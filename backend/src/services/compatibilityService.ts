@@ -25,7 +25,15 @@
  *   warnings: Array<{ rule: string, components: string[], message: string }>
  * }}
  */
-function validateCompatibility(build) {
+function validateCompatibility(build: {
+  cpu?: { socket: string; tdp?: number | null };
+  motherboard?: { socket: string; supported_ram_types: string[]; max_ram_frequency: number; tdp?: number | null };
+  gpu?: { length_mm: number; tdp?: number | null };
+  ram?: { ram_type: string; frequency_mhz: number; tdp?: number | null };
+  storage?: { tdp?: number | null };
+  psu?: { wattage: number; tdp?: number | null };
+  case?: { max_gpu_length_mm: number; tdp?: number | null };
+}) {
   const errors = [];
   const warnings = [];
 
@@ -77,7 +85,7 @@ function validateCompatibility(build) {
   }
 
   // Rule 5 — TDP calculation
-  const componentKeys = ['cpu', 'motherboard', 'gpu', 'ram', 'storage', 'psu', 'case'];
+  const componentKeys = ['cpu', 'motherboard', 'gpu', 'ram', 'storage', 'psu', 'case'] as const;
   const total_tdp = componentKeys.reduce((sum, key) => {
     const component = build[key];
     return sum + (component && component.tdp != null ? component.tdp : 0);
@@ -105,4 +113,4 @@ function validateCompatibility(build) {
   };
 }
 
-module.exports = { validateCompatibility };
+export { validateCompatibility };
