@@ -1,11 +1,9 @@
-# Generated documentation and diagrams (binary/regeneratable — not for Git)
-docs/uml/
-docs/diagrams/output/
-docs/Cahier_de_charge.pdf
-docs/cahier_de_charge.tex
-docs/cahier_de_charge_v2.pdf
-docs/cahier_de_charge_v2.tex
-docs/plantuml.jar
+# Generated/rendered artifacts (binary/regeneratable — not for Git)
+notes/diagrams/rendered/
+notes/spec/rendered/
+
+# docs/ folder — fully replaced by notes/
+docs/
 
 # Kiro IDE files
 .kiro/
@@ -39,6 +37,5 @@ notes/.obsidian/
 *.log
 npm-debug.log*
 
-# PlantUML jar (build tool, not source)
+# PlantUML jar (build tool binary — not for Git)
 plantuml.jar
-docs/plantuml.jar

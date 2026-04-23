@@ -1,0 +1,120 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\geometry{a4paper, margin=2.5cm}
+
+% Configuration de hyperref pour supprimer les boîtes rouges
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  hidelinks
+}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{ifthen}
+
+\begin{document}
+
+% --- PAGE DE GARDE PROFESSIONNELLE ---
+\begin{titlepage}
+\centering
+\IfFileExists{emsi.png}{\includegraphics[width=0.4\textwidth]{emsi.png}\par}{}\par
+\vspace{1.5cm}
+{\scshape\Large École Marocaine des Sciences de l'Ingénieur \par}
+\vspace{1cm}
+{\scshape\Large Cahier des Charges Informatique \par}
+\vspace{1.5cm}
+{\huge\bfseries Plateforme Web de Configuration PC au Maroc \par}
+\vspace{1cm}
+{\large Solution d'optimisation et de compatibilité matérielle \par}
+\vspace{2cm}
+\begin{minipage}{0.45\textwidth}
+\begin{flushleft} \large
+\textbf{Réalisé par :}\\
+Salmane ELHJOUJI \\
+Ghali KHARMOUDY
+\end{flushleft}
+\end{minipage}
+\begin{minipage}{0.45\textwidth}
+\begin{flushright} \large
+\textbf{Établissement :}\\
+EMSI Orangers \\
+Casablanca
+\end{flushright}
+\end{minipage}
+\vfill
+{\large Année Universitaire : 2025 - 2026 \par}
+{\large Période de réalisation : 30 Mars - 11 Mai 2026 \par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section{Introduction et Contexte}
+L'assemblage d'un ordinateur sur mesure est une tâche complexe où la moindre erreur de compatibilité peut entraîner des pertes financières importantes. Au Maroc, le marché du matériel informatique est fragmenté entre plusieurs revendeurs, rendant la comparaison des prix et la vérification des stocks fastidieuse. Ce projet propose une plateforme centralisée pour simplifier ce processus.
+
+\section{Périmètre du Projet (Scope)}
+Afin de garantir la faisabilité du projet dans les délais impartis, le périmètre d'intervention est défini comme suit :
+\begin{itemize}[label=\textbullet]
+\item \textbf{Inclus :} Gestion des composants internes principaux (Processeur, Carte Mère, Carte Graphique, RAM, Stockage, Alimentation, Boîtier). Comparaison des prix via web scraping sur un panel de sites marocains présélectionnés.
+\item \textbf{Exclu (Hors périmètre) :} La vente directe ou le paiement en ligne (la plateforme agit uniquement comme comparateur/redirection). La gestion des périphériques externes (écrans, claviers, souris) n'est pas prioritaire pour la version initiale (MVP).
+\end{itemize}
+
+\section{Acteurs du Système}
+Le système interagit avec plusieurs acteurs ayant des rôles bien définis :
+\begin{itemize}[label=\textbullet]
+\item \textbf{Visiteur / Utilisateur :} Passionné d'informatique, gamer ou professionnel. Il utilise le configurateur pour assembler son PC, consulte les alertes de compatibilité et compare les prix.
+\item \textbf{Administrateur (Développeurs) :} Gère le dictionnaire de la base de données, surveille les logs des scripts de scraping, et s'assure de la normalisation des noms de produits entre les différents revendeurs.
+\item \textbf{Système Autonome (Bot/Scraper) :} Acteur non-humain (scripts TypeScript sous Bun) qui s'exécute en arrière-plan à intervalles réguliers pour mettre à jour les prix et l'état des stocks.
+\end{itemize}
+
+\section{Analyse des Besoins Fonctionnels}
+\subsection{Moteur de Compatibilité (Cœur du système)}
+Le système doit valider automatiquement les relations techniques suivantes :
+\begin{itemize}[label=\textbullet]
+\item \textbf{Socket :} Compatibilité Processeur / Carte Mère (ex: AM5, LGA1700).
+\item \textbf{Mémoire :} Type de RAM (DDR4/DDR5) et fréquences supportées.
+\item \textbf{Dimensions :} Longueur du GPU vs espace disponible dans le boîtier.
+\item \textbf{Énergie :} Calcul du TDP total avec recommandation d'une alimentation adaptée (+20\% de marge).
+\end{itemize}
+
+\subsection{Gestion des Données (Scraping et Agrégation)}
+\begin{itemize}[label=\textbullet]
+\item Extraction quotidienne des prix et stocks des sites e-commerce marocains.
+\item Normalisation des noms des produits pour une comparaison efficace.
+\item Redirection directe vers le site du vendeur pour finaliser l'achat.
+\end{itemize}
+
+\section{Besoins Non Fonctionnels}
+\begin{itemize}[label=\textbullet]
+\item \textbf{Performance :} Temps de réponse du moteur de filtrage inférieur à 500ms.
+\item \textbf{Fiabilité :} Mise à jour automatique des données toutes les 24 heures.
+\item \textbf{UX/UI :} Interface intuitive, moderne et entièrement "Responsive" (Mobile/Desktop).
+\item \textbf{Sécurité :} Protection contre les injections SQL et sécurisation des API.
+\end{itemize}
+
+\section{Architecture et Spécifications Techniques}
+\begin{itemize}[label=\textbullet]
+\item \textbf{Backend :} Bun (v1.3+ LTS) avec le framework Hono (pour sa performance native et sa compatibilité TypeScript).
+\item \textbf{Base de Données :} PostgreSQL (pour la robustesse des relations complexes).
+\item \textbf{Scraping :} Scripts TypeScript (cheerio + undici) pour l'extraction et la normalisation des données.
+\item \textbf{Frontend :} React.js avec Vite (pour une interface réactive sans rechargement de page).
+\end{itemize}
+
+\section{Méthodologie et Planning}
+Le projet suit une approche agile, répartie sur la période de développement convenue :
+\begin{enumerate}
+\item \textbf{Du 30 Mars au 12 Avril :} Modélisation de la base de données, définition du périmètre matériel et des règles métier de compatibilité.
+\item \textbf{Du 13 Avril au 26 Avril :} Développement du backend (API) et mise en place des scripts de scraping.
+\item \textbf{Du 27 Avril au 3 Mai :} Intégration de l'interface utilisateur (Frontend) et connexion au moteur de filtrage en temps réel.
+\item \textbf{Du 4 Mai au 11 Mai :} Tests de robustesse, correction des anomalies et préparation des livrables de soutenance.
+\end{enumerate}
+
+\end{document}
