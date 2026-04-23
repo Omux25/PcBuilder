@@ -1,0 +1,92 @@
+@startuml PC Builder Database Schema
+!theme plain
+skinparam linetype ortho
+
+title PC Builder Platform - Database Schema (ERD)
+
+entity "components" as components {
+  * id : SERIAL <<PK>>
+  --
+  * name : VARCHAR(255)
+  brand : VARCHAR(100)
+  * category : VARCHAR(50)
+  ..CPU / Motherboard..
+  socket : VARCHAR(50)
+  ..Motherboard..
+  supported_ram_types : VARCHAR(20)[]
+  max_ram_frequency : INTEGER
+  ..RAM..
+  ram_type : VARCHAR(10)
+  frequency_mhz : INTEGER
+  ..GPU..
+  length_mm : INTEGER
+  ..Case..
+  max_gpu_length_mm : INTEGER
+  ..PSU..
+  wattage : INTEGER
+  ..Common..
+  tdp : INTEGER
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "retailers" as retailers {
+  * id : SERIAL <<PK>>
+  --
+  * name : VARCHAR(100) <<UNIQUE>>
+  * base_url : VARCHAR(255)
+  active : BOOLEAN
+}
+
+entity "prices" as prices {
+  * id : SERIAL <<PK>>
+  --
+  * component_id : INTEGER <<FK>>
+  * retailer_id : INTEGER <<FK>>
+  * price : NUMERIC(10,2)
+  * in_stock : BOOLEAN
+  * product_url : VARCHAR(500)
+  * last_updated : TIMESTAMPTZ
+  --
+  UNIQUE(component_id, retailer_id)
+}
+
+entity "scraper_logs" as scraper_logs {
+  * id : SERIAL <<PK>>
+  --
+  * level : VARCHAR(10)
+  site : VARCHAR(100)
+  * message : TEXT
+  created_at : TIMESTAMPTZ
+}
+
+entity "admins" as admins {
+  * id : SERIAL <<PK>>
+  --
+  * username : VARCHAR(100) <<UNIQUE>>
+  * password_hash : VARCHAR(255)
+  created_at : TIMESTAMPTZ
+}
+
+' Relationships
+components ||--o{ prices : "has offers"
+retailers ||--o{ prices : "provides"
+
+note bottom of components
+  Polymorphic table — typed columns per category
+  enable indexed SQL queries for compatibility checks.
+  (e.g. WHERE socket = 'AM5' uses idx_components_socket)
+  This is preferred over JSONB for structured,
+  queryable compatibility data.
+  Category-specific columns are nullable;
+  Zod schemas enforce required fields per category.
+end note
+
+note bottom of prices
+  UPSERT target:
+  ON CONFLICT (component_id, retailer_id)
+  DO UPDATE SET price, in_stock,
+  product_url, last_updated
+end note
+
+@enduml

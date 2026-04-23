@@ -1,0 +1,78 @@
+@startuml Activity Diagram
+!theme plain
+skinparam activityDiamondBackgroundColor #lightgray
+skinparam activityStartColor #green
+skinparam activityEndColor #red
+
+title PC Builder Platform — Activity Diagram\n(Complete User Flow)
+
+start
+
+:User opens PC Builder platform;
+
+:Display Configurator with 7 empty slots:\n• CPU\n• Motherboard\n• GPU\n• RAM\n• Storage\n• PSU\n• Case;
+
+partition "Component Selection Loop" {
+  repeat
+    :User clicks a component category;
+    
+    :Fetch component list\nGET /api/components?category=<cat>;
+    
+    :Display available components\nfor selected category;
+    
+    :User selects a component;
+    
+    :Add component to BuildConfiguration;
+    
+    :Call compatibility validation\nPOST /api/compatibility/validate;
+    
+    if (Socket mismatch?) then (yes)
+      #pink:Display error:\n"CPU socket incompatible\nwith Motherboard";
+    endif
+    
+    if (RAM type mismatch?) then (yes)
+      #pink:Display error:\n"RAM type not supported\nby Motherboard";
+    endif
+    
+    if (GPU too long?) then (yes)
+      #pink:Display error:\n"GPU does not fit in Case";
+    endif
+    
+    if (RAM frequency exceeded?) then (yes)
+      #yellow:Display warning:\n"RAM frequency exceeds\nMotherboard max";
+    endif
+    
+    if (PSU underpowered?) then (yes)
+      #yellow:Display warning:\n"PSU wattage below\nrecommended";
+    endif
+    
+    :Update Build Summary:\n• Show selected component\n• Show total TDP\n• Show recommended PSU wattage\n• Highlight incompatible components;
+    
+  repeat while (More components to select?) is (yes)
+  -> no;
+}
+
+partition "Price Comparison" {
+  :User clicks on a component\nto view price offers;
+  
+  :Fetch price offers\nGET /api/components/:id/prices;
+  
+  if (Offers available?) then (no)
+    #lightgray:Display message:\n"Component not available\nfrom any retailer";
+    stop
+  else (yes)
+    :Display price offers sorted\nby ascending price:\n• Retailer name\n• Price (MAD)\n• Stock availability\n• Last updated date;
+  endif
+  
+  :User clicks on a retailer offer;
+  
+  :Open retailer product page\nin new browser tab;
+  
+  :User lands on retailer website;
+  
+  :User completes purchase\non retailer's site;
+}
+
+stop
+
+@enduml

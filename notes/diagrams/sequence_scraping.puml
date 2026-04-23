@@ -1,0 +1,72 @@
+@startuml Sequence - Daily Price Scraping
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title Sequence Diagram: Daily Price Scraping (Background Process)
+
+participant "Bun.cron\nScheduler" as cron
+participant "Site1Scraper\n(cheerio+undici)" as s1
+participant "Site2Scraper\n(cheerio+undici)" as s2
+participant "Aggregator" as agg
+database "PostgreSQL\n(Bun.sql)" as db
+
+== Scheduled Trigger (Every 24h) ==
+
+cron -> cron : Cron expression: '0 0 * * *'\n(midnight daily)
+activate cron
+
+cron -> db : INSERT INTO scraper_logs\n{ level: 'INFO',\n  message: 'Scraping session started' }
+
+== Site 1 Scraping ==
+
+cron -> s1 : scrape()
+activate s1
+
+s1 -> s1 : undici.fetch(site1_url)
+s1 -> s1 : cheerio.load(html)
+s1 -> s1 : Extract:\n• price\n• in_stock\n• product_url\nper component_id
+
+alt Success
+  s1 --> cron : ScrapedPrice[]
+  deactivate s1
+else Error (timeout / HTML changed / HTTP 429)
+  s1 --> cron : throws Error
+  deactivate s1
+  cron -> db : INSERT INTO scraper_logs\n{ level: 'ERROR',\n  site: 'site1',\n  message: error.message }
+  note right : Continue to next scraper\nwithout interruption
+end
+
+== Site 2 Scraping ==
+
+cron -> s2 : scrape()
+activate s2
+
+s2 -> s2 : undici.fetch(site2_url)
+s2 -> s2 : cheerio.load(html)
+s2 -> s2 : Extract:\n• price\n• in_stock\n• product_url\nper component_id
+
+alt Success
+  s2 --> cron : ScrapedPrice[]
+  deactivate s2
+else Error
+  s2 --> cron : throws Error
+  deactivate s2
+  cron -> db : INSERT INTO scraper_logs\n{ level: 'ERROR',\n  site: 'site2',\n  message: error.message }
+end
+
+== Aggregation ==
+
+cron -> agg : aggregate(allResults)
+activate agg
+
+loop For each ScrapedPrice
+  agg -> db : INSERT INTO prices\n(component_id, retailer_id, price,\n in_stock, product_url, last_updated)\nON CONFLICT (component_id, retailer_id)\nDO UPDATE SET\n  price = EXCLUDED.price,\n  in_stock = EXCLUDED.in_stock,\n  product_url = EXCLUDED.product_url,\n  last_updated = NOW()
+end
+
+agg -> db : INSERT INTO scraper_logs\n{ level: 'INFO',\n  message: 'Session complete:\n  X components updated, Y errors' }
+
+deactivate agg
+deactivate cron
+
+@enduml

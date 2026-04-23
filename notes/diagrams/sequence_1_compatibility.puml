@@ -1,0 +1,64 @@
+@startuml Sequence 1 - Compatibility Validation
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title Sequence Diagram 1: Component Selection & Compatibility Validation
+
+actor "User" as user
+participant "React UI\n(Vite)" as ui
+participant "Hono API\n(Bun)" as api
+participant "Zod\nMiddleware" as zod
+participant "Compatibility\nEngine" as engine
+participant "Component\nService" as service
+database "PostgreSQL\n(Bun.sql)" as db
+
+== Browse Components ==
+
+user -> ui : Click category (e.g. CPU)
+ui -> api : GET /api/components?category=cpu
+api -> service : getComponents({ category: 'cpu' })
+service -> db : SELECT * FROM components\nWHERE category = $1
+db --> service : Component[]
+service --> api : Component[]
+api --> ui : HTTP 200 Component[]
+ui --> user : Display component list
+
+user -> ui : Select component\n(e.g. AMD Ryzen 7 9700X)
+ui -> ui : Update BuildConfiguration state
+
+== Compatibility Validation ==
+
+ui -> api : POST /api/compatibility/validate\n{ cpu, motherboard, gpu, ram, psu, case }
+api -> zod : Validate request body schema
+
+alt Validation fails
+  zod --> api : ZodError
+  api --> ui : HTTP 400\n{ error: { code: "VALIDATION_ERROR", fields: [...] } }
+  ui --> user : Show field errors
+end
+
+api -> engine : validateCompatibility(build)
+
+engine -> engine : checkSocketMatch(cpu, motherboard)
+engine -> engine : checkRamType(ram, motherboard)
+engine -> engine : checkRamFrequency(ram, motherboard)
+engine -> engine : checkGpuClearance(gpu, case)
+engine -> engine : total_tdp = Σ component TDPs
+engine -> engine : recommended_psu = ceil(total_tdp × 1.2)
+engine -> engine : checkPsuWattage(psu, recommended_psu)
+
+engine --> api : CompatibilityResult\n{ compatible, total_tdp,\n  recommended_psu_wattage,\n  errors[], warnings[] }
+api --> ui : HTTP 200 CompatibilityResult
+
+alt Errors present (e.g. socket_mismatch)
+  ui -> ui : Highlight incompatible\ncomponents in red
+  ui --> user : Show error alerts\nin Build Summary
+else Warnings only (e.g. psu_underpowered)
+  ui -> ui : Show warning indicators
+  ui --> user : Show warnings\nin Build Summary
+else Fully compatible
+  ui --> user : Build Summary updated\n✓ All components compatible
+end
+
+@enduml
