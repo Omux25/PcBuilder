@@ -1,5 +1,11 @@
-# Generated documentation and diagrams
-docs/
+# Generated documentation and diagrams (binary/regeneratable — not for Git)
+docs/uml/
+docs/diagrams/output/
+docs/Cahier_de_charge.pdf
+docs/cahier_de_charge.tex
+docs/cahier_de_charge_v2.pdf
+docs/cahier_de_charge_v2.tex
+docs/plantuml.jar
 
 # Kiro IDE files
 .kiro/
@@ -25,6 +31,9 @@ bun.lockb
 # OS
 .DS_Store
 Thumbs.db
+
+# Obsidian (if used to read notes/)
+notes/.obsidian/
 
 # Logs
 *.log

@@ -1,0 +1,267 @@
+@startuml Class Diagram
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam dpi 150
+skinparam pageMargin 10
+skinparam nodesep 60
+skinparam ranksep 80
+skinparam wrapWidth 200
+skinparam maxMessageSize 200
+
+title PC Builder Platform — Class Diagram
+
+' ─── DOMAIN MODEL ────────────────────────────────────────────────────────────
+
+abstract class Component {
+  + id: number
+  + name: string
+  + brand: string
+  + category: ComponentCategory
+  + tdp: number
+  + created_at: Date
+  + updated_at: Date
+}
+
+enum ComponentCategory {
+  CPU
+  MOTHERBOARD
+  GPU
+  RAM
+  STORAGE
+  PSU
+  CASE
+}
+
+class CPU {
+  + socket: string
+  + tdp: number
+}
+
+class Motherboard {
+  + socket: string
+  + supported_ram_types: string[]
+  + max_ram_frequency: number
+  + tdp: number
+}
+
+class GPU {
+  + length_mm: number
+  + tdp: number
+}
+
+class RAM {
+  + ram_type: string
+  + frequency_mhz: number
+  + tdp: number
+}
+
+class Storage {
+  + tdp: number
+}
+
+class PSU {
+  + wattage: number
+}
+
+class Case {
+  + max_gpu_length_mm: number
+}
+
+class Retailer {
+  + id: number
+  + name: string
+  + base_url: string
+  + active: boolean
+}
+
+class Price {
+  + id: number
+  + component_id: number
+  + retailer_id: number
+  + price: number
+  + in_stock: boolean
+  + product_url: string
+  + last_updated: Date
+}
+
+class ScraperLog {
+  + id: number
+  + level: LogLevel
+  + site: string
+  + message: string
+  + created_at: Date
+}
+
+enum LogLevel {
+  INFO
+  WARNING
+  ERROR
+}
+
+class Admin {
+  + id: number
+  + username: string
+  + password_hash: string
+  + created_at: Date
+}
+
+' ─── CONFIGURATION ───────────────────────────────────────────────────────────
+
+class BuildConfiguration {
+  + cpu?: CPU
+  + motherboard?: Motherboard
+  + gpu?: GPU
+  + ram?: RAM
+  + storage?: Storage
+  + psu?: PSU
+  + case?: Case
+  + /totalWattage: number
+  + /totalPrice: number
+}
+
+note right of BuildConfiguration
+  /totalWattage and /totalPrice
+  are derived attributes (UML "/").
+  Computed at runtime from
+  selected components.
+end note
+
+' ─── SERVICES ────────────────────────────────────────────────────────────────
+
+class ComponentService {
+  - db: BunSQL
+  + getComponents(filters): Promise<Component[]>
+  + getComponentById(id): Promise<Component>
+  + getPricesByComponentId(id): Promise<PriceOffer[]>
+  + createComponent(data): Promise<Component>
+  + updateComponent(id, data): Promise<Component>
+  + deleteComponent(id): Promise<void>
+}
+
+class CompatibilityEngine {
+  + validateCompatibility(build): CompatibilityResult
+  - checkSocketMatch(cpu, mb): void
+  - checkRamType(ram, mb): void
+  - checkRamFrequency(ram, mb): void
+  - checkGpuClearance(gpu, c): void
+  - calculateTotalTdp(components): number
+  - checkPsuWattage(psu, recommended): void
+}
+
+class AuthService {
+  - db: BunSQL
+  + login(username, password): Promise<string>
+  + verifyToken(token): Promise<Admin>
+  + hashPassword(password): Promise<string>
+  + comparePassword(password, hash): Promise<boolean>
+}
+
+' ─── SCRAPING ────────────────────────────────────────────────────────────────
+
+abstract class BaseScraper {
+  # retailer_id: number
+  # component_mappings: Map<string, number>
+  + {abstract} scrape(): Promise<ScrapedPrice[]>
+  # fetch(url): Promise<string>
+  # parseHtml(html): CheerioAPI
+}
+
+class Site1Scraper {
+  + scrape(): Promise<ScrapedPrice[]>
+}
+
+class Site2Scraper {
+  + scrape(): Promise<ScrapedPrice[]>
+}
+
+class Aggregator {
+  - db: BunSQL
+  + aggregate(results): Promise<void>
+  - upsertPrice(price): Promise<void>
+  - logSummary(updated, errors): Promise<void>
+}
+
+class Scheduler {
+  - scrapers: BaseScraper[]
+  - aggregator: Aggregator
+  + start(): void
+  - runScrapingSession(): Promise<void>
+}
+
+' ─── DTOs ────────────────────────────────────────────────────────────────────
+
+class CompatibilityResult {
+  + compatible: boolean
+  + total_tdp: number
+  + recommended_psu_wattage: number
+  + errors: CompatibilityIssue[]
+  + warnings: CompatibilityIssue[]
+}
+
+class CompatibilityIssue {
+  + rule: string
+  + components: string[]
+  + message: string
+}
+
+class PriceOffer {
+  + retailer_name: string
+  + price: number
+  + in_stock: boolean
+  + product_url: string
+  + last_updated: Date
+}
+
+class ScrapedPrice {
+  + component_id: number
+  + retailer_id: number
+  + price: number
+  + in_stock: boolean
+  + product_url: string
+  + scraped_at: Date
+}
+
+' ─── RELATIONSHIPS ───────────────────────────────────────────────────────────
+
+' Inheritance
+Component <|-- CPU
+Component <|-- Motherboard
+Component <|-- GPU
+Component <|-- RAM
+Component <|-- Storage
+Component <|-- PSU
+Component <|-- Case
+Component -- ComponentCategory
+ScraperLog -- LogLevel
+
+' Domain
+Component "1" -- "0..*" Price
+Retailer "1" -- "0..*" Price
+
+' Configuration
+BuildConfiguration o-- CPU
+BuildConfiguration o-- Motherboard
+BuildConfiguration o-- GPU
+BuildConfiguration o-- RAM
+BuildConfiguration o-- Storage
+BuildConfiguration o-- PSU
+BuildConfiguration o-- Case
+
+' Services
+ComponentService ..> Component
+ComponentService ..> PriceOffer
+CompatibilityEngine ..> BuildConfiguration
+CompatibilityEngine ..> CompatibilityResult
+CompatibilityResult o-- CompatibilityIssue
+AuthService ..> Admin
+
+' Scraping
+BaseScraper <|-- Site1Scraper
+BaseScraper <|-- Site2Scraper
+BaseScraper ..> ScrapedPrice
+Aggregator ..> ScrapedPrice
+Aggregator ..> Price
+Scheduler "1" o-- "many" BaseScraper
+Scheduler --> Aggregator
+
+@enduml

@@ -1,0 +1,51 @@
+@startuml User Journey
+!theme plain
+
+title PC Builder Platform - User Journey (Activity Diagram)
+
+start
+
+:User opens the platform;
+
+:Configurator displays 7 component slots\n(CPU, Motherboard, GPU, RAM,\nStorage, PSU, Case);
+
+repeat
+  :User clicks a component category;
+  :Platform fetches component list\nGET /api/components?category=<cat>;
+  :User selects a component;
+  :Platform calls POST /api/compatibility/validate;
+
+  if (Compatibility errors?) then (yes)
+    :Highlight incompatible components\nin red in Build Summary;
+    :Display error alerts\n(socket_mismatch / ram_type_mismatch\n/ gpu_too_long);
+  else (no)
+    if (Compatibility warnings?) then (yes)
+      :Display warnings\n(ram_frequency_exceeded\n/ psu_underpowered);
+    endif
+  endif
+
+  :Update Build Summary:\n- Show selected component\n- Show total TDP\n- Show recommended PSU wattage;
+
+repeat while (More components to select?) is (yes)
+-> no;
+
+:User clicks on a component\nto compare prices;
+
+:Platform fetches\nGET /api/components/:id/prices;
+
+:Display price offers sorted\nby ascending price:\n- Retailer name\n- Price (MAD)\n- Stock availability\n- Last updated date;
+
+if (Offers available?) then (no)
+  :Show "Not available from\nany referenced retailer";
+  stop
+endif
+
+:User clicks on a retailer offer;
+
+:Open retailer product page\nin a new browser tab;
+
+:User completes purchase\non retailer's website;
+
+stop
+
+@enduml

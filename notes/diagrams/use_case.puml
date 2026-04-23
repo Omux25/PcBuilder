@@ -1,0 +1,86 @@
+@startuml Use Case Diagram
+!theme plain
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+
+title PC Builder Platform — Use Case Diagram
+
+left to right direction
+
+actor "User\n(Visitor)" as user
+actor "Administrator" as admin
+actor "Scraping Bot\n(Bun.cron)" as scraper
+
+rectangle "PC Builder Platform" {
+
+  package "Build Configuration" {
+    usecase "Select Component\nby Category" as UC1
+    usecase "View Compatible\nComponents" as UC2
+    usecase "Evaluate\nCompatibility" as UC3
+    usecase "Generate\nCompatibility Warning" as UC3W
+    usecase "View Build Summary\n(TDP + PSU)" as UC4
+    usecase "Reset Build" as UC5
+  }
+
+  package "Price Comparison" {
+    usecase "View Price Offers\nby Retailer" as UC6
+    usecase "Compare Prices\n(sorted ascending)" as UC7
+    usecase "Redirect to\nRetailer Website" as UC8
+  }
+
+  package "Compatibility Rules" {
+    usecase "Check CPU /\nMotherboard Socket" as UC9
+    usecase "Check RAM Type\n& Frequency" as UC10
+    usecase "Check GPU /\nCase Clearance" as UC11
+    usecase "Calculate TDP &\nRecommend PSU" as UC12
+  }
+
+  package "Administration" {
+    usecase "Login (JWT)" as UC13
+    usecase "Add / Edit /\nDelete Component" as UC14
+    usecase "View Scraper\nLogs" as UC15
+  }
+
+  package "Data Collection" {
+    usecase "Update Component\nPrices & Inventory" as UC16
+    usecase "Normalize &\nAggregate Data" as UC17
+    usecase "Log Scraping\nSession" as UC18
+  }
+}
+
+' User associations
+user --> UC1
+user --> UC3
+user --> UC4
+user --> UC5
+user --> UC6
+user --> UC7
+user --> UC8
+
+' Include: always happens
+UC1 .> UC2 : <<include>>
+UC3 .> UC9 : <<include>>
+UC3 .> UC10 : <<include>>
+UC3 .> UC11 : <<include>>
+UC3 .> UC12 : <<include>>
+UC6 .> UC7 : <<include>>
+
+' Extend: only when condition is met (warning/error case)
+UC3W .> UC3 : <<extend>>
+
+' Redirect only when user chooses an offer
+UC8 .> UC7 : <<extend>>
+
+' Admin associations
+admin --> UC13
+admin --> UC14
+admin --> UC15
+UC14 .> UC13 : <<include>>
+UC15 .> UC13 : <<include>>
+
+' Scraping Bot associations
+scraper --> UC16
+UC16 .> UC17 : <<include>>
+UC17 .> UC18 : <<include>>
+
+@enduml
