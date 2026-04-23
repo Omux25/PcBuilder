@@ -1,0 +1,561 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\geometry{a4paper, margin=2.5cm}
+
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  hidelinks
+}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{ifthen}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{float}
+
+% Custom colors
+\definecolor{primaryblue}{RGB}{30, 90, 160}
+\definecolor{lightgray}{RGB}{245, 245, 245}
+\definecolor{warningyellow}{RGB}{255, 193, 7}
+\definecolor{successgreen}{RGB}{40, 167, 69}
+\definecolor{dangerred}{RGB}{220, 53, 69}
+
+% Section formatting
+\titleformat{\section}{\large\bfseries\color{primaryblue}}{}{0em}{\thesection\quad}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{\thesubsection\quad}
+
+\begin{document}
+
+% ─────────────────────────────────────────────────────────────────────────────
+% PAGE DE GARDE
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{titlepage}
+\centering
+\IfFileExists{emsi.png}{\includegraphics[width=0.4\textwidth]{emsi.png}\par}{}
+\vspace{1.5cm}
+{\scshape\Large École Marocaine des Sciences de l'Ingénieur \par}
+\vspace{0.5cm}
+{\scshape\large Filière : Génie Informatique \par}
+\vspace{1cm}
+{\scshape\Large Cahier des Charges Informatique \par}
+\vspace{1.5cm}
+{\huge\bfseries Plateforme Web de Configuration PC au Maroc \par}
+\vspace{0.8cm}
+{\large\itshape Solution de comparaison de prix et de vérification de compatibilité matérielle \par}
+\vspace{2cm}
+\begin{minipage}{0.45\textwidth}
+\begin{flushleft}\large
+\textbf{Réalisé par :}\\[4pt]
+Salmane ELHJOUJI \\
+Ghali KHARMOUDY
+\end{flushleft}
+\end{minipage}
+\begin{minipage}{0.45\textwidth}
+\begin{flushright}\large
+\textbf{Établissement :}\\[4pt]
+EMSI Orangers \\
+Casablanca
+\end{flushright}
+\end{minipage}
+\vfill
+{\large Année Universitaire : 2025--2026 \par}
+{\large Période de réalisation : 30 Mars -- 11 Mai 2026 \par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Glossaire}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\begin{longtable}{>{\bfseries}p{3.5cm} p{10cm}}
+\toprule
+\textbf{Terme} & \textbf{Définition} \\
+\midrule
+\endhead
+TDP &
+\textit{Thermal Design Power} — Puissance maximale consommée par un composant, exprimée en watts. Utilisée pour calculer la puissance totale d'une configuration. \\
+\midrule
+Socket &
+Interface physique entre le processeur (CPU) et la carte mère. Deux composants ne sont compatibles que s'ils partagent le même socket (ex : AM5, LGA1700). \\
+\midrule
+DDR4 / DDR5 &
+\textit{Double Data Rate} — Générations de mémoire RAM. DDR5 est plus rapide mais incompatible avec les cartes mères DDR4. \\
+\midrule
+GPU &
+\textit{Graphics Processing Unit} — Carte graphique. Sa longueur physique (en mm) doit être inférieure au clearance maximal du boîtier. \\
+\midrule
+PSU &
+\textit{Power Supply Unit} — Alimentation électrique. Sa puissance (en watts) doit couvrir la consommation totale de la configuration avec une marge de sécurité. \\
+\midrule
+Scraping &
+Technique d'extraction automatique de données depuis des pages web. Utilisée ici pour collecter les prix et stocks des revendeurs marocains. \\
+\midrule
+UPSERT &
+Opération de base de données combinant INSERT et UPDATE : si la ligne existe, elle est mise à jour ; sinon, elle est insérée. \\
+\midrule
+JWT &
+\textit{JSON Web Token} — Jeton d'authentification signé cryptographiquement. Utilisé pour sécuriser les endpoints d'administration. \\
+\midrule
+API REST &
+\textit{Application Programming Interface} suivant le style architectural REST. Ensemble d'URLs exposées par le backend pour que le frontend puisse échanger des données via HTTP. \\
+\midrule
+bcrypt &
+Algorithme de hachage de mots de passe. Transforme un mot de passe en une chaîne irréversible stockée en base de données. \\
+\midrule
+Configurateur &
+Module interactif de l'interface utilisateur permettant de sélectionner et assembler des composants PC. \\
+\midrule
+Moteur de compatibilité &
+Sous-système backend qui valide les règles de compatibilité entre composants et retourne les erreurs et avertissements. \\
+\bottomrule
+\end{longtable}
+
+\newpage
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Introduction et Contexte}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{Problématique}
+
+L'assemblage d'un ordinateur sur mesure est une tâche complexe où la moindre erreur de compatibilité peut entraîner des pertes financières importantes. Un processeur AMD Ryzen monté sur une carte mère Intel, une barrette de RAM DDR5 insérée dans une carte mère DDR4 uniquement, ou une carte graphique trop longue pour le boîtier choisi : ces erreurs sont fréquentes chez les non-initiés et coûteuses à corriger.
+
+Au Maroc, ce problème est amplifié par la fragmentation du marché : les composants sont vendus par une dizaine de revendeurs indépendants (Matelpro, Tradeline, Electro Bazar, etc.) dont les prix et les stocks varient quotidiennement. L'utilisateur doit aujourd'hui visiter manuellement chaque site pour comparer les offres, sans aucune garantie de compatibilité entre les pièces sélectionnées. La plateforme cible un catalogue initial d'environ 150 à 200 composants référencés.
+
+\subsection{Solution Proposée}
+
+Ce projet propose une plateforme web centralisée qui :
+\begin{enumerate}
+  \item Permet à l'utilisateur de composer un PC pièce par pièce avec validation de compatibilité en temps réel.
+  \item Agrège automatiquement les prix des revendeurs marocains via des scripts de scraping planifiés.
+  \item Redirige l'utilisateur vers le site du revendeur pour finaliser son achat au meilleur prix.
+\end{enumerate}
+
+La plateforme est un \textbf{comparateur et conseiller} — elle ne vend rien directement.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Périmètre du Projet (Scope)}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{Inclus dans le périmètre}
+
+\begin{itemize}[label=\textbullet]
+  \item Gestion des 7 catégories de composants internes : Processeur (CPU), Carte Mère, Carte Graphique (GPU), Mémoire RAM, Stockage, Alimentation (PSU), Boîtier.
+  \item Moteur de compatibilité couvrant 4 règles techniques : socket, type/fréquence RAM, dimensions GPU/boîtier, consommation électrique.
+  \item Comparaison de prix en quasi-temps réel via scraping quotidien de sites e-commerce marocains présélectionnés.
+  \item Interface d'administration sécurisée (JWT) pour la gestion du catalogue de composants.
+  \item Tableau de bord de surveillance des logs de scraping.
+  \item Interface utilisateur responsive (mobile et desktop).
+\end{itemize}
+
+\subsection{Hors périmètre (MVP)}
+
+\begin{itemize}[label=\textbullet]
+  \item Vente directe ou paiement en ligne — la plateforme redirige uniquement vers les revendeurs.
+  \item Gestion des périphériques externes (écrans, claviers, souris, casques).
+  \item Système de comptes utilisateurs ou de sauvegarde de configurations.
+  \item Application mobile native (iOS/Android).
+  \item Comparaison de prix hors Maroc.
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Acteurs du Système}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\begin{longtable}{>{\bfseries}p{3.5cm} p{4.5cm} p{6cm}}
+\toprule
+\textbf{Acteur} & \textbf{Profil} & \textbf{Interactions principales} \\
+\midrule
+\endhead
+Visiteur / Utilisateur &
+Passionné d'informatique, gamer, professionnel cherchant à assembler un PC. &
+Sélectionne des composants, consulte les alertes de compatibilité, compare les prix, est redirigé vers les revendeurs. \\
+\midrule
+Administrateur &
+Développeur ou responsable technique gérant la plateforme. &
+S'authentifie via JWT, ajoute/modifie/supprime des composants, consulte les logs de scraping. \\
+\midrule
+Système Autonome (Scraper) &
+Acteur non-humain : scripts TypeScript exécutés par Bun.cron() toutes les 24h. &
+Extrait les prix et stocks des sites e-commerce, normalise les données, met à jour la base de données, enregistre les logs d'exécution. \\
+\bottomrule
+\end{longtable}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Besoins Fonctionnels}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{BF-01 — Sélection et Assemblage de Composants}
+
+\textbf{En tant qu'utilisateur}, je veux sélectionner des composants par catégorie afin de composer un PC adapté à mes besoins.
+
+\begin{itemize}[label=\textbullet]
+  \item Le configurateur propose les 7 catégories de composants.
+  \item La sélection d'une catégorie affiche la liste des composants disponibles.
+  \item L'ajout d'un composant met à jour le récapitulatif de la configuration.
+  \item La suppression d'un composant recalcule toutes les validations de compatibilité.
+  \item Un bouton « Réinitialiser » permet de vider entièrement la configuration.
+\end{itemize}
+
+\subsection{BF-02 — Moteur de Compatibilité : Socket CPU / Carte Mère}
+
+\textbf{En tant qu'utilisateur}, je veux être alerté automatiquement si le CPU et la carte mère sont incompatibles.
+
+\begin{itemize}[label=\textbullet]
+  \item Le système vérifie que le socket du CPU correspond au socket de la carte mère (ex : AM5 $\leftrightarrow$ AM5, LGA1700 $\leftrightarrow$ LGA1700).
+  \item En cas d'incompatibilité, une alerte identifie les deux sockets en conflit.
+  \item Les composants incompatibles sont mis en évidence visuellement dans le récapitulatif.
+  \item Le filtre de composants priorise les éléments compatibles avec la sélection existante.
+\end{itemize}
+
+\subsection{BF-03 — Moteur de Compatibilité : RAM / Carte Mère}
+
+\textbf{En tant qu'utilisateur}, je veux que la plateforme vérifie la compatibilité de la RAM avec la carte mère.
+
+\begin{itemize}[label=\textbullet]
+  \item Le système vérifie que le type de RAM (DDR4 ou DDR5) est supporté par la carte mère.
+  \item En cas d'incompatibilité de type, une alerte précise le type requis et le type sélectionné.
+  \item Si la fréquence de la RAM dépasse le maximum supporté par la carte mère, un avertissement indique la fréquence maximale effective.
+\end{itemize}
+
+\subsection{BF-04 — Moteur de Compatibilité : GPU / Boîtier}
+
+\textbf{En tant qu'utilisateur}, je veux vérifier que la carte graphique s'insère physiquement dans le boîtier.
+
+\begin{itemize}[label=\textbullet]
+  \item Le système compare la longueur du GPU (en mm) avec l'espace maximal disponible dans le boîtier.
+  \item En cas de dépassement, une alerte indique la longueur du GPU et le clearance maximal du boîtier.
+\end{itemize}
+
+\subsection{BF-05 — Moteur de Compatibilité : Consommation Électrique}
+
+\textbf{En tant qu'utilisateur}, je veux que la plateforme calcule la consommation totale et recommande une alimentation adaptée.
+
+\begin{itemize}[label=\textbullet]
+  \item Le système calcule la somme des TDP de tous les composants sélectionnés.
+  \item La puissance recommandée est calculée avec une marge de 20\% : $P_{recommandée} = \lceil TDP_{total} \times 1{,}2 \rceil$.
+  \item Si l'alimentation sélectionnée est inférieure à la puissance recommandée, un avertissement est affiché.
+  \item La consommation totale et la puissance recommandée sont affichées en permanence dans le récapitulatif.
+\end{itemize}
+
+\subsection{BF-06 — Scraping et Mise à Jour des Prix}
+
+\textbf{En tant qu'utilisateur}, je veux consulter des prix à jour des revendeurs marocains.
+
+\begin{itemize}[label=\textbullet]
+  \item Le scraper extrait automatiquement le prix et la disponibilité de chaque composant référencé.
+  \item Une mise à jour complète est effectuée toutes les 24 heures via un planificateur (Bun.cron).
+  \item La date et l'heure de la dernière mise à jour sont enregistrées pour chaque offre.
+  \item En cas d'erreur sur un site (timeout, structure HTML modifiée, blocage HTTP 429), l'erreur est journalisée et le scraping continue sur les autres sites.
+\end{itemize}
+
+\subsection{BF-07 — Comparaison de Prix et Redirection}
+
+\textbf{En tant qu'utilisateur}, je veux comparer les prix d'un composant entre revendeurs et être redirigé vers le site du vendeur.
+
+\begin{itemize}[label=\textbullet]
+  \item La page détail d'un composant affiche toutes les offres disponibles, triées par prix croissant, avec le nom du revendeur, le prix en MAD, la disponibilité et la date de mise à jour.
+  \item Un clic sur une offre ouvre la page produit du revendeur dans un nouvel onglet.
+  \item Si aucune offre n'est disponible, un message informatif est affiché.
+\end{itemize}
+
+\subsection{BF-08 — Gestion du Catalogue (Administration)}
+
+\textbf{En tant qu'administrateur}, je veux gérer le catalogue de composants via une interface sécurisée.
+
+\begin{itemize}[label=\textbullet]
+  \item L'API expose des endpoints sécurisés (JWT) pour ajouter, modifier et supprimer des composants.
+  \item Lors de l'ajout, tous les champs obligatoires sont validés (nom, catégorie, socket/type selon la catégorie, TDP, dimensions si applicable).
+  \item Un champ manquant ou invalide retourne HTTP 400 avec la liste des champs en erreur.
+\end{itemize}
+
+\subsection{BF-09 — Surveillance des Scripts de Scraping (Administration)}
+
+\textbf{En tant qu'administrateur}, je veux surveiller l'état des scripts de scraping pour détecter rapidement les anomalies.
+
+\begin{itemize}[label=\textbullet]
+  \item Chaque session de scraping enregistre un log de début et de fin avec le nombre de composants mis à jour.
+  \item Chaque erreur est journalisée avec le nom du site, le type d'erreur et l'horodatage.
+  \item L'API expose un endpoint permettant de consulter les logs filtrables par date, site et niveau de sévérité (INFO, WARNING, ERROR).
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{uml/Sequence 1 - Compatibility Validation.png}{%
+  \includegraphics[width=0.90\textwidth]{uml/Sequence 1 - Compatibility Validation.png}%
+}{%
+  \textit{[Diagramme de séquence — fichier non trouvé]}%
+}
+\caption{Diagramme de séquence — Validation de compatibilité (BF-02 à BF-05)}
+\end{figure}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Besoins Non Fonctionnels}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\begin{longtable}{>{\bfseries}p{2.5cm} p{4cm} p{7cm}}
+\toprule
+\textbf{Réf.} & \textbf{Critère} & \textbf{Exigence} \\
+\midrule
+\endhead
+BNF-01 & Performance &
+Le moteur de filtrage et de compatibilité doit répondre en moins de 500 ms dans des conditions de charge normales. \\
+\midrule
+BNF-02 & Fiabilité &
+Les données de prix et de stocks sont mises à jour automatiquement toutes les 24 heures. \\
+\midrule
+BNF-03 & Sécurité &
+Toutes les requêtes SQL utilisent des requêtes paramétrées (protection contre les injections SQL). Les endpoints d'administration sont protégés par JWT. Les mots de passe sont hachés avec bcrypt. \\
+\midrule
+BNF-04 & Validation des données &
+Toutes les données entrantes sont validées (type, format, champs obligatoires) avant tout traitement ou persistance en base de données. Tout champ invalide ou manquant retourne une réponse HTTP 400 avec la liste des champs en erreur. \\
+\midrule
+BNF-05 & Accessibilité / UX &
+L'interface est utilisable et lisible sur des écrans de 320px à 2560px de largeur. Les alertes de compatibilité sont visibles et compréhensibles sur mobile et desktop. \\
+\midrule
+BNF-06 & Maintenabilité &
+Le code est entièrement en TypeScript avec typage strict. L'architecture suit une séparation claire entre routes, services et middleware. \\
+\bottomrule
+\end{longtable}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Modèle de Données}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{Entités Principales}
+
+La base de données PostgreSQL est composée de 5 tables :
+
+\begin{longtable}{>{\bfseries}p{3cm} p{4cm} p{6.5cm}}
+\toprule
+\textbf{Table} & \textbf{Rôle} & \textbf{Champs clés} \\
+\midrule
+\endhead
+components &
+Catalogue de tous les composants PC. &
+id, name, brand, category, socket, supported\_ram\_types[], max\_ram\_frequency, ram\_type, frequency\_mhz, length\_mm, max\_gpu\_length\_mm, wattage, tdp \\
+\midrule
+retailers &
+Sites e-commerce marocains référencés. &
+id, name, base\_url, active \\
+\midrule
+prices &
+Prix scrappés (1 ligne par composant × revendeur). &
+id, component\_id (FK), retailer\_id (FK), price, in\_stock, product\_url, last\_updated \\
+\midrule
+scraper\_logs &
+Journal d'exécution des scripts de scraping. &
+id, level (INFO/WARNING/ERROR), site, message, created\_at \\
+\midrule
+admins &
+Comptes administrateurs. &
+id, username, password\_hash (bcrypt), created\_at \\
+\bottomrule
+\end{longtable}
+
+\subsection{Choix de Conception : Table Polymorphique}
+
+La table \texttt{components} adopte un modèle polymorphique : une seule table regroupe les 7 catégories de composants. Les colonnes spécifiques à une catégorie (ex : \texttt{socket} pour les CPU, \texttt{length\_mm} pour les GPU) sont \texttt{NULL} pour les autres catégories. La validation des champs obligatoires par catégorie est assurée au niveau applicatif par des schémas Zod.
+
+Ce choix simplifie les requêtes de filtrage et évite la multiplication des jointures.
+
+\subsection{Contrainte d'Unicité pour le Scraping}
+
+La table \texttt{prices} impose une contrainte \texttt{UNIQUE(component\_id, retailer\_id)}, ce qui permet au scraper d'effectuer des opérations \textbf{UPSERT} : si une offre existe déjà pour ce couple (composant, revendeur), elle est mise à jour ; sinon, elle est insérée.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Architecture et Spécifications Techniques}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{Stack Technologique}
+
+\begin{longtable}{>{\bfseries}p{3cm} p{3.5cm} p{7cm}}
+\toprule
+\textbf{Couche} & \textbf{Technologie} & \textbf{Justification} \\
+\midrule
+\endhead
+Runtime &
+Bun 1.3+ (WSL2) &
+3--4× plus rapide que Node.js. Client SQL, planificateur cron et runner de tests intégrés nativement. \\
+\midrule
+Framework Backend &
+Hono &
+2--3× plus rapide qu'Express. TypeScript natif. API quasi-identique à Express pour faciliter la prise en main. \\
+\midrule
+Base de données &
+PostgreSQL &
+Robustesse des relations complexes, support natif des tableaux (pour \texttt{supported\_ram\_types}), transactions ACID. \\
+\midrule
+Client SQL &
+Bun.sql (intégré) &
+Client PostgreSQL natif dans Bun 1.2+. Requêtes paramétrées automatiques via template literals. Aucune dépendance externe. \\
+\midrule
+Validation &
+Zod &
+Schémas déclaratifs, inférence TypeScript automatique, messages d'erreur précis au niveau des champs. \\
+\midrule
+Authentification &
+JWT + bcrypt &
+Authentification stateless adaptée aux API REST. bcrypt pour le hachage sécurisé des mots de passe. \\
+\midrule
+Scraping &
+cheerio + undici &
+Crawlee est incompatible avec Bun (Node.js uniquement). cheerio parse le HTML, undici effectue les requêtes HTTP — tous deux compatibles Bun. \\
+\midrule
+Planificateur &
+Bun.cron() (intégré) &
+Planificateur cron natif dans Bun 1.3+. Aucune dépendance externe (pas de node-cron). \\
+\midrule
+Frontend &
+React.js + Vite &
+Interface réactive sans rechargement de page. Vite offre un démarrage quasi-instantané en développement. \\
+\midrule
+Tests &
+bun test + fast-check &
+Runner de tests Jest-compatible intégré dans Bun. fast-check pour les tests basés sur les propriétés (PBT). \\
+\bottomrule
+\end{longtable}
+
+\subsection{Architecture en Couches}
+
+Le système est organisé en trois couches indépendantes :
+
+\begin{enumerate}
+  \item \textbf{Frontend (React.js / Vite)} — Interface utilisateur responsive. Communique avec le backend via des appels REST HTTP.
+  \item \textbf{Backend (Bun / Hono)} — API REST exposant la logique métier : moteur de compatibilité, catalogue de composants, authentification JWT, logs. S'exécute dans WSL2.
+  \item \textbf{Système de Scraping (Bun.cron + cheerio/undici)} — Scripts autonomes planifiés toutes les 24h. Extraient les prix, normalisent les données et mettent à jour la base de données via UPSERT.
+\end{enumerate}
+
+\begin{figure}[h]
+\centering
+\IfFileExists{uml/Use Case Diagram.png}{%
+  \includegraphics[width=0.85\textwidth]{uml/Use Case Diagram.png}%
+}{%
+  \textit{[Diagramme de cas d'utilisation — fichier non trouvé]}%
+}
+\caption{Diagramme de cas d'utilisation — Acteurs et fonctionnalités principales}
+\end{figure}
+
+\subsection{Endpoints API Principaux}
+
+\begin{longtable}{p{1.5cm} p{5.5cm} p{1.5cm} p{5cm}}
+\toprule
+\textbf{Méthode} & \textbf{Endpoint} & \textbf{Auth} & \textbf{Description} \\
+\midrule
+\endhead
+GET & /api/components & Non & Liste des composants (filtrable par catégorie, socket, type RAM) \\
+GET & /api/components/:id & Non & Détail d'un composant \\
+GET & /api/components/:id/prices & Non & Offres de prix triées par prix croissant \\
+POST & /api/compatibility/validate & Non & Validation d'une configuration, retourne erreurs et avertissements \\
+POST & /api/auth/login & Non & Authentification administrateur, retourne un JWT \\
+POST & /api/admin/components & JWT & Ajout d'un composant \\
+PUT & /api/admin/components/:id & JWT & Modification d'un composant \\
+DELETE & /api/admin/components/:id & JWT & Suppression d'un composant \\
+GET & /api/admin/logs & JWT & Consultation des logs de scraping \\
+\bottomrule
+\end{longtable}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Gestion des Risques}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\begin{longtable}{>{\bfseries}p{4cm} p{3.5cm} p{6cm}}
+\toprule
+\textbf{Risque} & \textbf{Probabilité} & \textbf{Mesure d'atténuation} \\
+\midrule
+\endhead
+Blocage du scraper par un revendeur (HTTP 429, CAPTCHA) &
+Moyenne &
+Chaque scraper s'exécute dans un bloc try/catch indépendant. L'erreur est journalisée et le scraping continue sur les autres sites. \\
+\midrule
+Modification de la structure HTML d'un site revendeur &
+Haute &
+Les sélecteurs CSS sont isolés dans chaque scraper. Une alerte ERROR dans les logs signale immédiatement la rupture. \\
+\midrule
+Données de prix obsolètes &
+Faible &
+La date de dernière mise à jour est affichée pour chaque offre. Le cycle de 24h limite l'obsolescence. \\
+\midrule
+Injection SQL &
+Faible &
+Toutes les requêtes utilisent les template literals de Bun.sql (requêtes paramétrées automatiques). \\
+\midrule
+Accès non autorisé aux endpoints d'administration &
+Faible &
+Authentification JWT obligatoire sur tous les endpoints /api/admin/*. Tokens expirables (8h). \\
+\midrule
+Dépassement du délai de livraison (11 Mai 2026) &
+Moyenne &
+Les tâches optionnelles (tests de propriétés, tests d'intégration avancés) sont clairement identifiées et peuvent être reportées sans bloquer le MVP. \\
+\bottomrule
+\end{longtable}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Méthodologie et Planning}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{Approche de Développement}
+
+Le projet suit un développement incrémental par couches, chaque couche étant validée par des tests avant de passer à la suivante. Cette approche garantit qu'aucune régression n'est introduite lors de l'ajout de nouvelles fonctionnalités. Les phases 2 et 3 sont menées en parallèle : Salmane développe le backend API et le système de scraping simultanément, tandis que Ghali prépare les composants frontend.
+
+\subsection{Répartition des Rôles}
+
+\begin{itemize}[label=\textbullet]
+  \item \textbf{Salmane ELHJOUJI} — Backend : API REST, moteur de compatibilité, système de scraping, base de données.
+  \item \textbf{Ghali KHARMOUDY} — Frontend : interface React.js, configurateur, récapitulatif de build, page de comparaison de prix.
+\end{itemize}
+
+\subsection{Planning Prévisionnel}
+
+\begin{longtable}{p{4.5cm} p{3cm} p{6cm}}
+\toprule
+\textbf{Phase} & \textbf{Période} & \textbf{Livrables} \\
+\midrule
+\endhead
+Phase 1 — Fondations &
+30 Mars -- 12 Avril &
+Migrations SQL (5 tables), schémas Zod, middleware JWT, moteur de compatibilité, tests unitaires. \\
+\midrule
+Phase 2 — Backend API &
+13 Avril -- 26 Avril &
+Routes publiques (composants, prix, compatibilité), routes admin (CRUD, logs), app.ts, server.ts. \\
+\midrule
+Phase 3 — Scraping &
+13 Avril -- 26 Avril &
+BaseScraper, scrapers par site, agrégateur UPSERT, planificateur Bun.cron. \\
+\midrule
+Phase 4 — Frontend &
+27 Avril -- 3 Mai &
+Configurateur React, récapitulatif de build, page de comparaison de prix, layout responsive. \\
+\midrule
+Phase 5 — Intégration et Tests &
+4 Mai -- 11 Mai &
+Tests d'intégration, correction des anomalies, préparation des livrables de soutenance. \\
+\bottomrule
+\end{longtable}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Livrables}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\begin{itemize}[label=\textbullet]
+  \item \textbf{Code source} — Dépôt Git structuré (\texttt{backend/}, \texttt{frontend/}) avec historique de commits conventionnels.
+  \item \textbf{Base de données} — Scripts de migration SQL reproductibles (5 fichiers numérotés).
+  \item \textbf{Documentation technique} — Diagrammes UML (Use Case, Classe, Séquence ×4, Activité), documentation backend exhaustive.
+  \item \textbf{Suite de tests} — Tests unitaires (bun test), tests basés sur les propriétés (fast-check). La couverture est mesurée via \texttt{bun test --coverage} ; l'objectif est $\geq$ 80\% sur les services et routes API.
+  \item \textbf{Présentation de soutenance} — Démonstration live de la plateforme fonctionnelle.
+\end{itemize}
+
+\end{document}

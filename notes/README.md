@@ -18,6 +18,17 @@
 
 ---
 
+## Spec Documents
+
+The original project specification (Cahier des Charges) written for EMSI Orangers. See [spec/README.md](spec/README.md) for how to regenerate the PDFs.
+
+| File | Description |
+|---|---|
+| [spec/cahier_de_charge_v2.tex](spec/cahier_de_charge_v2.tex) | LaTeX source — version 2 (latest) |
+| [spec/cahier_de_charge.tex](spec/cahier_de_charge.tex) | LaTeX source — version 1 |
+
+---
+
 ## Guide
 
 Reference and learning material — read these to understand the project.
@@ -54,9 +65,6 @@ PlantUML source files for all project diagrams. See [diagrams/README.md](diagram
 | [diagrams/sequence_2_price_comparison.puml](diagrams/sequence_2_price_comparison.puml) | Sequence | Price comparison and retailer redirect |
 | [diagrams/sequence_3_admin.puml](diagrams/sequence_3_admin.puml) | Sequence | Admin login and component management |
 | [diagrams/sequence_scraping.puml](diagrams/sequence_scraping.puml) | Sequence | Daily price scraping background process |
-| [diagrams/architecture.puml](diagrams/architecture.puml) | Component | System architecture |
-| [diagrams/database.puml](diagrams/database.puml) | ERD | Database schema |
-| [diagrams/api_routes.puml](diagrams/api_routes.puml) | Component | All REST API routes |
 
 ---
 
