@@ -182,4 +182,105 @@ async function getPricesByComponentId(id: number): Promise<PriceOffer[]> {
   ` as Promise<PriceOffer[]>;
 }
 
-export { getComponents, getComponentById, getPricesByComponentId };
+// ── Admin Service Functions ──────────────────────────────────────────────────
+
+/**
+ * Inserts a new component and returns the created row.
+ *
+ * @param data - Validated component data (from Zod schema)
+ */
+async function createComponent(data: Record<string, unknown>): Promise<Component> {
+  const {
+    name, brand, category, socket, supported_ram_types,
+    max_ram_frequency, ram_type, frequency_mhz, length_mm,
+    max_gpu_length_mm, wattage, tdp,
+  } = data as Record<string, unknown>;
+
+  const rows = (await _sql`
+    INSERT INTO components (
+      name, brand, category, socket, supported_ram_types,
+      max_ram_frequency, ram_type, frequency_mhz, length_mm,
+      max_gpu_length_mm, wattage, tdp
+    ) VALUES (
+      ${name as string},
+      ${(brand ?? null) as string | null},
+      ${category as string},
+      ${(socket ?? null) as string | null},
+      ${(supported_ram_types ?? null) as string[] | null},
+      ${(max_ram_frequency ?? null) as number | null},
+      ${(ram_type ?? null) as string | null},
+      ${(frequency_mhz ?? null) as number | null},
+      ${(length_mm ?? null) as number | null},
+      ${(max_gpu_length_mm ?? null) as number | null},
+      ${(wattage ?? null) as number | null},
+      ${(tdp ?? null) as number | null}
+    )
+    RETURNING *
+  `) as Component[];
+
+  return rows[0];
+}
+
+/**
+ * Updates an existing component and returns the updated row.
+ * Throws COMPONENT_NOT_FOUND if no component matches the id.
+ *
+ * @param id   - The component's primary key
+ * @param data - Validated component data (from Zod schema)
+ */
+async function updateComponent(id: number, data: Record<string, unknown>): Promise<Component> {
+  const {
+    name, brand, category, socket, supported_ram_types,
+    max_ram_frequency, ram_type, frequency_mhz, length_mm,
+    max_gpu_length_mm, wattage, tdp,
+  } = data as Record<string, unknown>;
+
+  const rows = (await _sql`
+    UPDATE components SET
+      name                = ${name as string},
+      brand               = ${(brand ?? null) as string | null},
+      category            = ${category as string},
+      socket              = ${(socket ?? null) as string | null},
+      supported_ram_types = ${(supported_ram_types ?? null) as string[] | null},
+      max_ram_frequency   = ${(max_ram_frequency ?? null) as number | null},
+      ram_type            = ${(ram_type ?? null) as string | null},
+      frequency_mhz       = ${(frequency_mhz ?? null) as number | null},
+      length_mm           = ${(length_mm ?? null) as number | null},
+      max_gpu_length_mm   = ${(max_gpu_length_mm ?? null) as number | null},
+      wattage             = ${(wattage ?? null) as number | null},
+      tdp                 = ${(tdp ?? null) as number | null},
+      updated_at          = NOW()
+    WHERE id = ${id}
+    RETURNING *
+  `) as Component[];
+
+  if (rows.length === 0) {
+    const err = new Error(`Component with id ${id} not found`);
+    (err as NodeJS.ErrnoException).code = 'COMPONENT_NOT_FOUND';
+    throw err;
+  }
+
+  return rows[0];
+}
+
+/**
+ * Deletes a component by ID.
+ * Throws COMPONENT_NOT_FOUND if no component matches.
+ *
+ * @param id - The component's primary key
+ */
+async function deleteComponent(id: number): Promise<void> {
+  const rows = (await _sql`
+    DELETE FROM components
+    WHERE id = ${id}
+    RETURNING id
+  `) as { id: number }[];
+
+  if (rows.length === 0) {
+    const err = new Error(`Component with id ${id} not found`);
+    (err as NodeJS.ErrnoException).code = 'COMPONENT_NOT_FOUND';
+    throw err;
+  }
+}
+
+export { getComponents, getComponentById, getPricesByComponentId, createComponent, updateComponent, deleteComponent };

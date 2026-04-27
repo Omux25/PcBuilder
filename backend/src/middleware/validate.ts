@@ -44,7 +44,7 @@ export async function validateComponent(c: Context, next: Next): Promise<Respons
       ? (body as Record<string, unknown>).category
       : undefined;
 
-  if (typeof category !== 'string' || !(category in componentSchemas)) {
+  if (typeof category !== 'string' || !Object.hasOwn(componentSchemas, category)) {
     return c.json(
       {
         error: {
