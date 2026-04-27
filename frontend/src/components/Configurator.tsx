@@ -1,10 +1,10 @@
 /**
- * Configurator — 7 component slots, each with a category selector.
- * Fetches components from the API and updates the build state.
+ * Configurator — 8 component slots using the searchable ComponentPicker.
+ * Shows a compact summary card when a component is selected.
  */
 
-import { useState, useEffect } from 'react';
-import { getComponents } from '../api';
+import { Link } from 'react-router-dom';
+import { ComponentPicker } from './ComponentPicker';
 import type { Component, ComponentCategory, BuildConfig } from '../types';
 import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
 import styles from './Configurator.module.css';
@@ -15,21 +15,33 @@ interface Props {
 }
 
 export function Configurator({ build, onChange }: Props) {
+  function handleSelect(category: ComponentCategory, component: Component | null) {
+    const next = { ...build };
+    if (component) next[category] = component;
+    else delete next[category];
+    onChange(next);
+  }
+
   return (
     <section className={styles.configurator}>
-      <h2 className={styles.title}>Configurer votre PC</h2>
+      <div className={styles.header}>
+        <h2 className={styles.title}>Configurer votre PC</h2>
+        <button
+          className={styles.resetBtn}
+          onClick={() => onChange({})}
+          disabled={Object.keys(build).length === 0}
+        >
+          Réinitialiser
+        </button>
+      </div>
+
       <div className={styles.slots}>
         {CATEGORY_ORDER.map((cat) => (
           <Slot
             key={cat}
             category={cat}
             selected={build[cat] ?? null}
-            onSelect={(component) => {
-              const next = { ...build };
-              if (component) next[cat] = component;
-              else delete next[cat];
-              onChange(next);
-            }}
+            onSelect={(c) => handleSelect(cat, c)}
           />
         ))}
       </div>
@@ -46,55 +58,36 @@ interface SlotProps {
 }
 
 function Slot({ category, selected, onSelect }: SlotProps) {
-  const [components, setComponents] = useState<Component[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
-    getComponents(category)
-      .then(setComponents)
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [category]);
-
   return (
     <div className={styles.slot}>
-      <label className={styles.label} htmlFor={`slot-${category}`}>
-        {CATEGORY_LABELS[category]}
-      </label>
+      <div className={styles.slotHeader}>
+        <span className={styles.label}>{CATEGORY_LABELS[category]}</span>
+        {selected && (
+          <Link
+            to={`/components/${selected.slug}`}
+            className={styles.detailLink}
+            title="Voir les détails et les prix"
+          >
+            Détails →
+          </Link>
+        )}
+      </div>
 
-      {loading && <p className={styles.hint}>Chargement…</p>}
-      {error   && <p className={styles.error}>Erreur: {error}</p>}
+      <ComponentPicker
+        category={category}
+        selected={selected}
+        onSelect={onSelect}
+      />
 
-      {!loading && !error && (
-        <select
-          id={`slot-${category}`}
-          value={selected?.id ?? ''}
-          onChange={(e) => {
-            const id = Number(e.target.value);
-            onSelect(components.find((c) => c.id === id) ?? null);
-          }}
-          aria-label={`Sélectionner ${CATEGORY_LABELS[category]}`}
-        >
-          <option value=''>— Aucun —</option>
-          {components.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.brand ? `${c.brand} ` : ''}{c.name}
-            </option>
-          ))}
-        </select>
-      )}
-
+      {/* Compact summary card when selected */}
       {selected && (
-        <button
-          className={styles.clear}
-          onClick={() => onSelect(null)}
-          aria-label={`Retirer ${CATEGORY_LABELS[category]}`}
-        >
-          ✕
-        </button>
+        <div className={styles.summaryCard}>
+          <span className={styles.cardBrand}>{selected.brand}</span>
+          <span className={styles.cardName}>{selected.name}</span>
+          {selected.tdp && (
+            <span className={styles.cardSpec}>{selected.tdp}W TDP</span>
+          )}
+        </div>
       )}
     </div>
   );
