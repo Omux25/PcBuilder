@@ -1,0 +1,111 @@
+/**
+ * Property-Based Tests — Scraper error isolation (Task 10.6)
+ *
+ * Property: when one scraper fails, the session still completes and
+ * logs a session-complete entry — for any error message.
+ *
+ * Requirements: 6.4, 9.2
+ */
+
+// @ts-nocheck
+import { describe, test, beforeEach, afterAll } from 'bun:test';
+import * as fc from 'fast-check';
+import { runScrapingSession } from '../scheduler.js';
+import { setSql as setLoggerSql, resetSql as resetLoggerSql } from '../utils/logger.js';
+import { setSql as setAggregatorSql, resetSql as resetAggregatorSql } from '../aggregator.js';
+import { setFetch, resetFetchAndLoad } from '../scrapers/baseScraper.js';
+
+const logEntries: Array<{ level: string; message: string }> = [];
+
+function makeLoggerSql() {
+  return (_strings: TemplateStringsArray, ...values: unknown[]) => {
+    logEntries.push({ level: values[0] as string, message: values[2] as string });
+    return Promise.resolve([]);
+  };
+}
+
+function makeAggregatorSql() {
+  return (_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]);
+}
+
+beforeEach(() => {
+  logEntries.length = 0;
+  setLoggerSql(makeLoggerSql());
+  setAggregatorSql(makeAggregatorSql());
+});
+
+afterAll(() => {
+  resetLoggerSql();
+  resetAggregatorSql();
+  resetFetchAndLoad();
+});
+
+describe('PBT 10.6 — scraper error isolation', () => {
+  test('session always completes even when fetch throws any error message', async () => {
+    await fc.assert(fc.asyncProperty(
+      fc.string({ minLength: 1, maxLength: 200 }),
+      async (errorMessage) => {
+        logEntries.length = 0;
+        setFetch((_url: string) => Promise.reject(new Error(errorMessage)));
+
+        await runScrapingSession();
+
+        // Session must always log a "complete" entry
+        const hasComplete = logEntries.some(
+          e => e.level === 'INFO' && e.message.includes('complete'),
+        );
+        return hasComplete;
+      },
+    ));
+  });
+
+  test('session always logs at least one ERROR entry when fetch fails', async () => {
+    await fc.assert(fc.asyncProperty(
+      fc.string({ minLength: 1, maxLength: 200 }),
+      async (errorMessage) => {
+        logEntries.length = 0;
+        setFetch((_url: string) => Promise.reject(new Error(errorMessage)));
+
+        await runScrapingSession();
+
+        const hasError = logEntries.some(e => e.level === 'ERROR');
+        return hasError;
+      },
+    ));
+  });
+
+  test('session never throws regardless of fetch error', async () => {
+    await fc.assert(fc.asyncProperty(
+      fc.string({ minLength: 1, maxLength: 200 }),
+      async (errorMessage) => {
+        logEntries.length = 0;
+        setFetch((_url: string) => Promise.reject(new Error(errorMessage)));
+
+        let threw = false;
+        try {
+          await runScrapingSession();
+        } catch {
+          threw = true;
+        }
+        return !threw;
+      },
+    ));
+  });
+
+  test('session always logs started before complete', async () => {
+    await fc.assert(fc.asyncProperty(
+      fc.string({ minLength: 1, maxLength: 200 }),
+      async (errorMessage) => {
+        logEntries.length = 0;
+        setFetch((_url: string) => Promise.reject(new Error(errorMessage)));
+
+        await runScrapingSession();
+
+        const startedIdx  = logEntries.findIndex(e => e.message.includes('started'));
+        const completeIdx = logEntries.findIndex(e => e.message.includes('complete'));
+
+        return startedIdx !== -1 && completeIdx !== -1 && startedIdx < completeIdx;
+      },
+    ));
+  });
+});
