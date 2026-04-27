@@ -9,6 +9,7 @@ import { logger } from './utils/logger.js';
 import { aggregate } from './aggregator.js';
 import { Site1Scraper } from './scrapers/site1Scraper.js';
 import { Site2Scraper } from './scrapers/site2Scraper.js';
+import { UltraPcScraper } from './scrapers/ultrapcScraper.js';
 import type { ScrapedPrice } from './scrapers/baseScraper.js';
 
 export async function runScrapingSession(): Promise<void> {
@@ -37,6 +38,18 @@ export async function runScrapingSession(): Promise<void> {
     await logger.error(
       `Site2 scraping failed: ${err instanceof Error ? err.message : String(err)}`,
       site2.siteName,
+    );
+  }
+
+  const ultrapc = new UltraPcScraper();
+  try {
+    const prices = await ultrapc.scrapeAllCategories();
+    allPrices.push(...prices);
+    await logger.info(`UltraPC: scraped ${prices.length} price(s)`, ultrapc.siteName);
+  } catch (err) {
+    await logger.error(
+      `UltraPC scraping failed: ${err instanceof Error ? err.message : String(err)}`,
+      ultrapc.siteName,
     );
   }
 
