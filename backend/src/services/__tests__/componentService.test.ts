@@ -99,60 +99,67 @@ afterAll(() => {
 
 // ── getComponents ────────────────────────────────────────────────────────────
 
+// Helper: add total_count field that getComponents now expects from the DB
+function withCount(rows: unknown[]) {
+  return rows.map((r: any) => ({ ...r, total_count: String(rows.length) }));
+}
+
 describe('getComponents', () => {
   test('with no filters returns all components', async () => {
-    setSql(makeMockSql(MOCK_COMPONENTS));
+    setSql(makeMockSql(withCount(MOCK_COMPONENTS)));
     const result = await getComponents();
-    expect(result).toHaveLength(3);
-    expect(result[0].name).toBe('AMD Ryzen 9 7950X');
-    expect(result[1].name).toBe('ASUS ROG STRIX B650');
-    expect(result[2].name).toBe('RTX 4090');
+    expect(result.components).toHaveLength(3);
+    expect(result.total).toBe(3);
+    expect(result.components[0].name).toBe('AMD Ryzen 9 7950X');
+    expect(result.components[1].name).toBe('ASUS ROG STRIX B650');
+    expect(result.components[2].name).toBe('RTX 4090');
   });
 
   test('with category filter returns only matching components', async () => {
     const cpuOnly = MOCK_COMPONENTS.filter(c => c.category === 'cpu');
-    setSql(makeMockSql(cpuOnly));
+    setSql(makeMockSql(withCount(cpuOnly)));
 
     const result = await getComponents({ category: 'cpu' });
-    expect(result).toHaveLength(1);
-    expect(result[0].category).toBe('cpu');
-    expect(result[0].name).toBe('AMD Ryzen 9 7950X');
+    expect(result.components).toHaveLength(1);
+    expect(result.components[0].category).toBe('cpu');
+    expect(result.components[0].name).toBe('AMD Ryzen 9 7950X');
   });
 
   test('with socket filter returns only matching components', async () => {
     const am5Only = MOCK_COMPONENTS.filter(c => c.socket === 'AM5');
-    setSql(makeMockSql(am5Only));
+    setSql(makeMockSql(withCount(am5Only)));
 
     const result = await getComponents({ socket: 'AM5' });
-    expect(result).toHaveLength(2);
-    result.forEach(c => expect(c.socket).toBe('AM5'));
+    expect(result.components).toHaveLength(2);
+    result.components.forEach(c => expect(c.socket).toBe('AM5'));
   });
 
   test('with ram_type filter returns only matching components', async () => {
-    // No RAM components in mock data — DB would return empty
     setSql(makeMockSql([]));
 
     const result = await getComponents({ ram_type: 'DDR5' });
-    expect(Array.isArray(result)).toBe(true);
-    expect(result).toHaveLength(0);
+    expect(Array.isArray(result.components)).toBe(true);
+    expect(result.components).toHaveLength(0);
+    expect(result.total).toBe(0);
   });
 
   test('with category + socket filters returns matching components', async () => {
     const filtered = MOCK_COMPONENTS.filter(
       c => c.category === 'cpu' && c.socket === 'AM5'
     );
-    setSql(makeMockSql(filtered));
+    setSql(makeMockSql(withCount(filtered)));
 
     const result = await getComponents({ category: 'cpu', socket: 'AM5' });
-    expect(result).toHaveLength(1);
-    expect(result[0].category).toBe('cpu');
-    expect(result[0].socket).toBe('AM5');
+    expect(result.components).toHaveLength(1);
+    expect(result.components[0].category).toBe('cpu');
+    expect(result.components[0].socket).toBe('AM5');
   });
 
   test('returns empty array when no components match', async () => {
     setSql(makeMockSql([]));
     const result = await getComponents({ category: 'storage' });
-    expect(result).toHaveLength(0);
+    expect(result.components).toHaveLength(0);
+    expect(result.total).toBe(0);
   });
 });
 
