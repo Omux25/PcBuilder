@@ -24,8 +24,8 @@ PcBuilder/
 │   │   │   └── componentService.ts     ← DB queries for components ✅
 │   │   ├── schemas/            ← Zod schemas per component category
 │   │   │   └── componentSchemas.ts ✅
-│   │   ├── app.ts              ← Hono app wiring (planned)
-│   │   └── server.ts           ← Entry point — Bun.serve() (planned)
+│   │   ├── app.ts              ← Hono app wiring ✅
+│   │   └── server.ts           ← Entry point — Bun.serve() ✅
 │   ├── scraper/                ← Price scraping system (planned)
 │   │   ├── scrapers/           ← One scraper per retailer site
 │   │   ├── aggregator.ts       ← UPSERT prices into database
@@ -114,7 +114,7 @@ Each scraper runs inside a `try/catch`. If one fails, the error is logged and th
 | POST | `/api/admin/components` | Create a component |
 | PUT | `/api/admin/components/:id` | Update a component |
 | DELETE | `/api/admin/components/:id` | Delete a component |
-| GET | `/api/admin/logs` | Query scraper logs |
+| GET | `/api/admin/logs` | Query scraper logs — optional `?level=`, `?site=`, `?limit=` filters |
 
 ## Error response format
 

@@ -6,18 +6,18 @@ Every technology choice in this project, and why it was chosen over the alternat
 
 | Layer | Technology | Version |
 |---|---|---|
-| Runtime | Bun (in WSL2) | 1.3+ |
-| Backend framework | Hono | 4.4.2 |
-| Database | PostgreSQL | latest |
+| Runtime | Bun (in WSL2) | 1.3.13 |
+| Backend framework | Hono | 4.12.12 |
+| Database | PostgreSQL | 16 |
 | DB client | Bun.sql (built-in) | — |
-| Validation | Zod | 3.23.8 |
-| Auth | JWT + bcrypt | jsonwebtoken 9.0.2, bcrypt 5.1.1 |
-| Scraping | cheerio + undici | cheerio 1.0.0, undici 6.19.2 |
+| Validation | Zod | 4.3.6 |
+| Auth | JWT + bcrypt | jsonwebtoken 9.0.2, bcrypt 6.0.0 |
+| Scraping | cheerio + undici | cheerio 1.0.0, undici 8.1.0 |
 | Scheduler | Bun.cron() (built-in) | — |
 | Testing | bun test (built-in) | — |
-| Property testing | fast-check | 3.20.0 |
+| Property testing | fast-check | 4.7.0 |
 | Language | TypeScript | ESNext |
-| Frontend framework | React + Vite | — |
+| Frontend framework | React + Vite | React 19, Vite 8 |
 
 ---
 

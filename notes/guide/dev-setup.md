@@ -1,117 +1,143 @@
 # Dev Setup
 
-How to run the server, tests, and migrations locally.
+How to run the full stack locally (backend + frontend + database).
+
+---
 
 ## Prerequisites
 
-- Windows with WSL2 installed (Ubuntu distro)
+- Windows 11 with WSL2 (Ubuntu distro)
 - Bun installed in WSL2 at `~/.bun/bin/bun`
-- PostgreSQL running in WSL2
+- PostgreSQL installed in WSL2 (`sudo apt install postgresql`)
 - VS Code with the WSL extension
 
-## Running tests
+---
 
-All tests run inside WSL2. From PowerShell:
+## 1. Start PostgreSQL
+
+PostgreSQL runs on port **5433** in this environment (not the default 5432).
+
+```powershell
+# Start the service (run once per WSL2 session)
+wsl -d Ubuntu -- bash -c "echo '2525' | sudo -S service postgresql start"
+```
+
+To verify it's running:
+```powershell
+wsl -d Ubuntu -- bash -c "ss -tlnp | grep 5433"
+```
+
+---
+
+## 2. Environment variables
+
+The `.env` file is already created at `backend/.env`. It contains:
+
+```env
+PORT=3000
+PGHOST=127.0.0.1
+PGPORT=5433
+PGDATABASE=pc_builder
+PGUSER=pc_builder_user
+PGPASSWORD=pc_builder_pass_2024
+JWT_SECRET=dev-secret-change-in-production
+JWT_EXPIRES_IN=8h
+```
+
+Bun loads `.env` automatically — no extra steps needed.
+
+---
+
+## 3. Run migrations (first time only)
+
+```powershell
+wsl -d Ubuntu -- bash -c "echo '2525' | sudo -S -u postgres psql -d pc_builder -f /mnt/c/Headquarters/Projects/PcBuilder/backend/src/db/migrations/001_create_components.sql"
+wsl -d Ubuntu -- bash -c "echo '2525' | sudo -S -u postgres psql -d pc_builder -f /mnt/c/Headquarters/Projects/PcBuilder/backend/src/db/migrations/002_create_retailers.sql"
+wsl -d Ubuntu -- bash -c "echo '2525' | sudo -S -u postgres psql -d pc_builder -f /mnt/c/Headquarters/Projects/PcBuilder/backend/src/db/migrations/003_create_prices.sql"
+wsl -d Ubuntu -- bash -c "echo '2525' | sudo -S -u postgres psql -d pc_builder -f /mnt/c/Headquarters/Projects/PcBuilder/backend/src/db/migrations/004_create_scraper_logs.sql"
+wsl -d Ubuntu -- bash -c "echo '2525' | sudo -S -u postgres psql -d pc_builder -f /mnt/c/Headquarters/Projects/PcBuilder/backend/src/db/migrations/005_create_admins.sql"
+```
+
+---
+
+## 4. Seed sample data (first time only)
+
+```powershell
+wsl -d Ubuntu -- bash -c "echo '2525' | sudo -S -u postgres psql -d pc_builder -f /mnt/c/Headquarters/Projects/PcBuilder/backend/seed.sql"
+```
+
+This inserts: 3 retailers, 29 components (5 CPUs, 4 motherboards, 5 GPUs, 4 RAM, 3 storage, 4 PSUs, 4 cases), sample prices, and an admin account.
+
+Admin credentials: `admin` / `admin123`
+
+---
+
+## 5. Start the backend
+
+```powershell
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun --hot src/server.ts"
+```
+
+Expected output: `Server running on http://localhost:3000`
+
+`--hot` enables hot reload — the server restarts automatically on file save.
+
+---
+
+## 6. Start the frontend
+
+Open a second terminal:
+
+```powershell
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/frontend && ~/.bun/bin/bun run dev"
+```
+
+Expected output: `VITE ready — Local: http://localhost:5173/`
+
+Then open **http://localhost:5173** in your browser.
+
+The Vite dev server proxies all `/api` requests to the backend automatically (configured in `vite.config.ts`).
+
+---
+
+## 7. Run tests
 
 ```powershell
 wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun test 2>&1"
 ```
 
-From inside WSL2 directly:
+Expected: **229 pass, 0 fail** across 23 files.
 
-```bash
-cd /mnt/c/Headquarters/Projects/PcBuilder/backend
-~/.bun/bin/bun test
+Test categories:
+- Unit tests — compatibility engine, middleware, services, routes
+- Integration tests — edge cases (404, 401, validation), scraping cycle
+- Property-based tests (fast-check) — all 11 correctness properties
+
+---
+
+## 8. Install dependencies
+
+```powershell
+# Backend
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun install"
+
+# Frontend
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/frontend && ~/.bun/bin/bun install"
 ```
 
-Expected output when all tests pass:
-
-```
-50 pass, 0 fail
-114 expect() calls
-Ran 50 tests across 3 files
-```
-
-### Test files
-
-| File | Tests | What it covers |
-|---|---|---|
-| `src/__tests__/compatibilityService.test.ts` | 24 | All 6 compatibility rules and edge cases |
-| `src/middleware/__tests__/auth.test.ts` | 7 | JWT middleware — missing/expired/invalid tokens |
-| `src/middleware/__tests__/validate.test.ts` | 19 | Zod validation — all 7 categories, missing fields, invalid enums |
-
-## Running the development server
-
-> The server entry point (`src/server.ts`) has not been created yet. Once it exists:
-
-```bash
-# In WSL2
-cd /mnt/c/Headquarters/Projects/PcBuilder/backend
-~/.bun/bin/bun --hot src/server.ts
-```
-
-`--hot` enables hot reload — the server restarts automatically when you save a file.
-
-## Running migrations
-
-Run these once to set up the database. Safe to re-run (uses `IF NOT EXISTS`).
-
-```bash
-# In WSL2
-psql -U pc_builder_user -d pc_builder -f backend/src/db/migrations/001_create_components.sql
-psql -U pc_builder_user -d pc_builder -f backend/src/db/migrations/002_create_retailers.sql
-psql -U pc_builder_user -d pc_builder -f backend/src/db/migrations/003_create_prices.sql
-psql -U pc_builder_user -d pc_builder -f backend/src/db/migrations/004_create_scraper_logs.sql
-psql -U pc_builder_user -d pc_builder -f backend/src/db/migrations/005_create_admins.sql
-```
-
-## Environment variables
-
-Copy `.env.example` to `.env` and fill in the values:
-
-```bash
-cp backend/.env.example backend/.env
-```
-
-Required variables:
-
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `JWT_SECRET` | Secret key for signing JWT tokens — use a long random string |
-| `JWT_EXPIRES_IN` | Token expiry duration, e.g. `8h` |
-
-> Never commit `.env` to Git. It is already in `.gitignore`.
-
-## Installing dependencies
-
-```bash
-# In WSL2
-cd /mnt/c/Headquarters/Projects/PcBuilder/backend
-~/.bun/bin/bun install
-```
+---
 
 ## Why test files show errors in VS Code
 
-Test files import from `bun:test`:
+Test files import from `bun:test` which is only available inside Bun (WSL2). VS Code's TypeScript server runs on Windows where Bun isn't installed. Test directories are excluded from `tsconfig.json` to prevent red squiggles — the tests still run perfectly in WSL2.
 
-```typescript
-import { test, expect, describe } from 'bun:test';
-```
-
-`bun:test` is only available when running inside Bun (WSL2). VS Code's TypeScript server runs on Windows where Bun isn't installed. To prevent red squiggles, test directories are excluded from the main `tsconfig.json`:
-
-```json
-"exclude": ["node_modules", "src/**/__tests__/**", "src/__tests__/**"]
-```
-
-The tests still run perfectly in WSL2 — this only affects the editor's type checking.
+---
 
 ## Regenerating UML diagrams
 
 ```bash
-# From the project root (requires Java)
-java -DPLANTUML_LIMIT_SIZE=8192 -jar docs/plantuml.jar -tpng notes/diagrams/*.puml -o "../../docs/uml"
+# From the project root (requires Java + plantuml.jar)
+java -DPLANTUML_LIMIT_SIZE=8192 -jar plantuml.jar -tpng notes/diagrams/*.puml -o rendered
 ```
 
-See [../diagrams/README.md](../diagrams/README.md) for more details.
+See [../diagrams/README.md](../diagrams/README.md) for details.
