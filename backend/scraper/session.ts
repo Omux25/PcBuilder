@@ -11,6 +11,7 @@ import { Site1Scraper } from './scrapers/site1Scraper.js';
 import { Site2Scraper } from './scrapers/site2Scraper.js';
 import { UltraPcScraper } from './scrapers/ultrapcScraper.js';
 import { NextLevelScraper } from './scrapers/nextlevelScraper.js';
+import { SetupGameScraper } from './scrapers/setupgameScraper.js';
 import type { ScrapedPrice } from './scrapers/baseScraper.js';
 
 export async function runScrapingSession(): Promise<void> {
@@ -63,6 +64,18 @@ export async function runScrapingSession(): Promise<void> {
     await logger.error(
       `NextLevel scraping failed: ${err instanceof Error ? err.message : String(err)}`,
       nextlevel.siteName,
+    );
+  }
+
+  const setupgame = new SetupGameScraper();
+  try {
+    const prices = await setupgame.scrapeAllCategories();
+    allPrices.push(...prices);
+    await logger.info(`SetupGame: scraped ${prices.length} price(s)`, setupgame.siteName);
+  } catch (err) {
+    await logger.error(
+      `SetupGame scraping failed: ${err instanceof Error ? err.message : String(err)}`,
+      setupgame.siteName,
     );
   }
 

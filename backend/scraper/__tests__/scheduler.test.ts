@@ -5,6 +5,7 @@ import { setSql as setLoggerSql, resetSql as resetLoggerSql } from '../utils/log
 import { setSql as setAggregatorSql, resetSql as resetAggregatorSql } from '../aggregator.js';
 import { setFetch, resetFetchAndLoad, setRetryDelay } from '../scrapers/baseScraper.js';
 import { setUltraPcFetch, resetUltraPcFetch } from '../scrapers/ultrapcScraper.js';
+import { setSetupGameFetch, resetSetupGameFetch } from '../scrapers/setupgameScraper.js';
 
 // ── Captured state ────────────────────────────────────────────────────────────
 
@@ -73,7 +74,12 @@ beforeEach(() => {
   setAggregatorSql(makeAggregatorSql());
   setFetch(makeEmptyPageFetch());
   setUltraPcFetch(makeEmptyUltraPcFetch());
-  setRetryDelay(0); // no waiting in tests
+  setSetupGameFetch((_url: string) => Promise.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve([]),
+  }));
+  setRetryDelay(0);
 });
 
 afterAll(() => {
@@ -81,6 +87,7 @@ afterAll(() => {
   resetAggregatorSql();
   resetFetchAndLoad();
   resetUltraPcFetch();
+  resetSetupGameFetch();
 });
 
 // ── Session lifecycle ─────────────────────────────────────────────────────────
