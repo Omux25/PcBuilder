@@ -41,6 +41,7 @@ export function Configurator({ build, onChange }: Props) {
             key={cat}
             category={cat}
             selected={build[cat] ?? null}
+            build={build}
             onSelect={(c) => handleSelect(cat, c)}
           />
         ))}
@@ -54,10 +55,11 @@ export function Configurator({ build, onChange }: Props) {
 interface SlotProps {
   category: ComponentCategory;
   selected: Component | null;
+  build: BuildConfig;
   onSelect: (component: Component | null) => void;
 }
 
-function Slot({ category, selected, onSelect }: SlotProps) {
+function Slot({ category, selected, build, onSelect }: SlotProps) {
   return (
     <div className={styles.slot}>
       <div className={styles.slotHeader}>
@@ -76,6 +78,7 @@ function Slot({ category, selected, onSelect }: SlotProps) {
       <ComponentPicker
         category={category}
         selected={selected}
+        build={build}
         onSelect={onSelect}
       />
 

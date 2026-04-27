@@ -43,6 +43,37 @@ export interface GetComponentsParams {
   limit?: number;
 }
 
+export interface SmartComponent extends Component {
+  lowest_price: number | null;
+  in_stock: boolean;
+  compatibility: 'compatible' | 'incompatible' | 'unknown';
+  compatibility_issues: string[];
+}
+
+export interface SmartSearchResult {
+  components: SmartComponent[];
+  total: number;
+}
+
+/** Smart search — returns components sorted by compatibility, stock, and price. */
+export async function smartSearch(params: {
+  category: ComponentCategory;
+  search?: string;
+  build?: BuildConfig;
+  page?: number;
+  limit?: number;
+}): Promise<SmartSearchResult> {
+  const qs = new URLSearchParams();
+  qs.set('category', params.category);
+  if (params.search)  qs.set('search', params.search);
+  if (params.page)    qs.set('page', String(params.page));
+  if (params.limit)   qs.set('limit', String(params.limit));
+  if (params.build && Object.keys(params.build).length > 0) {
+    qs.set('build', JSON.stringify(params.build));
+  }
+  return request<SmartSearchResult>(`/components/smart-search?${qs.toString()}`);
+}
+
 /** Fetch paginated components with optional filters. */
 export async function getComponents(params: GetComponentsParams = {}): Promise<ComponentListResult> {
   const qs = new URLSearchParams();

@@ -14,6 +14,7 @@ import { pricesRouter } from './routes/prices.js';
 import { compatibilityRouter } from './routes/compatibility.js';
 import { presetsRouter } from './routes/presets.js';
 import { healthRouter } from './routes/health.js';
+import { smartSearchRouter } from './routes/smartSearch.js';
 import { adminComponentsRouter } from './routes/admin/components.js';
 import { adminLogsRouter } from './routes/admin/logs.js';
 import { adminDashboardRouter } from './routes/admin/dashboard.js';
@@ -40,6 +41,7 @@ app.route('/api/components', pricesRouter);          // GET /api/components/:id/
 app.route('/api/compatibility', compatibilityRouter);
 app.route('/api/builds/presets', presetsRouter);
 app.route('/api/health', healthRouter);
+app.route('/api/components/smart-search', smartSearchRouter);
 
 // ── Protected routes ──────────────────────────────────────────────────────────
 
