@@ -47,31 +47,33 @@ describe('GET /api/components', () => {
     resetSql();
   });
 
+  // getComponents now returns { components, total } — mock must include total_count
+  function withCount(rows: unknown[]) {
+    return rows.map((r: any) => ({ ...r, total_count: String(rows.length) }));
+  }
+
   test('returns all components when no filters provided', async () => {
-    setSql(async () => [mockComponent, mockComponent2]);
+    setSql(async () => withCount([mockComponent, mockComponent2]));
 
     const res = await app.request('/api/components');
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body).toHaveLength(2);
-    expect(body[0].id).toBe(1);
-    expect(body[1].id).toBe(2);
+    expect(body.components).toHaveLength(2);
+    expect(body.total).toBe(2);
+    expect(body.components[0].id).toBe(1);
+    expect(body.components[1].id).toBe(2);
   });
 
   test('passes category filter to service', async () => {
-    let capturedQuery = '';
-    setSql(async (strings) => {
-      capturedQuery = strings.join('');
-      return [mockComponent];
-    });
+    setSql(async () => withCount([mockComponent]));
 
     const res = await app.request('/api/components?category=cpu');
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body).toHaveLength(1);
-    expect(body[0].category).toBe('cpu');
+    expect(body.components).toHaveLength(1);
+    expect(body.components[0].category).toBe('cpu');
   });
 
   test('returns empty array when no components match', async () => {
@@ -81,17 +83,18 @@ describe('GET /api/components', () => {
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body).toEqual([]);
+    expect(body.components).toEqual([]);
+    expect(body.total).toBe(0);
   });
 
   test('returns 200 with array shape', async () => {
-    setSql(async () => [mockComponent]);
+    setSql(async () => withCount([mockComponent]));
 
     const res = await app.request('/api/components');
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(Array.isArray(body)).toBe(true);
+    expect(Array.isArray(body.components)).toBe(true);
   });
 });
 

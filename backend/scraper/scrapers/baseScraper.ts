@@ -34,6 +34,8 @@ export interface ScrapedPrice {
   in_stock: boolean;
   /** Direct URL to the product page on the retailer site */
   product_url: string;
+  /** Optional: scraped product name — used for unmatched_listings */
+  product_name?: string;
 }
 
 // ── Dependency injection ──────────────────────────────────────────────────────
@@ -44,6 +46,7 @@ type LoadFn  = (html: string) => CheerioAPI;
 
 let _fetch: FetchFn = fetch as unknown as FetchFn;
 let _load:  LoadFn  = cheerio.load;
+let _retryDelayMs: number | null = null; // null = use default exponential backoff
 
 /** Replace the fetch function — used in unit tests. */
 export function setFetch(mockFetch: FetchFn): void {
@@ -55,10 +58,16 @@ export function setLoad(mockLoad: LoadFn): void {
   _load = mockLoad;
 }
 
+/** Override retry delay — set to 0 in tests to avoid waiting. */
+export function setRetryDelay(ms: number | null): void {
+  _retryDelayMs = ms;
+}
+
 /** Reset both to their real implementations. */
 export function resetFetchAndLoad(): void {
   _fetch = fetch as unknown as FetchFn;
   _load  = cheerio.load;
+  _retryDelayMs = null;
 }
 
 // ── Base class ────────────────────────────────────────────────────────────────
@@ -72,25 +81,43 @@ export abstract class BaseScraper {
   }
 
   /**
-   * Fetches the target URL, parses the HTML, and returns extracted prices.
-   *
-   * Throws on HTTP errors (non-2xx) or network failures.
-   * The scheduler catches these and logs them — one broken site never
-   * stops the rest of the session.
+   * Fetches the target URL with exponential backoff retry (up to 3 attempts).
+   * Only retries on network/timeout errors — HTTP errors (4xx/5xx) throw immediately.
    *
    * @param url - The page URL to scrape
    */
   async scrape(url: string): Promise<ScrapedPrice[]> {
-    const response = await _fetch(url);
+    const MAX_RETRIES = 3;
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} fetching ${url}`);
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const response = await _fetch(url);
+
+        // HTTP errors are not retried — throw immediately
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status} fetching ${url}`);
+        }
+
+        const html = await response.text();
+        const $    = _load(html);
+        return this.extractPrices($);
+      } catch (err) {
+        const isHttpError = err instanceof Error && err.message.startsWith('HTTP ');
+
+        // Don't retry HTTP errors — only network/timeout failures
+        if (isHttpError || attempt === MAX_RETRIES) {
+          throw err;
+        }
+
+        const delayMs = _retryDelayMs !== null ? _retryDelayMs : Math.pow(2, attempt) * 1000; // 2s, 4s
+        console.warn(
+          `[${this.siteName}] Attempt ${attempt}/${MAX_RETRIES} failed: ${(err as Error).message}. Retrying in ${delayMs}ms...`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
     }
 
-    const html = await response.text();
-    const $    = _load(html);
-
-    return this.extractPrices($);
+    throw new Error('Unreachable');
   }
 
   /**

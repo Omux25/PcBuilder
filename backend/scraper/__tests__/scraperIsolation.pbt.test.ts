@@ -13,7 +13,7 @@ import * as fc from 'fast-check';
 import { runScrapingSession } from '../scheduler.js';
 import { setSql as setLoggerSql, resetSql as resetLoggerSql } from '../utils/logger.js';
 import { setSql as setAggregatorSql, resetSql as resetAggregatorSql } from '../aggregator.js';
-import { setFetch, resetFetchAndLoad } from '../scrapers/baseScraper.js';
+import { setFetch, resetFetchAndLoad, setRetryDelay } from '../scrapers/baseScraper.js';
 
 const logEntries: Array<{ level: string; message: string }> = [];
 
@@ -25,13 +25,26 @@ function makeLoggerSql() {
 }
 
 function makeAggregatorSql() {
-  return (_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]);
+  return (strings: TemplateStringsArray, ..._values: unknown[]) => {
+    const query = strings.join('?');
+    // scraper_mappings lookup → return empty (unmatched path, no DB writes needed)
+    if (query.includes('scraper_mappings')) {
+      return Promise.resolve([]);
+    }
+    // unmatched_listings insert → success
+    if (query.includes('unmatched_listings')) {
+      return Promise.resolve([]);
+    }
+    // Any other query → empty result
+    return Promise.resolve([]);
+  };
 }
 
 beforeEach(() => {
   logEntries.length = 0;
   setLoggerSql(makeLoggerSql());
   setAggregatorSql(makeAggregatorSql());
+  setRetryDelay(0); // no waiting in tests
 });
 
 afterAll(() => {
