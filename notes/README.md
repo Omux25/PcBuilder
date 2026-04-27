@@ -18,6 +18,14 @@
 
 ---
 
+## Roadmap
+
+| File | What it contains |
+|---|---|
+| [roadmap.md](roadmap.md) | All tasks, their status, and what to work on next |
+
+---
+
 ## Spec Documents
 
 The original project specification (Cahier des Charges) written for EMSI Orangers. See [spec/README.md](spec/README.md) for how to regenerate the PDFs.
@@ -80,5 +88,9 @@ One file per completed task. Each file explains what was built, why it matters, 
 | [task-explainers/task-04-zod-schemas-middleware.md](task-explainers/task-04-zod-schemas-middleware.md) | Zod validation schemas and middleware | Backend | Salmane |
 | [task-explainers/task-05-jwt-auth.md](task-explainers/task-05-jwt-auth.md) | JWT authentication middleware and auth route | Backend | Salmane |
 | [task-explainers/task-06-1-component-service.md](task-explainers/task-06-1-component-service.md) | Component Service (data access layer) | Backend | Salmane |
+| [task-explainers/task-06-3-components-routes.md](task-explainers/task-06-3-components-routes.md) | Public component routes (GET /api/components) | Backend | Salmane |
+| [task-explainers/task-06-4-prices-route.md](task-explainers/task-06-4-prices-route.md) | Prices route (GET /api/components/:id/prices) | Backend | Salmane |
+| [task-explainers/task-06-5-compatibility-route.md](task-explainers/task-06-5-compatibility-route.md) | Compatibility route (POST /api/compatibility/validate) | Backend | Salmane |
+| [task-explainers/task-07-1-admin-components-routes.md](task-explainers/task-07-1-admin-components-routes.md) | Admin component routes (POST/PUT/DELETE) | Backend | Salmane |
 
 > New explainers are added here after each task is completed — never before.
