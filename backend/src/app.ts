@@ -7,6 +7,7 @@
 
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { serveStatic } from 'hono/bun';
 import { authRouter } from './routes/auth.js';
 import { componentsRouter } from './routes/components.js';
 import { pricesRouter } from './routes/prices.js';
@@ -80,5 +81,17 @@ app.onError((err, c) => {
     500,
   );
 });
+
+// ── Static file serving (production only) ────────────────────────────────────
+// Enabled when NODE_ENV=production and SERVE_STATIC=true.
+// Serves the admin panel at /admin and the frontend at /.
+// In development, Vite dev servers handle this instead.
+
+if (process.env.NODE_ENV === 'production' && process.env.SERVE_STATIC === 'true') {
+  app.use('/admin/*', serveStatic({ root: './admin/dist' }));
+  app.use('/*', serveStatic({ root: './frontend/dist' }));
+  // SPA fallback — serve index.html for any unmatched path
+  app.use('/*', serveStatic({ path: './frontend/dist/index.html' }));
+}
 
 export { app };
