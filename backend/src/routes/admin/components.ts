@@ -19,6 +19,7 @@ import {
   deleteComponent,
 } from '../../services/componentService.js';
 import { logActivity } from '../../services/adminService.js';
+import type { ComponentInput } from '../../schemas/componentSchemas.js';
 
 const adminComponentsRouter = new Hono();
 
@@ -27,7 +28,7 @@ adminComponentsRouter.use('/*', authMiddleware);
 // ── POST /api/admin/components ───────────────────────────────────────────────
 
 adminComponentsRouter.post('/', validateComponent, async (c) => {
-  const data    = c.get('validatedBody') as Record<string, unknown>;
+  const data    = c.get('validatedBody') as ComponentInput;
   const admin   = c.get('admin') as { id: number } | undefined;
 
   const component = await createComponent(data);
@@ -47,7 +48,7 @@ adminComponentsRouter.put('/:id', validateComponent, async (c) => {
     return c.json({ error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } }, 400);
   }
 
-  const data  = c.get('validatedBody') as Record<string, unknown>;
+  const data  = c.get('validatedBody') as ComponentInput;
   const admin = c.get('admin') as { id: number } | undefined;
 
   try {

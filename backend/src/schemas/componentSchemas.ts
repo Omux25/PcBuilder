@@ -68,3 +68,20 @@ export const componentSchemas = {
 } as const;
 
 export type ComponentCategory = keyof typeof componentSchemas;
+
+// ── Typed input for service layer ────────────────────────────────────────────
+
+/**
+ * Union of all validated component shapes.
+ * Used as the parameter type for createComponent() and updateComponent()
+ * so the service layer has compile-time safety instead of Record<string, unknown>.
+ */
+export type ComponentInput =
+  | (z.infer<typeof cpuSchema>        & { category: 'cpu';         description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
+  | (z.infer<typeof motherboardSchema> & { category: 'motherboard'; description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
+  | (z.infer<typeof gpuSchema>         & { category: 'gpu';         description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
+  | (z.infer<typeof ramSchema>         & { category: 'ram';         description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
+  | (z.infer<typeof storageSchema>     & { category: 'storage';     description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
+  | (z.infer<typeof psuSchema>         & { category: 'psu';         description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
+  | (z.infer<typeof caseSchema>        & { category: 'case';        description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
+  | (z.infer<typeof coolingSchema>     & { category: 'cooling';     description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number });

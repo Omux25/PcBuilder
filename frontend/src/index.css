@@ -1,17 +1,26 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:        #0f1117;
-  --surface:   #1a1d27;
-  --border:    #2a2d3a;
-  --accent:    #6366f1;
-  --accent-h:  #818cf8;
-  --danger:    #ef4444;
-  --warning:   #f59e0b;
-  --success:   #22c55e;
-  --text:      #e2e8f0;
-  --text-muted:#94a3b8;
-  --radius:    8px;
+  --bg:          #0f1117;
+  --surface:     #1a1d27;
+  --surface-2:   #1e1e2e;
+  --surface-3:   #313244;
+  --border:      #2a2d3a;
+  --border-2:    #45475a;
+  --accent:      #6366f1;
+  --accent-h:    #818cf8;
+  --accent-blue: #89b4fa;
+  --danger:      #ef4444;
+  --danger-soft: #f38ba8;
+  --warning:     #f59e0b;
+  --warning-soft:#f9e2af;
+  --success:     #22c55e;
+  --success-soft:#a6e3a1;
+  --text:        #e2e8f0;
+  --text-2:      #cdd6f4;
+  --text-muted:  #94a3b8;
+  --text-dim:    #6c7086;
+  --radius:      8px;
   font-family: system-ui, -apple-system, sans-serif;
   font-size: 15px;
   color: var(--text);
