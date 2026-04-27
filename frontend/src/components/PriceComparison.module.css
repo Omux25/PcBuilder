@@ -1,0 +1,78 @@
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: .9rem;
+}
+
+.title { color: var(--text); }
+
+.empty, .hint {
+  font-size: .9rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.errorMsg { font-size: .9rem; color: var(--danger); }
+
+.componentInfo {
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+}
+.category { font-size: .75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+.name     { font-weight: 600; }
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .875rem;
+}
+
+.table th {
+  text-align: left;
+  padding: .5rem .75rem;
+  color: var(--text-muted);
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  border-bottom: 1px solid var(--border);
+}
+
+.table td {
+  padding: .6rem .75rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.table tr:last-child td { border-bottom: none; }
+
+.cheapest td { background: #14532d22; }
+
+.price { font-weight: 700; color: var(--text); white-space: nowrap; }
+
+.inStock  { color: var(--success); font-size: .8rem; font-weight: 600; }
+.outOfStock { color: var(--text-muted); font-size: .8rem; }
+
+.date { color: var(--text-muted); font-size: .8rem; white-space: nowrap; }
+
+.buyBtn {
+  display: inline-block;
+  padding: .3rem .7rem;
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius);
+  font-size: .8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.buyBtn:hover { background: var(--accent-h); text-decoration: none; }
+
+@media (max-width: 640px) {
+  .table th:nth-child(4),
+  .table td:nth-child(4) { display: none; }
+}

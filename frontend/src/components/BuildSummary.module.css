@@ -1,0 +1,76 @@
+.summary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: .9rem;
+}
+
+.title { color: var(--text); }
+
+.empty, .hint {
+  font-size: .9rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.errorMsg { font-size: .9rem; color: var(--danger); }
+
+.badge {
+  display: inline-block;
+  padding: .35rem .8rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: .9rem;
+  width: fit-content;
+}
+.ok   { background: #14532d; color: var(--success); }
+.fail { background: #450a0a; color: var(--danger); }
+
+.stats {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.stat {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .5rem .85rem;
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+  min-width: 140px;
+}
+.statLabel { font-size: .75rem; color: var(--text-muted); }
+.statValue { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+
+.section { display: flex; flex-direction: column; gap: .4rem; }
+
+.sectionTitle { font-size: .85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+
+.list { list-style: none; display: flex; flex-direction: column; gap: .4rem; }
+
+.errorItem, .warnItem {
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+  padding: .5rem .75rem;
+  border-radius: var(--radius);
+  font-size: .875rem;
+}
+.errorItem { background: #450a0a33; border-left: 3px solid var(--danger); }
+.warnItem  { background: #78350f33; border-left: 3px solid var(--warning); }
+
+.rule {
+  font-size: .75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-muted);
+}
+
+.allGood { font-size: .9rem; color: var(--success); }
