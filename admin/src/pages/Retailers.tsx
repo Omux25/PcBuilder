@@ -1,0 +1,82 @@
+import { useEffect, useState } from 'react';
+import { ToggleLeft, ToggleRight } from 'lucide-react';
+import { getAdminRetailers, updateAdminRetailer } from '../api';
+import styles from './Retailers.module.css';
+
+export function Retailers() {
+  const [retailers, setRetailers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  function load() {
+    setLoading(true);
+    getAdminRetailers()
+      .then((data: any) => setRetailers(data.retailers ?? []))
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function handleToggle(retailer: any) {
+    try {
+      await updateAdminRetailer(retailer.id, { is_active: !retailer.is_active });
+      load();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Error');
+    }
+  }
+
+  return (
+    <div className={styles.page}>
+      <h1 className={styles.title}>Revendeurs</h1>
+
+      {error && <p className={styles.error}>{error}</p>}
+      {loading ? <p className={styles.loading}>Chargement...</p> : (
+        <table>
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th>Pays</th>
+              <th>Intervalle (h)</th>
+              <th>Dernier scraping</th>
+              <th>Statut</th>
+              <th>Prix enregistres</th>
+              <th>Actif</th>
+            </tr>
+          </thead>
+          <tbody>
+            {retailers.map((r) => (
+              <tr key={r.id}>
+                <td>
+                  <div className={styles.name}>{r.name}</div>
+                  <div className={styles.url}>{r.base_url}</div>
+                </td>
+                <td>{r.country}</td>
+                <td>{r.scraping_interval_hours}h</td>
+                <td className={styles.date}>
+                  {r.last_scrape_at ? new Date(r.last_scrape_at).toLocaleString('fr-MA') : '—'}
+                </td>
+                <td>
+                  {r.last_scrape_status && (
+                    <span className={`${styles.badge} ${styles[r.last_scrape_status.toLowerCase()]}`}>
+                      {r.last_scrape_status}
+                    </span>
+                  )}
+                </td>
+                <td>{r.price_records_count ?? 0}</td>
+                <td>
+                  <button className={styles.toggleBtn} onClick={() => handleToggle(r)}>
+                    {r.is_active
+                      ? <ToggleRight size={20} color="var(--success-soft)" />
+                      : <ToggleLeft size={20} color="var(--text-dim)" />}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
