@@ -6,9 +6,9 @@
 .empty {
   padding: 1.5rem;
   text-align: center;
-  color: #6c7086;
+  color: var(--text-dim);
   font-size: 0.85rem;
-  background: #181825;
-  border-radius: 8px;
-  border: 1px dashed #313244;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px dashed var(--border);
 }

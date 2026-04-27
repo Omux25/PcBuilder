@@ -73,6 +73,7 @@ ON CONFLICT (preset_build_id, category) DO NOTHING;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 4. Office PC (~4500 MAD) — everyday productivity
+-- Note: intentionally has no GPU slot — office PCs use CPU integrated graphics.
 -- ─────────────────────────────────────────────────────────────────────────────
 INSERT INTO preset_builds (name, description, use_case, total_price_estimate, is_active)
 SELECT 'Office PC', 'Reliable everyday PC for browsing, office apps, and light work.', 'office', 4500.00, true

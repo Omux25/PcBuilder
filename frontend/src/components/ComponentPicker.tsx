@@ -144,7 +144,15 @@ export function ComponentPicker({ category, selected, onSelect, compatibleOnly: 
 
           {/* Results */}
           <ul className={styles.list}>
-            {loading && <li className={styles.hint}>Chargement…</li>}
+            {loading && (
+            <>
+              {[1, 2, 3].map((i) => (
+                <li key={i} className={styles.skeleton}>
+                  <span className={styles.skeletonLine} />
+                </li>
+              ))}
+            </>
+          )}
             {error   && <li className={styles.errorItem}>Erreur: {error}</li>}
             {!loading && !error && components.length === 0 && (
               <li className={styles.hint}>Aucun résultat</li>

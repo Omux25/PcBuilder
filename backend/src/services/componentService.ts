@@ -7,6 +7,7 @@
 
 import { sql as bunSql } from 'bun';
 import { getUniqueSlug } from './slugService';
+import type { ComponentInput } from '../schemas/componentSchemas';
 
 // ── Dependency injection ─────────────────────────────────────────────────────
 
@@ -181,14 +182,24 @@ async function getPricesByComponentId(id: number): Promise<PriceOffer[]> {
 /**
  * Inserts a new component with auto-generated slug.
  */
-async function createComponent(data: Record<string, unknown>): Promise<Component> {
+async function createComponent(data: ComponentInput): Promise<Component> {
   const {
     name, brand, category, description, specs, image_url, release_year,
-    socket, supported_ram_types, max_ram_frequency, ram_type,
-    frequency_mhz, length_mm, max_gpu_length_mm, wattage, tdp,
-  } = data as Record<string, unknown>;
+  } = data as ComponentInput & { description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number };
 
-  const slug = await getUniqueSlug(brand as string | null, name as string);
+  // Extract category-specific fields safely
+  const d = data as Record<string, unknown>;
+  const socket              = d.socket              as string | undefined;
+  const supported_ram_types = d.supported_ram_types as string[] | undefined;
+  const max_ram_frequency   = d.max_ram_frequency   as number | undefined;
+  const ram_type            = d.ram_type            as string | undefined;
+  const frequency_mhz       = d.frequency_mhz       as number | undefined;
+  const length_mm           = d.length_mm           as number | undefined;
+  const max_gpu_length_mm   = d.max_gpu_length_mm   as number | undefined;
+  const wattage             = d.wattage             as number | undefined;
+  const tdp                 = d.tdp                 as number | undefined;
+
+  const slug = await getUniqueSlug(brand ?? null, name);
 
   const rows = (await _sql`
     INSERT INTO components (
@@ -198,22 +209,22 @@ async function createComponent(data: Record<string, unknown>): Promise<Component
       is_active
     ) VALUES (
       ${slug},
-      ${name as string},
-      ${(brand ?? null) as string | null},
-      ${category as string},
-      ${(description ?? null) as string | null},
+      ${name},
+      ${brand ?? null},
+      ${category},
+      ${description ?? null},
       ${(specs ?? null) as Record<string, unknown> | null},
-      ${(image_url ?? null) as string | null},
-      ${(release_year ?? null) as number | null},
-      ${(socket ?? null) as string | null},
+      ${image_url ?? null},
+      ${release_year ?? null},
+      ${socket ?? null},
       ${(supported_ram_types ?? null) as string[] | null},
-      ${(max_ram_frequency ?? null) as number | null},
-      ${(ram_type ?? null) as string | null},
-      ${(frequency_mhz ?? null) as number | null},
-      ${(length_mm ?? null) as number | null},
-      ${(max_gpu_length_mm ?? null) as number | null},
-      ${(wattage ?? null) as number | null},
-      ${(tdp ?? null) as number | null},
+      ${max_ram_frequency ?? null},
+      ${ram_type ?? null},
+      ${frequency_mhz ?? null},
+      ${length_mm ?? null},
+      ${max_gpu_length_mm ?? null},
+      ${wattage ?? null},
+      ${tdp ?? null},
       true
     )
     RETURNING *
@@ -226,34 +237,43 @@ async function createComponent(data: Record<string, unknown>): Promise<Component
  * Updates an existing component. Regenerates slug if name or brand changed.
  * Throws COMPONENT_NOT_FOUND if no component matches.
  */
-async function updateComponent(id: number, data: Record<string, unknown>): Promise<Component> {
+async function updateComponent(id: number, data: ComponentInput): Promise<Component> {
   const {
     name, brand, category, description, specs, image_url, release_year,
-    socket, supported_ram_types, max_ram_frequency, ram_type,
-    frequency_mhz, length_mm, max_gpu_length_mm, wattage, tdp,
-  } = data as Record<string, unknown>;
+  } = data as ComponentInput & { description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number };
 
-  const slug = await getUniqueSlug(brand as string | null, name as string, id);
+  const d = data as Record<string, unknown>;
+  const socket              = d.socket              as string | undefined;
+  const supported_ram_types = d.supported_ram_types as string[] | undefined;
+  const max_ram_frequency   = d.max_ram_frequency   as number | undefined;
+  const ram_type            = d.ram_type            as string | undefined;
+  const frequency_mhz       = d.frequency_mhz       as number | undefined;
+  const length_mm           = d.length_mm           as number | undefined;
+  const max_gpu_length_mm   = d.max_gpu_length_mm   as number | undefined;
+  const wattage             = d.wattage             as number | undefined;
+  const tdp                 = d.tdp                 as number | undefined;
+
+  const slug = await getUniqueSlug(brand ?? null, name, id);
 
   const rows = (await _sql`
     UPDATE components SET
       slug                = ${slug},
-      name                = ${name as string},
-      brand               = ${(brand ?? null) as string | null},
-      category            = ${category as string},
-      description         = ${(description ?? null) as string | null},
+      name                = ${name},
+      brand               = ${brand ?? null},
+      category            = ${category},
+      description         = ${description ?? null},
       specs               = ${(specs ?? null) as Record<string, unknown> | null},
-      image_url           = ${(image_url ?? null) as string | null},
-      release_year        = ${(release_year ?? null) as number | null},
-      socket              = ${(socket ?? null) as string | null},
+      image_url           = ${image_url ?? null},
+      release_year        = ${release_year ?? null},
+      socket              = ${socket ?? null},
       supported_ram_types = ${(supported_ram_types ?? null) as string[] | null},
-      max_ram_frequency   = ${(max_ram_frequency ?? null) as number | null},
-      ram_type            = ${(ram_type ?? null) as string | null},
-      frequency_mhz       = ${(frequency_mhz ?? null) as number | null},
-      length_mm           = ${(length_mm ?? null) as number | null},
-      max_gpu_length_mm   = ${(max_gpu_length_mm ?? null) as number | null},
-      wattage             = ${(wattage ?? null) as number | null},
-      tdp                 = ${(tdp ?? null) as number | null},
+      max_ram_frequency   = ${max_ram_frequency ?? null},
+      ram_type            = ${ram_type ?? null},
+      frequency_mhz       = ${frequency_mhz ?? null},
+      length_mm           = ${length_mm ?? null},
+      max_gpu_length_mm   = ${max_gpu_length_mm ?? null},
+      wattage             = ${wattage ?? null},
+      tdp                 = ${tdp ?? null},
       updated_at          = NOW()
     WHERE id = ${id}
     RETURNING *

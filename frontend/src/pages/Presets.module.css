@@ -7,7 +7,7 @@
 .loading, .error, .empty {
   text-align: center;
   padding: 3rem;
-  color: #6c7086;
+  color: var(--text-muted);
 }
 
 .pageHeader {
@@ -16,7 +16,7 @@
 
 .back {
   display: inline-block;
-  color: #89b4fa;
+  color: var(--accent-blue);
   text-decoration: none;
   font-size: 0.85rem;
   margin-bottom: 1rem;
@@ -27,12 +27,12 @@
 .title {
   font-size: 1.6rem;
   font-weight: 700;
-  color: #cdd6f4;
+  color: var(--text);
   margin: 0 0 0.4rem;
 }
 
 .subtitle {
-  color: #a6adc8;
+  color: var(--text-muted);
   font-size: 0.9rem;
   margin: 0;
 }
@@ -44,10 +44,10 @@
 .groupTitle {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #cdd6f4;
+  color: var(--text);
   margin: 0 0 1rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid #313244;
+  border-bottom: 1px solid var(--border);
 }
 
 .cards {
@@ -57,9 +57,9 @@
 }
 
 .card {
-  background: #181825;
-  border: 1px solid #313244;
-  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
@@ -67,7 +67,7 @@
 }
 
 .incomplete {
-  border-color: #f9e2af44;
+  border-color: rgba(249, 226, 175, 0.3);
 }
 
 .cardHeader {
@@ -80,13 +80,13 @@
 .cardName {
   font-size: 1rem;
   font-weight: 600;
-  color: #cdd6f4;
+  color: var(--text);
   margin: 0;
 }
 
 .incompleteBadge {
   font-size: 0.72rem;
-  color: #f9e2af;
+  color: var(--warning-soft);
   background: rgba(249, 226, 175, 0.1);
   border: 1px solid rgba(249, 226, 175, 0.3);
   border-radius: 4px;
@@ -96,7 +96,7 @@
 
 .cardDesc {
   font-size: 0.85rem;
-  color: #a6adc8;
+  color: var(--text-muted);
   margin: 0;
   line-height: 1.4;
 }
@@ -121,14 +121,14 @@
 }
 
 .componentCat {
-  color: #6c7086;
+  color: var(--text-dim);
   flex-shrink: 0;
   width: 110px;
   font-size: 0.75rem;
 }
 
 .componentName {
-  color: #cdd6f4;
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -140,29 +140,29 @@
   justify-content: space-between;
   gap: 0.5rem;
   padding-top: 0.5rem;
-  border-top: 1px solid #313244;
+  border-top: 1px solid var(--border);
 }
 
 .price {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #a6e3a1;
+  color: var(--success-soft);
 }
 
 .loadBtn {
-  background: #89b4fa;
+  background: var(--accent-blue);
   border: none;
-  border-radius: 6px;
-  color: #1e1e2e;
+  border-radius: var(--radius);
+  color: var(--bg);
   cursor: pointer;
   font-size: 0.8rem;
   font-weight: 600;
   padding: 0.4rem 0.75rem;
-  transition: background 0.15s;
+  transition: opacity 0.15s;
 }
 
 .loadBtn:hover:not(:disabled) {
-  background: #b4d0ff;
+  opacity: 0.85;
 }
 
 .loadBtn:disabled {
