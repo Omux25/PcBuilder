@@ -10,6 +10,7 @@ import { aggregate } from './aggregator.js';
 import { Site1Scraper } from './scrapers/site1Scraper.js';
 import { Site2Scraper } from './scrapers/site2Scraper.js';
 import { UltraPcScraper } from './scrapers/ultrapcScraper.js';
+import { NextLevelScraper } from './scrapers/nextlevelScraper.js';
 import type { ScrapedPrice } from './scrapers/baseScraper.js';
 
 export async function runScrapingSession(): Promise<void> {
@@ -50,6 +51,18 @@ export async function runScrapingSession(): Promise<void> {
     await logger.error(
       `UltraPC scraping failed: ${err instanceof Error ? err.message : String(err)}`,
       ultrapc.siteName,
+    );
+  }
+
+  const nextlevel = new NextLevelScraper();
+  try {
+    const prices = await nextlevel.scrapeAllCategories();
+    allPrices.push(...prices);
+    await logger.info(`NextLevel: scraped ${prices.length} price(s)`, nextlevel.siteName);
+  } catch (err) {
+    await logger.error(
+      `NextLevel scraping failed: ${err instanceof Error ? err.message : String(err)}`,
+      nextlevel.siteName,
     );
   }
 
