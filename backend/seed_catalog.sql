@@ -110,7 +110,6 @@ INSERT INTO components (slug, name, brand, category, ram_type, frequency_mhz, sp
 ('teamgroup-t-force-delta-32gb-ddr5-6000','T-Force Delta 32GB DDR5-6000',   'TeamGroup','ram', 'DDR5', 6000, '{"ram_type":"DDR5","capacity_gb":32,"frequency_mhz":6000,"cas_latency":38,"voltage":1.35,"kit":"2x16GB"}', 2022, true),
 ('corsair-vengeance-lpx-16gb-ddr4-2666',  'Vengeance LPX 16GB DDR4-2666',  'Corsair',  'ram', 'DDR4', 2666, '{"ram_type":"DDR4","capacity_gb":16,"frequency_mhz":2666,"cas_latency":16,"voltage":1.2,"kit":"2x8GB"}',   2016, true),
 ('kingston-valueram-8gb-ddr4-2666',       'ValueRAM 8GB DDR4-2666',         'Kingston', 'ram', 'DDR4', 2666, '{"ram_type":"DDR4","capacity_gb":8,"frequency_mhz":2666,"cas_latency":19,"voltage":1.2,"kit":"1x8GB"}',    2018, true),
-('gskill-ripjaws-v-16gb-ddr4-3200',       'Ripjaws V 16GB DDR4-3200',       'G.Skill',  'ram', 'DDR4', 3200, '{"ram_type":"DDR4","capacity_gb":16,"frequency_mhz":3200,"cas_latency":16,"voltage":1.35,"kit":"2x8GB"}',  2017, true),
 ('corsair-dominator-platinum-32gb-ddr5-5600','Dominator Platinum 32GB DDR5-5600','Corsair','ram','DDR5',5600,'{"ram_type":"DDR5","capacity_gb":32,"frequency_mhz":5600,"cas_latency":36,"voltage":1.25,"kit":"2x16GB"}',  2022, true)
 ON CONFLICT (slug) DO NOTHING;
 

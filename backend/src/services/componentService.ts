@@ -85,6 +85,12 @@ async function getComponents(
   const limit = Math.min(100, Math.max(1, filters.limit ?? 20));
   const offset = (page - 1) * limit;
 
+  // Escape SQL LIKE wildcards in the search term so user input like '%' or '_'
+  // is treated as a literal character, not a wildcard.
+  const safeSearch = search
+    ? search.replace(/%/g, '\\%').replace(/_/g, '\\_')
+    : null;
+
   // Build WHERE conditions as an array, then join with AND.
   // Bun.sql doesn't support dynamic WHERE building natively, so we use
   // a single query with all conditions using COALESCE/IS NULL tricks.
@@ -96,12 +102,12 @@ async function getComponents(
       AND (${socket ?? null}::text IS NULL OR socket = ${socket ?? null})
       AND (${ram_type ?? null}::text IS NULL OR ram_type = ${ram_type ?? null})
       AND (${brand ?? null}::text IS NULL OR LOWER(brand) = LOWER(${brand ?? null}))
-      AND (${search ?? null}::text IS NULL OR (
-            LOWER(name) LIKE LOWER('%' || ${search ?? null} || '%')
-            OR LOWER(brand) LIKE LOWER('%' || ${search ?? null} || '%')
-            OR LOWER(slug) LIKE LOWER('%' || ${search ?? null} || '%')
+      AND (${safeSearch}::text IS NULL OR (
+            LOWER(name) LIKE LOWER('%' || ${safeSearch} || '%') ESCAPE '\\'
+            OR LOWER(brand) LIKE LOWER('%' || ${safeSearch} || '%') ESCAPE '\\'
+            OR LOWER(slug) LIKE LOWER('%' || ${safeSearch} || '%') ESCAPE '\\'
           ))
-    ORDER BY id ASC
+    ORDER BY name ASC
     LIMIT ${limit} OFFSET ${offset}
   `) as (Component & { total_count: string })[];
 
@@ -288,35 +294,32 @@ async function deactivateComponent(id: number): Promise<Component> {
  * Throws COMPONENT_HAS_DEPENDENCIES if linked records exist.
  */
 async function deleteComponent(id: number): Promise<void> {
-  // Check for linked prices
-  const priceLinks = (await _sql`
-    SELECT COUNT(id) AS cnt FROM prices WHERE component_id = ${id}
-  `) as { cnt: string }[];
-
-  if (parseInt(priceLinks[0].cnt, 10) > 0) {
-    const err = new Error(`Component ${id} has linked price records and cannot be deleted`);
-    (err as NodeJS.ErrnoException).code = 'COMPONENT_HAS_DEPENDENCIES';
-    throw err;
-  }
-
-  // Check for linked scraper mappings
-  const mappingLinks = (await _sql`
-    SELECT COUNT(id) AS cnt FROM scraper_mappings WHERE component_id = ${id}
-  `) as { cnt: string }[];
-
-  if (parseInt(mappingLinks[0].cnt, 10) > 0) {
-    const err = new Error(`Component ${id} has linked scraper mappings and cannot be deleted`);
-    (err as NodeJS.ErrnoException).code = 'COMPONENT_HAS_DEPENDENCIES';
-    throw err;
-  }
-
+  // Use a transaction to avoid TOCTOU race between dependency check and DELETE
   const rows = (await _sql`
-    DELETE FROM components WHERE id = ${id} RETURNING id
-  `) as { id: number }[];
+    WITH dep_check AS (
+      SELECT
+        (SELECT COUNT(id) FROM prices WHERE component_id = ${id}) AS price_count,
+        (SELECT COUNT(id) FROM scraper_mappings WHERE component_id = ${id}) AS mapping_count
+    )
+    DELETE FROM components
+    WHERE id = ${id}
+      AND (SELECT price_count FROM dep_check) = 0
+      AND (SELECT mapping_count FROM dep_check) = 0
+    RETURNING id,
+      (SELECT price_count FROM dep_check) AS price_count,
+      (SELECT mapping_count FROM dep_check) AS mapping_count
+  `) as { id: number; price_count: string; mapping_count: string }[];
 
   if (rows.length === 0) {
-    const err = new Error(`Component with id ${id} not found`);
-    (err as NodeJS.ErrnoException).code = 'COMPONENT_NOT_FOUND';
+    // Check if it failed due to dependencies or because the component doesn't exist
+    const exists = (await _sql`SELECT id FROM components WHERE id = ${id} LIMIT 1`) as { id: number }[];
+    if (exists.length === 0) {
+      const err = new Error(`Component with id ${id} not found`);
+      (err as NodeJS.ErrnoException).code = 'COMPONENT_NOT_FOUND';
+      throw err;
+    }
+    const err = new Error(`Component ${id} has linked records and cannot be deleted`);
+    (err as NodeJS.ErrnoException).code = 'COMPONENT_HAS_DEPENDENCIES';
     throw err;
   }
 }

@@ -9,7 +9,7 @@
  */
 
 import { Hono } from 'hono';
-import { getComponents, getComponentById } from '../services/componentService.js';
+import { getComponents, getComponentById, getComponentBySlug } from '../services/componentService.js';
 import { getPriceHistory } from '../services/priceHistoryService.js';
 
 const componentsRouter = new Hono();
@@ -39,7 +39,22 @@ componentsRouter.get('/', async (c) => {
   return c.json({ components, total });
 });
 
-// GET /api/components/:id
+// GET /api/components/slug/:slug — MUST be before /:id so 'slug' is not parsed as a number
+componentsRouter.get('/slug/:slug', async (c) => {
+  const slug = c.req.param('slug');
+
+  try {
+    const component = await getComponentBySlug(slug);
+    return c.json(component);
+  } catch (err: unknown) {
+    if (err instanceof Error && (err as NodeJS.ErrnoException).code === 'COMPONENT_NOT_FOUND') {
+      return c.json({ error: { code: 'NOT_FOUND', message: err.message } }, 404);
+    }
+    throw err;
+  }
+});
+
+// GET /api/components/:id/price-history
 componentsRouter.get('/:id/price-history', async (c) => {
   const raw = c.req.param('id');
   const id  = Number(raw);

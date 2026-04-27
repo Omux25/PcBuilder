@@ -37,7 +37,8 @@ export function PriceHistoryChart({ history, loading }: Props) {
   // Build a map: date → { retailer_name: price }
   const dateMap = new Map<string, Record<string, number>>();
   for (const entry of history) {
-    const date = entry.recorded_at.slice(0, 10); // YYYY-MM-DD
+    // Use local date string to avoid UTC/local timezone mismatch
+    const date = new Date(entry.recorded_at).toLocaleDateString('fr-CA'); // YYYY-MM-DD in local time
     if (!dateMap.has(date)) dateMap.set(date, {});
     dateMap.get(date)![entry.retailer_name] = entry.price;
   }

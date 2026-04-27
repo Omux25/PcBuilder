@@ -92,17 +92,14 @@ export const CATEGORY_LABELS: Record<ComponentCategory, string> = {
   cooling:     'Refroidissement',
 };
 
+export const RULE_LABELS: Record<string, string> = {
+  socket_mismatch:       'Incompatibilité de socket',
+  ram_type_mismatch:     'Type de RAM incompatible',
+  ram_frequency_exceeded:'Fréquence RAM dépassée',
+  gpu_too_long:          'GPU trop long pour le boîtier',
+  psu_underpowered:      'Alimentation insuffisante',
+};
+
 export const CATEGORY_ORDER: ComponentCategory[] = [
   'cpu', 'motherboard', 'gpu', 'ram', 'storage', 'psu', 'case', 'cooling',
 ];
-
-export const CATEGORY_ICONS: Record<ComponentCategory, string> = {
-  cpu:         '🔲',
-  motherboard: '🖥',
-  gpu:         '🎮',
-  ram:         '💾',
-  storage:     '💿',
-  psu:         '⚡',
-  case:        '📦',
-  cooling:     '❄️',
-};

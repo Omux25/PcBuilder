@@ -50,6 +50,10 @@ export const caseSchema = baseSchema.extend({
   max_gpu_length_mm: z.number(),
 });
 
+export const coolingSchema = baseSchema.extend({
+  tdp: z.number().optional(),
+});
+
 // ── Category → schema map ────────────────────────────────────────────────────
 
 export const componentSchemas = {
@@ -60,6 +64,7 @@ export const componentSchemas = {
   storage: storageSchema,
   psu: psuSchema,
   case: caseSchema,
+  cooling: coolingSchema,
 } as const;
 
 export type ComponentCategory = keyof typeof componentSchemas;

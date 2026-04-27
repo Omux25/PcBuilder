@@ -64,7 +64,6 @@ export function getComponentById(id: number): Promise<Component> {
 
 /** Fetch a single component by slug. */
 export function getComponentBySlug(slug: string): Promise<Component> {
-  // The API doesn't have a slug endpoint yet — search by slug
   return request<Component>(`/components/slug/${slug}`);
 }
 

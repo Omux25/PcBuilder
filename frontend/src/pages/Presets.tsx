@@ -11,10 +11,10 @@ import { CATEGORY_LABELS } from '../types';
 import styles from './Presets.module.css';
 
 const USE_CASE_LABELS: Record<string, string> = {
-  gaming:      '🎮 Gaming',
-  workstation: '💼 Workstation',
-  office:      '🏢 Bureau',
-  budget:      '💰 Budget',
+  gaming:      'Gaming',
+  workstation: 'Workstation',
+  office:      'Bureau',
+  budget:      'Budget',
 };
 
 interface Props {
@@ -92,7 +92,7 @@ function PresetCard({ preset, onLoad }: { preset: PresetBuild; onLoad: (p: Prese
         <h3 className={styles.cardName}>{preset.name}</h3>
         {preset.incomplete && (
           <span className={styles.incompleteBadge} title="Certains composants ne sont plus disponibles">
-            ⚠ Incomplet
+            Incomplet
           </span>
         )}
       </div>

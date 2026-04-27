@@ -57,15 +57,13 @@ export interface ActivityEntry {
  */
 async function getDashboardStats(): Promise<DashboardStats> {
   const [componentStats, retailerStats, priceStats, unmatchedStats, scrapeStats] =
-    await Promise.all([
-      // Components by category
+    await Promise.allSettled([
       _sql`
         SELECT category, COUNT(id) AS count
         FROM components WHERE is_active = true
         GROUP BY category
       ` as Promise<{ category: string; count: string }[]>,
 
-      // Retailer counts
       _sql`
         SELECT
           COUNT(id) AS total,
@@ -73,15 +71,12 @@ async function getDashboardStats(): Promise<DashboardStats> {
         FROM retailers
       ` as Promise<{ total: string; active: string }[]>,
 
-      // Total price records
       _sql`SELECT COUNT(id) AS total FROM prices` as Promise<{ total: string }[]>,
 
-      // Unmatched listings pending review
       _sql`
         SELECT COUNT(id) AS total FROM unmatched_listings WHERE status = 'pending'
       ` as Promise<{ total: string }[]>,
 
-      // Last scrape info
       _sql`
         SELECT last_scrape_at, last_scrape_status
         FROM retailers
@@ -93,21 +88,28 @@ async function getDashboardStats(): Promise<DashboardStats> {
 
   const components_by_category: Record<string, number> = {};
   let total_components = 0;
-  for (const row of componentStats) {
-    components_by_category[row.category] = parseInt(row.count, 10);
-    total_components += parseInt(row.count, 10);
+  if (componentStats.status === 'fulfilled') {
+    for (const row of componentStats.value) {
+      components_by_category[row.category] = parseInt(row.count, 10);
+      total_components += parseInt(row.count, 10);
+    }
   }
+
+  const retailerRow = retailerStats.status === 'fulfilled' ? retailerStats.value[0] : null;
+  const priceRow    = priceStats.status === 'fulfilled'    ? priceStats.value[0]    : null;
+  const unmatchedRow = unmatchedStats.status === 'fulfilled' ? unmatchedStats.value[0] : null;
+  const scrapeRow   = scrapeStats.status === 'fulfilled'   ? scrapeStats.value[0]   : null;
 
   return {
     total_components,
     components_by_category,
-    total_retailers: parseInt(retailerStats[0]?.total ?? '0', 10),
-    active_retailers: parseInt(retailerStats[0]?.active ?? '0', 10),
-    total_price_records: parseInt(priceStats[0]?.total ?? '0', 10),
-    unmatched_listings_count: parseInt(unmatchedStats[0]?.total ?? '0', 10),
+    total_retailers:          retailerRow ? parseInt(retailerRow.total, 10)  : 0,
+    active_retailers:         retailerRow ? parseInt(retailerRow.active, 10) : 0,
+    total_price_records:      priceRow    ? parseInt(priceRow.total, 10)     : 0,
+    unmatched_listings_count: unmatchedRow ? parseInt(unmatchedRow.total, 10) : 0,
     last_scrape: {
-      time: scrapeStats[0]?.last_scrape_at ?? null,
-      status: scrapeStats[0]?.last_scrape_status ?? null,
+      time:   scrapeRow?.last_scrape_at     ?? null,
+      status: scrapeRow?.last_scrape_status ?? null,
     },
   };
 }

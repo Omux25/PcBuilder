@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
 import { Configurator } from './components/Configurator';
 import { BuildSummary } from './components/BuildSummary';
@@ -14,6 +14,19 @@ export default function App() {
   const [priceTarget, setPriceTarget] = useState<Component | null>(null);
 
   const selectedComponents = Object.values(build).filter(Boolean) as Component[];
+
+  // Auto-select the first component for price comparison when build changes
+  useEffect(() => {
+    if (selectedComponents.length === 0) {
+      setPriceTarget(null);
+      return;
+    }
+    // Keep current target if it's still in the build, otherwise switch to first
+    const stillSelected = priceTarget && selectedComponents.some((c) => c.id === priceTarget.id);
+    if (!stillSelected) {
+      setPriceTarget(selectedComponents[0]);
+    }
+  }, [build]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Called from Presets page — loads component IDs into build state
   async function handleLoadPreset(componentIds: Record<string, number>) {
@@ -38,7 +51,7 @@ export default function App() {
     <div className={styles.app}>
       <header className={styles.header}>
         <Link to="/" className={styles.logoLink}>
-          <h1 className={styles.logo}>🖥 PC Builder <span className={styles.sub}>Maroc</span></h1>
+          <h1 className={styles.logo}>PC Builder <span className={styles.sub}>Maroc</span></h1>
         </Link>
         <nav className={styles.nav}>
           <Link to="/presets" className={styles.navLink}>Configurations prêtes</Link>
