@@ -1,11 +1,17 @@
 /**
- * ComponentPicker — searchable component selector with debounced API calls.
- * Replaces the old dropdown selects in the Configurator.
+ * ComponentPicker — smart component selector.
+ *
+ * Results are sorted by:
+ *   1. Compatible + in stock + cheapest first
+ *   2. Compatible + out of stock
+ *   3. Incompatible (grayed out, with reason shown on hover)
+ *
+ * Each result shows: name, lowest price, stock badge, compatibility indicator.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getComponents } from '../api';
-import type { Component, ComponentCategory } from '../types';
+import { smartSearch, type SmartComponent } from '../api';
+import type { Component, ComponentCategory, BuildConfig } from '../types';
 import { CATEGORY_LABELS } from '../types';
 import { CategoryIcon } from './CategoryIcon';
 import styles from './ComponentPicker.module.css';
@@ -13,17 +19,17 @@ import styles from './ComponentPicker.module.css';
 interface Props {
   category: ComponentCategory;
   selected: Component | null;
+  build: BuildConfig;
   onSelect: (component: Component | null) => void;
-  compatibleOnly?: boolean;
 }
 
 const DEBOUNCE_MS = 300;
 const PAGE_SIZE = 20;
 
-export function ComponentPicker({ category, selected, onSelect, compatibleOnly: _compatibleOnly }: Props) {
+export function ComponentPicker({ category, selected, build, onSelect }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [components, setComponents] = useState<Component[]>([]);
+  const [components, setComponents] = useState<SmartComponent[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -32,17 +38,27 @@ export function ComponentPicker({ category, selected, onSelect, compatibleOnly: 
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
+  // Build context without the current category (so we check compatibility of candidates)
+  const buildContext: BuildConfig = { ...build };
+  delete buildContext[category];
+
   const fetchComponents = useCallback((searchTerm: string, pageNum: number) => {
     setLoading(true);
     setError(null);
-    getComponents({ category, search: searchTerm || undefined, page: pageNum, limit: PAGE_SIZE })
+    smartSearch({
+      category,
+      search: searchTerm || undefined,
+      build: buildContext,
+      page: pageNum,
+      limit: PAGE_SIZE,
+    })
       .then(({ components: list, total: t }) => {
         setComponents(list);
         setTotal(t);
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [category]);
+  }, [category, JSON.stringify(buildContext)]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Debounced search
   useEffect(() => {
@@ -60,7 +76,7 @@ export function ComponentPicker({ category, selected, onSelect, compatibleOnly: 
     if (open) fetchComponents(search, page);
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Close on outside click or Escape key
+  // Close on outside click or Escape
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -90,7 +106,7 @@ export function ComponentPicker({ category, selected, onSelect, compatibleOnly: 
 
   return (
     <div className={styles.picker} ref={containerRef}>
-      {/* Trigger button */}
+      {/* Trigger */}
       <button
         ref={triggerRef}
         type="button"
@@ -98,23 +114,25 @@ export function ComponentPicker({ category, selected, onSelect, compatibleOnly: 
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="listbox"
-        aria-label={`Sélectionner ${CATEGORY_LABELS[category]}`}
+        aria-label={`Selectionner ${CATEGORY_LABELS[category]}`}
       >
         {selected ? (
           <span className={styles.selectedLabel}>
             <CategoryIcon category={category} size={16} className={styles.iconSvg} />
-            <span className={styles.selectedName}>{selected.brand ? `${selected.brand} ` : ''}{selected.name}</span>
+            <span className={styles.selectedName}>
+              {selected.brand ? `${selected.brand} ` : ''}{selected.name}
+            </span>
           </span>
         ) : (
           <span className={styles.placeholder}>
             <CategoryIcon category={category} size={16} className={styles.iconSvg} />
-            Sélectionner…
+            Selectionner...
           </span>
         )}
         <span className={styles.chevron}>{open ? '▲' : '▼'}</span>
       </button>
 
-      {/* Clear button */}
+      {/* Clear */}
       {selected && (
         <button
           type="button"
@@ -122,19 +140,18 @@ export function ComponentPicker({ category, selected, onSelect, compatibleOnly: 
           onClick={(e) => { e.stopPropagation(); onSelect(null); }}
           aria-label="Retirer ce composant"
         >
-          ✕
+          x
         </button>
       )}
 
       {/* Dropdown */}
       {open && (
         <div className={styles.dropdown} role="listbox">
-          {/* Search input */}
           <div className={styles.searchWrap}>
             <input
               type="text"
               className={styles.searchInput}
-              placeholder="Rechercher…"
+              placeholder="Rechercher..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               autoFocus
@@ -142,62 +159,118 @@ export function ComponentPicker({ category, selected, onSelect, compatibleOnly: 
             />
           </div>
 
-          {/* Results */}
           <ul className={styles.list}>
             {loading && (
-            <>
-              {[1, 2, 3].map((i) => (
-                <li key={i} className={styles.skeleton}>
-                  <span className={styles.skeletonLine} />
-                </li>
-              ))}
-            </>
-          )}
-            {error   && <li className={styles.errorItem}>Erreur: {error}</li>}
+              <>
+                {[1, 2, 3].map((i) => (
+                  <li key={i} className={styles.skeleton}>
+                    <span className={styles.skeletonLine} />
+                  </li>
+                ))}
+              </>
+            )}
+            {error && <li className={styles.errorItem}>Erreur: {error}</li>}
             {!loading && !error && components.length === 0 && (
-              <li className={styles.hint}>Aucun résultat</li>
+              <li className={styles.hint}>Aucun resultat</li>
             )}
             {!loading && components.map((c) => (
-              <li
+              <ComponentRow
                 key={c.id}
-                role="option"
-                aria-selected={selected?.id === c.id}
-                className={`${styles.item} ${selected?.id === c.id ? styles.itemSelected : ''}`}
-                onClick={() => { onSelect(c); setOpen(false); setSearch(''); }}
-              >
-                <span className={styles.itemName}>
-                  {c.brand && <span className={styles.brand}>{c.brand}</span>}
-                  {c.name}
-                </span>
-                {c.specs && typeof (c.specs as Record<string, unknown>).tdp === 'number' && (
-                  <span className={styles.spec}>{(c.specs as Record<string, unknown>).tdp as number}W</span>
-                )}
-              </li>
+                component={c}
+                isSelected={selected?.id === c.id}
+                onSelect={() => {
+                  if (c.compatibility !== 'incompatible') {
+                    onSelect(c);
+                    setOpen(false);
+                    setSearch('');
+                  }
+                }}
+              />
             ))}
           </ul>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className={styles.pagination}>
-              <button
-                className={styles.pageBtn}
-                disabled={page <= 1}
-                onClick={() => handlePageChange(page - 1)}
-              >
-                ‹
+              <button className={styles.pageBtn} disabled={page <= 1} onClick={() => handlePageChange(page - 1)}>
+                &lsaquo;
               </button>
               <span className={styles.pageInfo}>{page} / {totalPages}</span>
-              <button
-                className={styles.pageBtn}
-                disabled={page >= totalPages}
-                onClick={() => handlePageChange(page + 1)}
-              >
-                ›
+              <button className={styles.pageBtn} disabled={page >= totalPages} onClick={() => handlePageChange(page + 1)}>
+                &rsaquo;
               </button>
             </div>
           )}
         </div>
       )}
     </div>
+  );
+}
+
+// ── Component row ─────────────────────────────────────────────────────────────
+
+function ComponentRow({
+  component,
+  isSelected,
+  onSelect,
+}: {
+  component: SmartComponent;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  const isIncompatible = component.compatibility === 'incompatible';
+  const hasPrice = component.lowest_price !== null;
+
+  return (
+    <li
+      role="option"
+      aria-selected={isSelected}
+      aria-disabled={isIncompatible}
+      className={[
+        styles.item,
+        isSelected ? styles.itemSelected : '',
+        isIncompatible ? styles.itemIncompatible : '',
+      ].join(' ')}
+      onClick={onSelect}
+      title={isIncompatible ? component.compatibility_issues.join(' | ') : undefined}
+    >
+      <div className={styles.itemMain}>
+        <div className={styles.itemName}>
+          {component.brand && <span className={styles.brand}>{component.brand}</span>}
+          <span>{component.name}</span>
+        </div>
+
+        <div className={styles.itemMeta}>
+          {/* Price */}
+          {hasPrice ? (
+            <span className={styles.price}>
+              {component.lowest_price!.toLocaleString('fr-MA')} MAD
+            </span>
+          ) : (
+            <span className={styles.noPrice}>Prix non disponible</span>
+          )}
+
+          {/* Stock badge */}
+          {hasPrice && (
+            <span className={component.in_stock ? styles.inStock : styles.outStock}>
+              {component.in_stock ? 'En stock' : 'Rupture'}
+            </span>
+          )}
+
+          {/* Compatibility badge */}
+          {isIncompatible && (
+            <span className={styles.incompatibleBadge} title={component.compatibility_issues.join(' | ')}>
+              Incompatible
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Incompatibility reason */}
+      {isIncompatible && component.compatibility_issues.length > 0 && (
+        <div className={styles.incompatibleReason}>
+          {component.compatibility_issues[0]}
+        </div>
+      )}
+    </li>
   );
 }
