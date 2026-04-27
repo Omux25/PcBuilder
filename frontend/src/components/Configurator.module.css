@@ -1,60 +1,112 @@
 .configurator {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: #181825;
+  border-radius: 12px;
   padding: 1.25rem;
+  border: 1px solid #313244;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
 }
 
 .title {
-  margin-bottom: 1rem;
-  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #cdd6f4;
+  margin: 0;
+}
+
+.resetBtn {
+  background: none;
+  border: 1px solid #45475a;
+  border-radius: 6px;
+  color: #6c7086;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.6rem;
+  transition: all 0.15s;
+}
+
+.resetBtn:hover:not(:disabled) {
+  border-color: #f38ba8;
+  color: #f38ba8;
+}
+
+.resetBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .slots {
   display: flex;
   flex-direction: column;
-  gap: .75rem;
+  gap: 0.75rem;
 }
 
 .slot {
-  display: grid;
-  grid-template-columns: 160px 1fr auto;
-  align-items: center;
-  gap: .5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
 }
 
-@media (max-width: 600px) {
-  .slot {
-    grid-template-columns: 1fr auto;
-    grid-template-rows: auto auto;
-  }
-  .label { grid-column: 1 / -1; }
+.slotHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .label {
-  font-size: .85rem;
-  color: var(--text-muted);
+  font-size: 0.8rem;
   font-weight: 500;
+  color: #a6adc8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.hint {
-  font-size: .85rem;
-  color: var(--text-muted);
-  font-style: italic;
+.detailLink {
+  font-size: 0.75rem;
+  color: #89b4fa;
+  text-decoration: none;
 }
 
-.error {
-  font-size: .85rem;
-  color: var(--danger);
+.detailLink:hover {
+  text-decoration: underline;
 }
 
-.clear {
-  background: transparent;
-  color: var(--text-muted);
-  font-size: .9rem;
-  padding: .3rem .5rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  line-height: 1;
+.summaryCard {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  background: #1e3a5f22;
+  border-radius: 4px;
+  font-size: 0.78rem;
 }
-.clear:hover { color: var(--danger); border-color: var(--danger); }
+
+.cardBrand {
+  color: #89b4fa;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.cardName {
+  color: #cdd6f4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardSpec {
+  color: #6c7086;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+@media (max-width: 640px) {
+  .configurator {
+    padding: 1rem;
+  }
+}

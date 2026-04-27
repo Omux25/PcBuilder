@@ -1,53 +1,86 @@
 import { useState } from 'react';
+import { Routes, Route, Link } from 'react-router-dom';
 import { Configurator } from './components/Configurator';
 import { BuildSummary } from './components/BuildSummary';
 import { PriceComparison } from './components/PriceComparison';
-import type { BuildConfig, Component } from './types';
+import { ComponentDetail } from './pages/ComponentDetail';
+import { Presets } from './pages/Presets';
+import type { BuildConfig, Component, ComponentCategory } from './types';
+import { getComponentById } from './api';
 import styles from './App.module.css';
 
 export default function App() {
   const [build, setBuild] = useState<BuildConfig>({});
-  // The component whose prices are currently shown — defaults to the first selected one
   const [priceTarget, setPriceTarget] = useState<Component | null>(null);
 
   const selectedComponents = Object.values(build).filter(Boolean) as Component[];
 
+  // Called from Presets page — loads component IDs into build state
+  async function handleLoadPreset(componentIds: Record<string, number>) {
+    const entries = await Promise.allSettled(
+      Object.entries(componentIds).map(async ([category, id]) => {
+        const component = await getComponentById(id);
+        return [category, component] as [ComponentCategory, Component];
+      })
+    );
+
+    const newBuild: BuildConfig = {};
+    for (const result of entries) {
+      if (result.status === 'fulfilled') {
+        const [category, component] = result.value;
+        newBuild[category] = component;
+      }
+    }
+    setBuild(newBuild);
+  }
+
   return (
     <div className={styles.app}>
       <header className={styles.header}>
-        <h1 className={styles.logo}>🖥 PC Builder <span className={styles.sub}>Maroc</span></h1>
-        <p className={styles.tagline}>Configurez, vérifiez la compatibilité, comparez les prix.</p>
+        <Link to="/" className={styles.logoLink}>
+          <h1 className={styles.logo}>🖥 PC Builder <span className={styles.sub}>Maroc</span></h1>
+        </Link>
+        <nav className={styles.nav}>
+          <Link to="/presets" className={styles.navLink}>Configurations prêtes</Link>
+        </nav>
       </header>
 
-      <main className={styles.main}>
-        {/* Left column — configurator + build summary */}
-        <div className={styles.left}>
-          <Configurator build={build} onChange={setBuild} />
-          <BuildSummary build={build} />
-        </div>
-
-        {/* Right column — price comparison */}
-        <div className={styles.right}>
-          {/* Quick-select buttons for price comparison */}
-          {selectedComponents.length > 0 && (
-            <div className={styles.priceNav}>
-              <p className={styles.priceNavLabel}>Voir les prix pour :</p>
-              <div className={styles.priceNavBtns}>
-                {selectedComponents.map((c) => (
-                  <button
-                    key={c.id}
-                    className={`${styles.priceNavBtn} ${priceTarget?.id === c.id ? styles.active : ''}`}
-                    onClick={() => setPriceTarget(c)}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
+      <Routes>
+        {/* Home — configurator */}
+        <Route path="/" element={
+          <main className={styles.main}>
+            <div className={styles.left}>
+              <Configurator build={build} onChange={setBuild} />
+              <BuildSummary build={build} />
             </div>
-          )}
-          <PriceComparison component={priceTarget} />
-        </div>
-      </main>
+            <div className={styles.right}>
+              {selectedComponents.length > 0 && (
+                <div className={styles.priceNav}>
+                  <p className={styles.priceNavLabel}>Voir les prix pour :</p>
+                  <div className={styles.priceNavBtns}>
+                    {selectedComponents.map((c) => (
+                      <button
+                        key={c.id}
+                        className={`${styles.priceNavBtn} ${priceTarget?.id === c.id ? styles.active : ''}`}
+                        onClick={() => setPriceTarget(c)}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <PriceComparison component={priceTarget} />
+            </div>
+          </main>
+        } />
+
+        {/* Component detail */}
+        <Route path="/components/:slug" element={<ComponentDetail />} />
+
+        {/* Preset builds */}
+        <Route path="/presets" element={<Presets onLoadPreset={handleLoadPreset} />} />
+      </Routes>
 
       <footer className={styles.footer}>
         <p>PC Builder Maroc — comparateur de prix, pas un vendeur. Les achats se font sur les sites des revendeurs.</p>

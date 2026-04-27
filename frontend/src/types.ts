@@ -2,13 +2,22 @@
  * Shared TypeScript interfaces — mirror the backend API response shapes.
  */
 
-export type ComponentCategory = 'cpu' | 'motherboard' | 'gpu' | 'ram' | 'storage' | 'psu' | 'case';
+export type ComponentCategory =
+  | 'cpu' | 'motherboard' | 'gpu' | 'ram'
+  | 'storage' | 'psu' | 'case' | 'cooling';
 
 export interface Component {
   id: number;
+  slug: string;
   name: string;
   brand?: string;
   category: ComponentCategory;
+  description?: string;
+  specs?: Record<string, unknown>;
+  image_url?: string;
+  release_year?: number;
+  is_active: boolean;
+  // Legacy flat columns — still used by compatibility engine
   socket?: string;
   supported_ram_types?: string[];
   max_ram_frequency?: number;
@@ -23,11 +32,20 @@ export interface Component {
 }
 
 export interface PriceOffer {
+  retailer_id: number;
   retailer_name: string;
   price: number;
   in_stock: boolean;
   product_url: string;
   last_updated: string;
+}
+
+export interface PriceHistoryEntry {
+  retailer_id: number;
+  retailer_name: string;
+  price: number;
+  in_stock: boolean;
+  recorded_at: string;
 }
 
 export interface CompatibilityError {
@@ -50,6 +68,16 @@ export interface CompatibilityResult {
   warnings: CompatibilityWarning[];
 }
 
+export interface PresetBuild {
+  id: number;
+  name: string;
+  description?: string;
+  use_case: 'gaming' | 'workstation' | 'office' | 'budget';
+  total_price_estimate?: number;
+  incomplete: boolean;
+  components: Record<string, Pick<Component, 'id' | 'slug' | 'name' | 'brand' | 'image_url' | 'is_active'>>;
+}
+
 /** The build configuration — one optional slot per category. */
 export type BuildConfig = Partial<Record<ComponentCategory, Component>>;
 
@@ -61,8 +89,20 @@ export const CATEGORY_LABELS: Record<ComponentCategory, string> = {
   storage:     'Stockage',
   psu:         'Alimentation (PSU)',
   case:        'Boîtier',
+  cooling:     'Refroidissement',
 };
 
 export const CATEGORY_ORDER: ComponentCategory[] = [
-  'cpu', 'motherboard', 'gpu', 'ram', 'storage', 'psu', 'case',
+  'cpu', 'motherboard', 'gpu', 'ram', 'storage', 'psu', 'case', 'cooling',
 ];
+
+export const CATEGORY_ICONS: Record<ComponentCategory, string> = {
+  cpu:         '🔲',
+  motherboard: '🖥',
+  gpu:         '🎮',
+  ram:         '💾',
+  storage:     '💿',
+  psu:         '⚡',
+  case:        '📦',
+  cooling:     '❄️',
+};
