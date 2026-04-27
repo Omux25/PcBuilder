@@ -4,7 +4,7 @@
  * Requirements: 8.2, 8.3, 11.2
  */
 
-import { z } from 'zod';
+import { z } from 'zod/v4';
 
 // ── Shared base ──────────────────────────────────────────────────────────────
 
