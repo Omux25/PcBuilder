@@ -41,14 +41,12 @@ pricesRouter.get('/:id/prices', async (c) => {
 
   const offers = await getPricesByComponentId(id);
 
-  if (offers.length === 0) {
-    return c.json({
-      offers: [],
-      message: 'This component is not available from any referenced retailer.',
-    });
-  }
-
-  return c.json({ offers });
+  return c.json({
+    offers,
+    message: offers.length === 0
+      ? 'This component is not available from any referenced retailer.'
+      : undefined,
+  });
 });
 
 export { pricesRouter };

@@ -16,6 +16,25 @@ import { randomUUID } from 'crypto';
 
 const authRouter = new Hono();
 
+// ── Rate limiter ─────────────────────────────────────────────────────────────
+// Simple in-memory rate limiter: max 10 login attempts per IP per minute.
+
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+
+  if (!entry || now > entry.resetAt) {
+    loginAttempts.set(ip, { count: 1, resetAt: now + 60_000 });
+    return false;
+  }
+
+  entry.count++;
+  if (entry.count > 10) return true;
+  return false;
+}
+
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const ACCESS_TOKEN_EXPIRY  = '15m';
@@ -62,6 +81,15 @@ function getRefreshTokenFromCookie(c: any): string | null {
 // ── POST /api/auth/login ─────────────────────────────────────────────────────
 
 authRouter.post('/login', async (c) => {
+  const ip = c.req.header('x-forwarded-for') ?? c.req.header('x-real-ip') ?? 'unknown';
+
+  if (isRateLimited(ip)) {
+    return c.json(
+      { error: { code: 'RATE_LIMITED', message: 'Too many login attempts. Try again in a minute.' } },
+      429,
+    );
+  }
+
   let body: unknown;
   try {
     body = await c.req.json();

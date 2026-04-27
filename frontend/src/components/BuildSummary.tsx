@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import { validateBuild } from '../api';
 import type { BuildConfig, CompatibilityResult } from '../types';
+import { RULE_LABELS } from '../types';
 import styles from './BuildSummary.module.css';
 
 interface Props {
@@ -28,10 +29,25 @@ export function BuildSummary({ build }: Props) {
     setLoading(true);
     setError(null);
 
-    validateBuild(build)
-      .then(setResult)
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
+    const abortController = new AbortController();
+
+    const timer = setTimeout(() => {
+      validateBuild(build)
+        .then((r) => {
+          if (!abortController.signal.aborted) setResult(r);
+        })
+        .catch((e: Error) => {
+          if (!abortController.signal.aborted) setError(e.message);
+        })
+        .finally(() => {
+          if (!abortController.signal.aborted) setLoading(false);
+        });
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      abortController.abort();
+    };
   }, [build, hasComponents]);
 
   if (!hasComponents) {
@@ -70,7 +86,7 @@ export function BuildSummary({ build }: Props) {
               <ul className={styles.list}>
                 {result.errors.map((e, i) => (
                   <li key={i} className={styles.errorItem}>
-                    <span className={styles.rule}>{e.rule}</span>
+                    <span className={styles.rule}>{RULE_LABELS[e.rule] ?? e.rule}</span>
                     <span>{e.message}</span>
                   </li>
                 ))}
@@ -85,7 +101,7 @@ export function BuildSummary({ build }: Props) {
               <ul className={styles.list}>
                 {result.warnings.map((w, i) => (
                   <li key={i} className={styles.warnItem}>
-                    <span className={styles.rule}>{w.rule}</span>
+                    <span className={styles.rule}>{RULE_LABELS[w.rule] ?? w.rule}</span>
                     <span>{w.message}</span>
                   </li>
                 ))}

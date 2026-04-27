@@ -6,7 +6,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getComponents } from '../api';
 import type { Component, ComponentCategory } from '../types';
-import { CATEGORY_ICONS } from '../types';
+import { CATEGORY_LABELS } from '../types';
+import { CategoryIcon } from './CategoryIcon';
 import styles from './ComponentPicker.module.css';
 
 interface Props {
@@ -29,6 +30,7 @@ export function ComponentPicker({ category, selected, onSelect, compatibleOnly: 
   const [error, setError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const fetchComponents = useCallback((searchTerm: string, pageNum: number) => {
     setLoading(true);
@@ -58,16 +60,26 @@ export function ComponentPicker({ category, selected, onSelect, compatibleOnly: 
     if (open) fetchComponents(search, page);
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Close on outside click
+  // Close on outside click or Escape key
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && open) {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    }
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -80,20 +92,22 @@ export function ComponentPicker({ category, selected, onSelect, compatibleOnly: 
     <div className={styles.picker} ref={containerRef}>
       {/* Trigger button */}
       <button
+        ref={triggerRef}
         type="button"
         className={`${styles.trigger} ${selected ? styles.hasValue : ''}`}
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="listbox"
+        aria-label={`Sélectionner ${CATEGORY_LABELS[category]}`}
       >
         {selected ? (
           <span className={styles.selectedLabel}>
-            <span className={styles.icon}>{CATEGORY_ICONS[category]}</span>
+            <CategoryIcon category={category} size={16} className={styles.iconSvg} />
             <span className={styles.selectedName}>{selected.brand ? `${selected.brand} ` : ''}{selected.name}</span>
           </span>
         ) : (
           <span className={styles.placeholder}>
-            <span className={styles.icon}>{CATEGORY_ICONS[category]}</span>
+            <CategoryIcon category={category} size={16} className={styles.iconSvg} />
             Sélectionner…
           </span>
         )}

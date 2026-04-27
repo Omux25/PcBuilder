@@ -174,12 +174,12 @@ describe('DELETE /api/admin/components/:id', () => {
   });
 
   test('returns 200 with success message when component deleted', async () => {
-    // deleteComponent makes 3 SQL calls: count prices, count mappings, then DELETE
+    // New deleteComponent uses a single CTE — returns the deleted row on success
     let callCount = 0;
     setSql(async () => {
       callCount++;
-      if (callCount <= 2) return [{ cnt: '0' }]; // no dependencies
-      return [{ id: 1 }]; // DELETE RETURNING
+      if (callCount === 1) return [{ id: 1, price_count: '0', mapping_count: '0' }]; // CTE DELETE success
+      return []; // fallback SELECT (not reached on success)
     });
 
     const res = await app.request('/api/admin/components/1', {
@@ -193,12 +193,12 @@ describe('DELETE /api/admin/components/:id', () => {
   });
 
   test('returns 404 when component not found', async () => {
-    // deleteComponent: count prices → 0, count mappings → 0, DELETE → []
+    // New deleteComponent uses a single CTE query — returns [] when component not found
     let callCount = 0;
     setSql(async () => {
       callCount++;
-      if (callCount <= 2) return [{ cnt: '0' }];
-      return []; // nothing deleted
+      if (callCount === 1) return []; // CTE DELETE returns nothing — component not found
+      return []; // fallback SELECT also returns nothing
     });
 
     const res = await app.request('/api/admin/components/999', {

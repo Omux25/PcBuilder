@@ -70,8 +70,8 @@ export function PriceComparison({ component }: Props) {
             </tr>
           </thead>
           <tbody>
-            {offers.map((offer, i) => (
-              <tr key={i} className={i === 0 ? styles.cheapest : undefined}>
+            {offers.map((offer) => (
+              <tr key={offer.retailer_id} className={offers.indexOf(offer) === 0 ? styles.cheapest : undefined}>
                 <td>{offer.retailer_name}</td>
                 <td className={styles.price}>
                   {offer.price.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}

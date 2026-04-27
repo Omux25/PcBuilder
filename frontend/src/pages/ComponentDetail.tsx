@@ -5,10 +5,10 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getComponents, getPrices, getPriceHistory } from '../api';
+import { getComponentBySlug, getPrices, getPriceHistory } from '../api';
 import { PriceHistoryChart } from '../components/PriceHistoryChart';
 import type { Component, PriceOffer, PriceHistoryEntry } from '../types';
-import { CATEGORY_LABELS, CATEGORY_ICONS } from '../types';
+import { CATEGORY_LABELS } from '../types';
 import styles from './ComponentDetail.module.css';
 
 export function ComponentDetail() {
@@ -24,14 +24,9 @@ export function ComponentDetail() {
     setLoading(true);
     setError(null);
 
-    // Find component by slug via search
-    getComponents({ search: slug, limit: 1 })
-      .then(async ({ components }) => {
-        const found = components.find((c) => c.slug === slug);
-        if (!found) throw new Error('Composant introuvable');
+    getComponentBySlug(slug)
+      .then(async (found) => {
         setComponent(found);
-
-        // Fetch prices and history in parallel
         const [priceData, historyData] = await Promise.all([
           getPrices(found.id),
           getPriceHistory(found.id, { days: 30 }),
@@ -64,9 +59,6 @@ export function ComponentDetail() {
 
       {/* Hero */}
       <div className={styles.hero}>
-        <div className={styles.heroIcon}>
-          {CATEGORY_ICONS[component.category]}
-        </div>
         <div className={styles.heroInfo}>
           <div className={styles.categoryBadge}>
             {CATEGORY_LABELS[component.category]}

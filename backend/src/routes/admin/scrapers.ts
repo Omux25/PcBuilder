@@ -1,8 +1,8 @@
 /**
  * Admin scraper routes — JWT-protected
  *
- * POST /api/admin/scrapers/:retailerId/run  — trigger immediate scrape for one retailer
- * POST /api/admin/scrapers/run-all          — trigger all active retailers
+ * POST /api/admin/scrapers/run-all         — trigger all active retailers
+ * POST /api/admin/scrapers/:retailerId/run — trigger one retailer
  *
  * Requirements: 5.1, 5.2, 5.3, 5.6
  */
@@ -10,6 +10,7 @@
 import { Hono } from 'hono';
 import { authMiddleware } from '../../middleware/auth.js';
 import { getRetailers, getRetailerById } from '../../services/retailerService.js';
+import { runScrapingSession } from '../../../scraper/session.js';
 
 const adminScrapersRouter = new Hono();
 
@@ -29,12 +30,9 @@ adminScrapersRouter.post('/run-all', async (c) => {
     const jobId = `scrape-${retailer.id}-${Date.now()}`;
     jobIds.push(jobId);
 
-    // Fire-and-forget: run scrape in background
     runningJobs.add(retailer.id);
     (async () => {
       try {
-        // Dynamic import to avoid circular deps — scheduler handles the actual scraping
-        const { runScrapingSession } = await import('../../../scraper/scheduler.js');
         await runScrapingSession();
       } finally {
         runningJobs.delete(retailer.id);
@@ -52,7 +50,6 @@ adminScrapersRouter.post('/:retailerId/run', async (c) => {
     return c.json({ error: { code: 'VALIDATION_ERROR', message: 'retailerId must be a positive integer' } }, 400);
   }
 
-  // Verify retailer exists
   try {
     await getRetailerById(retailerId);
   } catch (err: unknown) {
@@ -62,7 +59,6 @@ adminScrapersRouter.post('/:retailerId/run', async (c) => {
     throw err;
   }
 
-  // Check if already running
   if (runningJobs.has(retailerId)) {
     return c.json(
       { error: { code: 'CONFLICT', message: `A scraping job is already running for retailer ${retailerId}` } },
@@ -72,11 +68,9 @@ adminScrapersRouter.post('/:retailerId/run', async (c) => {
 
   const jobId = `scrape-${retailerId}-${Date.now()}`;
 
-  // Fire-and-forget
   runningJobs.add(retailerId);
   (async () => {
     try {
-      const { runScrapingSession } = await import('../../../scraper/scheduler.js');
       await runScrapingSession();
     } finally {
       runningJobs.delete(retailerId);

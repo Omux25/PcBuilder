@@ -6,6 +6,7 @@
  */
 
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { authRouter } from './routes/auth.js';
 import { componentsRouter } from './routes/components.js';
 import { pricesRouter } from './routes/prices.js';
@@ -21,6 +22,14 @@ import { adminUnmatchedRouter } from './routes/admin/unmatched.js';
 import { adminPresetsRouter } from './routes/admin/presets.js';
 
 const app = new Hono();
+
+// CORS — allow configured origins (comma-separated in ALLOWED_ORIGINS env var)
+app.use('/api/*', cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') ?? '*',
+  allowHeaders: ['Content-Type', 'Authorization'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true,
+}));
 
 // ── Public routes ─────────────────────────────────────────────────────────────
 
