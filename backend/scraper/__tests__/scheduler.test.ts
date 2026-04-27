@@ -4,6 +4,7 @@ import { runScrapingSession } from '../scheduler.js';
 import { setSql as setLoggerSql, resetSql as resetLoggerSql } from '../utils/logger.js';
 import { setSql as setAggregatorSql, resetSql as resetAggregatorSql } from '../aggregator.js';
 import { setFetch, resetFetchAndLoad, setRetryDelay } from '../scrapers/baseScraper.js';
+import { setUltraPcFetch, resetUltraPcFetch } from '../scrapers/ultrapcScraper.js';
 
 // ── Captured state ────────────────────────────────────────────────────────────
 
@@ -56,12 +57,22 @@ function makeFailingFetch(message = 'Network error') {
   return (_url: string) => Promise.reject(new Error(message));
 }
 
+// Empty JSON response for UltraPC (no products, no real HTTP calls)
+function makeEmptyUltraPcFetch() {
+  return (_url: string) => Promise.resolve({
+    ok: true,
+    status: 200,
+    text: () => Promise.resolve('{"products":[],"pagination":{"total_items":0,"pages_count":1,"current_page":1}}'),
+  });
+}
+
 beforeEach(() => {
   logEntries.length = 0;
   upsertedPrices.length = 0;
   setLoggerSql(makeLoggerSql());
   setAggregatorSql(makeAggregatorSql());
   setFetch(makeEmptyPageFetch());
+  setUltraPcFetch(makeEmptyUltraPcFetch());
   setRetryDelay(0); // no waiting in tests
 });
 
@@ -69,6 +80,7 @@ afterAll(() => {
   resetLoggerSql();
   resetAggregatorSql();
   resetFetchAndLoad();
+  resetUltraPcFetch();
 });
 
 // ── Session lifecycle ─────────────────────────────────────────────────────────

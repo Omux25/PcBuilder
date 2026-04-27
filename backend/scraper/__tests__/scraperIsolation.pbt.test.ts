@@ -14,6 +14,7 @@ import { runScrapingSession } from '../scheduler.js';
 import { setSql as setLoggerSql, resetSql as resetLoggerSql } from '../utils/logger.js';
 import { setSql as setAggregatorSql, resetSql as resetAggregatorSql } from '../aggregator.js';
 import { setFetch, resetFetchAndLoad, setRetryDelay } from '../scrapers/baseScraper.js';
+import { setUltraPcFetch, resetUltraPcFetch } from '../scrapers/ultrapcScraper.js';
 
 const logEntries: Array<{ level: string; message: string }> = [];
 
@@ -45,12 +46,19 @@ beforeEach(() => {
   setLoggerSql(makeLoggerSql());
   setAggregatorSql(makeAggregatorSql());
   setRetryDelay(0); // no waiting in tests
+  // Mock UltraPC fetch to return empty results — prevents real HTTP calls
+  setUltraPcFetch((_url: string) => Promise.resolve({
+    ok: true,
+    status: 200,
+    text: () => Promise.resolve('{"products":[],"pagination":{"total_items":0,"pages_count":1,"current_page":1}}'),
+  }));
 });
 
 afterAll(() => {
   resetLoggerSql();
   resetAggregatorSql();
   resetFetchAndLoad();
+  resetUltraPcFetch();
 });
 
 describe('PBT 10.6 — scraper error isolation', () => {
