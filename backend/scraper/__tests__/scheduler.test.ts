@@ -3,7 +3,7 @@ import { describe, test, expect, beforeEach, afterAll } from 'bun:test';
 import { runScrapingSession } from '../scheduler.js';
 import { setSql as setLoggerSql, resetSql as resetLoggerSql } from '../utils/logger.js';
 import { setSql as setAggregatorSql, resetSql as resetAggregatorSql } from '../aggregator.js';
-import { setFetch, resetFetchAndLoad } from '../scrapers/baseScraper.js';
+import { setFetch, resetFetchAndLoad, setRetryDelay } from '../scrapers/baseScraper.js';
 
 // ── Captured state ────────────────────────────────────────────────────────────
 
@@ -25,10 +25,15 @@ function makeLoggerSql() {
 
 function makeAggregatorSql() {
   return (strings: TemplateStringsArray, ...values: unknown[]) => {
-    upsertedPrices.push({
-      component_id: values[0] as number,
-      retailer_id:  values[1] as number,
-    });
+    const query = strings.join('?');
+    // scraper_mappings lookup → return empty (unmatched path)
+    if (query.includes('scraper_mappings')) {
+      return Promise.resolve([]);
+    }
+    // unmatched_listings insert → success
+    if (query.includes('unmatched_listings')) {
+      return Promise.resolve([]);
+    }
     return Promise.resolve([]);
   };
 }
@@ -57,6 +62,7 @@ beforeEach(() => {
   setLoggerSql(makeLoggerSql());
   setAggregatorSql(makeAggregatorSql());
   setFetch(makeEmptyPageFetch());
+  setRetryDelay(0); // no waiting in tests
 });
 
 afterAll(() => {
@@ -85,8 +91,8 @@ describe('runScrapingSession() — lifecycle', () => {
   test('session complete message includes updated and error counts', async () => {
     await runScrapingSession();
     const last = logEntries[logEntries.length - 1];
-    expect(last.message).toMatch(/\d+ price\(s\) updated/);
-    expect(last.message).toMatch(/\d+ error\(s\)/);
+    expect(last.message).toMatch(/\d+ updated/);
+    expect(last.message).toMatch(/\d+ error/);
   });
 
   test('does not throw even when all scrapers fail', async () => {
@@ -138,6 +144,6 @@ describe('runScrapingSession() — aggregation', () => {
   test('session complete log shows 0 updated when no prices scraped', async () => {
     await runScrapingSession();
     const last = logEntries[logEntries.length - 1];
-    expect(last.message).toContain('0 price(s) updated');
+    expect(last.message).toContain('0 updated');
   });
 });

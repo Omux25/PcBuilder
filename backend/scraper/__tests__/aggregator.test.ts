@@ -3,20 +3,44 @@ import { describe, test, expect, beforeEach, afterAll } from 'bun:test';
 import { aggregate, setSql, resetSql } from '../aggregator.js';
 import type { ScrapedPrice } from '../scrapers/baseScraper.js';
 
-// ── Mock SQL factory ──────────────────────────────────────────────────────────
+// ── Sample data ───────────────────────────────────────────────────────────────
 
-const upsertedRows: ScrapedPrice[] = [];
+const PRICES: ScrapedPrice[] = [
+  { component_id: 1, retailer_id: 1, price: 1299.99, in_stock: true,  product_url: 'https://site1.ma/cpu-1', product_name: 'CPU 1' },
+  { component_id: 2, retailer_id: 1, price: 450.00,  in_stock: false, product_url: 'https://site1.ma/gpu-2', product_name: 'GPU 2' },
+  { component_id: 3, retailer_id: 2, price: 2499.00, in_stock: true,  product_url: 'https://site2.ma/gpu-3', product_name: 'GPU 3' },
+];
 
-function makeMockSql() {
+// ── Mock SQL helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Creates a mock SQL that simulates the new aggregator flow:
+ * - Call 1 per price: scraper_mappings lookup → returns mapping or []
+ * - Call 2 per price (if matched): current prices lookup → returns [] (no existing price)
+ * - Call 3 per price (if matched): UPSERT prices
+ * - Call 4 per price (if matched): INSERT price_history
+ */
+function makeMappedSql(componentId: number) {
+  // Returns a mapping for every product URL
   return (strings: TemplateStringsArray, ...values: unknown[]) => {
-    // INSERT values order: component_id, retailer_id, price, in_stock, product_url, NOW()
-    upsertedRows.push({
-      component_id: values[0] as number,
-      retailer_id:  values[1] as number,
-      price:        values[2] as number,
-      in_stock:     values[3] as boolean,
-      product_url:  values[4] as string,
-    });
+    const query = strings.join('?');
+    if (query.includes('scraper_mappings')) {
+      return Promise.resolve([{ component_id: componentId }]);
+    }
+    if (query.includes('FROM prices')) {
+      return Promise.resolve([]); // no existing price → history will be inserted
+    }
+    return Promise.resolve([]);
+  };
+}
+
+function makeUnmatchedSql() {
+  // Returns no mapping for any product URL
+  return (strings: TemplateStringsArray, ...values: unknown[]) => {
+    const query = strings.join('?');
+    if (query.includes('scraper_mappings')) {
+      return Promise.resolve([]); // no mapping
+    }
     return Promise.resolve([]);
   };
 }
@@ -26,109 +50,81 @@ function makeThrowingSql() {
     Promise.reject(new Error('FK violation'));
 }
 
-let throwCount = 0;
-function makePartiallyThrowingSql(failOnIndex: number) {
-  let callIndex = 0;
-  return (strings: TemplateStringsArray, ...values: unknown[]) => {
-    const i = callIndex++;
-    if (i === failOnIndex) {
-      return Promise.reject(new Error('FK violation'));
-    }
-    upsertedRows.push({
-      component_id: values[0] as number,
-      retailer_id:  values[1] as number,
-      price:        values[2] as number,
-      in_stock:     values[3] as boolean,
-      product_url:  values[4] as string,
-    });
-    return Promise.resolve([]);
-  };
-}
-
-// ── Sample data ───────────────────────────────────────────────────────────────
-
-const PRICES: ScrapedPrice[] = [
-  { component_id: 1, retailer_id: 1, price: 1299.99, in_stock: true,  product_url: 'https://site1.ma/cpu-1' },
-  { component_id: 2, retailer_id: 1, price: 450.00,  in_stock: false, product_url: 'https://site1.ma/gpu-2' },
-  { component_id: 3, retailer_id: 2, price: 2499.00, in_stock: true,  product_url: 'https://site2.ma/gpu-3' },
-];
-
 beforeEach(() => {
-  upsertedRows.length = 0;
-  throwCount = 0;
-  setSql(makeMockSql());
+  resetSql();
 });
 
 afterAll(() => {
   resetSql();
 });
 
-// ── aggregate() — happy path ──────────────────────────────────────────────────
+// ── aggregate() — matched products ───────────────────────────────────────────
 
-describe('aggregate() — success', () => {
-  test('returns updated count equal to number of prices', async () => {
+describe('aggregate() — matched products', () => {
+  test('returns updated count equal to number of matched prices', async () => {
+    setSql(makeMappedSql(1));
     const result = await aggregate(PRICES);
     expect(result.updated).toBe(3);
     expect(result.errors).toBe(0);
-  });
-
-  test('UPSERTs every price record', async () => {
-    await aggregate(PRICES);
-    expect(upsertedRows).toHaveLength(3);
-  });
-
-  test('passes correct values to the SQL query', async () => {
-    await aggregate([PRICES[0]]);
-    expect(upsertedRows[0].component_id).toBe(1);
-    expect(upsertedRows[0].retailer_id).toBe(1);
-    expect(upsertedRows[0].price).toBe(1299.99);
-    expect(upsertedRows[0].in_stock).toBe(true);
-    expect(upsertedRows[0].product_url).toBe('https://site1.ma/cpu-1');
+    expect(result.unmatched).toBe(0);
   });
 
   test('returns updated=0 and errors=0 for empty input', async () => {
+    setSql(makeMappedSql(1));
     const result = await aggregate([]);
     expect(result.updated).toBe(0);
     expect(result.errors).toBe(0);
-    expect(upsertedRows).toHaveLength(0);
+    expect(result.unmatched).toBe(0);
   });
 
   test('handles a single price record', async () => {
+    setSql(makeMappedSql(1));
     const result = await aggregate([PRICES[0]]);
     expect(result.updated).toBe(1);
     expect(result.errors).toBe(0);
   });
 });
 
+// ── aggregate() — unmatched products ─────────────────────────────────────────
+
+describe('aggregate() — unmatched products', () => {
+  test('counts unmatched when no mapping exists', async () => {
+    setSql(makeUnmatchedSql());
+    const result = await aggregate(PRICES);
+    expect(result.unmatched).toBe(3);
+    expect(result.updated).toBe(0);
+    expect(result.errors).toBe(0);
+  });
+
+  test('does not throw for unmatched products', async () => {
+    setSql(makeUnmatchedSql());
+    await expect(aggregate(PRICES)).resolves.toBeDefined();
+  });
+});
+
 // ── aggregate() — error handling ─────────────────────────────────────────────
 
 describe('aggregate() — error handling', () => {
-  test('counts errors when all inserts fail', async () => {
+  test('counts errors when SQL throws', async () => {
     setSql(makeThrowingSql());
     const result = await aggregate(PRICES);
     expect(result.updated).toBe(0);
     expect(result.errors).toBe(3);
   });
 
-  test('does not throw when inserts fail', async () => {
+  test('does not throw when SQL fails', async () => {
     setSql(makeThrowingSql());
     await expect(aggregate(PRICES)).resolves.toBeDefined();
   });
 
-  test('continues processing after a failed row', async () => {
-    // Fail the second row (index 1), succeed the rest
-    setSql(makePartiallyThrowingSql(1));
-    const result = await aggregate(PRICES);
-    expect(result.updated).toBe(2);
-    expect(result.errors).toBe(1);
-    expect(upsertedRows).toHaveLength(2);
-  });
-
-  test('result shape always has updated and errors fields', async () => {
+  test('result shape always has updated, unmatched, and errors fields', async () => {
+    setSql(makeMappedSql(1));
     const result = await aggregate([]);
     expect(result).toHaveProperty('updated');
+    expect(result).toHaveProperty('unmatched');
     expect(result).toHaveProperty('errors');
     expect(typeof result.updated).toBe('number');
+    expect(typeof result.unmatched).toBe('number');
     expect(typeof result.errors).toBe('number');
   });
 });

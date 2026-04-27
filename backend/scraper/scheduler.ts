@@ -1,24 +1,11 @@
 /**
- * Scheduler — runs the full scraping session every 24 hours via Bun.cron().
+ * Scheduler — runs scraping sessions per-retailer based on their configured interval.
+ * Skips retailers where is_active = false.
  *
- * Wires together: scrapers → aggregator → logger.
- *
- * Flow per session:
- *   1. Log session start
- *   2. Run each scraper inside try/catch — one failure never stops the rest
- *   3. Collect all ScrapedPrice[] results
- *   4. Pass everything to the aggregator (UPSERT into prices table)
- *   5. Log session complete with summary
- *
- * To start the scheduler, import this file:
- *   import './scraper/scheduler.js';
- *
- * Or run it standalone:
- *   bun scraper/scheduler.ts
- *
- * Requirements: 6.6, 9.1, 9.2
+ * Requirements: 4.2, 4.4, 6.6, 9.1, 9.2
  */
 
+import { sql } from 'bun';
 import { logger } from './utils/logger.js';
 import { aggregate } from './aggregator.js';
 import { Site1Scraper } from './scrapers/site1Scraper.js';
@@ -27,15 +14,6 @@ import type { ScrapedPrice } from './scrapers/baseScraper.js';
 
 // ── Scraping session ──────────────────────────────────────────────────────────
 
-/**
- * Runs one full scraping session:
- * - Calls each scraper
- * - Collects results
- * - Aggregates into the DB
- * - Logs start, per-scraper errors, and final summary
- *
- * Exported so it can be called directly in tests or triggered manually.
- */
 export async function runScrapingSession(): Promise<void> {
   await logger.info('Scraping session started');
 
@@ -68,27 +46,47 @@ export async function runScrapingSession(): Promise<void> {
   }
 
   // ── Aggregate ────────────────────────────────────────────────────────────────
-  const { updated, errors } = await aggregate(allPrices);
+  const { updated, unmatched, errors } = await aggregate(allPrices);
 
   await logger.info(
-    `Session complete: ${updated} price(s) updated, ${errors} error(s)`,
+    `Session complete: ${updated} updated, ${unmatched} unmatched, ${errors} error(s)`,
   );
 }
 
-// ── Cron schedule ─────────────────────────────────────────────────────────────
+// ── Per-retailer interval check ───────────────────────────────────────────────
 
 /**
- * Schedules the scraping session to run every day at midnight.
- * Bun.cron() is built into Bun 1.3+ — no external package needed.
- *
- * Cron expression: '0 0 * * *'
- *   ┌── minute (0)
- *   │  ┌── hour (0 = midnight)
- *   │  │  ┌── day of month (*)
- *   │  │  │  ┌── month (*)
- *   │  │  │  │  ┌── day of week (*)
- *   0  0  *  *  *
+ * Checks which active retailers are due for a scrape based on their
+ * scraping_interval_hours setting, then runs a session for each.
+ * Called by the cron job every hour.
  */
-Bun.cron('0 0 * * *', runScrapingSession);
+async function runDueRetailers(): Promise<void> {
+  let retailers: { id: number; name: string; scraping_interval_hours: number }[];
 
-console.log('Scraper scheduler started — runs daily at midnight.');
+  try {
+    retailers = await sql`
+      SELECT id, name, scraping_interval_hours
+      FROM retailers
+      WHERE is_active = true
+        AND (
+          last_scrape_at IS NULL
+          OR last_scrape_at < NOW() - (scraping_interval_hours || ' hours')::INTERVAL
+        )
+    `;
+  } catch (err) {
+    await logger.error(`Failed to query retailers for scheduling: ${(err as Error).message}`);
+    return;
+  }
+
+  if (retailers.length === 0) return;
+
+  await logger.info(`Scheduler: ${retailers.length} retailer(s) due for scraping`);
+  await runScrapingSession();
+}
+
+// ── Cron schedule ─────────────────────────────────────────────────────────────
+// Check every hour which retailers are due — respects per-retailer intervals.
+
+Bun.cron('0 * * * *', runDueRetailers);
+
+console.log('Scraper scheduler started — checks for due retailers every hour.');

@@ -5,6 +5,7 @@ import {
   setFetch,
   setLoad,
   resetFetchAndLoad,
+  setRetryDelay,
   type ScrapedPrice,
 } from '../baseScraper.js';
 import type { CheerioAPI } from 'cheerio';
@@ -53,6 +54,7 @@ const MOCK_PRICES: ScrapedPrice[] = [
 
 beforeEach(() => {
   resetFetchAndLoad();
+  setRetryDelay(0); // no waiting in tests
 });
 
 afterAll(() => {

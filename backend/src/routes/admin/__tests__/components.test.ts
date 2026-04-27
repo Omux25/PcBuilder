@@ -174,7 +174,13 @@ describe('DELETE /api/admin/components/:id', () => {
   });
 
   test('returns 200 with success message when component deleted', async () => {
-    setSql(async () => [{ id: 1 }]);
+    // deleteComponent makes 3 SQL calls: count prices, count mappings, then DELETE
+    let callCount = 0;
+    setSql(async () => {
+      callCount++;
+      if (callCount <= 2) return [{ cnt: '0' }]; // no dependencies
+      return [{ id: 1 }]; // DELETE RETURNING
+    });
 
     const res = await app.request('/api/admin/components/1', {
       method: 'DELETE',
@@ -187,7 +193,13 @@ describe('DELETE /api/admin/components/:id', () => {
   });
 
   test('returns 404 when component not found', async () => {
-    setSql(async () => []);
+    // deleteComponent: count prices → 0, count mappings → 0, DELETE → []
+    let callCount = 0;
+    setSql(async () => {
+      callCount++;
+      if (callCount <= 2) return [{ cnt: '0' }];
+      return []; // nothing deleted
+    });
 
     const res = await app.request('/api/admin/components/999', {
       method: 'DELETE',
