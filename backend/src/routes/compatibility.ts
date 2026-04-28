@@ -19,14 +19,14 @@ compatibilityRouter.post('/validate', async (c) => {
     body = await c.req.json();
   } catch {
     return c.json(
-      { error: { code: 'VALIDATION_ERROR', message: 'Request body must be valid JSON', fields: [] } },
+      { error: { code: 'VALIDATION_ERROR', message: 'Le corps de la requête doit être du JSON valide', fields: [] } },
       400,
     );
   }
 
   if (body === null || typeof body !== 'object') {
     return c.json(
-      { error: { code: 'VALIDATION_ERROR', message: 'Request body must be an object', fields: [] } },
+      { error: { code: 'VALIDATION_ERROR', message: 'Le corps de la requête doit être un objet', fields: [] } },
       400,
     );
   }

@@ -104,7 +104,7 @@ describe('authMiddleware', () => {
     expect(res.status).toBe(401);
     const json = await res.json();
     expect(json.error.code).toBe('UNAUTHORIZED');
-    expect(json.error.message).toContain('expired');
+    expect(json.error.message).toContain('expiré');
   });
 
   test('calls next() and attaches admin payload to context when token is valid', async () => {
