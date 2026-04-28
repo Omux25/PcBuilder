@@ -108,7 +108,7 @@
   transition: all .15s;
 }
 .priceNavBtn:hover { border-color: var(--accent); color: var(--text); }
-.priceNavBtn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.priceNavBtn.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
 
 /* ── Footer ─────────────────────────────────────────────────────────────────── */
 

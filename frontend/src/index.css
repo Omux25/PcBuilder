@@ -21,6 +21,14 @@
   --text-muted:  #94a3b8;
   --text-dim:    #6c7086;
   --radius:      8px;
+
+  /* Semantic tint backgrounds — used for badges and highlighted rows */
+  --success-tint:  #14532d;       /* dark green bg for compatible badge */
+  --danger-tint:   #450a0a;       /* dark red bg for incompatible badge */
+  --warning-tint:  #78350f;       /* dark amber bg for warning items */
+  --success-row:   rgba(20,83,45,0.13);   /* subtle green row highlight */
+  --danger-row:    rgba(69,10,10,0.20);   /* subtle red row highlight */
+  --warning-row:   rgba(120,53,15,0.20);  /* subtle amber row highlight */
   font-family: system-ui, -apple-system, sans-serif;
   font-size: 15px;
   color: var(--text);

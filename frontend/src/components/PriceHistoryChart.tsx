@@ -15,8 +15,15 @@ interface Props {
   loading?: boolean;
 }
 
-// Distinct colors for up to 6 retailers
-const COLORS = ['#89b4fa', '#a6e3a1', '#fab387', '#f38ba8', '#cba6f7', '#94e2d5'];
+// Distinct colors for up to 6 retailers — using CSS variables resolved at runtime
+function getCssVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+const RETAILER_COLORS = [
+  '--accent-blue', '--success-soft', '--warning-soft',
+  '--danger-soft', '--text-2',       '--text-muted',
+] as const;
 
 export function PriceHistoryChart({ history, loading }: Props) {
   if (loading) {
@@ -47,38 +54,42 @@ export function PriceHistoryChart({ history, loading }: Props) {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, prices]) => ({ date, ...prices }));
 
+  const gridColor   = getCssVar('--border');
+  const tickColor   = getCssVar('--text-dim');
+  const tooltipBg   = getCssVar('--surface-2');
+  const tooltipBdr  = getCssVar('--border-2');
+  const legendColor = getCssVar('--text-muted');
+
   return (
     <div className={styles.chart}>
       <ResponsiveContainer width="100%" height={220}>
         <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#313244" />
+          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
           <XAxis
             dataKey="date"
-            tick={{ fill: '#6c7086', fontSize: 11 }}
+            tick={{ fill: tickColor, fontSize: 11 }}
             tickLine={false}
           />
           <YAxis
-            tick={{ fill: '#6c7086', fontSize: 11 }}
+            tick={{ fill: tickColor, fontSize: 11 }}
             tickLine={false}
             axisLine={false}
             tickFormatter={(v) => `${v} MAD`}
             width={75}
           />
           <Tooltip
-            contentStyle={{ background: '#1e1e2e', border: '1px solid #313244', borderRadius: 6 }}
-            labelStyle={{ color: '#cdd6f4', fontSize: 12 }}
+            contentStyle={{ background: tooltipBg, border: `1px solid ${tooltipBdr}`, borderRadius: 6 }}
+            labelStyle={{ color: getCssVar('--text-2'), fontSize: 12 }}
             itemStyle={{ fontSize: 12 }}
             formatter={(value) => value != null ? [`${Number(value).toLocaleString()} MAD`] : ['-']}
           />
-          <Legend
-            wrapperStyle={{ fontSize: 12, color: '#a6adc8' }}
-          />
+          <Legend wrapperStyle={{ fontSize: 12, color: legendColor }} />
           {retailerNames.map((name, i) => (
             <Line
               key={name}
               type="monotone"
               dataKey={name}
-              stroke={COLORS[i % COLORS.length]}
+              stroke={getCssVar(RETAILER_COLORS[i % RETAILER_COLORS.length])}
               strokeWidth={2}
               dot={false}
               connectNulls
