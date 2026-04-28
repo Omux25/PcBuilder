@@ -23,5 +23,6 @@ One file per completed task. Each file explains what was built, why it matters, 
 | [task-10-5-scheduler.md](task-10-5-scheduler.md) | Scheduler (Bun.cron every 24h) | Backend | Salmane | ✅ Done |
 | [task-12-frontend.md](task-12-frontend.md) | React frontend (Vite + all components) | Frontend | Ghali | ✅ Done |
 | [task-pbt-all.md](task-pbt-all.md) | All 11 property-based tests (fast-check) | Backend | Salmane | ✅ Done |
+| [smart-component-matcher.md](smart-component-matcher.md) | DNA-based smart component matcher (Gemini recommendations) | Backend | Salmane | ✅ Done |
 
 > New rows are added here after each task is completed — never before.
