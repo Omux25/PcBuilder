@@ -65,17 +65,18 @@ export class SetupGameScraper {
   readonly siteName = SITE_NAME;
 
   async scrapeAllCategories(): Promise<ScrapedPrice[]> {
-    const allPrices: ScrapedPrice[] = [];
+    const results = await Promise.allSettled(
+      CATEGORY_IDS.map((id) => this.scrapeCategory(id))
+    );
 
-    for (const categoryId of CATEGORY_IDS) {
-      try {
-        const prices = await this.scrapeCategory(categoryId);
-        allPrices.push(...prices);
-      } catch (err) {
-        console.error(`[${SITE_NAME}] Failed to scrape category ${categoryId}: ${(err as Error).message}`);
+    const allPrices: ScrapedPrice[] = [];
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        allPrices.push(...result.value);
+      } else {
+        console.error(`[${SITE_NAME}] Category failed: ${result.reason}`);
       }
     }
-
     return allPrices;
   }
 
@@ -89,7 +90,7 @@ export class SetupGameScraper {
 
       const response = await _fetch(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+          'User-Agent': 'PCBuilderMaroc-Bot/1.0 (price comparator; +https://pcbuilder.ma)',
           'Accept': 'application/json',
           'Origin': 'https://setupgame.ma',
           'Referer': 'https://setupgame.ma/',

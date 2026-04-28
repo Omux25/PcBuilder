@@ -5,7 +5,11 @@
  * the X-Requested-With: XMLHttpRequest header, it returns a JSON response
  * containing all product data (name, URL, price, stock status).
  *
- * This is much more reliable than HTML scraping and handles pagination.
+ * Stock status: the listing API does NOT expose stock. We use the PrestaShop
+ * product AJAX endpoint (?controller=product&id_product=X&ajax=1&action=refresh)
+ * which returns HTML containing either "product-unavailable" or "product-available".
+ * We only check stock for products that have a scraper_mapping (i.e. products we
+ * actually display to users), not all 2164 products.
  *
  * JSON response structure (verified 2026-04-27):
  *   {
@@ -15,6 +19,7 @@
  *         url: "https://www.ultrapc.ma/socket-am5/4996-amd-ryzen-5-7600x.html",
  *         price_amount: 2390,
  *         active: "1",
+ *         id_product: 4996,
  *         ...
  *       }
  *     ],
@@ -24,9 +29,6 @@
  *       current_page: 1
  *     }
  *   }
- *
- * Stock status: all products returned by the API are in stock.
- * Out-of-stock products are not returned in the listing.
  *
  * Requirements: 6.1, 6.2, 6.3
  */
@@ -38,7 +40,7 @@ const SITE_NAME   = 'ultrapc.ma';
 const RETAILER_ID = 10; // ID in the retailers table
 
 const HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+  'User-Agent': 'PCBuilderMaroc-Bot/1.0 (price comparator; +https://pcbuilder.ma)',
   'X-Requested-With': 'XMLHttpRequest',
   'Accept': 'application/json, text/javascript, */*',
 };
@@ -80,6 +82,7 @@ interface UltraPcProduct {
   canonical_url: string;
   price_amount: number;
   active: string;
+  id_product?: number;
 }
 
 interface UltraPcResponse {
@@ -96,20 +99,49 @@ export class UltraPcScraper {
 
   /**
    * Scrapes all component category pages and returns all found price records.
+   * Categories are fetched in parallel to reduce total time.
+   * Note: in_stock defaults to true — the aggregator checks actual stock
+   * only for mapped products via the PrestaShop product API.
    */
   async scrapeAllCategories(): Promise<ScrapedPrice[]> {
-    const allPrices: ScrapedPrice[] = [];
+    const results = await Promise.allSettled(
+      CATEGORY_URLS.map((url) => this.scrapeCategory(url))
+    );
 
-    for (const baseUrl of CATEGORY_URLS) {
-      try {
-        const prices = await this.scrapeCategory(baseUrl);
-        allPrices.push(...prices);
-      } catch (err) {
-        console.error(`[${SITE_NAME}] Failed to scrape ${baseUrl}: ${(err as Error).message}`);
+    const allPrices: ScrapedPrice[] = [];
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        allPrices.push(...result.value);
+      } else {
+        console.error(`[${SITE_NAME}] Category failed: ${result.reason}`);
       }
     }
-
     return allPrices;
+  }
+
+  /**
+   * Checks stock status for a subset of products using the PrestaShop AJAX endpoint.
+   * Called by the aggregator only for mapped products (not all 2164 scraped products).
+   * Mutates in_stock in place. Runs in parallel batches of 20.
+   */
+  async checkStock(prices: ScrapedPrice[]): Promise<void> {
+    const BATCH_SIZE = 20;
+    for (let i = 0; i < prices.length; i += BATCH_SIZE) {
+      const batch = prices.slice(i, i + BATCH_SIZE);
+      await Promise.all(batch.map(async (price) => {
+        const idMatch = price.product_url.match(/\/(\d+)-[^/]+\.html$/);
+        if (!idMatch) return;
+        try {
+          const res = await _fetch(
+            `https://www.ultrapc.ma/index.php?controller=product&id_product=${idMatch[1]}&ajax=1&action=refresh`,
+            { headers: HEADERS as Record<string, unknown> }
+          );
+          if (!res.ok) return;
+          const html = await res.text();
+          price.in_stock = !html.includes('product-unavailable') && !html.includes('Rupture de stock');
+        } catch { /* leave as true on failure */ }
+      }));
+    }
   }
 
   /**
@@ -146,7 +178,7 @@ export class UltraPcScraper {
             component_id: 0, // resolved by aggregator via scraper_mappings
             retailer_id: RETAILER_ID,
             price,
-            in_stock: true, // products in the listing are in stock
+            in_stock: true, // will be corrected by checkStockBatch after all pages are scraped
             product_url,
             product_name: product.name,
           });
@@ -159,9 +191,9 @@ export class UltraPcScraper {
 
       page++;
 
-      // Small delay between pages to be respectful
+      // Small delay between pages to be respectful (100ms is enough for a JSON API)
       if (page <= totalPages) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
     } while (page <= totalPages && page <= 10); // cap at 10 pages per category
 
