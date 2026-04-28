@@ -1,34 +1,78 @@
-# PC Builder — Team Notes
+# PC Builder Maroc — Documentation
 
-> A price comparator and compatibility checker for PC components in Morocco. Users pick parts, get instant compatibility feedback, and compare prices across Moroccan retailers. The platform does **not** sell anything — it redirects users to retailer websites.
+> A price comparator and compatibility checker for PC components in Morocco.
+> Users pick parts, get instant compatibility feedback, and compare prices across Moroccan retailers.
+> The platform does **not** sell anything — it redirects users to retailer websites.
 
-**Team:** Salmane ELHJOUJI (backend) · Ghali KHARMOUDY (frontend)  
-**School:** EMSI Orangers, Casablanca  
-**Deadline:** May 11, 2026
-
----
-
-## How to read these files
-
-| Tool | How |
-|---|---|
-| **VS Code** | Open the `notes/` folder. All files are plain Markdown — they render in the preview panel (`Ctrl+Shift+V`). |
-| **GitHub** | Browse directly in the repository. GitHub renders Markdown automatically. |
-| **Obsidian** | Open the `notes/` folder as a vault. Internal links and backlinks work out of the box. |
+**Team:** Salmane ELHJOUJI (backend) · Ghali KHARMOUDY (frontend)
+**School:** EMSI Orangers, Casablanca · **Deadline:** May 11, 2026
+**Status:** Complete — 324 tests passing
 
 ---
 
-## Roadmap
+## Start here
 
-| File | What it contains |
+If you're new to the project, read in this order:
+
+1. [What the platform does and how it's built](features/compatibility-engine.md) — start with the core feature
+2. [How to run everything locally](reference/dev-setup.md) — get the stack running
+3. [API reference](reference/api.md) — all endpoints in one place
+4. [Database schema](reference/database.md) — all 14 tables explained
+
+---
+
+## Features
+
+How each major feature works — the what, why, and how.
+
+| File | What it covers |
 |---|---|
-| [roadmap.md](roadmap.md) | All tasks, their status, and what to work on next |
+| [features/compatibility-engine.md](features/compatibility-engine.md) | The 6 compatibility rules, how errors vs warnings work, TDP calculation |
+| [features/price-comparison.md](features/price-comparison.md) | Price offers, variant model, price history, how the scraper feeds the UI |
+| [features/scraping-system.md](features/scraping-system.md) | How scrapers work, the DNA matcher, aggregator, scheduler |
+| [features/authentication.md](features/authentication.md) | JWT access tokens, refresh tokens, rate limiting, bcrypt |
+| [features/component-catalog.md](features/component-catalog.md) | Categories, Zod schemas, slugs, search, pagination |
+| [features/admin-panel.md](features/admin-panel.md) | Dashboard, component CRUD, bulk import, unmatched listings |
+
+---
+
+## Reference
+
+Precise technical reference — look things up here.
+
+| File | What it covers |
+|---|---|
+| [reference/api.md](reference/api.md) | Every API route — method, URL, params, response shape |
+| [reference/database.md](reference/database.md) | All 14 tables, columns, constraints, indexes |
+| [reference/dev-setup.md](reference/dev-setup.md) | Prerequisites, migrations, running the stack, running tests |
+| [reference/stack.md](reference/stack.md) | Every technology choice and why it was made |
+
+---
+
+## Diagrams
+
+PlantUML source files — committed to Git. Rendered PNGs are in `diagrams/rendered/`.
+
+| File | Type | What it shows |
+|---|---|---|
+| [diagrams/use_case.puml](diagrams/use_case.puml) | Use Case | Actors and all system use cases |
+| [diagrams/class.puml](diagrams/class.puml) | Class | Domain model, services, scrapers |
+| [diagrams/activity.puml](diagrams/activity.puml) | Activity | Complete user flow |
+| [diagrams/sequence_1_compatibility.puml](diagrams/sequence_1_compatibility.puml) | Sequence | Compatibility validation flow |
+| [diagrams/sequence_2_price_comparison.puml](diagrams/sequence_2_price_comparison.puml) | Sequence | Price comparison and retailer redirect |
+| [diagrams/sequence_3_admin.puml](diagrams/sequence_3_admin.puml) | Sequence | Admin login and component management |
+| [diagrams/sequence_scraping.puml](diagrams/sequence_scraping.puml) | Sequence | Daily price scraping background process |
+
+To regenerate PNGs:
+```bash
+java -DPLANTUML_LIMIT_SIZE=8192 -jar plantuml.jar -tpng notes/diagrams/*.puml -o rendered
+```
 
 ---
 
 ## Spec Documents
 
-The original project specification (Cahier des Charges) written for EMSI Orangers. See [spec/README.md](spec/README.md) for how to regenerate the PDFs.
+The original project specification (Cahier des Charges) for EMSI Orangers.
 
 | File | Description |
 |---|---|
@@ -37,60 +81,6 @@ The original project specification (Cahier des Charges) written for EMSI Oranger
 
 ---
 
-## Guide
+## Project status
 
-Reference and learning material — read these to understand the project.
-
-| File | What it contains |
-|---|---|
-| [guide/stack.md](guide/stack.md) | Every technology choice and why it was made |
-| [guide/architecture.md](guide/architecture.md) | Project structure, layers, API routes, middleware chain |
-| [guide/database.md](guide/database.md) | All 5 database tables explained, how to run migrations |
-| [guide/dev-setup.md](guide/dev-setup.md) | How to run the server, tests, and migrations locally |
-| [guide/concepts.md](guide/concepts.md) | Plain-language explanations of every concept (JWT, Zod, TDP, etc.) |
-| [guide/git-workflow.md](guide/git-workflow.md) | Commit conventions, branch rules, what's gitignored |
-
----
-
-## Glossary
-
-| File | What it contains |
-|---|---|
-| [glossary.md](glossary.md) | Alphabetical definitions of every technical term used in this project |
-
----
-
-## Diagrams
-
-PlantUML source files for all project diagrams. See [diagrams/README.md](diagrams/README.md) for the full index and instructions for regenerating PNGs.
-
-| File | Type | What it shows |
-|---|---|---|
-| [diagrams/use_case.puml](diagrams/use_case.puml) | Use Case | Actors and all system use cases |
-| [diagrams/class.puml](diagrams/class.puml) | Class | Domain model, services, scrapers, DTOs |
-| [diagrams/activity.puml](diagrams/activity.puml) | Activity | Complete user flow |
-| [diagrams/sequence_1_compatibility.puml](diagrams/sequence_1_compatibility.puml) | Sequence | Component selection and compatibility validation |
-| [diagrams/sequence_2_price_comparison.puml](diagrams/sequence_2_price_comparison.puml) | Sequence | Price comparison and retailer redirect |
-| [diagrams/sequence_3_admin.puml](diagrams/sequence_3_admin.puml) | Sequence | Admin login and component management |
-| [diagrams/sequence_scraping.puml](diagrams/sequence_scraping.puml) | Sequence | Daily price scraping background process |
-
----
-
-## Task Explainers
-
-One file per completed task. Each file explains what was built, why it matters, and which files were created or changed — based on the actual code.
-
-| File | Task | Track | Dev |
-|---|---|---|---|
-| [task-explainers/task-01-project-scaffolding.md](task-explainers/task-01-project-scaffolding.md) | Initialize project structure and database | Backend | Salmane |
-| [task-explainers/task-02-compatibility-engine.md](task-explainers/task-02-compatibility-engine.md) | Implement the Compatibility Engine | Backend | Salmane |
-| [task-explainers/task-03-compatibility-tests.md](task-explainers/task-03-compatibility-tests.md) | Checkpoint — all compatibility engine tests pass | Backend | Salmane |
-| [task-explainers/task-04-zod-schemas-middleware.md](task-explainers/task-04-zod-schemas-middleware.md) | Zod validation schemas and middleware | Backend | Salmane |
-| [task-explainers/task-05-jwt-auth.md](task-explainers/task-05-jwt-auth.md) | JWT authentication middleware and auth route | Backend | Salmane |
-| [task-explainers/task-06-1-component-service.md](task-explainers/task-06-1-component-service.md) | Component Service (data access layer) | Backend | Salmane |
-| [task-explainers/task-06-3-components-routes.md](task-explainers/task-06-3-components-routes.md) | Public component routes (GET /api/components) | Backend | Salmane |
-| [task-explainers/task-06-4-prices-route.md](task-explainers/task-06-4-prices-route.md) | Prices route (GET /api/components/:id/prices) | Backend | Salmane |
-| [task-explainers/task-06-5-compatibility-route.md](task-explainers/task-06-5-compatibility-route.md) | Compatibility route (POST /api/compatibility/validate) | Backend | Salmane |
-| [task-explainers/task-07-1-admin-components-routes.md](task-explainers/task-07-1-admin-components-routes.md) | Admin component routes (POST/PUT/DELETE) | Backend | Salmane |
-
-> New explainers are added here after each task is completed — never before.
+See [roadmap.md](roadmap.md) for the full task history and what was built in each phase.
