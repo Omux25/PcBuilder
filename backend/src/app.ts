@@ -12,7 +12,6 @@ import { authRouter } from './routes/auth.js';
 import { componentsRouter } from './routes/components.js';
 import { pricesRouter } from './routes/prices.js';
 import { compatibilityRouter } from './routes/compatibility.js';
-import { presetsRouter } from './routes/presets.js';
 import { healthRouter } from './routes/health.js';
 import { smartSearchRouter } from './routes/smartSearch.js';
 import { adminComponentsRouter } from './routes/admin/components.js';
@@ -21,7 +20,6 @@ import { adminDashboardRouter } from './routes/admin/dashboard.js';
 import { adminRetailersRouter } from './routes/admin/retailers.js';
 import { adminScrapersRouter } from './routes/admin/scrapers.js';
 import { adminUnmatchedRouter } from './routes/admin/unmatched.js';
-import { adminPresetsRouter } from './routes/admin/presets.js';
 
 const app = new Hono();
 
@@ -36,12 +34,11 @@ app.use('/api/*', cors({
 // ── Public routes ─────────────────────────────────────────────────────────────
 
 app.route('/api/auth', authRouter);
+app.route('/api/components/smart-search', smartSearchRouter); // MUST be before /api/components (avoids /:id catch-all)
 app.route('/api/components', componentsRouter);
 app.route('/api/components', pricesRouter);          // GET /api/components/:id/prices
 app.route('/api/compatibility', compatibilityRouter);
-app.route('/api/builds/presets', presetsRouter);
 app.route('/api/health', healthRouter);
-app.route('/api/components/smart-search', smartSearchRouter);
 
 // ── Protected routes ──────────────────────────────────────────────────────────
 
@@ -51,7 +48,6 @@ app.route('/api/admin/logs', adminLogsRouter);
 app.route('/api/admin/retailers', adminRetailersRouter);
 app.route('/api/admin/scrapers', adminScrapersRouter);
 app.route('/api/admin/unmatched-listings', adminUnmatchedRouter);
-app.route('/api/admin/presets', adminPresetsRouter);
 
 // ── Global 404 ───────────────────────────────────────────────────────────────
 
@@ -60,7 +56,7 @@ app.notFound((c) => {
     {
       error: {
         code: 'NOT_FOUND',
-        message: `Route ${c.req.method} ${c.req.path} not found`,
+        message: `Route ${c.req.method} ${c.req.path} introuvable`,
       },
     },
     404,
@@ -77,7 +73,7 @@ app.onError((err, c) => {
     {
       error: {
         code: 'INTERNAL_ERROR',
-        message: 'An unexpected error occurred',
+        message: 'Une erreur inattendue s\'est produite',
       },
     },
     500,

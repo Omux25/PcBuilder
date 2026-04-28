@@ -56,6 +56,8 @@ export interface PriceOffer {
   price: number;
   in_stock: boolean;
   product_url: string;
+  variant_label: string | null;
+  variant_details: Record<string, unknown> | null;
   last_updated: string;
 }
 
@@ -130,7 +132,7 @@ async function getComponentById(id: number): Promise<Component> {
   `) as Component[];
 
   if (rows.length === 0) {
-    const err = new Error(`Component with id ${id} not found`);
+    const err = new Error(`Composant avec l'identifiant ${id} introuvable`);
     (err as NodeJS.ErrnoException).code = 'COMPONENT_NOT_FOUND';
     throw err;
   }
@@ -150,7 +152,7 @@ async function getComponentBySlug(slug: string): Promise<Component> {
   `) as Component[];
 
   if (rows.length === 0) {
-    const err = new Error(`Component with slug "${slug}" not found`);
+    const err = new Error(`Composant "${slug}" introuvable`);
     (err as NodeJS.ErrnoException).code = 'COMPONENT_NOT_FOUND';
     throw err;
   }
@@ -160,20 +162,23 @@ async function getComponentBySlug(slug: string): Promise<Component> {
 
 /**
  * Returns all price offers for a component, sorted by ascending price.
+ * Each row is a distinct variant (AIB partner, packaging, etc.).
  */
 async function getPricesByComponentId(id: number): Promise<PriceOffer[]> {
   return _sql`
     SELECT
-      r.id          AS retailer_id,
-      r.name        AS retailer_name,
+      r.id              AS retailer_id,
+      r.name            AS retailer_name,
       p.price,
       p.in_stock,
       p.product_url,
+      p.variant_label,
+      p.variant_details,
       p.last_updated
     FROM prices p
     JOIN retailers r ON r.id = p.retailer_id
     WHERE p.component_id = ${id}
-    ORDER BY p.price ASC
+    ORDER BY p.in_stock DESC, p.price ASC
   ` as Promise<PriceOffer[]>;
 }
 
@@ -280,7 +285,7 @@ async function updateComponent(id: number, data: ComponentInput): Promise<Compon
   `) as Component[];
 
   if (rows.length === 0) {
-    const err = new Error(`Component with id ${id} not found`);
+    const err = new Error(`Composant avec l'identifiant ${id} introuvable`);
     (err as NodeJS.ErrnoException).code = 'COMPONENT_NOT_FOUND';
     throw err;
   }
@@ -300,7 +305,7 @@ async function deactivateComponent(id: number): Promise<Component> {
   `) as Component[];
 
   if (rows.length === 0) {
-    const err = new Error(`Component with id ${id} not found`);
+    const err = new Error(`Composant avec l'identifiant ${id} introuvable`);
     (err as NodeJS.ErrnoException).code = 'COMPONENT_NOT_FOUND';
     throw err;
   }
@@ -314,7 +319,6 @@ async function deactivateComponent(id: number): Promise<Component> {
  * Throws COMPONENT_HAS_DEPENDENCIES if linked records exist.
  */
 async function deleteComponent(id: number): Promise<void> {
-  // Use a transaction to avoid TOCTOU race between dependency check and DELETE
   const rows = (await _sql`
     WITH dep_check AS (
       SELECT
@@ -331,14 +335,13 @@ async function deleteComponent(id: number): Promise<void> {
   `) as { id: number; price_count: string; mapping_count: string }[];
 
   if (rows.length === 0) {
-    // Check if it failed due to dependencies or because the component doesn't exist
     const exists = (await _sql`SELECT id FROM components WHERE id = ${id} LIMIT 1`) as { id: number }[];
     if (exists.length === 0) {
-      const err = new Error(`Component with id ${id} not found`);
+      const err = new Error(`Composant avec l'identifiant ${id} introuvable`);
       (err as NodeJS.ErrnoException).code = 'COMPONENT_NOT_FOUND';
       throw err;
     }
-    const err = new Error(`Component ${id} has linked records and cannot be deleted`);
+    const err = new Error(`Le composant ${id} possède des enregistrements liés et ne peut pas être supprimé`);
     (err as NodeJS.ErrnoException).code = 'COMPONENT_HAS_DEPENDENCIES';
     throw err;
   }
