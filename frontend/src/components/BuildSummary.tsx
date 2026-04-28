@@ -76,7 +76,7 @@ export function BuildSummary({ build }: Props) {
           {/* TDP */}
           <div className={styles.stats}>
             <Stat label="Consommation totale" value={`${result.total_tdp} W`} />
-            <Stat label="PSU recommandé (min)" value={`${result.recommended_psu_wattage} W`} />
+            <Stat label="Alimentation recommandée (min)" value={`${result.recommended_psu_wattage} W`} />
           </div>
 
           {/* Errors */}

@@ -154,10 +154,42 @@ export function ComponentDetail() {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+const SPEC_KEY_LABELS: Record<string, string> = {
+  socket:              'Socket',
+  cores:               'Cœurs',
+  threads:             'Threads',
+  base_clock_ghz:      'Fréquence de base (GHz)',
+  boost_clock_ghz:     'Fréquence boost (GHz)',
+  tdp:                 'TDP (W)',
+  chipset:             'Chipset',
+  vram_gb:             'VRAM (Go)',
+  length_mm:           'Longueur (mm)',
+  pcie_version:        'PCIe',
+  ram_type:            'Type de RAM',
+  capacity_gb:         'Capacité (Go)',
+  frequency_mhz:       'Fréquence (MHz)',
+  cas_latency:         'Latence CAS',
+  voltage:             'Tension (V)',
+  kit:                 'Kit',
+  type:                'Type',
+  interface:           'Interface',
+  read_speed_mbps:     'Lecture (Mo/s)',
+  write_speed_mbps:    'Écriture (Mo/s)',
+  wattage:             'Puissance (W)',
+  efficiency_rating:   'Certification',
+  modular:             'Modulaire',
+  form_factor:         'Format',
+  max_gpu_length_mm:   'Longueur GPU max (mm)',
+  max_cpu_cooler_height_mm: 'Hauteur ventirad max (mm)',
+  drive_bays:          'Baies de stockage',
+  supported_ram_types: 'Types RAM supportés',
+  max_ram_gb:          'RAM max (Go)',
+  max_ram_frequency:   'Fréquence RAM max (MHz)',
+  ram_slots:           'Emplacements RAM',
+};
+
 function formatSpecKey(key: string): string {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return SPEC_KEY_LABELS[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function formatSpecValue(value: unknown): string {

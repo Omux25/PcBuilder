@@ -114,7 +114,7 @@ export function ComponentPicker({ category, selected, build, onSelect }: Props) 
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="listbox"
-        aria-label={`Selectionner ${CATEGORY_LABELS[category]}`}
+        aria-label={`Sélectionner ${CATEGORY_LABELS[category]}`}
       >
         {selected ? (
           <span className={styles.selectedLabel}>
@@ -126,7 +126,7 @@ export function ComponentPicker({ category, selected, build, onSelect }: Props) 
         ) : (
           <span className={styles.placeholder}>
             <CategoryIcon category={category} size={16} className={styles.iconSvg} />
-            Selectionner...
+            Sélectionner...
           </span>
         )}
         <span className={styles.chevron}>{open ? '▲' : '▼'}</span>
@@ -140,7 +140,7 @@ export function ComponentPicker({ category, selected, build, onSelect }: Props) 
           onClick={(e) => { e.stopPropagation(); onSelect(null); }}
           aria-label="Retirer ce composant"
         >
-          x
+          ×
         </button>
       )}
 
@@ -171,7 +171,7 @@ export function ComponentPicker({ category, selected, build, onSelect }: Props) 
             )}
             {error && <li className={styles.errorItem}>Erreur: {error}</li>}
             {!loading && !error && components.length === 0 && (
-              <li className={styles.hint}>Aucun resultat</li>
+              <li className={styles.hint}>Aucun résultat</li>
             )}
             {!loading && components.map((c) => (
               <ComponentRow
