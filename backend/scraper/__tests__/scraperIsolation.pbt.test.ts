@@ -14,6 +14,7 @@ import { runScrapingSession } from '../scheduler.js';
 import { setSql as setLoggerSql, resetSql as resetLoggerSql } from '../utils/logger.js';
 import { setSql as setAggregatorSql, resetSql as resetAggregatorSql } from '../aggregator.js';
 import { setSql as setAutoMapperSql, resetSql as resetAutoMapperSql } from '../autoMapper.js';
+import { setSql as setCatalogBuilderSql, resetSql as resetCatalogBuilderSql } from '../catalogBuilder.js';
 import { setFetch, resetFetchAndLoad, setRetryDelay, setSilent } from '../scrapers/baseScraper.js';
 import { setUltraPcFetch, resetUltraPcFetch } from '../scrapers/ultrapcScraper.js';
 import { setSetupGameFetch, resetSetupGameFetch } from '../scrapers/setupgameScraper.js';
@@ -48,6 +49,7 @@ beforeEach(() => {
   setLoggerSql(makeLoggerSql());
   setAggregatorSql(makeAggregatorSql());
   setAutoMapperSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
+  setCatalogBuilderSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
   setRetryDelay(0);
   setSilent(true);
   setUltraPcFetch((_url: string) => Promise.resolve({
@@ -66,6 +68,7 @@ afterAll(() => {
   resetLoggerSql();
   resetAggregatorSql();
   resetAutoMapperSql();
+  resetCatalogBuilderSql();
   resetFetchAndLoad();
   resetUltraPcFetch();
   resetSetupGameFetch();
