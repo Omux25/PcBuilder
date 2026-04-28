@@ -167,11 +167,12 @@ function extractStorageDna(name: string): string[] {
   else if (n.includes('sata')) tokens.push('sata');
 
   // Model name tokens — critical for distinguishing 970/980/990, SN770/SN850X, etc.
-  // Strip brand names and generic words, keep model identifiers
+  // Strip only truly generic words — keep brand names and model identifiers.
+  // NOTE: 'evo', 'pro', 'plus' are intentionally NOT in the noise list because
+  // they distinguish "870 EVO" from "870 QVO", "980 PRO" from "980", etc.
   const noise = new Set(['ssd', 'hdd', 'nvme', 'sata', 'internal', 'solid', 'state',
-    'drive', 'hard', 'disk', 'pcie', 'gen', 'plus', 'pro', 'evo', 'black', 'blue',
-    'samsung', 'western', 'digital', 'seagate', 'kingston', 'crucial', 'corsair',
-    'wd', 'lexar', 'teamgroup', 'sabrent', 'silicon', 'power']);
+    'drive', 'hard', 'disk', 'pcie', 'gen', 'the', 'and', 'with',
+    'wd', 'western', 'digital']); // only strip ambiguous abbreviations, not brand names
 
   // Extract model-specific tokens (alphanumeric, not pure capacity/interface)
   const modelTokens = n.split(' ').filter((t) => {
@@ -182,7 +183,7 @@ function extractStorageDna(name: string): string[] {
     // Keep tokens that look like model identifiers (mix of letters/digits, or pure numbers like 970)
     return /\d/.test(t) || t.length >= 3;
   });
-  tokens.push(...modelTokens.slice(0, 3));
+  tokens.push(...modelTokens.slice(0, 4)); // take up to 4 model tokens for storage
 
   return tokens.filter(Boolean);
 }
