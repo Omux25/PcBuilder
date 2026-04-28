@@ -77,9 +77,30 @@ The `name` field is the raw scraped product title — it's used by the DNA match
 
 ---
 
-## The aggregator
+## The auto-mapping and catalog building pipeline
 
-`backend/scraper/aggregator.ts` takes all `ScrapedPrice[]` results and writes them to the database.
+After every scrape session, three steps run automatically:
+
+### Step 1 — autoMap()
+Runs the DNA matcher against all pending `unmatched_listings`. For each listing where a confident match is found (score = 1.0, or 0.8 for case/cooling), it creates a `scraper_mapping` entry so the next scrape prices it correctly.
+
+### Step 2 — buildFromUnmatched()
+For listings that still couldn't be matched, extracts structured specs from the product name and creates a new catalog entry. Supported categories:
+- **CPU** — socket inferred from model family (AM4/AM5/LGA1700/LGA1851)
+- **GPU** — length_mm and TDP estimated from model tier, VRAM from name
+- **RAM** — DDR type, frequency, capacity extracted from name
+- **Storage** — capacity and interface type extracted from name
+- **Motherboard** — socket and RAM type inferred from chipset
+
+Case, cooling, and PSU stay for admin review — too many variants to reliably extract specs.
+
+### Step 3 — autoMap() pass 2
+Runs the DNA matcher again to link listings to the newly created entries.
+
+### Quality checks
+Run `bun scripts/verify_catalog_builder.ts` after any catalog builder run to check for missing required fields, category mismatches, and duplicates.
+
+Run `bun scripts/db_health_check.ts` for a full database integrity check.
 
 ### Step 1 — UltraPC stock check
 

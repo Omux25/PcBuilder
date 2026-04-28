@@ -123,11 +123,16 @@ The detail page for a single component (accessed via `/components/:slug`) shows:
 
 ## How prices get into the database
 
-Prices come from the scraping system. See [scraping-system.md](scraping-system.md) for the full flow. The short version:
+Prices come from the scraping system. The full automated pipeline runs after every scrape session:
 
-1. Scrapers fetch retailer pages and return `ScrapedPrice[]` objects
-2. The aggregator looks up `scraper_mappings` to find which component each product URL belongs to
-3. For each mapped product, it extracts the variant label and details
-4. It UPSERTs the price into the `prices` table
-5. If the price changed since last time, it inserts a row into `price_history`
-6. Unrecognized products go into `unmatched_listings` for admin review
+```
+Scraper runs (every hour)
+  → aggregate()          — prices known products, saves unknowns to unmatched_listings
+  → autoMap()            — DNA matcher links unmatched to existing catalog entries
+  → buildFromUnmatched() — extracts specs from product names, creates new catalog entries
+                           (CPU, GPU, RAM, storage, motherboard only)
+  → autoMap() pass 2     — links listings to newly created entries
+  → session log: "312 updated, 47 unmatched, 12 auto-mapped, 8 new catalog entries"
+```
+
+No manual intervention needed for products the matcher can identify. Products the matcher cannot categorize (cases, coolers, PSUs, accessories, bundles) stay in `unmatched_listings` for admin review.
