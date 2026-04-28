@@ -149,4 +149,26 @@ export abstract class BaseScraper {
    * @param $ - Cheerio API loaded with the page HTML
    */
   protected abstract extractPrices($: CheerioAPI): ScrapedPrice[];
+
+  /**
+   * Fetches a URL and returns the parsed Cheerio object.
+   * Useful when a subclass needs to extract additional data (e.g. pagination)
+   * from the same HTML without calling scrape() twice.
+   */
+  protected async fetchAndParse(url: string): Promise<CheerioAPI> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    let response: Awaited<ReturnType<FetchFn>>;
+    try {
+      response = await _fetch(url, {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'PCBuilderMaroc-Bot/1.0 (price comparator; +https://pcbuilder.ma)' },
+      } as RequestInit);
+    } finally {
+      clearTimeout(timeout);
+    }
+    if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${url}`);
+    const html = await response.text();
+    return _load(html);
+  }
 }
