@@ -85,7 +85,7 @@ authRouter.post('/login', async (c) => {
 
   if (isRateLimited(ip)) {
     return c.json(
-      { error: { code: 'RATE_LIMITED', message: 'Too many login attempts. Try again in a minute.' } },
+      { error: { code: 'RATE_LIMITED', message: 'Trop de tentatives de connexion. Réessayez dans une minute.' } },
       429,
     );
   }
@@ -94,17 +94,17 @@ authRouter.post('/login', async (c) => {
   try {
     body = await c.req.json();
   } catch {
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' } }, 401);
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Identifiants invalides' } }, 401);
   }
 
   if (!body || typeof body !== 'object') {
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' } }, 401);
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Identifiants invalides' } }, 401);
   }
 
   const { username, password } = body as Record<string, unknown>;
 
   if (typeof username !== 'string' || typeof password !== 'string') {
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' } }, 401);
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Identifiants invalides' } }, 401);
   }
 
   let rows: Array<{ id: number; username: string; password_hash: string }>;
@@ -115,18 +115,18 @@ authRouter.post('/login', async (c) => {
       LIMIT 1
     `;
   } catch {
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' } }, 401);
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Identifiants invalides' } }, 401);
   }
 
   if (rows.length === 0) {
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' } }, 401);
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Identifiants invalides' } }, 401);
   }
 
   const admin = rows[0];
   const passwordMatch = await bcrypt.compare(password, admin.password_hash);
 
   if (!passwordMatch) {
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' } }, 401);
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Identifiants invalides' } }, 401);
   }
 
   // Generate tokens
@@ -154,7 +154,7 @@ authRouter.post('/refresh', async (c) => {
   const refreshToken = getRefreshTokenFromCookie(c);
 
   if (!refreshToken) {
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'No refresh token' } }, 401);
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Jeton de rafraîchissement manquant' } }, 401);
   }
 
   // Look up the token in DB
@@ -167,7 +167,7 @@ authRouter.post('/refresh', async (c) => {
   ` as { admin_id: number; expires_at: string; username: string }[];
 
   if (rows.length === 0) {
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid refresh token' } }, 401);
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Jeton de rafraîchissement invalide' } }, 401);
   }
 
   const { admin_id, expires_at, username } = rows[0];
@@ -176,7 +176,7 @@ authRouter.post('/refresh', async (c) => {
     // Clean up expired token
     await sql`DELETE FROM refresh_tokens WHERE token = ${refreshToken}`;
     clearRefreshCookie(c);
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Refresh token expired' } }, 401);
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Jeton de rafraîchissement expiré' } }, 401);
   }
 
   const accessToken = makeAccessToken(admin_id, username);

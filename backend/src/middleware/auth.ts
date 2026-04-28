@@ -25,14 +25,14 @@ export async function authMiddleware(c: Context, next: Next): Promise<Response |
       {
         error: {
           code: 'UNAUTHORIZED',
-          message: 'Authorization header is missing or malformed',
+          message: 'En-tête d\'autorisation manquant ou malformé',
         },
       },
       401,
     );
   }
 
-  const token = authHeader.slice(7); // Remove "Bearer " prefix
+  const token = authHeader.slice(7);
 
   const secret = process.env.JWT_SECRET;
   if (!secret) {
@@ -40,7 +40,7 @@ export async function authMiddleware(c: Context, next: Next): Promise<Response |
       {
         error: {
           code: 'UNAUTHORIZED',
-          message: 'Server misconfiguration: JWT_SECRET is not set',
+          message: 'Erreur de configuration serveur : JWT_SECRET non défini',
         },
       },
       401,
@@ -57,19 +57,18 @@ export async function authMiddleware(c: Context, next: Next): Promise<Response |
         {
           error: {
             code: 'UNAUTHORIZED',
-            message: 'Token has expired',
+            message: 'Jeton expiré',
           },
         },
         401,
       );
     }
 
-    // Covers JsonWebTokenError (malformed, invalid signature, etc.)
     return c.json(
       {
         error: {
           code: 'UNAUTHORIZED',
-          message: 'Invalid token',
+          message: 'Jeton invalide',
         },
       },
       401,
