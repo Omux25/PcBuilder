@@ -91,7 +91,17 @@ export abstract class BaseScraper {
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
-        const response = await _fetch(url);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000); // 30s per request
+        let response: Awaited<ReturnType<FetchFn>>;
+        try {
+          response = await _fetch(url, {
+            signal: controller.signal,
+            headers: { 'User-Agent': 'PCBuilderMaroc-Bot/1.0 (price comparator; +https://pcbuilder.ma)' },
+          } as RequestInit);
+        } finally {
+          clearTimeout(timeout);
+        }
 
         // HTTP errors are not retried — throw immediately
         if (!response.ok) {

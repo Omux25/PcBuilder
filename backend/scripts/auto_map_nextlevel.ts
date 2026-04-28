@@ -1,33 +1,17 @@
 /**
  * Auto-mapping script for NextLevel PC (retailer_id = 11).
- * Scrapes all categories, then fuzzy-matches against catalog components.
+ * Uses the smart DNA matcher from componentMatcher.ts.
+ *
+ * Run with:
+ *   bun run scripts/auto_map_nextlevel.ts
  */
 
 import { sql } from 'bun';
 import { NextLevelScraper } from '../scraper/scrapers/nextlevelScraper.js';
-import { componentSlug } from '../src/utils/slugify.js';
+import { findBestMatch, type CatalogComponent } from '../src/utils/componentMatcher.js';
 
-function normalize(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
-function extractTokens(name: string): string[] {
-  const noise = new Set(['the', 'and', 'or', 'for', 'with', 'box', 'tray', 'mpk', 'ghz',
-    'mhz', 'edition', 'series', 'version', 'wraith', 'stealth', 'spire', 'fan', 'no',
-    'jusqu', 'a', 'de', 'le', 'la', 'les', 'du', 'des', 'en', 'et', 'ou']);
-  return normalize(name).split(' ').filter((t) => t.length > 1 && !noise.has(t));
-}
-
-function matchScore(productName: string, componentName: string): number {
-  const productTokens = new Set(extractTokens(productName));
-  const componentTokens = extractTokens(componentName);
-  if (componentTokens.length === 0) return 0;
-  let matched = 0;
-  for (const token of componentTokens) {
-    if (productTokens.has(token)) matched++;
-  }
-  return matched / componentTokens.length;
-}
+const PARTIAL_MATCH_CATEGORIES = new Set(['case', 'cooling']);
+const PARTIAL_THRESHOLD = 0.8;
 
 async function main() {
   console.log('Scraping NextLevel PC...');
@@ -37,7 +21,7 @@ async function main() {
 
   const components = await sql`
     SELECT id, name, brand, category FROM components WHERE is_active = true
-  ` as { id: number; name: string; brand: string | null; category: string }[];
+  ` as CatalogComponent[];
 
   const existing = await sql`
     SELECT product_url FROM scraper_mappings WHERE retailer_id = 11
@@ -51,31 +35,38 @@ async function main() {
     const productName = product.product_name ?? '';
     if (!productName) { unmatched++; continue; }
 
-    let bestScore = 0;
-    let bestComponent: typeof components[0] | null = null;
+    let match = findBestMatch(productName, components, 1.0);
 
-    for (const component of components) {
-      const fullName = component.brand ? `${component.brand} ${component.name}` : component.name;
-      const score = matchScore(productName, fullName);
-      if (score > bestScore) { bestScore = score; bestComponent = component; }
+    if (!match) {
+      const partial = findBestMatch(productName, components, PARTIAL_THRESHOLD);
+      if (partial) {
+        const cat = components.find((c) => c.id === partial.componentId)?.category ?? '';
+        if (PARTIAL_MATCH_CATEGORIES.has(cat)) match = partial;
+      }
     }
 
-    if (bestScore >= 0.85 && bestComponent) {
+    if (match) {
       try {
         await sql`
           INSERT INTO scraper_mappings (component_id, retailer_id, product_url, product_identifier)
-          VALUES (${bestComponent.id}, 11, ${product.product_url}, ${productName})
+          VALUES (${match.componentId}, 11, ${product.product_url}, ${productName})
           ON CONFLICT (retailer_id, product_url) DO NOTHING
         `;
         mapped++;
+        if (mapped <= 10) {
+          const comp = components.find((c) => c.id === match!.componentId);
+          console.log(`  MAPPED: "${productName}" → "${comp?.brand ?? ''} ${comp?.name ?? ''}"`);
+        }
       } catch { /* skip */ }
     } else {
       unmatched++;
     }
   }
 
-  console.log(`Done. Mapped: ${mapped}, Skipped: ${skipped}, Unmatched: ${unmatched}`);
-  const total = await sql`SELECT COUNT(id) AS cnt FROM scraper_mappings WHERE retailer_id = 11` as { cnt: string }[];
+  console.log(`\nDone. Mapped: ${mapped}, Skipped: ${skipped}, Unmatched: ${unmatched}`);
+  const total = await sql`
+    SELECT COUNT(id) AS cnt FROM scraper_mappings WHERE retailer_id = 11
+  ` as { cnt: string }[];
   console.log(`Total NextLevel mappings: ${total[0].cnt}`);
 }
 

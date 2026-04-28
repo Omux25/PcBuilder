@@ -29,52 +29,61 @@ const CATEGORY_URLS: string[] = [
 ];
 
 export class NextLevelScraper extends BaseScraper {
+  /** Stores the max page number found during the last extractPrices call. */
+  private lastTotalPages = 1;
+
   constructor() {
     super(SITE_NAME);
   }
 
   async scrapeAllCategories(): Promise<ScrapedPrice[]> {
-    const allPrices: ScrapedPrice[] = [];
+    const results = await Promise.allSettled(
+      CATEGORY_URLS.map((url) => this.scrapeCategory(url))
+    );
 
-    for (const baseUrl of CATEGORY_URLS) {
-      try {
-        const prices = await this.scrapeCategory(baseUrl);
-        allPrices.push(...prices);
-      } catch (err) {
-        console.error(`[${SITE_NAME}] Failed to scrape ${baseUrl}: ${(err as Error).message}`);
+    const allPrices: ScrapedPrice[] = [];
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        allPrices.push(...result.value);
+      } else {
+        console.error(`[${SITE_NAME}] Category failed: ${result.reason}`);
       }
     }
-
     return allPrices;
   }
 
   private async scrapeCategory(baseUrl: string): Promise<ScrapedPrice[]> {
-    const prices: ScrapedPrice[] = [];
-    let page = 1;
-    let hasMore = true;
+    // Fetch page 1 — extractPrices will also detect total pages via pagination links
+    this.lastTotalPages = 1;
+    const page1Prices = await this.scrape(baseUrl).catch(() => [] as ScrapedPrice[]);
 
-    while (hasMore && page <= 20) {
-      // Use ?page=N for numeric ID URLs, /page/N for slug URLs
-      const url = page === 1 ? baseUrl : `${baseUrl}?page=${page}`;
-      try {
-        const pagePrices = await this.scrape(url);
-        prices.push(...pagePrices);
-        hasMore = pagePrices.length >= 12;
-      } catch {
-        hasMore = false;
-      }
-      page++;
+    if (page1Prices.length === 0) return [];
 
-      if (hasMore) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
-    }
+    const totalPages = this.lastTotalPages;
+    if (totalPages <= 1) return page1Prices;
 
-    return prices;
+    // Fetch all remaining pages in parallel
+    const pagePromises = Array.from({ length: totalPages - 1 }, (_, i) =>
+      this.scrape(`${baseUrl}?page=${i + 2}`).catch(() => [] as ScrapedPrice[])
+    );
+    const pageResults = await Promise.all(pagePromises);
+
+    return [...page1Prices, ...pageResults.flat()];
   }
 
   protected extractPrices($: CheerioAPI): ScrapedPrice[] {
     const prices: ScrapedPrice[] = [];
+
+    // Detect total pages from pagination links — store for scrapeCategory to use
+    const pageNums: number[] = [];
+    $('a[href*="page="]').each((_i, el) => {
+      const href = $(el).attr('href') ?? '';
+      const m = href.match(/[?&]page=(\d+)/);
+      if (m) pageNums.push(parseInt(m[1]));
+    });
+    if (pageNums.length > 0) {
+      this.lastTotalPages = Math.max(...pageNums);
+    }
 
     // Strategy: extract products from JSON-LD ItemList (names + URLs)
     // then pair with prices from span.price elements (same order)
@@ -119,12 +128,20 @@ export class NextLevelScraper extends BaseScraper {
       }
     }
 
-    // Extract stock status — "EN STOCK" text in the page
-    // Count EN STOCK occurrences to determine which products are in stock
-    const pageText = $.root().text();
-    const enStockCount = (pageText.match(/EN STOCK/g) ?? []).length;
+    // Build per-product stock map from product cards.
+    // Use the badge text (.badge-name-text) which reliably shows "EN STOCK" or "RUPTURE DE STOCK".
+    // The .out-of-stock/.hide approach is unreliable — NextLevel sometimes keeps .hide even when out of stock.
+    const stockByUrl = new Map<string, boolean>();
+    $('article.product-miniature').each((_i, card) => {
+      const url = $(card).find('a[itemprop="url"], a.product-thumbnail').first().attr('href') ?? '';
+      if (!url) return;
+      // Get the first badge text — "EN STOCK" = in stock, anything else (including "RUPTURE DE STOCK") = out
+      const badgeText = $(card).find('.badge-name-text').first().text().trim().toUpperCase();
+      const inStock = badgeText === 'EN STOCK';
+      stockByUrl.set(url, inStock);
+    });
 
-    // For each JSON-LD product, pair with price
+    // For each JSON-LD product, pair with price and per-product stock status
     for (let i = 0; i < jsonLdProducts.length; i++) {
       const product = jsonLdProducts[i];
       if (!product.url || !product.name) continue;
@@ -143,9 +160,8 @@ export class NextLevelScraper extends BaseScraper {
       );
       if (isNaN(price) || price <= 0) continue;
 
-      // Assume in stock if EN STOCK appears enough times
-      // (rough heuristic — most products on the page are in stock)
-      const in_stock = enStockCount > 0;
+      // Per-product stock from card — fall back to true if card not found
+      const in_stock = stockByUrl.get(product.url) ?? true;
 
       prices.push({
         component_id: 0,
