@@ -63,8 +63,10 @@ function inferCategory(name: string): string | null {
   if (n.match(/\b(carte\s*m[eè]re|motherboard)\b/)) return 'motherboard';
   if (n.match(/\b([abxhz]\d{3,4}[ei]?)\b/) && !n.match(/\b(rtx|gtx|rx\s*\d{4})\b/)) return 'motherboard';
 
-  // RAM
-  if (n.match(/\b(ddr[45]|dimm|sodimm)\b/) && !n.match(/\b(carte\s*m[eè]re|motherboard|[abxhz]\d{3,4})\b/)) return 'ram';
+  // RAM — must NOT look like a motherboard (chipset pattern takes priority)
+  if (n.match(/\b(ddr[45]|dimm|sodimm)\b/) &&
+      !n.match(/\b(carte\s*m[eè]re|motherboard)\b/) &&
+      !n.match(/\b[abxhz]\d{3,4}[ei]?\b/)) return 'ram';
 
   // Storage
   if (n.match(/\b(nvme|m\.?2|ssd|hdd|disque\s*dur|firecuda|barracuda|ironwolf)\b/)) return 'storage';
