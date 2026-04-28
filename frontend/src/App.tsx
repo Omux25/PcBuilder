@@ -4,9 +4,7 @@ import { Configurator } from './components/Configurator';
 import { BuildSummary } from './components/BuildSummary';
 import { PriceComparison } from './components/PriceComparison';
 import { ComponentDetail } from './pages/ComponentDetail';
-import { Presets } from './pages/Presets';
-import type { BuildConfig, Component, ComponentCategory } from './types';
-import { getComponentById } from './api';
+import type { BuildConfig, Component } from './types';
 import styles from './App.module.css';
 
 export default function App() {
@@ -15,37 +13,17 @@ export default function App() {
 
   const selectedComponents = Object.values(build).filter(Boolean) as Component[];
 
-  // Auto-select the first component for price comparison when build changes
+  // Sélectionner automatiquement le premier composant pour la comparaison des prix
   useEffect(() => {
     if (selectedComponents.length === 0) {
       setPriceTarget(null);
       return;
     }
-    // Keep current target if it's still in the build, otherwise switch to first
     const stillSelected = priceTarget && selectedComponents.some((c) => c.id === priceTarget.id);
     if (!stillSelected) {
       setPriceTarget(selectedComponents[0]);
     }
   }, [build]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Called from Presets page — loads component IDs into build state
-  async function handleLoadPreset(componentIds: Record<string, number>) {
-    const entries = await Promise.allSettled(
-      Object.entries(componentIds).map(async ([category, id]) => {
-        const component = await getComponentById(id);
-        return [category, component] as [ComponentCategory, Component];
-      })
-    );
-
-    const newBuild: BuildConfig = {};
-    for (const result of entries) {
-      if (result.status === 'fulfilled') {
-        const [category, component] = result.value;
-        newBuild[category] = component;
-      }
-    }
-    setBuild(newBuild);
-  }
 
   return (
     <div className={styles.app}>
@@ -53,13 +31,10 @@ export default function App() {
         <Link to="/" className={styles.logoLink}>
           <h1 className={styles.logo}>PC Builder <span className={styles.sub}>Maroc</span></h1>
         </Link>
-        <nav className={styles.nav}>
-          <Link to="/presets" className={styles.navLink}>Configurations prêtes</Link>
-        </nav>
       </header>
 
       <Routes>
-        {/* Home — configurator */}
+        {/* Page principale — configurateur */}
         <Route path="/" element={
           <main className={styles.main}>
             <div className={styles.left}>
@@ -88,11 +63,8 @@ export default function App() {
           </main>
         } />
 
-        {/* Component detail */}
+        {/* Page détail composant */}
         <Route path="/components/:slug" element={<ComponentDetail />} />
-
-        {/* Preset builds */}
-        <Route path="/presets" element={<Presets onLoadPreset={handleLoadPreset} />} />
       </Routes>
 
       <footer className={styles.footer}>

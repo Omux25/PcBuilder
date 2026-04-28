@@ -37,6 +37,8 @@ export interface PriceOffer {
   price: number;
   in_stock: boolean;
   product_url: string;
+  variant_label: string | null;
+  variant_details: Record<string, unknown> | null;
   last_updated: string;
 }
 
