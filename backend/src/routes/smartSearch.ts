@@ -36,7 +36,7 @@ smartSearchRouter.get('/', async (c) => {
   const limit    = Math.min(100, c.req.query('limit') ? Number(c.req.query('limit')) : 20);
 
   if (!category) {
-    return c.json({ error: { code: 'VALIDATION_ERROR', message: 'category is required' } }, 400);
+    return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Le paramètre category est requis' } }, 400);
   }
 
   // Parse current build from query param
@@ -46,7 +46,7 @@ smartSearchRouter.get('/', async (c) => {
     try {
       currentBuild = JSON.parse(buildParam);
     } catch {
-      return c.json({ error: { code: 'VALIDATION_ERROR', message: 'build must be valid JSON' } }, 400);
+      return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Le paramètre build doit être du JSON valide' } }, 400);
     }
   }
 
@@ -63,15 +63,18 @@ smartSearchRouter.get('/', async (c) => {
     return c.json({ components: [], total: 0 });
   }
 
-  // Fetch lowest prices for all components in one query
-  const componentIds = components.map((c) => c.id);
+  // Fetch lowest prices for all components in one query.
+  // We join against the prices table filtered by the same category/search
+  // to avoid passing a JS array as a Postgres parameter (Bun.sql limitation).
   const priceRows = await sql`
     SELECT
       p.component_id,
-      MIN(p.price) AS lowest_price,
+      MIN(p.price)        AS lowest_price,
       BOOL_OR(p.in_stock) AS any_in_stock
     FROM prices p
-    WHERE p.component_id = ANY(${componentIds}::int[])
+    JOIN components c ON c.id = p.component_id
+    WHERE c.category = ${category}
+      AND c.is_active = true
     GROUP BY p.component_id
   ` as { component_id: number; lowest_price: number; any_in_stock: boolean }[];
 

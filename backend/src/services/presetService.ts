@@ -64,7 +64,7 @@ async function getPresets(useCase?: string): Promise<PresetBuild[]> {
   if (presetRows.length === 0) return [];
 
   // Fetch all components for these presets in one query
-  const presetIds = presetRows.map((p) => p.id);
+  // Use a JOIN against preset_builds instead of passing an array parameter (Bun.sql limitation)
   const componentRows = (await _sql`
     SELECT
       pbc.preset_build_id,
@@ -72,7 +72,9 @@ async function getPresets(useCase?: string): Promise<PresetBuild[]> {
       c.id, c.slug, c.name, c.brand, c.image_url, c.is_active
     FROM preset_build_components pbc
     JOIN components c ON c.id = pbc.component_id
-    WHERE pbc.preset_build_id = ANY(${presetIds}::int[])
+    JOIN preset_builds pb ON pb.id = pbc.preset_build_id
+    WHERE pb.is_active = true
+      AND (${useCase ?? null}::text IS NULL OR pb.use_case = ${useCase ?? null})
   `) as (PresetComponent & { preset_build_id: number; category: string })[];
 
   // Group components by preset

@@ -26,7 +26,7 @@ componentsRouter.get('/', async (c) => {
 
   if (limit > 100) {
     return c.json(
-      { error: { code: 'VALIDATION_ERROR', message: 'limit cannot exceed 100' } },
+      { error: { code: 'VALIDATION_ERROR', message: 'La limite ne peut pas dépasser 100' } },
       400,
     );
   }
@@ -61,7 +61,7 @@ componentsRouter.get('/:id/price-history', async (c) => {
 
   if (!Number.isInteger(id) || id <= 0) {
     return c.json(
-      { error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } },
+      { error: { code: 'VALIDATION_ERROR', message: 'L\'identifiant doit être un entier positif' } },
       400,
     );
   }
@@ -86,7 +86,7 @@ componentsRouter.get('/:id', async (c) => {
 
   if (!Number.isInteger(id) || id <= 0) {
     return c.json(
-      { error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } },
+      { error: { code: 'VALIDATION_ERROR', message: 'L\'identifiant doit être un entier positif' } },
       400,
     );
   }
