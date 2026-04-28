@@ -7,28 +7,27 @@ import type { ScrapedPrice } from '../scrapers/baseScraper.js';
 
 const PRICES: ScrapedPrice[] = [
   { component_id: 1, retailer_id: 1, price: 1299.99, in_stock: true,  product_url: 'https://site1.ma/cpu-1', product_name: 'CPU 1' },
-  { component_id: 2, retailer_id: 1, price: 450.00,  in_stock: false, product_url: 'https://site1.ma/gpu-2', product_name: 'GPU 2' },
-  { component_id: 3, retailer_id: 2, price: 2499.00, in_stock: true,  product_url: 'https://site2.ma/gpu-3', product_name: 'GPU 3' },
+  { component_id: 2, retailer_id: 2, price: 450.00,  in_stock: false, product_url: 'https://site1.ma/gpu-2', product_name: 'GPU 2' },
+  { component_id: 3, retailer_id: 3, price: 2499.00, in_stock: true,  product_url: 'https://site2.ma/gpu-3', product_name: 'GPU 3' },
 ];
 
 // ── Mock SQL helpers ──────────────────────────────────────────────────────────
 
 /**
  * Creates a mock SQL that simulates the new aggregator flow:
- * - Call 1 per price: scraper_mappings lookup → returns mapping or []
- * - Call 2 per price (if matched): current prices lookup → returns [] (no existing price)
- * - Call 3 per price (if matched): UPSERT prices
- * - Call 4 per price (if matched): INSERT price_history
+ * - scraper_mappings lookup → returns mapping with component_id + category
+ * - current prices lookup → returns [] (no existing price)
+ * - UPSERT prices
+ * - INSERT price_history
  */
 function makeMappedSql(componentId: number) {
-  // Returns a mapping for every product URL
   return (strings: TemplateStringsArray, ...values: unknown[]) => {
     const query = strings.join('?');
     if (query.includes('scraper_mappings')) {
-      return Promise.resolve([{ component_id: componentId }]);
+      return Promise.resolve([{ component_id: componentId, category: 'cpu' }]);
     }
     if (query.includes('FROM prices')) {
-      return Promise.resolve([]); // no existing price → history will be inserted
+      return Promise.resolve([]);
     }
     return Promise.resolve([]);
   };
