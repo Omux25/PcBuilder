@@ -50,7 +50,7 @@
 
 .table tr:last-child td { border-bottom: none; }
 
-.cheapest td { background: #14532d22; }
+.cheapest td { background: var(--success-row); }
 
 .price { font-weight: 700; color: var(--text); white-space: nowrap; }
 
@@ -63,7 +63,7 @@
   display: inline-block;
   padding: .3rem .7rem;
   background: var(--accent);
-  color: #fff;
+  color: var(--bg);
   border-radius: var(--radius);
   font-size: .8rem;
   font-weight: 600;

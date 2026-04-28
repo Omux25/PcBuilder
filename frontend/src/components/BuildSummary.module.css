@@ -26,8 +26,8 @@
   font-size: .9rem;
   width: fit-content;
 }
-.ok   { background: #14532d; color: var(--success); }
-.fail { background: #450a0a; color: var(--danger); }
+.ok   { background: var(--success-tint); color: var(--success); }
+.fail { background: var(--danger-tint);  color: var(--danger); }
 
 .stats {
   display: flex;
@@ -62,8 +62,8 @@
   border-radius: var(--radius);
   font-size: .875rem;
 }
-.errorItem { background: #450a0a33; border-left: 3px solid var(--danger); }
-.warnItem  { background: #78350f33; border-left: 3px solid var(--warning); }
+.errorItem { background: var(--danger-row);  border-left: 3px solid var(--danger); }
+.warnItem  { background: var(--warning-row); border-left: 3px solid var(--warning); }
 
 .rule {
   font-size: .75rem;

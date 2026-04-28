@@ -12,7 +12,7 @@ import { Hono } from 'hono';
 import { sql } from 'bun';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { randomUUID } from 'crypto';
+import { randomBytes } from 'crypto';
 
 const authRouter = new Hono();
 
@@ -35,7 +35,31 @@ function isRateLimited(ip: string): boolean {
   return false;
 }
 
-// ── Constants ────────────────────────────────────────────────────────────────
+// ── Refresh token helpers ────────────────────────────────────────────────────
+
+/**
+ * Generates a cryptographically strong 32-byte random token (256 bits).
+ * Returns the raw hex string — this is what goes in the cookie.
+ */
+function generateRefreshToken(): string {
+  return randomBytes(32).toString('hex');
+}
+
+/**
+ * Hashes a raw refresh token with bcrypt before storing in the DB.
+ * Cost factor 10 — fast enough for login, strong enough for storage.
+ * If the DB is compromised, raw tokens cannot be recovered from hashes.
+ */
+async function hashRefreshToken(raw: string): Promise<string> {
+  return bcrypt.hash(raw, 10);
+}
+
+/**
+ * Verifies a raw refresh token against a stored bcrypt hash.
+ */
+async function verifyRefreshToken(raw: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(raw, hash);
+}
 
 const ACCESS_TOKEN_EXPIRY  = '15m';
 const REFRESH_TOKEN_EXPIRY_DAYS = 7;
@@ -131,16 +155,17 @@ authRouter.post('/login', async (c) => {
 
   // Generate tokens
   const accessToken  = makeAccessToken(admin.id, admin.username);
-  const refreshToken = randomUUID();
+  const rawRefresh   = generateRefreshToken();
+  const refreshHash  = await hashRefreshToken(rawRefresh);
   const expiresAt    = refreshTokenExpiry();
 
-  // Store refresh token in DB
+  // Store refresh token HASH in DB — never the raw token
   await sql`
     INSERT INTO refresh_tokens (admin_id, token, expires_at)
-    VALUES (${admin.id}, ${refreshToken}, ${expiresAt.toISOString()})
+    VALUES (${admin.id}, ${refreshHash}, ${expiresAt.toISOString()})
   `;
 
-  setRefreshCookie(c, refreshToken);
+  setRefreshCookie(c, rawRefresh);
 
   return c.json({
     access_token: accessToken,
@@ -151,35 +176,37 @@ authRouter.post('/login', async (c) => {
 // ── POST /api/auth/refresh ───────────────────────────────────────────────────
 
 authRouter.post('/refresh', async (c) => {
-  const refreshToken = getRefreshTokenFromCookie(c);
+  const rawToken = getRefreshTokenFromCookie(c);
 
-  if (!refreshToken) {
+  if (!rawToken) {
     return c.json({ error: { code: 'UNAUTHORIZED', message: 'Jeton de rafraîchissement manquant' } }, 401);
   }
 
-  // Look up the token in DB
+  // Fetch all non-expired tokens — we must compare hashes since we can't
+  // query by raw value. Limit to recent tokens to keep this fast.
   const rows = await sql`
-    SELECT rt.admin_id, rt.expires_at, a.username
+    SELECT rt.id, rt.admin_id, rt.token AS token_hash, rt.expires_at, a.username
     FROM refresh_tokens rt
     JOIN admins a ON a.id = rt.admin_id
-    WHERE rt.token = ${refreshToken}
-    LIMIT 1
-  ` as { admin_id: number; expires_at: string; username: string }[];
+    WHERE rt.expires_at > NOW()
+    ORDER BY rt.expires_at DESC
+    LIMIT 50
+  ` as { id: number; admin_id: number; token_hash: string; expires_at: string; username: string }[];
 
-  if (rows.length === 0) {
+  // Find the matching token by comparing raw value against stored hashes
+  let matched: typeof rows[0] | null = null;
+  for (const row of rows) {
+    if (await verifyRefreshToken(rawToken, row.token_hash)) {
+      matched = row;
+      break;
+    }
+  }
+
+  if (!matched) {
     return c.json({ error: { code: 'UNAUTHORIZED', message: 'Jeton de rafraîchissement invalide' } }, 401);
   }
 
-  const { admin_id, expires_at, username } = rows[0];
-
-  if (new Date(expires_at) < new Date()) {
-    // Clean up expired token
-    await sql`DELETE FROM refresh_tokens WHERE token = ${refreshToken}`;
-    clearRefreshCookie(c);
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Jeton de rafraîchissement expiré' } }, 401);
-  }
-
-  const accessToken = makeAccessToken(admin_id, username);
+  const accessToken = makeAccessToken(matched.admin_id, matched.username);
 
   return c.json({
     access_token: accessToken,
@@ -190,10 +217,23 @@ authRouter.post('/refresh', async (c) => {
 // ── POST /api/auth/logout ────────────────────────────────────────────────────
 
 authRouter.post('/logout', async (c) => {
-  const refreshToken = getRefreshTokenFromCookie(c);
+  const rawToken = getRefreshTokenFromCookie(c);
 
-  if (refreshToken) {
-    await sql`DELETE FROM refresh_tokens WHERE token = ${refreshToken}`;
+  if (rawToken) {
+    // Find and delete the matching hashed token
+    const rows = await sql`
+      SELECT id, token AS token_hash FROM refresh_tokens
+      WHERE expires_at > NOW()
+      ORDER BY expires_at DESC
+      LIMIT 50
+    ` as { id: number; token_hash: string }[];
+
+    for (const row of rows) {
+      if (await verifyRefreshToken(rawToken, row.token_hash)) {
+        await sql`DELETE FROM refresh_tokens WHERE id = ${row.id}`;
+        break;
+      }
+    }
   }
 
   clearRefreshCookie(c);
