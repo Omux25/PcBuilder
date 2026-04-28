@@ -431,8 +431,14 @@ export function scoreDnaMatch(productName: string, catalogName: string, category
  * Uses DNA matching: requires ALL DNA tokens to match (score = 1.0).
  * Falls back to best partial match if no perfect match found.
  *
+ * Key insight: scoring is done using the CATALOG ENTRY'S category, not the
+ * product's inferred category. This means a RAM product is scored against
+ * each catalog entry using that entry's DNA extractor. A motherboard entry
+ * has chipset+socket DNA — a RAM product name won't contain those tokens,
+ * so the score will be low. This prevents cross-category false positives.
+ *
  * Rejects bundle products: if the product name contains DNA tokens from
- * 3+ different categories, it's likely a pre-built PC or bundle listing.
+ * 2+ major categories simultaneously, it's likely a pre-built PC or bundle.
  *
  * @param productName - scraped product title
  * @param components  - catalog components to match against
@@ -443,14 +449,7 @@ export function findBestMatch(
   components: CatalogComponent[],
   minScore = 1.0,
 ): MatchResult | null {
-  // Bundle detection: count how many distinct categories have a perfect DNA match.
-  // A pre-built PC like "Ryzen 5 7600X RTX 4090 32GB DDR5 1TB NVMe" will match
-  // cpu + gpu + ram + storage simultaneously — reject it.
-  //
-  // Rules (Gemini recommendation):
-  // - Threshold: 2+ matching categories = bundle
-  // - Safety guardrail: only trigger if at least one matching category is a "major component"
-  //   (cpu, gpu, motherboard). This prevents false positives from case+cooling combos.
+  // Bundle detection: count how many distinct MAJOR categories have a perfect DNA match.
   const MAJOR_CATEGORIES = new Set(['cpu', 'gpu', 'motherboard']);
   const matchingCategories = new Set<string>();
   for (const component of components) {
@@ -463,7 +462,7 @@ export function findBestMatch(
   }
 
   let best: MatchResult | null = null;
-  let bestSpecificity = -1; // total length of DNA tokens — longer = more specific
+  let bestSpecificity = -1;
 
   for (const component of components) {
     const fullName = component.brand
@@ -471,7 +470,15 @@ export function findBestMatch(
       : component.name;
 
     const { score, dnaTokens } = scoreDnaMatch(productName, fullName, component.category);
-    // Specificity = total character length of all DNA tokens (longer tokens = more specific match)
+
+    // Require minimum DNA token count to avoid trivially short DNA matching everything.
+    // A catalog entry with only 1 DNA token that is just a RAM type (ddr4/ddr5) is
+    // too weak — it would match any product containing that RAM type.
+    // Exception: GPU and CPU can have 1 token (chipset model is sufficient).
+    if (dnaTokens.length === 1 &&
+        !['gpu', 'cpu'].includes(component.category) &&
+        (dnaTokens[0] === 'ddr4' || dnaTokens[0] === 'ddr5')) continue;
+
     const specificity = dnaTokens.reduce((sum, t) => sum + t.length, 0);
 
     if (score > (best?.score ?? -1) || (best !== null && score === best.score && specificity > bestSpecificity)) {
