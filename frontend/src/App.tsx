@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
 import { Configurator } from './components/Configurator';
 import { BuildSummary } from './components/BuildSummary';
 import { PriceComparison } from './components/PriceComparison';
-import { ComponentDetail } from './pages/ComponentDetail';
 import type { BuildConfig, Component } from './types';
 import styles from './App.module.css';
+
+// Lazy-load the detail page — it's only needed when navigating to /components/:slug
+const ComponentDetail = lazy(() => import('./pages/ComponentDetail').then(m => ({ default: m.ComponentDetail })));
 
 export default function App() {
   const [build, setBuild] = useState<BuildConfig>({});
@@ -64,7 +66,11 @@ export default function App() {
         } />
 
         {/* Page détail composant */}
-        <Route path="/components/:slug" element={<ComponentDetail />} />
+        <Route path="/components/:slug" element={
+          <Suspense fallback={<div className={styles.loading}>Chargement...</div>}>
+            <ComponentDetail />
+          </Suspense>
+        } />
       </Routes>
 
       <footer className={styles.footer}>
