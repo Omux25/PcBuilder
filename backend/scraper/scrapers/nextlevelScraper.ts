@@ -97,66 +97,25 @@ export class NextLevelScraper extends BaseScraper {
   protected extractPrices($: CheerioAPI): ScrapedPrice[] {
     const prices: ScrapedPrice[] = [];
 
-    // Extract products from JSON-LD ItemList (names + URLs)
-    const jsonLdProducts: { name: string; url: string }[] = [];
-
-    $('script[type="application/ld+json"]').each((_i, el) => {
-      const content = $(el).html() ?? '';
-      try {
-        const data = JSON.parse(content);
-        if (data['@type'] === 'ItemList' && Array.isArray(data.itemListElement)) {
-          for (const item of data.itemListElement) {
-            if (item.item?.['@type'] === 'Product') {
-              jsonLdProducts.push({
-                name: item.item.name ?? '',
-                url: item.item.url ?? '',
-              });
-            }
-          }
-        }
-      } catch { /* skip malformed JSON-LD */ }
-    });
-
-    if (jsonLdProducts.length === 0) return [];
-
-    // Extract prices in order — span.price appears multiple times per product
-    // (the theme renders each product card multiple times for mobile/desktop).
-    // Deduplicate by taking unique consecutive values.
-    const allPriceEls: string[] = [];
-    $('span.price').each((_i, el) => {
-      const text = $(el).text().trim();
-      if (text.match(/\d[\s\d]*,\d{2}/)) {
-        allPriceEls.push(text);
-      }
-    });
-
-    const uniquePrices: string[] = [];
-    for (let i = 0; i < allPriceEls.length; i++) {
-      if (i === 0 || allPriceEls[i] !== allPriceEls[i - 1]) {
-        uniquePrices.push(allPriceEls[i]);
-      }
-    }
-
-    // Build per-product stock map from product cards.
-    // Use badge text (.badge-name-text): "EN STOCK" = in stock.
-    const stockByUrl = new Map<string, boolean>();
+    // Strategy: extract price, URL, name, and stock directly from each product card.
+    // This is more reliable than pairing JSON-LD products with span.price by index,
+    // because bundle products (containing "+") appear in the card list but are skipped
+    // in JSON-LD, causing index drift and wrong price assignments.
     $('article.product-miniature').each((_i, card) => {
       const url = $(card).find('a[itemprop="url"], a.product-thumbnail').first().attr('href') ?? '';
       if (!url) return;
-      const badgeText = $(card).find('.badge-name-text').first().text().trim().toUpperCase();
-      stockByUrl.set(url, badgeText === 'EN STOCK');
-    });
 
-    // Pair each JSON-LD product with its price and stock status
-    for (let i = 0; i < jsonLdProducts.length; i++) {
-      const product = jsonLdProducts[i];
-      if (!product.url || !product.name) continue;
+      // Product name — from itemprop or title element
+      const name = $(card).find('[itemprop="name"]').first().text().trim() ||
+                   $(card).find('.product-title a').first().text().trim() ||
+                   $(card).find('h2 a, h3 a').first().text().trim();
 
-      // Skip bundle/pack products
-      if (product.name.includes('+')) continue;
+      // Skip bundle products (contain "+")
+      if (name.includes('+')) return;
 
-      const rawPrice = uniquePrices[i] ?? '';
-      if (!rawPrice) continue;
+      // Price — first span.price inside this card
+      const rawPrice = $(card).find('span.price').first().text().trim();
+      if (!rawPrice) return;
 
       const price = parseFloat(
         rawPrice
@@ -164,19 +123,21 @@ export class NextLevelScraper extends BaseScraper {
           .replace(/[^\d,]/g, '')
           .replace(',', '.')
       );
-      if (isNaN(price) || price <= 0) continue;
+      if (isNaN(price) || price <= 0) return;
 
-      const in_stock = stockByUrl.get(product.url) ?? true;
+      // Stock status from badge
+      const badgeText = $(card).find('.badge-name-text').first().text().trim().toUpperCase();
+      const in_stock = badgeText === 'EN STOCK';
 
       prices.push({
         component_id: 0,
         retailer_id: RETAILER_ID,
         price,
         in_stock,
-        product_url: product.url,
-        product_name: product.name,
+        product_url: url,
+        product_name: name,
       });
-    }
+    });
 
     return prices;
   }
