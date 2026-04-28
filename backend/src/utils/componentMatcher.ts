@@ -193,10 +193,16 @@ function extractStorageDna(name: string): string[] {
  * e.g. "corsair", "850w", "gold"
  * Brand AND wattage are both required — brand alone is too weak.
  * If wattage cannot be determined, returns empty DNA (no match).
+ *
+ * Guard: reject names that look like motherboard chipsets (B650, X870, etc.)
+ * to prevent PSU wattage numbers from matching chipset numbers.
  */
 function extractPsuDna(name: string): string[] {
   const n = normalize(name);
   const tokens: string[] = [];
+
+  // Guard: if the name looks like a motherboard (chipset pattern), return empty
+  if (n.match(/\b[abxhz]\d{3,4}[ei]?\b/) && !n.match(/\b\d{3,4}\s*w\b/)) return [];
 
   // Brand — extract first word if it's a known PSU brand
   const PSU_BRANDS = new Set([
@@ -211,13 +217,14 @@ function extractPsuDna(name: string): string[] {
     tokens.push('bequiet');
   }
 
-  // Wattage — explicit "850W" takes priority
+  // Wattage — explicit "850W" takes priority (must have W suffix)
   const wattMatch = n.match(/\b(\d{3,4})\s*w\b/);
   if (wattMatch) {
     tokens.push(`${wattMatch[1]}w`);
   } else {
     // Wattage with efficiency suffix: "850G" (Gold), "850X" (Platinum), "850P" etc.
-    const wattSuffixMatch = n.match(/\b(\d{3,4})[gxpbt]\b/);
+    // Only match if NOT preceded by a letter (avoids B850, X870 chipset patterns)
+    const wattSuffixMatch = n.match(/(?<![a-z])(\d{3,4})[gxpbt]\b/);
     if (wattSuffixMatch) {
       const w = parseInt(wattSuffixMatch[1]);
       if (w >= 300 && w <= 2000) tokens.push(`${w}w`);
