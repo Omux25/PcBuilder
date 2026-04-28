@@ -3,7 +3,8 @@ import { describe, test, expect, beforeEach, afterAll } from 'bun:test';
 import { runScrapingSession } from '../scheduler.js';
 import { setSql as setLoggerSql, resetSql as resetLoggerSql } from '../utils/logger.js';
 import { setSql as setAggregatorSql, resetSql as resetAggregatorSql } from '../aggregator.js';
-import { setFetch, resetFetchAndLoad, setRetryDelay } from '../scrapers/baseScraper.js';
+import { setSql as setAutoMapperSql, resetSql as resetAutoMapperSql } from '../autoMapper.js';
+import { setFetch, resetFetchAndLoad, setRetryDelay, setSilent } from '../scrapers/baseScraper.js';
 import { setUltraPcFetch, resetUltraPcFetch } from '../scrapers/ultrapcScraper.js';
 import { setSetupGameFetch, resetSetupGameFetch } from '../scrapers/setupgameScraper.js';
 
@@ -40,6 +41,17 @@ function makeAggregatorSql() {
   };
 }
 
+// autoMapper SQL mock — returns empty catalog and no pending listings
+function makeAutoMapperSql() {
+  return (strings: TemplateStringsArray, ..._values: unknown[]) => {
+    const query = strings.join('?');
+    if (query.includes('FROM components')) return Promise.resolve([]);
+    if (query.includes('FROM unmatched_listings')) return Promise.resolve([]);
+    if (query.includes('scraper_logs')) return Promise.resolve([]);
+    return Promise.resolve([]);
+  };
+}
+
 /**
  * Makes a fetch mock that returns an empty product listing page.
  * Site1Scraper will find no .product-card elements → returns [].
@@ -72,6 +84,7 @@ beforeEach(() => {
   upsertedPrices.length = 0;
   setLoggerSql(makeLoggerSql());
   setAggregatorSql(makeAggregatorSql());
+  setAutoMapperSql(makeAutoMapperSql());
   setFetch(makeEmptyPageFetch());
   setUltraPcFetch(makeEmptyUltraPcFetch());
   setSetupGameFetch((_url: string) => Promise.resolve({
@@ -80,11 +93,13 @@ beforeEach(() => {
     json: () => Promise.resolve([]),
   }));
   setRetryDelay(0);
+  setSilent(true);
 });
 
 afterAll(() => {
   resetLoggerSql();
   resetAggregatorSql();
+  resetAutoMapperSql();
   resetFetchAndLoad();
   resetUltraPcFetch();
   resetSetupGameFetch();
