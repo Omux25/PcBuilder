@@ -143,6 +143,15 @@ wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~
 # Re-map unmatched listings using DNA matcher
 wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun scripts/remap_all.ts"
 
+# Run catalog builder on pending unmatched listings
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun scripts/run_catalog_builder.ts"
+
+# Full database health check
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun scripts/db_health_check.ts"
+
+# Coverage stats
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun scripts/db_stats.ts"
+
 # Evaluate matcher precision/recall
 wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun scripts/evaluate_matcher.ts"
 ```

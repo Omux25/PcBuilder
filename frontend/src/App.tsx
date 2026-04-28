@@ -3,11 +3,13 @@ import { Routes, Route, Link } from 'react-router-dom';
 import { Configurator } from './components/Configurator';
 import { BuildSummary } from './components/BuildSummary';
 import { PriceComparison } from './components/PriceComparison';
-import type { BuildConfig, Component } from './types';
+import type { BuildConfig, Component, ComponentCategory } from './types';
+import { getComponentById } from './api';
 import styles from './App.module.css';
 
-// Lazy-load the detail page — it's only needed when navigating to /components/:slug
+// Lazy-load pages — only needed when navigating to those routes
 const ComponentDetail = lazy(() => import('./pages/ComponentDetail').then(m => ({ default: m.ComponentDetail })));
+const Presets = lazy(() => import('./pages/Presets').then(m => ({ default: m.Presets })));
 
 export default function App() {
   const [build, setBuild] = useState<BuildConfig>({});
@@ -15,7 +17,7 @@ export default function App() {
 
   const selectedComponents = Object.values(build).filter(Boolean) as Component[];
 
-  // Sélectionner automatiquement le premier composant pour la comparaison des prix
+  // Auto-select first component for price comparison when build changes
   useEffect(() => {
     if (selectedComponents.length === 0) {
       setPriceTarget(null);
@@ -27,12 +29,33 @@ export default function App() {
     }
   }, [build]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Load a preset build — fetches each component by ID and populates the build
+  async function handleLoadPreset(componentIds: Record<string, number>) {
+    const entries = await Promise.allSettled(
+      Object.entries(componentIds).map(async ([category, id]) => {
+        const component = await getComponentById(id);
+        return [category, component] as [ComponentCategory, Component];
+      })
+    );
+    const newBuild: BuildConfig = {};
+    for (const result of entries) {
+      if (result.status === 'fulfilled') {
+        const [category, component] = result.value;
+        newBuild[category] = component;
+      }
+    }
+    setBuild(newBuild);
+  }
+
   return (
     <div className={styles.app}>
       <header className={styles.header}>
         <Link to="/" className={styles.logoLink}>
           <h1 className={styles.logo}>PC Builder <span className={styles.sub}>Maroc</span></h1>
         </Link>
+        <nav className={styles.nav}>
+          <Link to="/presets" className={styles.navLink}>Configurations prêtes</Link>
+        </nav>
       </header>
 
       <Routes>
@@ -69,6 +92,13 @@ export default function App() {
         <Route path="/components/:slug" element={
           <Suspense fallback={<div className={styles.loading}>Chargement...</div>}>
             <ComponentDetail />
+          </Suspense>
+        } />
+
+        {/* Configurations prêtes */}
+        <Route path="/presets" element={
+          <Suspense fallback={<div className={styles.loading}>Chargement...</div>}>
+            <Presets onLoadPreset={handleLoadPreset} />
           </Suspense>
         } />
       </Routes>
