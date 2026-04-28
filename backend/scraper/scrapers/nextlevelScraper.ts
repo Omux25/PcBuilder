@@ -4,9 +4,14 @@
  * Strategy (based on HTML inspection):
  * - JSON-LD ItemList provides product names and URLs (20 per page)
  * - span.price provides prices in order matching the JSON-LD list
- * - Stock status: "EN STOCK" text appears in the page for in-stock items
+ * - Stock status: badge text ".badge-name-text" — "EN STOCK" = in stock
  *
- * Pagination: /categorie-produit/{category}/page/{n}
+ * Pagination: ?page=N (confirmed working, /page/N returns 404)
+ *
+ * Race condition fix: the old code stored total pages in an instance variable
+ * (lastTotalPages) which was overwritten by parallel category scrapes.
+ * Now scrapeCategory() calls fetchAndParse() once for page 1, extracts both
+ * products AND total pages from the same Cheerio object — no shared state.
  *
  * Requirements: 6.1, 6.2, 6.3
  */
@@ -29,9 +34,6 @@ const CATEGORY_URLS: string[] = [
 ];
 
 export class NextLevelScraper extends BaseScraper {
-  /** Stores the max page number found during the last extractPrices call. */
-  private lastTotalPages = 1;
-
   constructor() {
     super(SITE_NAME);
   }
@@ -53,13 +55,20 @@ export class NextLevelScraper extends BaseScraper {
   }
 
   private async scrapeCategory(baseUrl: string): Promise<ScrapedPrice[]> {
-    // Fetch page 1 — extractPrices will also detect total pages via pagination links
-    this.lastTotalPages = 1;
-    const page1Prices = await this.scrape(baseUrl).catch(() => [] as ScrapedPrice[]);
+    // Fetch page 1 once — parse both products AND total pages from the same HTML.
+    // This avoids any shared instance state between parallel category calls.
+    let $page1: CheerioAPI;
+    try {
+      $page1 = await this.fetchAndParse(baseUrl);
+    } catch {
+      return [];
+    }
 
+    const page1Prices = this.extractPrices($page1);
     if (page1Prices.length === 0) return [];
 
-    const totalPages = this.lastTotalPages;
+    // Extract total pages from the same Cheerio object — no race condition possible
+    const totalPages = this.parseTotalPages($page1);
     if (totalPages <= 1) return page1Prices;
 
     // Fetch all remaining pages in parallel
@@ -71,22 +80,24 @@ export class NextLevelScraper extends BaseScraper {
     return [...page1Prices, ...pageResults.flat()];
   }
 
-  protected extractPrices($: CheerioAPI): ScrapedPrice[] {
-    const prices: ScrapedPrice[] = [];
-
-    // Detect total pages from pagination links — store for scrapeCategory to use
+  /**
+   * Extracts the total number of pages from pagination links.
+   * Returns 1 if no pagination is found (single-page category).
+   */
+  private parseTotalPages($: CheerioAPI): number {
     const pageNums: number[] = [];
     $('a[href*="page="]').each((_i, el) => {
       const href = $(el).attr('href') ?? '';
       const m = href.match(/[?&]page=(\d+)/);
       if (m) pageNums.push(parseInt(m[1]));
     });
-    if (pageNums.length > 0) {
-      this.lastTotalPages = Math.max(...pageNums);
-    }
+    return pageNums.length > 0 ? Math.max(...pageNums) : 1;
+  }
 
-    // Strategy: extract products from JSON-LD ItemList (names + URLs)
-    // then pair with prices from span.price elements (same order)
+  protected extractPrices($: CheerioAPI): ScrapedPrice[] {
+    const prices: ScrapedPrice[] = [];
+
+    // Extract products from JSON-LD ItemList (names + URLs)
     const jsonLdProducts: { name: string; url: string }[] = [];
 
     $('script[type="application/ld+json"]').each((_i, el) => {
@@ -103,14 +114,14 @@ export class NextLevelScraper extends BaseScraper {
             }
           }
         }
-      } catch { /* skip */ }
+      } catch { /* skip malformed JSON-LD */ }
     });
 
     if (jsonLdProducts.length === 0) return [];
 
     // Extract prices in order — span.price appears multiple times per product
-    // (the theme renders each product card multiple times for mobile/desktop)
-    // We need unique prices in the same order as JSON-LD products
+    // (the theme renders each product card multiple times for mobile/desktop).
+    // Deduplicate by taking unique consecutive values.
     const allPriceEls: string[] = [];
     $('span.price').each((_i, el) => {
       const text = $(el).text().trim();
@@ -119,8 +130,6 @@ export class NextLevelScraper extends BaseScraper {
       }
     });
 
-    // The theme renders each product 4 times — take every 4th price
-    // (or deduplicate by taking unique consecutive values)
     const uniquePrices: string[] = [];
     for (let i = 0; i < allPriceEls.length; i++) {
       if (i === 0 || allPriceEls[i] !== allPriceEls[i - 1]) {
@@ -129,24 +138,21 @@ export class NextLevelScraper extends BaseScraper {
     }
 
     // Build per-product stock map from product cards.
-    // Use the badge text (.badge-name-text) which reliably shows "EN STOCK" or "RUPTURE DE STOCK".
-    // The .out-of-stock/.hide approach is unreliable — NextLevel sometimes keeps .hide even when out of stock.
+    // Use badge text (.badge-name-text): "EN STOCK" = in stock.
     const stockByUrl = new Map<string, boolean>();
     $('article.product-miniature').each((_i, card) => {
       const url = $(card).find('a[itemprop="url"], a.product-thumbnail').first().attr('href') ?? '';
       if (!url) return;
-      // Get the first badge text — "EN STOCK" = in stock, anything else (including "RUPTURE DE STOCK") = out
       const badgeText = $(card).find('.badge-name-text').first().text().trim().toUpperCase();
-      const inStock = badgeText === 'EN STOCK';
-      stockByUrl.set(url, inStock);
+      stockByUrl.set(url, badgeText === 'EN STOCK');
     });
 
-    // For each JSON-LD product, pair with price and per-product stock status
+    // Pair each JSON-LD product with its price and stock status
     for (let i = 0; i < jsonLdProducts.length; i++) {
       const product = jsonLdProducts[i];
       if (!product.url || !product.name) continue;
 
-      // Skip bundle/pack products (they contain "+")
+      // Skip bundle/pack products
       if (product.name.includes('+')) continue;
 
       const rawPrice = uniquePrices[i] ?? '';
@@ -160,7 +166,6 @@ export class NextLevelScraper extends BaseScraper {
       );
       if (isNaN(price) || price <= 0) continue;
 
-      // Per-product stock from card — fall back to true if card not found
       const in_stock = stockByUrl.get(product.url) ?? true;
 
       prices.push({
