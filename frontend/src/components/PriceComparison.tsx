@@ -1,5 +1,6 @@
 /**
- * PriceComparison — shows price offers for a selected component.
+ * PriceComparison — shows all price offers for a selected component,
+ * including variant labels (AIB partner, BOX/Tray, color, etc.).
  * Opens the retailer's product page in a new tab on click.
  */
 
@@ -42,6 +43,15 @@ export function PriceComparison({ component }: Props) {
     );
   }
 
+  // Separate in-stock from out-of-stock for visual grouping
+  const inStock    = offers.filter(o => o.in_stock);
+  const outOfStock = offers.filter(o => !o.in_stock);
+  const cheapestUrl = inStock.length > 0 ? inStock[0].product_url : offers[0]?.product_url;
+
+  // Determine if variant column is useful (skip if all labels are empty or identical)
+  const variantLabels = offers.map(o => o.variant_label ?? '').filter(Boolean);
+  const showVariant = variantLabels.length > 0 && new Set(variantLabels).size > 1;
+
   return (
     <section className={styles.panel}>
       <h2 className={styles.title}>Comparaison des prix</h2>
@@ -52,7 +62,7 @@ export function PriceComparison({ component }: Props) {
       </div>
 
       {loading && <p className={styles.hint}>Chargement des prix…</p>}
-      {error   && <p className={styles.errorMsg}>Erreur: {error}</p>}
+      {error   && <p className={styles.errorMsg}>Erreur : {error}</p>}
 
       {!loading && !error && offers.length === 0 && (
         <p className={styles.empty}>Ce composant n'est disponible chez aucun revendeur référencé.</p>
@@ -63,16 +73,25 @@ export function PriceComparison({ component }: Props) {
           <thead>
             <tr>
               <th>Revendeur</th>
+              {showVariant && <th>Variante</th>}
               <th>Prix</th>
               <th>Stock</th>
-              <th>Mis à jour</th>
+              <th className={styles.dateCol}>Mis à jour</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {offers.map((offer) => (
-              <tr key={offer.retailer_id} className={offers.indexOf(offer) === 0 ? styles.cheapest : undefined}>
+            {[...inStock, ...outOfStock].map((offer) => (
+              <tr
+                key={offer.product_url}
+                className={offer.product_url === cheapestUrl ? styles.cheapest : undefined}
+              >
                 <td>{offer.retailer_name}</td>
+                {showVariant && (
+                  <td className={styles.variant}>
+                    {offer.variant_label ?? <span className={styles.noVariant}>—</span>}
+                  </td>
+                )}
                 <td className={styles.price}>
                   {offer.price.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}
                 </td>
@@ -81,7 +100,7 @@ export function PriceComparison({ component }: Props) {
                     {offer.in_stock ? 'En stock' : 'Épuisé'}
                   </span>
                 </td>
-                <td className={styles.date}>
+                <td className={`${styles.date} ${styles.dateCol}`}>
                   {new Date(offer.last_updated).toLocaleDateString('fr-MA')}
                 </td>
                 <td>
@@ -90,7 +109,7 @@ export function PriceComparison({ component }: Props) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.buyBtn}
-                    aria-label={`Acheter chez ${offer.retailer_name}`}
+                    aria-label={`Acheter chez ${offer.retailer_name}${offer.variant_label ? ` — ${offer.variant_label}` : ''}`}
                   >
                     Voir →
                   </a>
@@ -99,6 +118,12 @@ export function PriceComparison({ component }: Props) {
             ))}
           </tbody>
         </table>
+      )}
+
+      {!loading && !error && outOfStock.length > 0 && inStock.length > 0 && (
+        <p className={styles.hint}>
+          {outOfStock.length} offre{outOfStock.length > 1 ? 's' : ''} épuisée{outOfStock.length > 1 ? 's' : ''} affichée{outOfStock.length > 1 ? 's' : ''} en bas du tableau.
+        </p>
       )}
     </section>
   );
