@@ -1,105 +1,112 @@
-# PC Builder Platform — Morocco
+# PC Builder Maroc
 
-A full-stack web application for composing custom PC builds, validating component compatibility in real time, and comparing prices from Moroccan retailers.
+A price comparator and compatibility checker for PC components in Morocco. Users pick parts, get instant compatibility feedback, and compare prices across Moroccan retailers. The platform does **not** sell anything — it redirects users to retailer websites to complete purchases.
 
-## Project Structure
+**Team:** Salmane ELHJOUJI (backend) · Ghali KHARMOUDY (frontend)
+**School:** EMSI Orangers, Casablanca · **Deadline:** May 11, 2026
+**Status:** Complete — 324 tests passing
+
+---
+
+## What it does
+
+- **Compatibility checker** — select CPU, motherboard, GPU, RAM, storage, PSU, case, and cooling. Get instant errors (socket mismatch, RAM type mismatch, GPU too long) and warnings (RAM speed exceeded, PSU underpowered).
+- **Price comparison** — see all available offers for a component across UltraPC, NextLevel, and SetupGame, sorted by availability and price. Includes variant labels (AIB partner, CPU packaging, RAM kit config).
+- **Price history** — track how prices have changed over time with a line chart per retailer.
+- **Admin panel** — manage the component catalog, monitor scrapers, review unmatched listings, and view dashboard stats.
+
+---
+
+## Stack
+
+| Layer | Technology |
+|---|---|
+| Runtime | Bun 1.3+ (in WSL2) |
+| Backend | Hono (TypeScript) |
+| Database | PostgreSQL 16 + Bun.sql |
+| Scraping | undici + cheerio |
+| Frontend | React 19 + Vite |
+| Admin panel | React 19 + Vite (separate app) |
+| Auth | JWT + bcrypt + refresh tokens |
+| Testing | bun test + fast-check (324 tests) |
+
+---
+
+## Project structure
 
 ```
-pc-builder/
-├── backend/          # Node.js / Express REST API + scraping system
-│   ├── src/
-│   │   ├── app.js
-│   │   ├── server.js
-│   │   ├── db/
-│   │   │   ├── pool.js
-│   │   │   └── migrations/
-│   │   ├── routes/
-│   │   ├── middleware/
-│   │   ├── services/
-│   │   └── schemas/
-│   ├── scraper/
-│   └── package.json
-└── frontend/         # React.js SPA
+PcBuilder/
+├── backend/          ← Bun + Hono API server + scraping system
+├── frontend/         ← React + Vite (user-facing, port 5173)
+├── admin/            ← React + Vite (admin panel, port 5174)
+├── notes/            ← Project documentation
+│   ├── features/     ← How each feature works
+│   └── reference/    ← API, database, dev setup, stack
+├── dev.ps1           ← One-command dev stack launcher
+└── docker-compose.yml
 ```
 
-## Prerequisites
+---
 
-- **WSL2** (Windows Subsystem for Linux 2) — backend runs inside WSL2
-- **Bun** 1.3+ (inside WSL2): `curl -fsSL https://bun.sh/install | bash`
-- **PostgreSQL** 15+ (inside WSL2 or via Docker)
-- **Node.js** 20+ (Windows side, for the React frontend with Vite)
+## Quick start
 
-## Backend Setup (inside WSL2)
+```powershell
+# 1. Start PostgreSQL (once per WSL2 session)
+wsl -d Ubuntu -- bash -c "echo '2525' | sudo -S service postgresql start"
 
-### 1. Install dependencies
-
-```bash
-cd backend
-bun install
+# 2. Start backend + frontend + admin panel
+.\dev.ps1
 ```
 
-### 2. Configure environment variables
+- Backend API → http://localhost:3000
+- Frontend → http://localhost:5173
+- Admin panel → http://localhost:5174/admin
 
-```bash
-cp .env.example .env
-# Edit .env and fill in your database credentials and JWT secret
+For first-time setup (migrations, seed data, dependencies), see [notes/reference/dev-setup.md](notes/reference/dev-setup.md).
+
+---
+
+## Documentation
+
+| File | What it covers |
+|---|---|
+| [notes/features/compatibility-engine.md](notes/features/compatibility-engine.md) | The 6 compatibility rules explained |
+| [notes/features/price-comparison.md](notes/features/price-comparison.md) | Price offers, variant model, price history |
+| [notes/features/scraping-system.md](notes/features/scraping-system.md) | Scrapers, DNA matcher, aggregator, scheduler |
+| [notes/features/authentication.md](notes/features/authentication.md) | JWT, refresh tokens, rate limiting |
+| [notes/features/component-catalog.md](notes/features/component-catalog.md) | Categories, schemas, slugs, search |
+| [notes/features/admin-panel.md](notes/features/admin-panel.md) | Dashboard, CRUD, bulk import, unmatched listings |
+| [notes/reference/api.md](notes/reference/api.md) | Full API route reference |
+| [notes/reference/database.md](notes/reference/database.md) | All 14 database tables |
+| [notes/reference/dev-setup.md](notes/reference/dev-setup.md) | How to run everything locally |
+| [notes/reference/stack.md](notes/reference/stack.md) | Technology choices and why |
+
+---
+
+## Running tests
+
+```powershell
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun test 2>&1"
 ```
 
-### 3. Create the database
+Expected: 324 pass, 0 fail across 26 files.
 
-```bash
-psql -U postgres -c "CREATE DATABASE pc_builder;"
-psql -U postgres -c "CREATE USER pc_builder_user WITH PASSWORD 'changeme';"
-psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE pc_builder TO pc_builder_user;"
-```
+---
 
-### 4. Run migrations
+## Environment variables
 
-Apply the SQL migration scripts in order:
+Copy `backend/.env.example` to `backend/.env` and fill in your values.
 
-```bash
-psql -U pc_builder_user -d pc_builder -f backend/src/db/migrations/001_create_components.sql
-psql -U pc_builder_user -d pc_builder -f backend/src/db/migrations/002_create_retailers.sql
-psql -U pc_builder_user -d pc_builder -f backend/src/db/migrations/003_create_prices.sql
-psql -U pc_builder_user -d pc_builder -f backend/src/db/migrations/004_create_scraper_logs.sql
-psql -U pc_builder_user -d pc_builder -f backend/src/db/migrations/005_create_admins.sql
-```
-
-### 5. Start the server
-
-```bash
-# Development (hot reload)
-bun run dev
-
-# Production
-bun run start
-```
-
-The API will be available at `http://localhost:3000`.
-
-## Running Tests
-
-```bash
-cd backend
-bun test
-```
-
-## Frontend Setup
-
-The React.js frontend will be initialized in a later task. See `frontend/README.md`.
-
-## Environment Variables Reference
-
-| Variable | Description | Default |
-|---|---|---|
-| `PORT` | HTTP server port | `3000` |
-| `DB_HOST` | PostgreSQL host | `localhost` |
-| `DB_PORT` | PostgreSQL port | `5432` |
-| `DB_NAME` | Database name | — |
-| `DB_USER` | Database user | — |
-| `DB_PASSWORD` | Database password | — |
-| `DB_POOL_MAX` | Max pool connections | `10` |
-| `DB_IDLE_TIMEOUT_MS` | Idle client timeout (ms) | `600000` |
-| `DB_CONNECTION_TIMEOUT_MS` | Connection timeout (ms) | `30000` |
-| `JWT_SECRET` | Secret for signing JWTs | — |
-| `JWT_EXPIRES_IN` | JWT expiry duration | `8h` |
+| Variable | Description |
+|---|---|
+| `PORT` | HTTP server port (default: 3000) |
+| `PGHOST` | PostgreSQL host |
+| `PGPORT` | PostgreSQL port (5433 in this environment) |
+| `PGDATABASE` | Database name |
+| `PGUSER` | Database user |
+| `PGPASSWORD` | Database password |
+| `JWT_SECRET` | Secret for signing access tokens |
+| `JWT_EXPIRES_IN` | Access token expiry (default: 15m) |
+| `ALLOWED_ORIGINS` | Comma-separated CORS origins |
+| `NODE_ENV` | production or development |
+| `SERVE_STATIC` | Set to true in production to serve frontend from backend |

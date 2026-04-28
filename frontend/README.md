@@ -1,73 +1,41 @@
-# React + TypeScript + Vite
+# PC Builder — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The user-facing React + Vite application. Runs on port 5173 in development.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## What's in here
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+frontend/src/
+├── api.ts                    ← API client (fetch wrappers for all endpoints)
+├── types.ts                  ← TypeScript interfaces + CATEGORY_LABELS + RULE_LABELS
+├── App.tsx                   ← Root component, layout, build state
+├── index.css                 ← Global CSS reset and design tokens (CSS variables)
+├── components/
+│   ├── Configurator.tsx      ← 8 component slots, each with a ComponentPicker
+│   ├── ComponentPicker.tsx   ← Searchable dropdown with compatibility filtering
+│   ├── BuildSummary.tsx      ← TDP, PSU recommendation, errors, warnings
+│   ├── PriceComparison.tsx   ← Price table with variant column, in/out-of-stock grouping
+│   └── PriceHistoryChart.tsx ← Recharts line chart for price history
+└── pages/
+    └── ComponentDetail.tsx   ← Component detail page (/components/:slug)
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Running
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```powershell
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/frontend && ~/.bun/bin/bun run dev"
 ```
+
+Or use `dev.ps1` from the project root to start all three services at once.
+
+The Vite dev server proxies all `/api` requests to `http://localhost:3000` — no CORS issues in development.
+
+## Building for production
+
+```powershell
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/frontend && ~/.bun/bin/bun run build"
+```
+
+Output goes to `frontend/dist/`. In production, nginx serves this directory at `/`.
