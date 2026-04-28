@@ -7,6 +7,7 @@
 
 import { logger } from './utils/logger.js';
 import { aggregate } from './aggregator.js';
+import { autoMap } from './autoMapper.js';
 import { Site1Scraper } from './scrapers/site1Scraper.js';
 import { Site2Scraper } from './scrapers/site2Scraper.js';
 import { UltraPcScraper } from './scrapers/ultrapcScraper.js';
@@ -81,7 +82,13 @@ export async function runScrapingSession(): Promise<void> {
 
   const { updated, unmatched, errors } = await aggregate(allPrices);
 
+  // Auto-map any new unmatched listings using the DNA matcher.
+  // This runs after every session so new products are linked automatically
+  // without waiting for manual admin review.
+  const { mapped: autoMapped } = await autoMap();
+
   await logger.info(
-    `Session complete: ${updated} updated, ${unmatched} unmatched, ${errors} error(s)`,
+    `Session complete: ${updated} updated, ${unmatched} unmatched, ${errors} error(s)` +
+    (autoMapped > 0 ? `, ${autoMapped} auto-mapped` : ''),
   );
 }
