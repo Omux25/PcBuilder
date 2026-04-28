@@ -114,31 +114,36 @@ function extractBrand(name: string): string {
 function extractCpuSpecs(name: string): { socket: string; tdp: number } | null {
   const n = name.toLowerCase();
 
-  // Determine socket from CPU family
+  // Extract model number to determine generation
+  const modelMatch = n.match(/\b(\d{4,5}[a-z0-9]{0,4})\b/);
+  const modelNum = modelMatch ? parseInt(modelMatch[1]) : 0;
+
   let socket = '';
-  if (n.match(/ryzen\s*[3579]\s*(3[0-9]{3}|5[0-9]{3}|7[0-9]{3})/)) socket = 'AM4';
-  else if (n.match(/ryzen\s*[3579]\s*(9[0-9]{3}|7[0-9]{3}x3d|7[0-9]{3})/)) {
-    // Ryzen 7000/9000 series → AM5, older → AM4
-    const modelMatch = n.match(/\b(\d{4})\b/);
-    const model = modelMatch ? parseInt(modelMatch[1]) : 0;
-    socket = model >= 7000 ? 'AM5' : 'AM4';
+
+  // AMD Ryzen — determine socket from model number
+  if (n.match(/\bryzen/)) {
+    if (modelNum >= 7000 || n.match(/\b9[0-9]{3}x?\b/)) socket = 'AM5';
+    else socket = 'AM4'; // Ryzen 1000–5000 series
   }
-  else if (n.match(/ryzen\s*[3579]/)) {
-    const modelMatch = n.match(/\b(\d{4})\b/);
-    const model = modelMatch ? parseInt(modelMatch[1]) : 0;
-    socket = model >= 7000 ? 'AM5' : 'AM4';
+  // AMD Athlon / APU (G-series)
+  else if (n.match(/\b(athlon|a[468]\d{3}g?)\b/)) socket = 'AM4';
+  // Intel Core Ultra (Arrow Lake / Meteor Lake)
+  else if (n.match(/\bcore\s*ultra/)) socket = 'LGA1851';
+  // Intel Core iX — determine socket from generation
+  else if (n.match(/\bcore\s*i[3579]/)) {
+    if (modelNum >= 14000) socket = 'LGA1700';       // 14th gen
+    else if (modelNum >= 12000) socket = 'LGA1700';  // 12th/13th gen
+    else if (modelNum >= 10000) socket = 'LGA1200';  // 10th/11th gen
+    else if (modelNum >= 8000)  socket = 'LGA1151';  // 8th/9th gen
+    else if (modelNum >= 6000)  socket = 'LGA1151';  // 6th/7th gen
+    else socket = 'LGA1700'; // fallback for unknown
   }
-  else if (n.match(/core\s*ultra/)) socket = 'LGA1851';
-  else if (n.match(/core\s*i[3579][-\s]*(1[0-9]{4}|[89][0-9]{3})/)) {
-    const modelMatch = n.match(/\b(1[0-9]{4}|[89][0-9]{3})\b/);
-    const model = modelMatch ? parseInt(modelMatch[1]) : 0;
-    if (model >= 12000) socket = 'LGA1700';
-    else if (model >= 10000) socket = 'LGA1200';
-    else socket = 'LGA1151';
-  }
-  else if (n.match(/core\s*i[3579]/)) socket = 'LGA1700';
-  else if (n.match(/threadripper/)) socket = 'TRX40';
-  else if (n.match(/athlon|ryzen\s*3\s*3[0-9]{3}g/)) socket = 'AM4';
+  // Intel Pentium / Celeron
+  else if (n.match(/\b(pentium|celeron)\b/)) socket = 'LGA1200';
+  // Intel Xeon
+  else if (n.match(/\bxeon\b/)) socket = 'LGA1700';
+  // AMD Threadripper
+  else if (n.match(/\bthreadripper/)) socket = 'TRX40';
 
   if (!socket) return null;
 
@@ -148,7 +153,8 @@ function extractCpuSpecs(name: string): { socket: string; tdp: number } | null {
   else if (n.match(/\b(i7|ryzen\s*7)\b/)) tdp = 105;
   else if (n.match(/\b(i5|ryzen\s*5)\b/)) tdp = 65;
   else if (n.match(/\b(i3|ryzen\s*3)\b/)) tdp = 58;
-  if (n.match(/\bk[fs]?\b/) && n.match(/intel/)) tdp = 125;
+  // Unlocked Intel multiplier = 125W
+  if (n.match(/\b\d{4,5}k[fs]?\b/) && n.match(/intel|core/)) tdp = 125;
 
   return { socket, tdp };
 }
@@ -156,42 +162,109 @@ function extractCpuSpecs(name: string): { socket: string; tdp: number } | null {
 function extractGpuSpecs(name: string): { length_mm: number; tdp: number; vram_gb: number } {
   const n = name.toLowerCase();
 
-  // Estimate VRAM from model
+  // Extract VRAM from name
   let vram_gb = 8;
   const vramMatch = n.match(/\b(\d+)\s*g[bo]\b/);
   if (vramMatch) vram_gb = parseInt(vramMatch[1]);
 
-  // Estimate TDP from model tier
+  // TDP lookup by model — ordered most specific first
   let tdp = 150;
-  if (n.match(/\b(rtx\s*4090|rtx\s*5090)\b/)) tdp = 450;
-  else if (n.match(/\b(rtx\s*4080|rtx\s*5080)\b/)) tdp = 320;
-  else if (n.match(/\b(rtx\s*4070\s*ti|rtx\s*5070\s*ti)\b/)) tdp = 285;
-  else if (n.match(/\b(rtx\s*4070|rtx\s*5070)\b/)) tdp = 200;
-  else if (n.match(/\b(rtx\s*4060\s*ti)\b/)) tdp = 165;
-  else if (n.match(/\b(rtx\s*4060|rtx\s*3060)\b/)) tdp = 115;
-  else if (n.match(/\b(rtx\s*3080|rtx\s*3090)\b/)) tdp = 350;
-  else if (n.match(/\b(rtx\s*3070)\b/)) tdp = 220;
-  else if (n.match(/\b(rtx\s*2060|rtx\s*2070)\b/)) tdp = 175;
-  else if (n.match(/\b(rx\s*7900\s*xtx)\b/)) tdp = 355;
-  else if (n.match(/\b(rx\s*7900\s*xt)\b/)) tdp = 315;
-  else if (n.match(/\b(rx\s*7800\s*xt|rx\s*7700\s*xt)\b/)) tdp = 263;
-  else if (n.match(/\b(rx\s*6800\s*xt|rx\s*6900\s*xt)\b/)) tdp = 300;
-  else if (n.match(/\b(rx\s*6700\s*xt)\b/)) tdp = 230;
-  else if (n.match(/\b(rx\s*6600\s*xt|rx\s*6600)\b/)) tdp = 160;
-  else if (n.match(/\b(gtx\s*1080\s*ti)\b/)) tdp = 250;
-  else if (n.match(/\b(gtx\s*1080)\b/)) tdp = 180;
-  else if (n.match(/\b(gtx\s*1070)\b/)) tdp = 150;
-  else if (n.match(/\b(gtx\s*1060)\b/)) tdp = 120;
-  else if (n.match(/\b(gtx\s*1050\s*ti|gtx\s*1050)\b/)) tdp = 75;
-  else if (n.match(/\b(arc\s*b580)\b/)) tdp = 190;
-  else if (n.match(/\b(arc\s*b570)\b/)) tdp = 150;
+  // RTX 50 series
+  if      (n.match(/\brtx\s*5090\b/))          tdp = 575;
+  else if (n.match(/\brtx\s*5080\b/))          tdp = 360;
+  else if (n.match(/\brtx\s*5070\s*ti\b/))     tdp = 300;
+  else if (n.match(/\brtx\s*5070\b/))          tdp = 250;
+  else if (n.match(/\brtx\s*5060\s*ti\b/))     tdp = 180;
+  else if (n.match(/\brtx\s*5060\b/))          tdp = 150;
+  else if (n.match(/\brtx\s*5050\b/))          tdp = 120;
+  // RTX 40 series
+  else if (n.match(/\brtx\s*4090\b/))          tdp = 450;
+  else if (n.match(/\brtx\s*4080\s*super\b/))  tdp = 320;
+  else if (n.match(/\brtx\s*4080\b/))          tdp = 320;
+  else if (n.match(/\brtx\s*4070\s*ti\s*super\b/)) tdp = 285;
+  else if (n.match(/\brtx\s*4070\s*ti\b/))     tdp = 285;
+  else if (n.match(/\brtx\s*4070\s*super\b/))  tdp = 220;
+  else if (n.match(/\brtx\s*4070\b/))          tdp = 200;
+  else if (n.match(/\brtx\s*4060\s*ti\b/))     tdp = 165;
+  else if (n.match(/\brtx\s*4060\b/))          tdp = 115;
+  // RTX 30 series
+  else if (n.match(/\brtx\s*3090\s*ti\b/))     tdp = 450;
+  else if (n.match(/\brtx\s*3090\b/))          tdp = 350;
+  else if (n.match(/\brtx\s*3080\s*ti\b/))     tdp = 350;
+  else if (n.match(/\brtx\s*3080\b/))          tdp = 320;
+  else if (n.match(/\brtx\s*3070\s*ti\b/))     tdp = 290;
+  else if (n.match(/\brtx\s*3070\b/))          tdp = 220;
+  else if (n.match(/\brtx\s*3060\s*ti\b/))     tdp = 200;
+  else if (n.match(/\brtx\s*3060\b/))          tdp = 170;
+  else if (n.match(/\brtx\s*3050\b/))          tdp = 130;
+  // RTX 20 series
+  else if (n.match(/\brtx\s*2080\s*ti\b/))     tdp = 250;
+  else if (n.match(/\brtx\s*2080\s*super\b/))  tdp = 250;
+  else if (n.match(/\brtx\s*2080\b/))          tdp = 215;
+  else if (n.match(/\brtx\s*2070\s*super\b/))  tdp = 215;
+  else if (n.match(/\brtx\s*2070\b/))          tdp = 175;
+  else if (n.match(/\brtx\s*2060\s*super\b/))  tdp = 175;
+  else if (n.match(/\brtx\s*2060\b/))          tdp = 160;
+  // GTX 16 series
+  else if (n.match(/\bgtx\s*1660\s*ti\b/))     tdp = 120;
+  else if (n.match(/\bgtx\s*1660\s*super\b/))  tdp = 125;
+  else if (n.match(/\bgtx\s*1660\b/))          tdp = 120;
+  else if (n.match(/\bgtx\s*1650\s*super\b/))  tdp = 100;
+  else if (n.match(/\bgtx\s*1650\b/))          tdp = 75;
+  // GTX 10 series
+  else if (n.match(/\bgtx\s*1080\s*ti\b/))     tdp = 250;
+  else if (n.match(/\bgtx\s*1080\b/))          tdp = 180;
+  else if (n.match(/\bgtx\s*1070\s*ti\b/))     tdp = 180;
+  else if (n.match(/\bgtx\s*1070\b/))          tdp = 150;
+  else if (n.match(/\bgtx\s*1060\b/))          tdp = 120;
+  else if (n.match(/\bgtx\s*1050\s*ti\b/))     tdp = 75;
+  else if (n.match(/\bgtx\s*1050\b/))          tdp = 75;
+  else if (n.match(/\bgt\s*1030\b/))           tdp = 30;
+  else if (n.match(/\bgt\s*730\b/))            tdp = 25;
+  // AMD RX 9000 series
+  else if (n.match(/\brx\s*9070\s*xt\b/))      tdp = 304;
+  else if (n.match(/\brx\s*9070\b/))           tdp = 220;
+  else if (n.match(/\brx\s*9060\s*xt\b/))      tdp = 150;
+  // AMD RX 7000 series
+  else if (n.match(/\brx\s*7900\s*xtx\b/))     tdp = 355;
+  else if (n.match(/\brx\s*7900\s*xt\b/))      tdp = 315;
+  else if (n.match(/\brx\s*7900\s*gre\b/))     tdp = 260;
+  else if (n.match(/\brx\s*7800\s*xt\b/))      tdp = 263;
+  else if (n.match(/\brx\s*7700\s*xt\b/))      tdp = 245;
+  else if (n.match(/\brx\s*7600\s*xt\b/))      tdp = 190;
+  else if (n.match(/\brx\s*7600\b/))           tdp = 165;
+  // AMD RX 6000 series
+  else if (n.match(/\brx\s*6950\s*xt\b/))      tdp = 335;
+  else if (n.match(/\brx\s*6900\s*xt\b/))      tdp = 300;
+  else if (n.match(/\brx\s*6800\s*xt\b/))      tdp = 300;
+  else if (n.match(/\brx\s*6800\b/))           tdp = 250;
+  else if (n.match(/\brx\s*6750\s*xt\b/))      tdp = 250;
+  else if (n.match(/\brx\s*6700\s*xt\b/))      tdp = 230;
+  else if (n.match(/\brx\s*6700\b/))           tdp = 175;
+  else if (n.match(/\brx\s*6650\s*xt\b/))      tdp = 180;
+  else if (n.match(/\brx\s*6600\s*xt\b/))      tdp = 160;
+  else if (n.match(/\brx\s*6600\b/))           tdp = 132;
+  else if (n.match(/\brx\s*6500\s*xt\b/))      tdp = 107;
+  else if (n.match(/\brx\s*6400\b/))           tdp = 53;
+  // AMD RX 5000 series
+  else if (n.match(/\brx\s*5700\s*xt\b/))      tdp = 225;
+  else if (n.match(/\brx\s*5700\b/))           tdp = 180;
+  else if (n.match(/\brx\s*5600\s*xt\b/))      tdp = 150;
+  else if (n.match(/\brx\s*5500\s*xt\b/))      tdp = 130;
+  // Intel Arc
+  else if (n.match(/\barc\s*b580\b/))          tdp = 190;
+  else if (n.match(/\barc\s*b570\b/))          tdp = 150;
+  else if (n.match(/\barc\s*a770\b/))          tdp = 225;
+  else if (n.match(/\barc\s*a750\b/))          tdp = 225;
+  else if (n.match(/\barc\s*a580\b/))          tdp = 185;
 
-  // Estimate length from tier
+  // Estimate length from TDP tier
   let length_mm = 240;
-  if (tdp >= 350) length_mm = 336;
-  else if (tdp >= 250) length_mm = 285;
-  else if (tdp >= 150) length_mm = 240;
-  else length_mm = 200;
+  if      (tdp >= 400) length_mm = 360;
+  else if (tdp >= 300) length_mm = 336;
+  else if (tdp >= 200) length_mm = 285;
+  else if (tdp >= 130) length_mm = 240;
+  else                 length_mm = 200;
 
   return { length_mm, tdp, vram_gb };
 }
@@ -356,10 +429,12 @@ export async function buildFromUnmatched(): Promise<BuildResult> {
 
     // DNA dedup: check if a component with the same DNA already exists
     // (catches "Ryzen 5 7600X BOX" when "Ryzen 5 7600X" is already in catalog)
+    // For storage: require a stricter match — model name must be present in both
+    const minScore = category === 'storage' ? 1.0 : 1.0;
     const dnaMatch = existingComponents.find(c => {
       if (c.category !== category) return false;
       const { score } = scoreDnaMatch(listing.scraped_name, `${c.brand ?? ''} ${c.name}`, category);
-      return score >= 1.0;
+      return score >= minScore;
     });
 
     if (dnaMatch) {
