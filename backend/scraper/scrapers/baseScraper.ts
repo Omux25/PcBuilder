@@ -47,6 +47,7 @@ type LoadFn  = (html: string) => CheerioAPI;
 let _fetch: FetchFn = fetch as unknown as FetchFn;
 let _load:  LoadFn  = cheerio.load;
 let _retryDelayMs: number | null = null; // null = use default exponential backoff
+let _silent = false; // suppress console.warn in tests
 
 /** Replace the fetch function — used in unit tests. */
 export function setFetch(mockFetch: FetchFn): void {
@@ -63,11 +64,20 @@ export function setRetryDelay(ms: number | null): void {
   _retryDelayMs = ms;
 }
 
-/** Reset both to their real implementations. */
+/**
+ * Suppress console.warn retry messages — set to true in tests to keep
+ * output clean when fast-check generates random error strings.
+ */
+export function setSilent(silent: boolean): void {
+  _silent = silent;
+}
+
+/** Reset all injected dependencies to their real implementations. */
 export function resetFetchAndLoad(): void {
   _fetch = fetch as unknown as FetchFn;
   _load  = cheerio.load;
   _retryDelayMs = null;
+  _silent = false;
 }
 
 // ── Base class ────────────────────────────────────────────────────────────────
@@ -120,9 +130,11 @@ export abstract class BaseScraper {
         }
 
         const delayMs = _retryDelayMs !== null ? _retryDelayMs : Math.pow(2, attempt) * 1000; // 2s, 4s
-        console.warn(
-          `[${this.siteName}] Attempt ${attempt}/${MAX_RETRIES} failed: ${(err as Error).message}. Retrying in ${delayMs}ms...`,
-        );
+        if (!_silent) {
+          console.warn(
+            `[${this.siteName}] Attempt ${attempt}/${MAX_RETRIES} failed: ${(err as Error).message}. Retrying in ${delayMs}ms...`,
+          );
+        }
         await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
     }

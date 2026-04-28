@@ -13,7 +13,7 @@ import * as fc from 'fast-check';
 import { runScrapingSession } from '../scheduler.js';
 import { setSql as setLoggerSql, resetSql as resetLoggerSql } from '../utils/logger.js';
 import { setSql as setAggregatorSql, resetSql as resetAggregatorSql } from '../aggregator.js';
-import { setFetch, resetFetchAndLoad, setRetryDelay } from '../scrapers/baseScraper.js';
+import { setFetch, resetFetchAndLoad, setRetryDelay, setSilent } from '../scrapers/baseScraper.js';
 import { setUltraPcFetch, resetUltraPcFetch } from '../scrapers/ultrapcScraper.js';
 import { setSetupGameFetch, resetSetupGameFetch } from '../scrapers/setupgameScraper.js';
 
@@ -47,6 +47,7 @@ beforeEach(() => {
   setLoggerSql(makeLoggerSql());
   setAggregatorSql(makeAggregatorSql());
   setRetryDelay(0);
+  setSilent(true);
   setUltraPcFetch((_url: string) => Promise.resolve({
     ok: true,
     status: 200,
