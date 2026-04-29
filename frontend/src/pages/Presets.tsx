@@ -8,6 +8,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { getPresets } from '../api';
 import type { PresetBuild } from '../types';
 import { CATEGORY_LABELS } from '../types';
+import { SkeletonCard } from '../components/Skeleton';
 import styles from './Presets.module.css';
 
 const USE_CASE_LABELS: Record<string, string> = {
@@ -43,8 +44,26 @@ export function Presets({ onLoadPreset }: Props) {
     navigate('/');
   }
 
-  if (loading) return <div className={styles.loading}>Chargement des configurations…</div>;
-  if (error)   return <div className={styles.error}>{error}</div>;
+  if (loading) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.pageHeader}>
+          <Link to="/" className={styles.back}>← Retour au configurateur</Link>
+          <h1 className={styles.title}>Configurations prêtes à l'emploi</h1>
+        </div>
+        <div className={styles.group}>
+          <div className={styles.cards}>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) return <div className={styles.error}>{error}</div>;
 
   // Group by use case
   const grouped = presets.reduce<Record<string, PresetBuild[]>>((acc, p) => {

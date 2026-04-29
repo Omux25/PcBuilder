@@ -8,30 +8,48 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 0.75rem;
+  padding: 0.65rem 1rem;
   background: var(--surface-2);
-  border: 1px solid var(--border-2);
+  border: 1px solid transparent;
   border-radius: var(--radius);
-  color: var(--text-2);
+  color: var(--text);
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  font-weight: 500;
   text-align: left;
-  transition: border-color 0.15s;
+  transition: all 0.2s ease;
 }
 
 .trigger:hover,
 .trigger:focus {
-  border-color: var(--accent-blue);
+  background: var(--surface-3);
   outline: none;
 }
 
-.hasValue { border-color: var(--accent-blue); }
+.hasValue { 
+  background: rgba(137, 180, 250, 0.05);
+  border-color: rgba(137, 180, 250, 0.2);
+}
 
 .placeholder {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  color: var(--text-dim);
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+.plusIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: var(--accent-blue);
+  color: var(--bg);
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-right: 0.5rem;
 }
 
 .selectedLabel {
@@ -45,6 +63,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.thumbnail {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+  border-radius: 2px;
 }
 
 .iconSvg { flex-shrink: 0; color: var(--text-muted); }

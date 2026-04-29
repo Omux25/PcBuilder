@@ -4,14 +4,21 @@
  * Opens the retailer's product page in a new tab on click.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import { getPrices } from '../api';
 import type { Component, PriceOffer } from '../types';
 import { CATEGORY_LABELS } from '../types';
+import { SkeletonText } from './Skeleton';
 import styles from './PriceComparison.module.css';
 
 interface Props {
   component: Component | null;
+}
+
+function getInitials(name: string) {
+  const parts = name.trim().split(/[\s_-]+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
 }
 
 export function PriceComparison({ component }: Props) {
@@ -43,12 +50,20 @@ export function PriceComparison({ component }: Props) {
     );
   }
 
-  // Separate in-stock from out-of-stock for visual grouping
-  const inStock    = offers.filter(o => o.in_stock);
-  const outOfStock = offers.filter(o => !o.in_stock);
-  const cheapestUrl = inStock.length > 0 ? inStock[0].product_url : offers[0]?.product_url;
+  const cheapestUrl = offers[0]?.product_url;
 
-  // Determine if variant column is useful (skip if all labels are empty or identical)
+  // Group by retailer while preserving backend sort order (best offer first)
+  const groupedOffers: { name: string; offers: PriceOffer[] }[] = [];
+  for (const offer of offers) {
+    let group = groupedOffers.find(g => g.name === offer.retailer_name);
+    if (!group) {
+      group = { name: offer.retailer_name, offers: [] };
+      groupedOffers.push(group);
+    }
+    group.offers.push(offer);
+  }
+
+  // Determine if variant column is useful
   const variantLabels = offers.map(o => o.variant_label ?? '').filter(Boolean);
   const showVariant = variantLabels.length > 0 && new Set(variantLabels).size > 1;
 
@@ -58,10 +73,13 @@ export function PriceComparison({ component }: Props) {
 
       <div className={styles.componentInfo}>
         <span className={styles.category}>{CATEGORY_LABELS[component.category]}</span>
-        <span className={styles.name}>{component.brand ? `${component.brand} ` : ''}{component.name}</span>
+        <span className={styles.name}>
+          {component.brand && !component.name.toLowerCase().startsWith(component.brand.toLowerCase()) ? `${component.brand} ` : ''}
+          {component.name}
+        </span>
       </div>
 
-      {loading && <p className={styles.hint}>Chargement des prix…</p>}
+      {loading && <div style={{ marginTop: '1rem' }}><SkeletonText lines={3} /></div>}
       {error   && <p className={styles.errorMsg}>Erreur : {error}</p>}
 
       {!loading && !error && offers.length === 0 && (
@@ -81,48 +99,59 @@ export function PriceComparison({ component }: Props) {
             </tr>
           </thead>
           <tbody>
-            {[...inStock, ...outOfStock].map((offer) => (
-              <tr
-                key={offer.product_url}
-                className={offer.product_url === cheapestUrl ? styles.cheapest : undefined}
-              >
-                <td>{offer.retailer_name}</td>
-                {showVariant && (
-                  <td className={styles.variant}>
-                    {offer.variant_label ?? <span className={styles.noVariant}>—</span>}
-                  </td>
-                )}
-                <td className={styles.price}>
-                  {offer.price.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}
-                </td>
-                <td>
-                  <span className={offer.in_stock ? styles.inStock : styles.outOfStock}>
-                    {offer.in_stock ? 'En stock' : 'Épuisé'}
-                  </span>
-                </td>
-                <td className={`${styles.date} ${styles.dateCol}`}>
-                  {new Date(offer.last_updated).toLocaleDateString('fr-MA')}
-                </td>
-                <td>
-                  <a
-                    href={offer.product_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.buyBtn}
-                    aria-label={`Acheter chez ${offer.retailer_name}${offer.variant_label ? ` — ${offer.variant_label}` : ''}`}
+            {groupedOffers.map((group) => (
+              <Fragment key={group.name}>
+                {group.offers.map((offer, index) => (
+                  <tr
+                    key={offer.product_url}
+                    className={offer.product_url === cheapestUrl ? styles.cheapest : undefined}
                   >
-                    Voir →
-                  </a>
-                </td>
-              </tr>
+                    {index === 0 && (
+                      <td rowSpan={group.offers.length} className={styles.retailerCell}>
+                        <div className={styles.retailerCellContent}>
+                          <div className={styles.retailerAvatar}>{getInitials(offer.retailer_name)}</div>
+                          <span>{offer.retailer_name}</span>
+                        </div>
+                      </td>
+                    )}
+                    {showVariant && (
+                      <td className={styles.variant}>
+                        {offer.variant_label ?? <span className={styles.noVariant}>—</span>}
+                      </td>
+                    )}
+                    <td className={styles.price}>
+                      {offer.price.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}
+                    </td>
+                    <td>
+                      <span className={offer.in_stock ? styles.inStock : styles.outOfStock}>
+                        {offer.in_stock ? 'En stock' : 'Épuisé'}
+                      </span>
+                    </td>
+                    <td className={`${styles.date} ${styles.dateCol}`}>
+                      {new Date(offer.last_updated).toLocaleDateString('fr-MA')}
+                    </td>
+                    <td>
+                      <a
+                        href={offer.product_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.buyBtn}
+                        aria-label={`Acheter chez ${offer.retailer_name}${offer.variant_label ? ` — ${offer.variant_label}` : ''}`}
+                      >
+                        Voir →
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </Fragment>
             ))}
           </tbody>
         </table>
       )}
 
-      {!loading && !error && outOfStock.length > 0 && inStock.length > 0 && (
+      {!loading && !error && offers.some(o => !o.in_stock) && offers.some(o => o.in_stock) && (
         <p className={styles.hint}>
-          {outOfStock.length} offre{outOfStock.length > 1 ? 's' : ''} épuisée{outOfStock.length > 1 ? 's' : ''} affichée{outOfStock.length > 1 ? 's' : ''} en bas du tableau.
+          Certaines variantes affichées sont actuellement épuisées.
         </p>
       )}
     </section>

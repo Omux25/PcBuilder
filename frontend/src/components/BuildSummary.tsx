@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import { validateBuild } from '../api';
 import type { BuildConfig, CompatibilityResult } from '../types';
-import { RULE_LABELS } from '../types';
+import { RULE_LABELS, RULE_TOOLTIPS } from '../types';
 import styles from './BuildSummary.module.css';
 
 interface Props {
@@ -86,7 +86,9 @@ export function BuildSummary({ build }: Props) {
               <ul className={styles.list}>
                 {result.errors.map((e, i) => (
                   <li key={i} className={styles.errorItem}>
-                    <span className={styles.rule}>{RULE_LABELS[e.rule] ?? e.rule}</span>
+                    <span className={styles.rule} data-tooltip={RULE_TOOLTIPS[e.rule]}>
+                      {RULE_LABELS[e.rule] ?? e.rule}
+                    </span>
                     <span>{e.message}</span>
                   </li>
                 ))}
@@ -101,7 +103,9 @@ export function BuildSummary({ build }: Props) {
               <ul className={styles.list}>
                 {result.warnings.map((w, i) => (
                   <li key={i} className={styles.warnItem}>
-                    <span className={styles.rule}>{RULE_LABELS[w.rule] ?? w.rule}</span>
+                    <span className={styles.rule} data-tooltip={RULE_TOOLTIPS[w.rule]}>
+                      {RULE_LABELS[w.rule] ?? w.rule}
+                    </span>
                     <span>{w.message}</span>
                   </li>
                 ))}

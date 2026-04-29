@@ -8,7 +8,7 @@
   gap: .9rem;
 }
 
-.title { color: var(--text); }
+.title { font-size: 1.15rem; font-weight: 600; color: var(--text); }
 
 .empty, .hint {
   font-size: .9rem;
@@ -24,7 +24,7 @@
   gap: .15rem;
 }
 .category { font-size: .75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
-.name     { font-weight: 600; }
+.name     { font-size: 1.25rem; font-weight: 700; color: var(--text); }
 
 .table {
   width: 100%;
@@ -50,7 +50,7 @@
 
 .table tr:last-child td { border-bottom: none; }
 
-.cheapest td { background: var(--success-row); }
+.cheapest td { background: rgba(137, 180, 250, 0.05); }
 
 .price { font-weight: 700; color: var(--text); white-space: nowrap; }
 
@@ -62,15 +62,21 @@
 .buyBtn {
   display: inline-block;
   padding: .3rem .7rem;
-  background: var(--accent);
-  color: var(--bg);
+  background: transparent;
+  color: var(--accent-blue);
+  border: 1px solid var(--accent-blue);
   border-radius: var(--radius);
   font-size: .8rem;
   font-weight: 600;
   white-space: nowrap;
   text-decoration: none;
+  transition: all 0.2s ease;
 }
-.buyBtn:hover { background: var(--accent-h); text-decoration: none; }
+.buyBtn:hover { 
+  background: var(--accent-blue); 
+  color: var(--bg); 
+  text-decoration: none; 
+}
 
 .variant {
   font-size: .8rem;
@@ -82,6 +88,31 @@
 }
 
 .noVariant { color: var(--border); }
+
+.retailerCell {
+  vertical-align: middle;
+}
+
+.retailerCellContent {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.retailerAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--surface-3);
+  color: var(--text);
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  border: 1px solid var(--border-2);
+}
 
 @media (max-width: 640px) {
   .dateCol { display: none; }

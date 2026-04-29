@@ -3,6 +3,7 @@ import { Routes, Route, Link } from 'react-router-dom';
 import { Configurator } from './components/Configurator';
 import { BuildSummary } from './components/BuildSummary';
 import { PriceComparison } from './components/PriceComparison';
+import { Skeleton } from './components/Skeleton';
 import type { BuildConfig, Component, ComponentCategory } from './types';
 import { getComponentById } from './api';
 import styles from './App.module.css';
@@ -90,14 +91,14 @@ export default function App() {
 
         {/* Page détail composant */}
         <Route path="/components/:slug" element={
-          <Suspense fallback={<div className={styles.loading}>Chargement...</div>}>
+          <Suspense fallback={<div className={styles.main}><Skeleton height={400} /></div>}>
             <ComponentDetail />
           </Suspense>
         } />
 
         {/* Configurations prêtes */}
         <Route path="/presets" element={
-          <Suspense fallback={<div className={styles.loading}>Chargement...</div>}>
+          <Suspense fallback={<div className={styles.main}><Skeleton height={400} /></div>}>
             <Presets onLoadPreset={handleLoadPreset} />
           </Suspense>
         } />

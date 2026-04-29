@@ -102,6 +102,14 @@ export const RULE_LABELS: Record<string, string> = {
   psu_underpowered:      'Alimentation insuffisante',
 };
 
+export const RULE_TOOLTIPS: Record<string, string> = {
+  socket_mismatch:       'Le processeur et la carte mère doivent avoir le même socket (ex: AM5) pour fonctionner ensemble.',
+  ram_type_mismatch:     'La carte mère ne supporte pas ce type de RAM (DDR4 vs DDR5).',
+  ram_frequency_exceeded:'La RAM fonctionnera à une vitesse inférieure, limitée par la carte mère ou le processeur.',
+  gpu_too_long:          'La carte graphique est trop longue et ne rentrera pas physiquement dans ce boîtier.',
+  psu_underpowered:      'L\'alimentation choisie n\'offre pas assez de puissance pour faire tourner ces composants de manière stable.',
+};
+
 export const CATEGORY_ORDER: ComponentCategory[] = [
   'cpu', 'motherboard', 'gpu', 'ram', 'storage', 'psu', 'case', 'cooling',
 ];

@@ -21,6 +21,7 @@
   --text-muted:  #94a3b8;
   --text-dim:    #6c7086;
   --radius:      8px;
+  --radius-lg:   12px;
 
   /* Semantic tint backgrounds — used for badges and highlighted rows */
   --success-tint:  #14532d;       /* dark green bg for compatible badge */
@@ -29,25 +30,29 @@
   --success-row:   rgba(20,83,45,0.13);   /* subtle green row highlight */
   --danger-row:    rgba(69,10,10,0.20);   /* subtle red row highlight */
   --warning-row:   rgba(120,53,15,0.20);  /* subtle amber row highlight */
-  font-family: system-ui, -apple-system, sans-serif;
+
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   font-size: 15px;
   color: var(--text);
   background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body { min-height: 100dvh; }
 
-a { color: var(--accent-h); text-decoration: none; }
-a:hover { text-decoration: underline; }
+a { color: var(--accent-h); text-decoration: none; transition: color 0.15s; }
+a:hover { text-decoration: underline; color: var(--accent-blue); }
 
 button {
   cursor: pointer;
   border: none;
   border-radius: var(--radius);
   font: inherit;
-  transition: opacity .15s;
+  transition: all .15s;
 }
 button:disabled { opacity: .45; cursor: not-allowed; }
+button:not(:disabled):hover { filter: brightness(1.1); }
 
 select {
   font: inherit;
@@ -57,9 +62,37 @@ select {
   border-radius: var(--radius);
   padding: .45rem .7rem;
   width: 100%;
+  transition: border-color 0.15s;
 }
 select:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+select:hover { border-color: var(--border-2); }
 
-h1 { font-size: 1.6rem; font-weight: 700; }
+input[type="text"], input[type="search"], input[type="email"], input[type="password"] {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .45rem .7rem;
+  transition: border-color 0.15s;
+}
+input:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+input:hover { border-color: var(--border-2); }
+
+h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; }
 h2 { font-size: 1.15rem; font-weight: 600; }
 h3 { font-size: 1rem; font-weight: 600; }
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-2); }
+
+/* Table row hover effect */
+table tbody tr {
+  transition: background-color 0.1s;
+}
+table tbody tr:hover {
+  background-color: var(--surface-2);
+}

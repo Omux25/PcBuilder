@@ -8,6 +8,7 @@ import {
   Legend, ResponsiveContainer,
 } from 'recharts';
 import type { PriceHistoryEntry } from '../types';
+import { Skeleton } from './Skeleton';
 import styles from './PriceHistoryChart.module.css';
 
 interface Props {
@@ -27,7 +28,11 @@ const RETAILER_COLORS = [
 
 export function PriceHistoryChart({ history, loading }: Props) {
   if (loading) {
-    return <div className={styles.empty}>Chargement de l'historique…</div>;
+    return (
+      <div className={styles.chart}>
+        <Skeleton height={220} />
+      </div>
+    );
   }
 
   if (history.length < 2) {
@@ -44,8 +49,7 @@ export function PriceHistoryChart({ history, loading }: Props) {
   // Build a map: date → { retailer_name: price }
   const dateMap = new Map<string, Record<string, number>>();
   for (const entry of history) {
-    // Use local date string to avoid UTC/local timezone mismatch
-    const date = new Date(entry.recorded_at).toLocaleDateString('fr-CA'); // YYYY-MM-DD in local time
+    const date = new Date(entry.recorded_at).toLocaleDateString('fr-MA', { year: 'numeric', month: '2-digit', day: '2-digit' });
     if (!dateMap.has(date)) dateMap.set(date, {});
     dateMap.get(date)![entry.retailer_name] = entry.price;
   }
