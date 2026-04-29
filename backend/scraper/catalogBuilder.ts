@@ -387,8 +387,10 @@ function cleanName(rawName: string, brand: string): string {
  * For each pending unmatched listing that couldn't be matched by autoMap(),
  * attempts to extract specs from the product name and create a new catalog entry.
  * Then creates a scraper_mapping so the next scrape prices it correctly.
+ *
+ * @param onProgress - optional callback called after each listing is processed
  */
-export async function buildFromUnmatched(): Promise<BuildResult> {
+export async function buildFromUnmatched(onProgress?: (done: number, total: number) => void): Promise<BuildResult> {
   let created = 0;
   let skipped = 0;
 
@@ -550,6 +552,8 @@ export async function buildFromUnmatched(): Promise<BuildResult> {
     } catch {
       skipped++;
     }
+
+    onProgress?.(created + skipped, pending.length);
   }
 
   if (created > 0) {
