@@ -27,8 +27,8 @@
 }
 
 .hasValue { 
-  background: rgba(137, 180, 250, 0.05);
-  border-color: rgba(137, 180, 250, 0.2);
+  background: var(--surface-2);
+  border-color: var(--border-2);
 }
 
 .placeholder {
@@ -97,17 +97,17 @@
   z-index: 1;
 }
 
-.clear:hover { color: var(--danger-soft); background: rgba(243,139,168,0.1); }
+.clear:hover { color: var(--danger); background: var(--danger-tint); }
 
 .dropdown {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: var(--surface-2);
+  background: var(--surface);
   border: 1px solid var(--border-2);
   border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  box-shadow: var(--shadow-lg);
   z-index: 100;
   overflow: hidden;
 }
@@ -120,10 +120,10 @@
 .searchInput {
   width: 100%;
   padding: 0.4rem 0.6rem;
-  background: var(--surface-3);
-  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  color: var(--text-2);
+  color: var(--text);
   font-size: 0.85rem;
   box-sizing: border-box;
 }
@@ -151,20 +151,20 @@
   font-size: 0.85rem;
   color: var(--text-2);
   transition: background 0.1s;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border);
 }
 
 .item:hover { background: var(--surface-3); }
 
-.itemSelected { background: rgba(137,180,250,0.1); color: var(--accent-blue); }
+.itemSelected { background: var(--surface-3); color: var(--accent-blue); }
 
 .itemIncompatible {
   opacity: 0.55;
   cursor: not-allowed;
-  background: rgba(243,139,168,0.03);
+  background: var(--danger-row);
 }
 
-.itemIncompatible:hover { background: rgba(243,139,168,0.06); }
+.itemIncompatible:hover { background: var(--danger-row); filter: brightness(0.95); }
 
 .itemMain {
   display: flex;
@@ -212,8 +212,8 @@
   font-size: 0.7rem;
   font-weight: 600;
   color: var(--success-soft);
-  background: rgba(166,227,161,0.1);
-  border: 1px solid rgba(166,227,161,0.2);
+  background: var(--success-row);
+  border: 1px solid var(--success-soft);
   border-radius: 3px;
   padding: 0.05rem 0.3rem;
   white-space: nowrap;
@@ -223,8 +223,8 @@
   font-size: 0.7rem;
   font-weight: 600;
   color: var(--text-dim);
-  background: rgba(108,112,134,0.1);
-  border: 1px solid rgba(108,112,134,0.2);
+  background: var(--surface-3);
+  border: 1px solid var(--border-2);
   border-radius: 3px;
   padding: 0.05rem 0.3rem;
   white-space: nowrap;
@@ -234,8 +234,8 @@
   font-size: 0.7rem;
   font-weight: 600;
   color: var(--danger-soft);
-  background: rgba(243,139,168,0.1);
-  border: 1px solid rgba(243,139,168,0.2);
+  background: var(--danger-row);
+  border: 1px solid var(--danger-soft);
   border-radius: 3px;
   padding: 0.05rem 0.3rem;
   white-space: nowrap;
