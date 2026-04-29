@@ -4,21 +4,11 @@
  * Requirements: 10.1, 10.5, 14.1
  */
 
-import { sql as bunSql } from 'bun';
+import { getSql } from '../db/index.js';
+import { AppError } from '../utils/errors.js';
 
-// ── Dependency injection ─────────────────────────────────────────────────────
-
-type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
-
-let _sql: SqlFn = bunSql as unknown as SqlFn;
-
-export function setSql(mockSql: SqlFn): void {
-  _sql = mockSql;
-}
-
-export function resetSql(): void {
-  _sql = bunSql as unknown as SqlFn;
-}
+// Re-export DI helpers from centralized module for test compatibility
+export { setSql, resetSql } from '../db/index.js';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,7 +44,8 @@ export interface PresetBuild {
  * @param useCase - Optional filter by use case
  */
 async function getPresets(useCase?: string): Promise<PresetBuild[]> {
-  const presetRows = (await _sql`
+  const sql = getSql();
+  const presetRows = (await sql`
     SELECT * FROM preset_builds
     WHERE is_active = true
       AND (${useCase ?? null}::text IS NULL OR use_case = ${useCase ?? null})
@@ -65,7 +56,7 @@ async function getPresets(useCase?: string): Promise<PresetBuild[]> {
 
   // Fetch all components for these presets in one query
   // Use a JOIN against preset_builds instead of passing an array parameter (Bun.sql limitation)
-  const componentRows = (await _sql`
+  const componentRows = (await sql`
     SELECT
       pbc.preset_build_id,
       pbc.category,
@@ -99,17 +90,16 @@ async function getPresets(useCase?: string): Promise<PresetBuild[]> {
  * Throws PRESET_NOT_FOUND if not found.
  */
 async function getPresetById(id: number): Promise<PresetBuild> {
-  const presetRows = (await _sql`
+  const sql = getSql();
+  const presetRows = (await sql`
     SELECT * FROM preset_builds WHERE id = ${id} LIMIT 1
   `) as Omit<PresetBuild, 'components' | 'incomplete'>[];
 
   if (presetRows.length === 0) {
-    const err = new Error(`Preset build with id ${id} not found`);
-    (err as NodeJS.ErrnoException).code = 'PRESET_NOT_FOUND';
-    throw err;
+    throw new AppError('PRESET_NOT_FOUND', `Preset build with id ${id} not found`, 404);
   }
 
-  const componentRows = (await _sql`
+  const componentRows = (await sql`
     SELECT
       pbc.category,
       c.id, c.slug, c.name, c.brand, c.image_url, c.is_active
@@ -141,7 +131,8 @@ async function createPreset(data: {
   components: Record<string, number>;
 }): Promise<PresetBuild> {
   // Insert preset
-  const presetRows = (await _sql`
+  const sql = getSql();
+  const presetRows = (await sql`
     INSERT INTO preset_builds (name, description, use_case, total_price_estimate, is_active)
     VALUES (
       ${data.name},
@@ -157,7 +148,7 @@ async function createPreset(data: {
 
   // Insert component links
   for (const [category, componentId] of Object.entries(data.components)) {
-    await _sql`
+    await sql`
       INSERT INTO preset_build_components (preset_build_id, component_id, category)
       VALUES (${preset.id}, ${componentId}, ${category})
       ON CONFLICT (preset_build_id, category) DO UPDATE SET component_id = ${componentId}
@@ -181,7 +172,8 @@ async function updatePreset(
     components?: Record<string, number>;
   }
 ): Promise<PresetBuild> {
-  const rows = (await _sql`
+  const sql = getSql();
+  const rows = (await sql`
     UPDATE preset_builds SET
       name                 = COALESCE(${data.name ?? null}, name),
       description          = COALESCE(${data.description ?? null}, description),
@@ -193,16 +185,14 @@ async function updatePreset(
   `) as Omit<PresetBuild, 'components' | 'incomplete'>[];
 
   if (rows.length === 0) {
-    const err = new Error(`Preset build with id ${id} not found`);
-    (err as NodeJS.ErrnoException).code = 'PRESET_NOT_FOUND';
-    throw err;
+    throw new AppError('PRESET_NOT_FOUND', `Preset build with id ${id} not found`, 404);
   }
 
   // Replace component links if provided
   if (data.components) {
-    await _sql`DELETE FROM preset_build_components WHERE preset_build_id = ${id}`;
+    await sql`DELETE FROM preset_build_components WHERE preset_build_id = ${id}`;
     for (const [category, componentId] of Object.entries(data.components)) {
-      await _sql`
+      await sql`
         INSERT INTO preset_build_components (preset_build_id, component_id, category)
         VALUES (${id}, ${componentId}, ${category})
       `;
@@ -217,14 +207,13 @@ async function updatePreset(
  * Throws PRESET_NOT_FOUND if no preset matches.
  */
 async function deletePreset(id: number): Promise<void> {
-  const rows = (await _sql`
+  const sql = getSql();
+  const rows = (await sql`
     DELETE FROM preset_builds WHERE id = ${id} RETURNING id
   `) as { id: number }[];
 
   if (rows.length === 0) {
-    const err = new Error(`Preset build with id ${id} not found`);
-    (err as NodeJS.ErrnoException).code = 'PRESET_NOT_FOUND';
-    throw err;
+    throw new AppError('PRESET_NOT_FOUND', `Preset build with id ${id} not found`, 404);
   }
 }
 

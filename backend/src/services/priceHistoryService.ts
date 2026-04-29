@@ -5,21 +5,10 @@
  * Requirements: 3.1, 3.2, 3.3
  */
 
-import { sql as bunSql } from 'bun';
+import { getSql } from '../db/index.js';
 
-// ── Dependency injection ─────────────────────────────────────────────────────
-
-type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
-
-let _sql: SqlFn = bunSql as unknown as SqlFn;
-
-export function setSql(mockSql: SqlFn): void {
-  _sql = mockSql;
-}
-
-export function resetSql(): void {
-  _sql = bunSql as unknown as SqlFn;
-}
+// Re-export DI helpers from centralized module for test compatibility
+export { setSql, resetSql } from '../db/index.js';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,8 +36,9 @@ async function getPriceHistory(
   retailerId?: number,
   days: number = 30
 ): Promise<PriceHistoryEntry[]> {
+  const sql = getSql();
   if (retailerId !== undefined) {
-    return _sql`
+    return sql`
       SELECT
         ph.id,
         ph.component_id,
@@ -66,7 +56,7 @@ async function getPriceHistory(
     ` as Promise<PriceHistoryEntry[]>;
   }
 
-  return _sql`
+  return sql`
     SELECT
       ph.id,
       ph.component_id,
@@ -102,7 +92,8 @@ async function recordPriceChange(
   inStock: boolean
 ): Promise<boolean> {
   // Get the most recent recorded price for this pair
-  const recent = (await _sql`
+  const sql = getSql();
+  const recent = (await sql`
     SELECT price FROM price_history
     WHERE component_id = ${componentId}
       AND retailer_id  = ${retailerId}
@@ -116,7 +107,7 @@ async function recordPriceChange(
     return false;
   }
 
-  await _sql`
+  await sql`
     INSERT INTO price_history (component_id, retailer_id, price, in_stock)
     VALUES (${componentId}, ${retailerId}, ${price}, ${inStock})
   `;

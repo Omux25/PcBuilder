@@ -4,21 +4,10 @@
  * Requirements: 7.1, 7.2, 7.3, 7.5
  */
 
-import { sql as bunSql } from 'bun';
+import { getSql } from '../db/index.js';
 
-// ── Dependency injection ─────────────────────────────────────────────────────
-
-type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
-
-let _sql: SqlFn = bunSql as unknown as SqlFn;
-
-export function setSql(mockSql: SqlFn): void {
-  _sql = mockSql;
-}
-
-export function resetSql(): void {
-  _sql = bunSql as unknown as SqlFn;
-}
+// Re-export DI helpers from centralized module for test compatibility
+export { setSql, resetSql } from '../db/index.js';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -58,26 +47,26 @@ export interface ActivityEntry {
 async function getDashboardStats(): Promise<DashboardStats> {
   const [componentStats, retailerStats, priceStats, unmatchedStats, scrapeStats] =
     await Promise.allSettled([
-      _sql`
+      getSql()`
         SELECT category, COUNT(id) AS count
         FROM components WHERE is_active = true
         GROUP BY category
       ` as Promise<{ category: string; count: string }[]>,
 
-      _sql`
+      getSql()`
         SELECT
           COUNT(id) AS total,
           COUNT(id) FILTER (WHERE is_active = true) AS active
         FROM retailers
       ` as Promise<{ total: string; active: string }[]>,
 
-      _sql`SELECT COUNT(id) AS total FROM prices` as Promise<{ total: string }[]>,
+      getSql()`SELECT COUNT(id) AS total FROM prices` as Promise<{ total: string }[]>,
 
-      _sql`
+      getSql()`
         SELECT COUNT(id) AS total FROM unmatched_listings WHERE status = 'pending'
       ` as Promise<{ total: string }[]>,
 
-      _sql`
+      getSql()`
         SELECT last_scrape_at, last_scrape_status
         FROM retailers
         WHERE last_scrape_at IS NOT NULL
@@ -119,7 +108,7 @@ async function getDashboardStats(): Promise<DashboardStats> {
  * Used for the dashboard bar chart.
  */
 async function getPriceUpdatesChart(days: number = 30): Promise<PriceUpdateChartEntry[]> {
-  const rows = (await _sql`
+  const rows = (await getSql()`
     SELECT
       DATE(recorded_at) AS date,
       COUNT(id) AS count
@@ -136,7 +125,7 @@ async function getPriceUpdatesChart(days: number = 30): Promise<PriceUpdateChart
  * Returns the most recent admin activity entries.
  */
 async function getRecentActivity(limit: number = 10): Promise<ActivityEntry[]> {
-  return _sql`
+  return getSql()`
     SELECT
       al.id,
       al.admin_id,
@@ -169,7 +158,7 @@ async function logActivity(
   entityId?: number,
   details?: Record<string, unknown>
 ): Promise<void> {
-  await _sql`
+  await getSql()`
     INSERT INTO admin_activity_log (admin_id, action, entity_type, entity_id, details)
     VALUES (
       ${adminId},

@@ -9,6 +9,7 @@
 
 import { Hono } from 'hono';
 import { getPresets, getPresetById } from '../services/presetService.js';
+import { AppError } from '../utils/errors.js';
 
 const presetsRouter = new Hono();
 
@@ -35,8 +36,8 @@ presetsRouter.get('/:id', async (c) => {
     const preset = await getPresetById(id);
     return c.json(preset);
   } catch (err: unknown) {
-    if (err instanceof Error && (err as NodeJS.ErrnoException).code === 'PRESET_NOT_FOUND') {
-      return c.json({ error: { code: 'NOT_FOUND', message: err.message } }, 404);
+    if (err instanceof AppError) {
+      return c.json(err.toJSON(), err.statusCode as any);
     }
     throw err;
   }

@@ -193,7 +193,7 @@ describe('getComponentById', () => {
     }
 
     expect(thrownError).not.toBeNull();
-    expect((thrownError as NodeJS.ErrnoException).code).toBe('COMPONENT_NOT_FOUND');
+    expect((thrownError as any).code).toBe('COMPONENT_NOT_FOUND');
     expect(thrownError!.message).toContain('9999');
   });
 });

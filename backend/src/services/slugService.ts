@@ -5,22 +5,11 @@
  * uniqueness across all existing component slugs.
  */
 
-import { sql as bunSql } from 'bun';
-import { componentSlug, generateUniqueSlug } from '../utils/slugify';
+import { getSql } from '../db/index.js';
+import { componentSlug, generateUniqueSlug } from '../utils/slugify.js';
 
-// ── Dependency injection ─────────────────────────────────────────────────────
-
-type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
-
-let _sql: SqlFn = bunSql as unknown as SqlFn;
-
-export function setSql(mockSql: SqlFn): void {
-  _sql = mockSql;
-}
-
-export function resetSql(): void {
-  _sql = bunSql as unknown as SqlFn;
-}
+// Re-export DI helpers from centralized module for test compatibility
+export { setSql, resetSql } from '../db/index.js';
 
 // ── Service ──────────────────────────────────────────────────────────────────
 
@@ -40,19 +29,20 @@ export async function getUniqueSlug(
   name: string,
   excludeId?: number
 ): Promise<string> {
+  const sql = getSql();
   const base = componentSlug(brand, name);
 
   // Fetch all slugs that could collide (those starting with the base slug)
   let rows: { slug: string }[];
 
   if (excludeId !== undefined) {
-    rows = (await _sql`
+    rows = (await sql`
       SELECT slug FROM components
       WHERE slug LIKE ${base + '%'}
         AND id != ${excludeId}
     `) as { slug: string }[];
   } else {
-    rows = (await _sql`
+    rows = (await sql`
       SELECT slug FROM components
       WHERE slug LIKE ${base + '%'}
     `) as { slug: string }[];

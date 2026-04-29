@@ -25,7 +25,7 @@
 import { Hono } from 'hono';
 import { getComponents } from '../services/componentService.js';
 import { validateCompatibility } from '../services/compatibilityService.js';
-import { sql } from 'bun';
+import { getSql } from '../db/index.js';
 
 const smartSearchRouter = new Hono();
 
@@ -50,8 +50,8 @@ smartSearchRouter.get('/', async (c) => {
     }
   }
 
-  // Fetch all matching components (no pagination yet — we need to sort by compatibility first)
-  // For large catalogs this could be optimized, but 305 components is fine
+  // For large catalogs this could be optimized with SQL-level sorting,
+  // but ~305 components is fine for in-memory sort + paginate.
   const { components } = await getComponents({
     category,
     search: search || undefined,
@@ -66,7 +66,7 @@ smartSearchRouter.get('/', async (c) => {
   // Fetch lowest prices for all components in one query.
   // We join against the prices table filtered by the same category/search
   // to avoid passing a JS array as a Postgres parameter (Bun.sql limitation).
-  const priceRows = await sql`
+  const priceRows = await getSql()`
     SELECT
       p.component_id,
       MIN(p.price)        AS lowest_price,

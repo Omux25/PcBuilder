@@ -11,6 +11,7 @@
 import { Hono } from 'hono';
 import { getComponents, getComponentById, getComponentBySlug } from '../services/componentService.js';
 import { getPriceHistory } from '../services/priceHistoryService.js';
+import { AppError } from '../utils/errors.js';
 
 const componentsRouter = new Hono();
 
@@ -47,8 +48,8 @@ componentsRouter.get('/slug/:slug', async (c) => {
     const component = await getComponentBySlug(slug);
     return c.json(component);
   } catch (err: unknown) {
-    if (err instanceof Error && (err as NodeJS.ErrnoException).code === 'COMPONENT_NOT_FOUND') {
-      return c.json({ error: { code: 'NOT_FOUND', message: err.message } }, 404);
+    if (err instanceof AppError) {
+      return c.json(err.toJSON(), err.statusCode as any);
     }
     throw err;
   }
@@ -73,8 +74,8 @@ componentsRouter.get('/:id/price-history', async (c) => {
     const history = await getPriceHistory(id, retailerId, days);
     return c.json({ component_id: id, history });
   } catch (err: unknown) {
-    if (err instanceof Error && (err as NodeJS.ErrnoException).code === 'COMPONENT_NOT_FOUND') {
-      return c.json({ error: { code: 'NOT_FOUND', message: err.message } }, 404);
+    if (err instanceof AppError) {
+      return c.json(err.toJSON(), err.statusCode as any);
     }
     throw err;
   }
@@ -95,14 +96,8 @@ componentsRouter.get('/:id', async (c) => {
     const component = await getComponentById(id);
     return c.json(component);
   } catch (err: unknown) {
-    if (
-      err instanceof Error &&
-      (err as NodeJS.ErrnoException).code === 'COMPONENT_NOT_FOUND'
-    ) {
-      return c.json(
-        { error: { code: 'NOT_FOUND', message: err.message } },
-        404,
-      );
+    if (err instanceof AppError) {
+      return c.json(err.toJSON(), err.statusCode as any);
     }
     throw err;
   }

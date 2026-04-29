@@ -46,7 +46,7 @@ function validateCompatibility(build: {
       errors.push({
         rule: 'socket_mismatch',
         components: ['cpu', 'motherboard'],
-        message: `CPU socket (${cpu.socket}) is incompatible with motherboard socket (${motherboard.socket}).`,
+        message: `Le socket du CPU (${cpu.socket}) est incompatible avec le socket de la carte mère (${motherboard.socket}).`,
       });
     }
   }
@@ -57,7 +57,7 @@ function validateCompatibility(build: {
       errors.push({
         rule: 'ram_type_mismatch',
         components: ['ram', 'motherboard'],
-        message: `RAM type (${ram.ram_type}) is not supported by the motherboard. Supported types: ${motherboard.supported_ram_types.join(', ')}.`,
+        message: `Le type de RAM (${ram.ram_type}) n'est pas pris en charge par la carte mère. Types supportés : ${motherboard.supported_ram_types.join(', ')}.`,
       });
     }
   }
@@ -68,7 +68,7 @@ function validateCompatibility(build: {
       warnings.push({
         rule: 'ram_frequency_exceeded',
         components: ['ram', 'motherboard'],
-        message: `RAM frequency (${ram.frequency_mhz} MHz) exceeds the maximum supported by the motherboard (${motherboard.max_ram_frequency} MHz). The RAM will run at ${motherboard.max_ram_frequency} MHz.`,
+        message: `La fréquence de la RAM (${ram.frequency_mhz} MHz) dépasse le maximum supporté par la carte mère (${motherboard.max_ram_frequency} MHz). La RAM fonctionnera à ${motherboard.max_ram_frequency} MHz.`,
       });
     }
   }
@@ -79,7 +79,7 @@ function validateCompatibility(build: {
       errors.push({
         rule: 'gpu_too_long',
         components: ['gpu', 'case'],
-        message: `GPU length (${gpu.length_mm} mm) exceeds the maximum GPU clearance of the case (${pcCase.max_gpu_length_mm} mm).`,
+        message: `La longueur du GPU (${gpu.length_mm} mm) dépasse l'espace disponible dans le boîtier (${pcCase.max_gpu_length_mm} mm).`,
       });
     }
   }
@@ -99,7 +99,7 @@ function validateCompatibility(build: {
       warnings.push({
         rule: 'psu_underpowered',
         components: ['psu'],
-        message: `PSU wattage (${psu.wattage} W) is lower than the recommended wattage (${recommended_psu_wattage} W).`,
+        message: `La puissance de l'alimentation (${psu.wattage} W) est inférieure à la puissance recommandée (${recommended_psu_wattage} W).`,
       });
     }
   }

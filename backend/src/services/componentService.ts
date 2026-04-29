@@ -5,23 +5,13 @@
  * Requirements: 1.1, 1.7, 7.1, 7.3, 8.1, 11.1, 13.1, 13.3
  */
 
-import { sql as bunSql } from 'bun';
-import { getUniqueSlug } from './slugService';
-import type { ComponentInput } from '../schemas/componentSchemas';
+import { getSql } from '../db/index.js';
+import { getUniqueSlug } from './slugService.js';
+import { AppError } from '../utils/errors.js';
+import type { ComponentInput } from '../schemas/componentSchemas.js';
 
-// ── Dependency injection ─────────────────────────────────────────────────────
-
-type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
-
-let _sql: SqlFn = bunSql as unknown as SqlFn;
-
-export function setSql(mockSql: SqlFn): void {
-  _sql = mockSql;
-}
-
-export function resetSql(): void {
-  _sql = bunSql as unknown as SqlFn;
-}
+// Re-export DI helpers from centralized module for test compatibility
+export { setSql, resetSql } from '../db/index.js';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -83,6 +73,7 @@ async function getComponents(
     limit?: number;
   } = {}
 ): Promise<ComponentListResult> {
+  const sql = getSql();
   const { category, socket, ram_type, brand, search } = filters;
   const page = Math.max(1, filters.page ?? 1);
   const limit = Math.min(100, Math.max(1, filters.limit ?? 20));
@@ -97,7 +88,7 @@ async function getComponents(
   // Build WHERE conditions as an array, then join with AND.
   // Bun.sql doesn't support dynamic WHERE building natively, so we use
   // a single query with all conditions using COALESCE/IS NULL tricks.
-  const rows = (await _sql`
+  const rows = (await sql`
     SELECT *, COUNT(*) OVER() AS total_count
     FROM components
     WHERE is_active = true
@@ -125,16 +116,15 @@ async function getComponents(
  * Throws COMPONENT_NOT_FOUND if not found or inactive.
  */
 async function getComponentById(id: number): Promise<Component> {
-  const rows = (await _sql`
+  const sql = getSql();
+  const rows = (await sql`
     SELECT * FROM components
     WHERE id = ${id} AND is_active = true
     LIMIT 1
   `) as Component[];
 
   if (rows.length === 0) {
-    const err = new Error(`Composant avec l'identifiant ${id} introuvable`);
-    (err as NodeJS.ErrnoException).code = 'COMPONENT_NOT_FOUND';
-    throw err;
+    throw new AppError('COMPONENT_NOT_FOUND', `Composant avec l'identifiant ${id} introuvable`, 404);
   }
 
   return rows[0];
@@ -145,16 +135,15 @@ async function getComponentById(id: number): Promise<Component> {
  * Throws COMPONENT_NOT_FOUND if not found or inactive.
  */
 async function getComponentBySlug(slug: string): Promise<Component> {
-  const rows = (await _sql`
+  const sql = getSql();
+  const rows = (await sql`
     SELECT * FROM components
     WHERE slug = ${slug} AND is_active = true
     LIMIT 1
   `) as Component[];
 
   if (rows.length === 0) {
-    const err = new Error(`Composant "${slug}" introuvable`);
-    (err as NodeJS.ErrnoException).code = 'COMPONENT_NOT_FOUND';
-    throw err;
+    throw new AppError('COMPONENT_NOT_FOUND', `Composant "${slug}" introuvable`, 404);
   }
 
   return rows[0];
@@ -165,7 +154,8 @@ async function getComponentBySlug(slug: string): Promise<Component> {
  * Each row is a distinct variant (AIB partner, packaging, etc.).
  */
 async function getPricesByComponentId(id: number): Promise<PriceOffer[]> {
-  return _sql`
+  const sql = getSql();
+  return sql`
     SELECT
       r.id              AS retailer_id,
       r.name            AS retailer_name,
@@ -188,25 +178,27 @@ async function getPricesByComponentId(id: number): Promise<PriceOffer[]> {
  * Inserts a new component with auto-generated slug.
  */
 async function createComponent(data: ComponentInput): Promise<Component> {
+  const sql = getSql();
   const {
     name, brand, category, description, specs, image_url, release_year,
   } = data as ComponentInput & { description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number };
 
-  // Extract category-specific fields safely
+  // Extract category-specific fields safely (fallback to specs JSON if not at root)
   const d = data as Record<string, unknown>;
-  const socket              = d.socket              as string | undefined;
-  const supported_ram_types = d.supported_ram_types as string[] | undefined;
-  const max_ram_frequency   = d.max_ram_frequency   as number | undefined;
-  const ram_type            = d.ram_type            as string | undefined;
-  const frequency_mhz       = d.frequency_mhz       as number | undefined;
-  const length_mm           = d.length_mm           as number | undefined;
-  const max_gpu_length_mm   = d.max_gpu_length_mm   as number | undefined;
-  const wattage             = d.wattage             as number | undefined;
-  const tdp                 = d.tdp                 as number | undefined;
+  const s = data.specs as Record<string, unknown> || {};
+  const socket              = (d.socket ?? s.socket)                            as string | undefined;
+  const supported_ram_types = (d.supported_ram_types ?? s.supported_ram_types)  as string[] | undefined;
+  const max_ram_frequency   = (d.max_ram_frequency ?? s.max_ram_frequency)      as number | undefined;
+  const ram_type            = (d.ram_type ?? s.ram_type)                        as string | undefined;
+  const frequency_mhz       = (d.frequency_mhz ?? s.frequency_mhz)              as number | undefined;
+  const length_mm           = (d.length_mm ?? s.length_mm)                      as number | undefined;
+  const max_gpu_length_mm   = (d.max_gpu_length_mm ?? s.max_gpu_length_mm)      as number | undefined;
+  const wattage             = (d.wattage ?? s.wattage)                          as number | undefined;
+  const tdp                 = (d.tdp ?? s.tdp)                                  as number | undefined;
 
   const slug = await getUniqueSlug(brand ?? null, name);
 
-  const rows = (await _sql`
+  const rows = (await sql`
     INSERT INTO components (
       slug, name, brand, category, description, specs, image_url, release_year,
       socket, supported_ram_types, max_ram_frequency, ram_type,
@@ -243,24 +235,26 @@ async function createComponent(data: ComponentInput): Promise<Component> {
  * Throws COMPONENT_NOT_FOUND if no component matches.
  */
 async function updateComponent(id: number, data: ComponentInput): Promise<Component> {
+  const sql = getSql();
   const {
     name, brand, category, description, specs, image_url, release_year,
   } = data as ComponentInput & { description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number };
 
   const d = data as Record<string, unknown>;
-  const socket              = d.socket              as string | undefined;
-  const supported_ram_types = d.supported_ram_types as string[] | undefined;
-  const max_ram_frequency   = d.max_ram_frequency   as number | undefined;
-  const ram_type            = d.ram_type            as string | undefined;
-  const frequency_mhz       = d.frequency_mhz       as number | undefined;
-  const length_mm           = d.length_mm           as number | undefined;
-  const max_gpu_length_mm   = d.max_gpu_length_mm   as number | undefined;
-  const wattage             = d.wattage             as number | undefined;
-  const tdp                 = d.tdp                 as number | undefined;
+  const s = data.specs as Record<string, unknown> || {};
+  const socket              = (d.socket ?? s.socket)                            as string | undefined;
+  const supported_ram_types = (d.supported_ram_types ?? s.supported_ram_types)  as string[] | undefined;
+  const max_ram_frequency   = (d.max_ram_frequency ?? s.max_ram_frequency)      as number | undefined;
+  const ram_type            = (d.ram_type ?? s.ram_type)                        as string | undefined;
+  const frequency_mhz       = (d.frequency_mhz ?? s.frequency_mhz)              as number | undefined;
+  const length_mm           = (d.length_mm ?? s.length_mm)                      as number | undefined;
+  const max_gpu_length_mm   = (d.max_gpu_length_mm ?? s.max_gpu_length_mm)      as number | undefined;
+  const wattage             = (d.wattage ?? s.wattage)                          as number | undefined;
+  const tdp                 = (d.tdp ?? s.tdp)                                  as number | undefined;
 
   const slug = await getUniqueSlug(brand ?? null, name, id);
 
-  const rows = (await _sql`
+  const rows = (await sql`
     UPDATE components SET
       slug                = ${slug},
       name                = ${name},
@@ -285,9 +279,7 @@ async function updateComponent(id: number, data: ComponentInput): Promise<Compon
   `) as Component[];
 
   if (rows.length === 0) {
-    const err = new Error(`Composant avec l'identifiant ${id} introuvable`);
-    (err as NodeJS.ErrnoException).code = 'COMPONENT_NOT_FOUND';
-    throw err;
+    throw new AppError('COMPONENT_NOT_FOUND', `Composant avec l'identifiant ${id} introuvable`, 404);
   }
 
   return rows[0];
@@ -298,16 +290,15 @@ async function updateComponent(id: number, data: ComponentInput): Promise<Compon
  * Throws COMPONENT_NOT_FOUND if no component matches.
  */
 async function deactivateComponent(id: number): Promise<Component> {
-  const rows = (await _sql`
+  const sql = getSql();
+  const rows = (await sql`
     UPDATE components SET is_active = false, updated_at = NOW()
     WHERE id = ${id}
     RETURNING *
   `) as Component[];
 
   if (rows.length === 0) {
-    const err = new Error(`Composant avec l'identifiant ${id} introuvable`);
-    (err as NodeJS.ErrnoException).code = 'COMPONENT_NOT_FOUND';
-    throw err;
+    throw new AppError('COMPONENT_NOT_FOUND', `Composant avec l'identifiant ${id} introuvable`, 404);
   }
 
   return rows[0];
@@ -319,7 +310,8 @@ async function deactivateComponent(id: number): Promise<Component> {
  * Throws COMPONENT_HAS_DEPENDENCIES if linked records exist.
  */
 async function deleteComponent(id: number): Promise<void> {
-  const rows = (await _sql`
+  const sql = getSql();
+  const rows = (await sql`
     WITH dep_check AS (
       SELECT
         (SELECT COUNT(id) FROM prices WHERE component_id = ${id}) AS price_count,
@@ -335,15 +327,11 @@ async function deleteComponent(id: number): Promise<void> {
   `) as { id: number; price_count: string; mapping_count: string }[];
 
   if (rows.length === 0) {
-    const exists = (await _sql`SELECT id FROM components WHERE id = ${id} LIMIT 1`) as { id: number }[];
+    const exists = (await sql`SELECT id FROM components WHERE id = ${id} LIMIT 1`) as { id: number }[];
     if (exists.length === 0) {
-      const err = new Error(`Composant avec l'identifiant ${id} introuvable`);
-      (err as NodeJS.ErrnoException).code = 'COMPONENT_NOT_FOUND';
-      throw err;
+      throw new AppError('COMPONENT_NOT_FOUND', `Composant avec l'identifiant ${id} introuvable`, 404);
     }
-    const err = new Error(`Le composant ${id} possède des enregistrements liés et ne peut pas être supprimé`);
-    (err as NodeJS.ErrnoException).code = 'COMPONENT_HAS_DEPENDENCIES';
-    throw err;
+    throw new AppError('COMPONENT_HAS_DEPENDENCIES', `Le composant ${id} possède des enregistrements liés et ne peut pas être supprimé`, 409);
   }
 }
 
