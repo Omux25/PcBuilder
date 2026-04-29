@@ -2,23 +2,18 @@
  * catalogBuilder.ts — Auto-creates catalog entries from scraped product names.
  *
  * Called after autoMap() for listings that couldn't be matched to any existing
- * catalog entry. For categories where specs can be reliably extracted from the
- * product name (CPU, GPU, RAM, storage, motherboard), it creates a new catalog
- * entry and immediately maps the listing to it.
+ * catalog entry. Supports: CPU, GPU, RAM, storage, motherboard, PSU, AIO cooling, case.
  *
- * For categories where specs cannot be reliably extracted (case, cooling, PSU),
- * the listing stays in unmatched_listings for admin review.
- *
- * This closes the loop: scrapers find new products → catalogBuilder adds them
- * to the catalog → autoMapper links them → next scrape prices them correctly.
- *
- * Deduplication: before inserting, checks if a component with the same DNA
- * tokens already exists (catches name variations like "BOX" vs "Tray").
+ * Fix 1: Motherboard chipset regex extended to include M/D/F suffixes (A520M, B550M, H610M)
+ * Fix 2: PSU auto-creation enabled — wattage reliably extractable from name
+ * Fix 3: AIO cooling auto-creation enabled — size reliably extractable
+ * Fix 4: Case auto-creation enabled — form factor extractable, max_gpu_length defaulted
+ * Fix 5: HTML entity decoding before processing (&#8211; → –, &rsquo; → ', etc.)
  */
 
 import { sql as bunSql } from 'bun';
 import { componentSlug, generateUniqueSlug } from '../src/utils/slugify.js';
-import { extractDna, scoreDnaMatch, type CatalogComponent } from '../src/utils/componentMatcher.js';
+import { scoreDnaMatch, type CatalogComponent } from '../src/utils/componentMatcher.js';
 import { logger } from './utils/logger.js';
 
 // ── Dependency injection ──────────────────────────────────────────────────────
@@ -36,11 +31,37 @@ export interface BuildResult {
   skipped: number;
 }
 
+// ── Fix 5: HTML entity decoder ────────────────────────────────────────────────
+
+/**
+ * Decodes common HTML entities in scraped product names.
+ * Retailers sometimes store names with HTML entities from their CMS.
+ */
+function decodeHtml(text: string): string {
+  return text
+    .replace(/&#8211;/g, '–')   // en dash
+    .replace(/&#8212;/g, '—')   // em dash
+    .replace(/&#039;/g, "'")    // apostrophe
+    .replace(/&rsquo;/g, "'")   // right single quote
+    .replace(/&lsquo;/g, "'")   // left single quote
+    .replace(/&amp;/g, '&')     // ampersand
+    .replace(/&quot;/g, '"')    // double quote
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#\d+;/g, ' ')    // any remaining numeric entities → space
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // ── Category classifier ───────────────────────────────────────────────────────
 
 /**
  * Infers the component category from a scraped product name.
  * Returns null for accessories, peripherals, fans, cables, and bundles.
+ *
+ * Fix 1: Motherboard chipset regex extended to [abxhz]\d{3,4}[eimd]?
+ *        to catch A520M, B550M, H610M, B760M-D4, etc.
  */
 function inferCategory(name: string): string | null {
   const n = name.toLowerCase();
@@ -48,40 +69,50 @@ function inferCategory(name: string): string | null {
   // Explicit skip patterns — accessories and non-components
   if (n.match(/\b(souris|mouse|clavier|keyboard|casque|headset|écran|monitor|webcam|micro(?:phone)?)\b/)) return null;
   if (n.match(/\b(câble|cable|adaptateur|adapter|riser|extension|hub|dock)\b/)) return null;
-  if (n.match(/\b(pâte|paste|thermal grease|graisse)\b/)) return null;
-  if (n.match(/\b(fan|ventilateur)\b/) && !n.match(/\b(cooler|refroidissement|aio|liquid)\b/)) return null;
+  if (n.match(/\b(pâte|paste|thermal grease|graisse|mx-\d|mx\d)\b/)) return null;
+  if (n.match(/\b(fan|ventilateur)\b/) && !n.match(/\b(cooler|refroidissement|aio|liquid|ventirad)\b/)) return null;
   if (n.match(/\b(pack|bundle|kit\s*(pc|gaming)|pc\s*(gamer|gaming|complet))\b/)) return null;
-  if (n.match(/\b(nvlink|sli bridge|bridge)\b/)) return null;
+  if (n.match(/\b(nvlink|sli bridge|bridge|upgrade kit|socket kit)\b/)) return null;
+  if (n.match(/\b(so-dimm|sodimm)\b/)) return null; // laptop RAM — skip
 
-  // CPU
+  // CPU — check before motherboard to avoid "Ryzen 5 3400G + MSI A520M" bundles
   if (n.match(/\b(ryzen|core\s*i[3579]|core\s*ultra|threadripper|xeon|athlon|pentium|celeron)\b/)) return 'cpu';
 
   // GPU
   if (n.match(/\b(rtx|gtx|radeon|rx\s*\d{4}|arc\s*[ab]\d{3}|geforce|quadro|firepro)\b/)) return 'gpu';
 
-  // Motherboard — chipset patterns
+  // Motherboard — explicit keywords first
   if (n.match(/\b(carte\s*m[eè]re|motherboard)\b/)) return 'motherboard';
-  if (n.match(/\b([abxhz]\d{3,4}[ei]?)\b/) && !n.match(/\b(rtx|gtx|rx\s*\d{4})\b/)) return 'motherboard';
+  // Fix 1: extended chipset regex — includes M (mATX), D (DDR variant), F suffix
+  if (n.match(/\b([abxhz]\d{3,4}[eimd]?)\b/) && !n.match(/\b(rtx|gtx|rx\s*\d{4})\b/)) return 'motherboard';
 
-  // RAM — must NOT look like a motherboard (chipset pattern takes priority)
-  if (n.match(/\b(ddr[45]|dimm|sodimm)\b/) &&
+  // RAM — must NOT look like a motherboard
+  if (n.match(/\b(ddr[45]|dimm)\b/) &&
       !n.match(/\b(carte\s*m[eè]re|motherboard)\b/) &&
-      !n.match(/\b[abxhz]\d{3,4}[ei]?\b/)) return 'ram';
+      !n.match(/\b[abxhz]\d{3,4}[eimd]?\b/)) return 'ram';
 
   // Storage
-  if (n.match(/\b(nvme|m\.?2|ssd|hdd|disque\s*dur|firecuda|barracuda|ironwolf)\b/)) return 'storage';
+  if (n.match(/\b(nvme|m\.?2|ssd|hdd|disque\s*(dur|ssd)|firecuda|barracuda|ironwolf)\b/)) return 'storage';
   if (n.match(/\b(sn\d{3}|bx\d{3}|mx\d{3}|p[235]\s*\d{3}|legend\s*\d{3})\b/)) return 'storage';
 
-  // PSU — only if wattage is explicit
-  if (n.match(/\b\d{3,4}\s*w\b/) && n.match(/\b(alimentation|psu|gold|platinum|titanium|bronze|modular|atx)\b/)) return 'psu';
+  // PSU — Fix 2: enable PSU auto-creation
+  // Require explicit wattage AND a PSU-specific keyword to avoid false positives
+  if (n.match(/\b\d{3,4}\s*w\b/) &&
+      n.match(/\b(alimentation|psu|gold|platinum|titanium|bronze|modular|80\s*plus|atx\s*3|semi.?mod|full.?mod)\b/) &&
+      !n.match(/\b[abxhz]\d{3,4}[eimd]?\b/)) return 'psu';
 
-  // Case
-  if (n.match(/\b(boitier|boîtier|case|tower|mid.?tower|full.?tower)\b/)) return 'case';
-
-  // Cooling
-  if (n.match(/\b(cooler|refroidissement|ventirad|aio|liquid\s*cooler|watercooling)\b/)) return 'cooling';
+  // Cooling — Fix 3: enable AIO auto-creation, keep air cooler detection
+  // Guard: "Air" in a case name (Corsair AIR series, Montech Air) must not match cooling
+  if (n.match(/\b(aio|liquid\s*cooler|watercooling|refroidissement\s*liquide)\b/)) return 'cooling';
+  if (n.match(/\b(cooler|ventirad|refroidissement)\b/) &&
+      !n.match(/\b(case|boitier|tower|air\s*\d{3,4})\b/)) return 'cooling';
   if (n.match(/\b(noctua|deepcool|arctic|thermalright|scythe|id.?cooling|be\s*quiet)\b/) &&
-      n.match(/\b(nh|ak|lc|le|se|sl|bk|dk|sk|ld|lf|lp|lx|pure|shadow|dark|silent)\b/)) return 'cooling';
+      n.match(/\b(nh|ak|lc|le|se|sl|bk|dk|sk|ld|lf|lp|lx|pure|shadow|dark|silent|freezer|liquid)\b/)) return 'cooling';
+
+  // Case — Fix 4: enable case auto-creation
+  if (n.match(/\b(boitier|boîtier|case|tower|mid.?tower|full.?tower|mini.?tower)\b/)) return 'case';
+  // Corsair AIR series, Montech Air series — these are cases, not coolers
+  if (n.match(/\b(corsair\s*air|montech\s*air|fractal\s*pop\s*air|fractal\s*define\s*air)\b/)) return 'case';
 
   return null;
 }
@@ -324,18 +355,26 @@ function extractMotherboardSpecs(name: string): {
 } | null {
   const n = name.toLowerCase();
 
-  // Extract chipset
-  const chipsetMatch = n.match(/\b([abxhz]\d{3,4}[ei]?)\b/);
+  // Fix 1: extended chipset regex — includes M (mATX), D (DDR variant), F suffix
+  const chipsetMatch = n.match(/\b([abxhz]\d{3,4}[eimd]?)\b/);
   if (!chipsetMatch) return null;
   const chipset = chipsetMatch[1].toUpperCase();
 
   // Determine socket and RAM type from chipset
   const AM5_CHIPSETS = ['X870E', 'X870', 'B850', 'B840', 'B860', 'X670E', 'X670', 'B650E', 'B650', 'A620'];
-  const AM4_CHIPSETS = ['X570', 'B550', 'X470', 'B450', 'A520', 'A320', 'B350', 'X370'];
+  const AM4_CHIPSETS = ['X570', 'B550', 'X470', 'B450', 'A520', 'A320', 'B350', 'X370',
+    // mATX variants
+    'B550M', 'B450M', 'A520M', 'A320M', 'X570M'];
   const LGA1851_CHIPSETS = ['Z890', 'B860', 'B850', 'B840', 'H870'];
-  const LGA1700_CHIPSETS = ['Z790', 'Z690', 'B760', 'B660', 'H770', 'H670', 'H610'];
-  const LGA1200_CHIPSETS = ['Z590', 'Z490', 'B560', 'B460', 'H570', 'H510', 'H470', 'H410'];
-  const LGA1151_CHIPSETS = ['Z390', 'Z370', 'B365', 'B360', 'H370', 'H310'];
+  const LGA1700_CHIPSETS = ['Z790', 'Z690', 'B760', 'B660', 'H770', 'H670', 'H610',
+    // mATX variants
+    'B760M', 'B660M', 'H610M', 'H670M', 'Z790M', 'Z690M'];
+  const LGA1200_CHIPSETS = ['Z590', 'Z490', 'B560', 'B460', 'H570', 'H510', 'H470', 'H410',
+    // mATX variants
+    'B560M', 'B460M', 'H510M', 'H470M', 'H410M', 'Z590M', 'Z490M'];
+  const LGA1151_CHIPSETS = ['Z390', 'Z370', 'B365', 'B360', 'H370', 'H310',
+    // mATX variants
+    'B365M', 'B360M', 'H370M', 'H310M', 'Z390M'];
 
   let socket = '';
   let supported_ram_types: string[] = ['DDR4'];
@@ -363,14 +402,74 @@ function extractMotherboardSpecs(name: string): {
   return { socket, chipset, supported_ram_types, max_ram_frequency };
 }
 
+// ── Fix 2: PSU spec extractor ─────────────────────────────────────────────────
+
+function extractPsuSpecs(name: string): { wattage: number; efficiency: string; modular: string } | null {
+  const n = name.toLowerCase();
+  const wattMatch = n.match(/\b(\d{3,4})\s*w\b/);
+  if (!wattMatch) return null;
+  const wattage = parseInt(wattMatch[1]);
+  if (wattage < 300 || wattage > 2000) return null;
+  let efficiency = '80+ Bronze';
+  if (n.includes('titanium')) efficiency = '80+ Titanium';
+  else if (n.includes('platinum')) efficiency = '80+ Platinum';
+  else if (n.includes('gold')) efficiency = '80+ Gold';
+  else if (n.includes('silver')) efficiency = '80+ Silver';
+  else if (n.includes('bronze')) efficiency = '80+ Bronze';
+  else if (n.match(/80\s*plus/)) efficiency = '80+';
+  let modular = 'Non-modular';
+  if (n.match(/full.?mod|fully.?mod/)) modular = 'Fully modular';
+  else if (n.match(/semi.?mod/)) modular = 'Semi-modular';
+  else if (n.includes('modular')) modular = 'Fully modular';
+  return { wattage, efficiency, modular };
+}
+
+// ── Fix 3: Cooling spec extractor ─────────────────────────────────────────────
+
+function extractCoolingSpecs(name: string): { tdp: number; cooling_type: string; size_mm: number | null } | null {
+  const n = name.toLowerCase();
+  const aioMatch = n.match(/\b(120|140|240|280|360|420)\s*mm\b/);
+  if (aioMatch || n.match(/\b(aio|liquid|watercooling)\b/)) {
+    const size_mm = aioMatch ? parseInt(aioMatch[1]) : null;
+    let tdp = 250;
+    if (size_mm === 420 || size_mm === 360) tdp = 350;
+    else if (size_mm === 280 || size_mm === 240) tdp = 280;
+    else if (size_mm === 140 || size_mm === 120) tdp = 180;
+    return { tdp, cooling_type: 'AIO', size_mm };
+  }
+  if (n.match(/\b(cooler|ventirad|refroidissement|aircooler)\b/) ||
+      n.match(/\b(noctua|deepcool|arctic|thermalright|scythe|be\s*quiet)\b/)) {
+    let tdp = 150;
+    if (n.match(/\b(nh-d15|nh-d14|dark rock pro|assassin|fuma)\b/)) tdp = 250;
+    else if (n.match(/\b(nh-u12|nh-u14|ak620|ak400|shadow rock)\b/)) tdp = 200;
+    return { tdp, cooling_type: 'Air', size_mm: null };
+  }
+  return null;
+}
+
+// ── Fix 4: Case spec extractor ────────────────────────────────────────────────
+
+function extractCaseSpecs(name: string): { form_factor: string; max_gpu_length_mm: number } {
+  const n = name.toLowerCase();
+  let form_factor = 'ATX Mid Tower';
+  if (n.match(/\b(mini.?itx|itx)\b/)) form_factor = 'Mini-ITX';
+  else if (n.match(/\b(micro.?atx|matx|m-atx)\b/)) form_factor = 'mATX Mid Tower';
+  else if (n.match(/\b(full.?tower|xl.?atx|e-atx)\b/)) form_factor = 'ATX Full Tower';
+  let max_gpu_length_mm = 380;
+  if (form_factor === 'Mini-ITX') max_gpu_length_mm = 300;
+  else if (form_factor === 'mATX Mid Tower') max_gpu_length_mm = 350;
+  else if (form_factor === 'ATX Full Tower') max_gpu_length_mm = 450;
+  return { form_factor, max_gpu_length_mm };
+}
+
 // ── Clean product name ────────────────────────────────────────────────────────
 
 /**
  * Strips packaging/variant suffixes from a scraped product name to get
- * a clean catalog name. E.g. "AMD Ryzen 5 7600X BOX" → "Ryzen 5 7600X"
+ * a clean catalog name. Also decodes HTML entities (Fix 5).
  */
 function cleanName(rawName: string, brand: string): string {
-  let name = rawName
+  let name = decodeHtml(rawName)
     .replace(new RegExp(`^${brand}\\s*`, 'i'), '')  // strip brand prefix
     .replace(/\s*(BOX|Tray|MPK|OEM|Bulk|no\s*fan|wraith\s*\w+|edition)\s*/gi, ' ')
     .replace(/\s*\(\d+\.?\d*\s*GHz\s*\/\s*\d+\.?\d*\s*GHz\)\s*/gi, '') // strip clock speeds
@@ -418,100 +517,90 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
   `) as CatalogComponent[];
 
   for (const listing of pending) {
-    const category = inferCategory(listing.scraped_name);
-    if (!category) { skipped++; continue; }
+    // Fix 5: decode HTML entities before processing
+    const scrapedName = decodeHtml(listing.scraped_name);
 
-    // Only auto-create for categories where we can reliably extract specs
-    // Case, cooling, PSU have too many variants — leave for admin review
-    if (!['cpu', 'gpu', 'ram', 'storage', 'motherboard'].includes(category)) {
-      skipped++;
-      continue;
-    }
+    const category = inferCategory(scrapedName);
+    if (!category) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
 
-    const brand = extractBrand(listing.scraped_name);
-    const cleanedName = cleanName(listing.scraped_name, brand);
+    // All 8 categories now supported
+    const brand = extractBrand(scrapedName);
+    const cleanedName = cleanName(scrapedName, brand);
 
     // DNA dedup: check if a component with the same DNA already exists
-    // (catches "Ryzen 5 7600X BOX" when "Ryzen 5 7600X" is already in catalog)
-    // For storage: require a stricter match — model name must be present in both
-    const minScore = category === 'storage' ? 1.0 : 1.0;
     const dnaMatch = existingComponents.find(c => {
       if (c.category !== category) return false;
-      const { score } = scoreDnaMatch(listing.scraped_name, `${c.brand ?? ''} ${c.name}`, category);
-      return score >= minScore;
+      const { score } = scoreDnaMatch(scrapedName, `${c.brand ?? ''} ${c.name}`, category);
+      return score >= 1.0;
     });
 
     if (dnaMatch) {
-      // Already exists — just create the mapping
       try {
         await _sql`
           INSERT INTO scraper_mappings (component_id, retailer_id, product_url, product_identifier)
-          VALUES (${dnaMatch.id}, ${listing.retailer_id}, ${listing.product_url}, ${listing.scraped_name})
+          VALUES (${dnaMatch.id}, ${listing.retailer_id}, ${listing.product_url}, ${scrapedName})
           ON CONFLICT (retailer_id, product_url) DO NOTHING
         `;
         await _sql`
           UPDATE unmatched_listings SET status = 'linked', linked_component_id = ${dnaMatch.id}
           WHERE id = ${listing.id}
         `;
-        created++; // counts as resolved
+        created++;
       } catch { skipped++; }
+      onProgress?.(created + skipped, pending.length);
       continue;
     }
 
-    // Extract specs for the category
+    // Extract specs and insert new catalog entry
     let insertResult: { id: number }[] = [];
 
     try {
       if (category === 'cpu') {
-        const specs = extractCpuSpecs(listing.scraped_name);
-        if (!specs) { skipped++; continue; }
+        const specs = extractCpuSpecs(scrapedName);
+        if (!specs) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
         const slug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
         existingSlugs.add(slug);
         insertResult = (await _sql`
           INSERT INTO components (slug, name, brand, category, socket, tdp, is_active)
           VALUES (${slug}, ${cleanedName}, ${brand}, 'cpu', ${specs.socket}, ${specs.tdp}, true)
-          ON CONFLICT (slug) DO NOTHING
-          RETURNING id
+          ON CONFLICT (slug) DO NOTHING RETURNING id
         `) as { id: number }[];
 
       } else if (category === 'gpu') {
-        const specs = extractGpuSpecs(listing.scraped_name);
+        const specs = extractGpuSpecs(scrapedName);
         const slug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
         existingSlugs.add(slug);
         insertResult = (await _sql`
           INSERT INTO components (slug, name, brand, category, length_mm, tdp, is_active)
           VALUES (${slug}, ${cleanedName}, ${brand}, 'gpu', ${specs.length_mm}, ${specs.tdp}, true)
-          ON CONFLICT (slug) DO NOTHING
-          RETURNING id
+          ON CONFLICT (slug) DO NOTHING RETURNING id
         `) as { id: number }[];
 
       } else if (category === 'ram') {
-        const specs = extractRamSpecs(listing.scraped_name);
-        if (!specs) { skipped++; continue; }
+        const specs = extractRamSpecs(scrapedName);
+        if (!specs) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
         const slug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
         existingSlugs.add(slug);
         insertResult = (await _sql`
           INSERT INTO components (slug, name, brand, category, ram_type, frequency_mhz, is_active)
           VALUES (${slug}, ${cleanedName}, ${brand}, 'ram', ${specs.ram_type}, ${specs.frequency_mhz}, true)
-          ON CONFLICT (slug) DO NOTHING
-          RETURNING id
+          ON CONFLICT (slug) DO NOTHING RETURNING id
         `) as { id: number }[];
 
       } else if (category === 'storage') {
-        const specs = extractStorageSpecs(listing.scraped_name);
-        if (!specs) { skipped++; continue; }
+        const specs = extractStorageSpecs(scrapedName);
+        if (!specs) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
         const slug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
         existingSlugs.add(slug);
         insertResult = (await _sql`
           INSERT INTO components (slug, name, brand, category, is_active)
           VALUES (${slug}, ${cleanedName}, ${brand}, 'storage', true)
-          ON CONFLICT (slug) DO NOTHING
-          RETURNING id
+          ON CONFLICT (slug) DO NOTHING RETURNING id
         `) as { id: number }[];
 
       } else if (category === 'motherboard') {
-        const specs = extractMotherboardSpecs(listing.scraped_name);
-        if (!specs) { skipped++; continue; }
+        const specs = extractMotherboardSpecs(scrapedName);
+        if (!specs) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
         const slug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
         existingSlugs.add(slug);
         insertResult = (await _sql`
@@ -523,31 +612,59 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
             ${slug}, ${cleanedName}, ${brand}, 'motherboard', ${specs.socket},
             ${specs.supported_ram_types}, ${specs.max_ram_frequency}, true
           )
-          ON CONFLICT (slug) DO NOTHING
-          RETURNING id
+          ON CONFLICT (slug) DO NOTHING RETURNING id
+        `) as { id: number }[];
+
+      } else if (category === 'psu') {
+        // Fix 2: PSU auto-creation
+        const specs = extractPsuSpecs(scrapedName);
+        if (!specs) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
+        const slug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
+        existingSlugs.add(slug);
+        insertResult = (await _sql`
+          INSERT INTO components (slug, name, brand, category, wattage, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'psu', ${specs.wattage}, true)
+          ON CONFLICT (slug) DO NOTHING RETURNING id
+        `) as { id: number }[];
+
+      } else if (category === 'cooling') {
+        // Fix 3: Cooling auto-creation
+        const specs = extractCoolingSpecs(scrapedName);
+        if (!specs) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
+        const slug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
+        existingSlugs.add(slug);
+        insertResult = (await _sql`
+          INSERT INTO components (slug, name, brand, category, tdp, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'cooling', ${specs.tdp}, true)
+          ON CONFLICT (slug) DO NOTHING RETURNING id
+        `) as { id: number }[];
+
+      } else if (category === 'case') {
+        // Fix 4: Case auto-creation
+        const specs = extractCaseSpecs(scrapedName);
+        const slug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
+        existingSlugs.add(slug);
+        insertResult = (await _sql`
+          INSERT INTO components (slug, name, brand, category, max_gpu_length_mm, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'case', ${specs.max_gpu_length_mm}, true)
+          ON CONFLICT (slug) DO NOTHING RETURNING id
         `) as { id: number }[];
       }
 
-      if (insertResult.length === 0) { skipped++; continue; }
+      if (insertResult.length === 0) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
 
       const newId = insertResult[0].id;
-
-      // Add to in-memory catalog for subsequent DNA dedup checks
       existingComponents.push({ id: newId, name: cleanedName, brand, category });
 
-      // Create scraper_mapping
       await _sql`
         INSERT INTO scraper_mappings (component_id, retailer_id, product_url, product_identifier)
-        VALUES (${newId}, ${listing.retailer_id}, ${listing.product_url}, ${listing.scraped_name})
+        VALUES (${newId}, ${listing.retailer_id}, ${listing.product_url}, ${scrapedName})
         ON CONFLICT (retailer_id, product_url) DO NOTHING
       `;
-
-      // Mark listing as linked
       await _sql`
         UPDATE unmatched_listings SET status = 'linked', linked_component_id = ${newId}
         WHERE id = ${listing.id}
       `;
-
       created++;
     } catch {
       skipped++;
