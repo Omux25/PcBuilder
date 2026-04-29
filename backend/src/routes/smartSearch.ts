@@ -66,24 +66,28 @@ smartSearchRouter.get('/', async (c) => {
   // Fetch lowest prices for all components in one query.
   // We join against the prices table filtered by the same category/search
   // to avoid passing a JS array as a Postgres parameter (Bun.sql limitation).
+  // Prefer lowest IN-STOCK price. Fall back to lowest overall only if nothing is in stock.
   const priceRows = await getSql()`
     SELECT
       p.component_id,
-      MIN(p.price)        AS lowest_price,
-      BOOL_OR(p.in_stock) AS any_in_stock
+      MIN(p.price) FILTER (WHERE p.in_stock = true) AS lowest_in_stock_price,
+      MIN(p.price)                                   AS lowest_any_price,
+      BOOL_OR(p.in_stock)                            AS any_in_stock
     FROM prices p
     JOIN components c ON c.id = p.component_id
     WHERE c.category = ${category}
       AND c.is_active = true
     GROUP BY p.component_id
-  ` as { component_id: number; lowest_price: number; any_in_stock: boolean }[];
+  ` as { component_id: number; lowest_in_stock_price: number | null; lowest_any_price: number; any_in_stock: boolean }[];
 
   const priceMap = new Map(priceRows.map((r) => [r.component_id, r]));
 
   // Check compatibility for each component
   const enriched = components.map((component) => {
     const priceData = priceMap.get(component.id);
-    const lowest_price = priceData ? Number(priceData.lowest_price) : null;
+    const lowest_price = priceData
+      ? Number(priceData.lowest_in_stock_price ?? priceData.lowest_any_price)
+      : null;
     const in_stock = priceData ? priceData.any_in_stock : false;
 
     // Build a test build with this component in the target slot
