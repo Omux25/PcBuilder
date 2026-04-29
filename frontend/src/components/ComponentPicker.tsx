@@ -153,7 +153,7 @@ export function ComponentPicker({ category, selected, build, onSelect }: Props) 
           </div>
 
           <ul className={styles.list}>
-            {loading && (
+            {loading && components.length === 0 && (
               <>
                 {[1, 2, 3].map((i) => (
                   <li key={i} className={styles.skeleton}>
@@ -166,7 +166,7 @@ export function ComponentPicker({ category, selected, build, onSelect }: Props) 
             {!loading && !error && components.length === 0 && (
               <li className={styles.hint}>Aucun résultat</li>
             )}
-            {!loading && components.map((c) => (
+            {components.map((c) => (
               <ComponentRow
                 key={c.id}
                 component={c}
