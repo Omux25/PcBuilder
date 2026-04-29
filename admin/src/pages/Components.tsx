@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Pencil, Trash2, Plus, ToggleLeft, ToggleRight } from 'lucide-react';
 import { getAdminComponents, deleteAdminComponent, updateAdminComponent } from '../api';
+import type { AdminComponent } from '../api';
+import { ComponentModal } from '../components/ComponentModal';
 import styles from './Components.module.css';
 
 const CATEGORIES = ['cpu', 'motherboard', 'gpu', 'ram', 'storage', 'psu', 'case', 'cooling'];
@@ -14,6 +16,8 @@ export function Components() {
   const [category, setCategory] = useState('');
   const [page, setPage] = useState(1);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingComponent, setEditingComponent] = useState<AdminComponent | null>(null);
 
   const LIMIT = 20;
 
@@ -61,13 +65,18 @@ export function Components() {
 
   const totalPages = Math.ceil(total / LIMIT);
 
+  function openModal(component: any = null) {
+    setEditingComponent(component);
+    setModalOpen(true);
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.header}>
         <h1>Composants</h1>
-        <a href="/admin/components/new" className={styles.addBtn}>
+        <button onClick={() => openModal()} className={styles.addBtn} style={{ border: 'none', cursor: 'pointer' }}>
           <Plus size={16} /> Ajouter
-        </a>
+        </button>
       </div>
 
       {/* Filters */}
@@ -126,9 +135,9 @@ export function Components() {
                   </td>
                   <td>
                     <div className={styles.actions}>
-                      <a href={`/admin/components/${c.id}/edit`} className={styles.editBtn} title="Modifier">
+                      <button onClick={() => openModal(c)} className={styles.editBtn} title="Modifier" style={{ border: 'none', background: 'none', cursor: 'pointer' }}>
                         <Pencil size={15} />
-                      </a>
+                      </button>
                       <button
                         className={styles.deleteBtn}
                         onClick={() => setConfirmDelete(c.id)}
@@ -167,6 +176,13 @@ export function Components() {
           </div>
         </div>
       )}
+
+      <ComponentModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSaved={load}
+        component={editingComponent}
+      />
     </div>
   );
 }

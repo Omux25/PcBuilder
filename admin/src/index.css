@@ -21,25 +21,30 @@
   --text-muted:  #94a3b8;
   --text-dim:    #6c7086;
   --radius:      8px;
-  font-family: system-ui, -apple-system, sans-serif;
+  --radius-lg:   12px;
+
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   font-size: 15px;
   color: var(--text);
   background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body { min-height: 100dvh; }
 
-a { color: var(--accent-h); text-decoration: none; }
-a:hover { text-decoration: underline; }
+a { color: var(--accent-h); text-decoration: none; transition: color 0.15s; }
+a:hover { text-decoration: underline; color: var(--accent-blue); }
 
 button {
   cursor: pointer;
   border: none;
   border-radius: var(--radius);
   font: inherit;
-  transition: opacity .15s;
+  transition: all .15s;
 }
 button:disabled { opacity: .45; cursor: not-allowed; }
+button:not(:disabled):hover { filter: brightness(1.1); }
 
 input, select, textarea {
   font: inherit;
@@ -48,17 +53,28 @@ input, select, textarea {
   border: 1px solid var(--border-2);
   border-radius: var(--radius);
   padding: .45rem .7rem;
+  transition: border-color 0.15s;
 }
 input:focus, select:focus, textarea:focus {
   outline: 2px solid var(--accent-blue);
   outline-offset: 2px;
 }
+input:hover, select:hover, textarea:hover {
+  border-color: var(--accent);
+}
 
 table { border-collapse: collapse; width: 100%; }
 th { text-align: left; color: var(--text-dim); font-weight: 500; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
 td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; color: var(--text); }
+tr { transition: background-color 0.1s; }
 tr:hover td { background: var(--surface); }
 
-h1 { font-size: 1.5rem; font-weight: 700; }
+h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
 h2 { font-size: 1.15rem; font-weight: 600; }
 h3 { font-size: 1rem; font-weight: 600; }
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-2); }

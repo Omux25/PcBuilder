@@ -6,6 +6,71 @@
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
+// ── Types ────────────────────────────────────────────────────────────────────
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface DashboardData {
+  stats: {
+    total_components: number;
+    active_retailers: number;
+    total_retailers: number;
+    total_price_records: number;
+    unmatched_listings_count: number;
+    last_scrape: {
+      time: string | null;
+      status: string | null;
+    };
+  };
+  price_updates_chart: Array<{ date: string; count: number }>;
+  recent_activity: Array<{
+    id: number;
+    action: string;
+    entity_type: string | null;
+    entity_id: number | null;
+    created_at: string;
+  }>;
+}
+
+export interface AdminComponent {
+  id: number;
+  name: string;
+  category: string;
+  is_active: boolean;
+  [key: string]: unknown;
+}
+
+export interface AdminRetailer {
+  id: number;
+  name: string;
+  is_active: boolean;
+  [key: string]: unknown;
+}
+
+export interface AdminPreset {
+  id: number;
+  name: string;
+  [key: string]: unknown;
+}
+
+export interface LogEntry {
+  id: number;
+  admin_id: number;
+  action: string;
+  [key: string]: unknown;
+}
+
+export interface UnmatchedListing {
+  id: number;
+  retailer_id: number;
+  [key: string]: unknown;
+}
+
 let accessToken: string | null = null;
 
 export function setAccessToken(token: string | null): void {
@@ -85,76 +150,76 @@ export async function logout(): Promise<void> {
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
-export const getDashboard = () => request<any>('/admin/dashboard');
+export const getDashboard = () => request<DashboardData>('/admin/dashboard');
 
 // ── Components ────────────────────────────────────────────────────────────────
 
 export const getAdminComponents = (params: Record<string, string> = {}) => {
   const qs = new URLSearchParams(params).toString();
-  return request<any>(`/admin/components${qs ? `?${qs}` : ''}`);
+  return request<PaginatedResponse<AdminComponent>>(`/admin/components${qs ? `?${qs}` : ''}`);
 };
 
 export const createAdminComponent = (data: Record<string, unknown>) =>
-  request<any>('/admin/components', { method: 'POST', body: JSON.stringify(data) });
+  request<AdminComponent>('/admin/components', { method: 'POST', body: JSON.stringify(data) });
 
 export const updateAdminComponent = (id: number, data: Record<string, unknown>) =>
-  request<any>(`/admin/components/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  request<AdminComponent>(`/admin/components/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 
 export const deleteAdminComponent = (id: number) =>
-  request<any>(`/admin/components/${id}`, { method: 'DELETE' });
+  request<{ message: string }>(`/admin/components/${id}`, { method: 'DELETE' });
 
 // ── Retailers ─────────────────────────────────────────────────────────────────
 
-export const getAdminRetailers = () => request<any>('/admin/retailers');
+export const getAdminRetailers = () => request<{ retailers: AdminRetailer[] }>('/admin/retailers');
 
 export const createAdminRetailer = (data: Record<string, unknown>) =>
-  request<any>('/admin/retailers', { method: 'POST', body: JSON.stringify(data) });
+  request<AdminRetailer>('/admin/retailers', { method: 'POST', body: JSON.stringify(data) });
 
 export const updateAdminRetailer = (id: number, data: Record<string, unknown>) =>
-  request<any>(`/admin/retailers/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  request<AdminRetailer>(`/admin/retailers/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 
 // ── Scrapers ──────────────────────────────────────────────────────────────────
 
 export const runAllScrapers = () =>
-  request<any>('/admin/scrapers/run-all', { method: 'POST' });
+  request<{ message: string; job_ids: string[]; retailers_count: number }>('/admin/scrapers/run-all', { method: 'POST' });
 
 export const runScraper = (retailerId: number) =>
-  request<any>(`/admin/scrapers/${retailerId}/run`, { method: 'POST' });
+  request<{ job_id: string; status: string; retailer_id: number }>(`/admin/scrapers/${retailerId}/run`, { method: 'POST' });
 
 // ── Logs ──────────────────────────────────────────────────────────────────────
 
 export const getAdminLogs = (params: Record<string, string> = {}) => {
   const qs = new URLSearchParams(params).toString();
-  return request<any>(`/admin/logs${qs ? `?${qs}` : ''}`);
+  return request<PaginatedResponse<LogEntry>>(`/admin/logs${qs ? `?${qs}` : ''}`);
 };
 
 // ── Unmatched listings ────────────────────────────────────────────────────────
 
 export const getUnmatchedListings = (params: Record<string, string> = {}) => {
   const qs = new URLSearchParams(params).toString();
-  return request<any>(`/admin/unmatched-listings${qs ? `?${qs}` : ''}`);
+  return request<PaginatedResponse<UnmatchedListing>>(`/admin/unmatched-listings${qs ? `?${qs}` : ''}`);
 };
 
 export const linkUnmatched = (id: number, componentId: number) =>
-  request<any>(`/admin/unmatched-listings/${id}/link`, {
+  request<{ message: string }>(`/admin/unmatched-listings/${id}/link`, {
     method: 'POST',
     body: JSON.stringify({ component_id: componentId }),
   });
 
 export const dismissUnmatched = (id: number) =>
-  request<any>(`/admin/unmatched-listings/${id}/dismiss`, { method: 'POST' });
+  request<{ message: string }>(`/admin/unmatched-listings/${id}/dismiss`, { method: 'POST' });
 
 // ── Presets ───────────────────────────────────────────────────────────────────
 
-export const getAdminPresets = () => request<any>('/admin/presets');
+export const getAdminPresets = () => request<{ presets: AdminPreset[] }>('/admin/presets');
 
 export const createAdminPreset = (data: Record<string, unknown>) =>
-  request<any>('/admin/presets', { method: 'POST', body: JSON.stringify(data) });
+  request<AdminPreset>('/admin/presets', { method: 'POST', body: JSON.stringify(data) });
 
 export const deleteAdminPreset = (id: number) =>
-  request<any>(`/admin/presets/${id}`, { method: 'DELETE' });
+  request<{ message: string }>(`/admin/presets/${id}`, { method: 'DELETE' });
 
 // ── Public components (for search in unmatched linking) ───────────────────────
 
 export const searchComponents = (search: string) =>
-  request<any>(`/components?search=${encodeURIComponent(search)}&limit=10`);
+  request<{ components: AdminComponent[]; total: number }>(`/components?search=${encodeURIComponent(search)}&limit=10`);
