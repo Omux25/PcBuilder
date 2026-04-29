@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
 import { ToggleLeft, ToggleRight } from 'lucide-react';
 import { getAdminRetailers, updateAdminRetailer } from '../api';
+import type { AdminRetailer } from '../api';
+import { RetailerModal } from '../components/RetailerModal';
 import styles from './Retailers.module.css';
 
 export function Retailers() {
   const [retailers, setRetailers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingRetailer, setEditingRetailer] = useState<AdminRetailer | null>(null);
 
   function load() {
     setLoading(true);
@@ -27,9 +31,19 @@ export function Retailers() {
     }
   }
 
+  function openModal(retailer: any = null) {
+    setEditingRetailer(retailer);
+    setModalOpen(true);
+  }
+
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>Revendeurs</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+        <h1 className={styles.title} style={{ margin: 0 }}>Revendeurs</h1>
+        <button onClick={() => openModal()} style={{ background: 'var(--accent-blue)', color: 'var(--bg)', border: 'none', padding: '0.45rem 0.9rem', borderRadius: 'var(--radius)', fontWeight: 600, cursor: 'pointer' }}>
+          + Ajouter
+        </button>
+      </div>
 
       {error && <p className={styles.error}>{error}</p>}
       {loading ? <p className={styles.loading}>Chargement...</p> : (
@@ -71,12 +85,22 @@ export function Retailers() {
                       ? <ToggleRight size={20} color="var(--success-soft)" />
                       : <ToggleLeft size={20} color="var(--text-dim)" />}
                   </button>
+                  <button onClick={() => openModal(r)} style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
+                    Modifier
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
+
+      <RetailerModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSaved={load}
+        retailer={editingRetailer}
+      />
     </div>
   );
 }
