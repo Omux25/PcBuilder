@@ -25,7 +25,7 @@ export function Configurator({ build, onChange }: Props) {
   return (
     <section className={styles.configurator}>
       <div className={styles.header}>
-        <h2 className={styles.title}>Configurer votre PC</h2>
+        <h2 className={styles.title}>PC Builder</h2>
         <button
           className={styles.resetBtn}
           onClick={() => onChange({})}
@@ -35,63 +35,59 @@ export function Configurator({ build, onChange }: Props) {
         </button>
       </div>
 
-      <div className={styles.slots}>
-        {CATEGORY_ORDER.map((cat) => (
-          <Slot
-            key={cat}
-            category={cat}
-            selected={build[cat] ?? null}
-            build={build}
-            onSelect={(c) => handleSelect(cat, c)}
-          />
-        ))}
+      <div className={styles.tableWrapper}>
+        <table className={styles.builderTable}>
+          <thead>
+            <tr>
+              <th className={styles.thCat}>Composant</th>
+              <th className={styles.thSel}>Sélection</th>
+              <th className={styles.thPrice}>Prix de base</th>
+              <th className={styles.thAction}>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {CATEGORY_ORDER.map((cat) => {
+              const selected = build[cat];
+              // TS hack: we know the Component picker passes a SmartComponent with lowest_price
+              const price = selected ? (selected as any).lowest_price : null;
+
+              return (
+                <tr key={cat} className={selected ? styles.rowSelected : ''}>
+                  <td className={styles.catCell}>
+                    <span className={styles.catLabel}>{CATEGORY_LABELS[cat]}</span>
+                  </td>
+                  <td className={styles.selectionCell}>
+                    <ComponentPicker
+                      category={cat}
+                      selected={selected ?? null}
+                      build={build}
+                      onSelect={(c) => handleSelect(cat, c)}
+                    />
+                  </td>
+                  <td className={styles.priceCell}>
+                    {selected ? (
+                      <span className={styles.priceVal}>
+                        {price ? `${price.toLocaleString('fr-MA')} MAD` : '—'}
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className={styles.actionCell}>
+                    {selected && (
+                      <button
+                        className={styles.removeBtn}
+                        onClick={() => handleSelect(cat, null)}
+                        title="Retirer"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </section>
-  );
-}
-
-// ── Single slot ───────────────────────────────────────────────────────────────
-
-interface SlotProps {
-  category: ComponentCategory;
-  selected: Component | null;
-  build: BuildConfig;
-  onSelect: (component: Component | null) => void;
-}
-
-function Slot({ category, selected, build, onSelect }: SlotProps) {
-  return (
-    <div className={styles.slot}>
-      <div className={styles.slotHeader}>
-        <span className={styles.label}>{CATEGORY_LABELS[category]}</span>
-        {selected && (
-          <Link
-            to={`/components/${selected.slug}`}
-            className={styles.detailLink}
-            title="Voir les détails et les prix"
-          >
-            Détails →
-          </Link>
-        )}
-      </div>
-
-      <ComponentPicker
-        category={category}
-        selected={selected}
-        build={build}
-        onSelect={onSelect}
-      />
-
-      {/* Compact summary card when selected */}
-      {selected && (
-        <div className={styles.summaryCard}>
-          <span className={styles.cardBrand}>{selected.brand}</span>
-          <span className={styles.cardName}>{selected.name}</span>
-          {selected.tdp && (
-            <span className={styles.cardSpec}>{selected.tdp}W TDP</span>
-          )}
-        </div>
-      )}
-    </div>
   );
 }

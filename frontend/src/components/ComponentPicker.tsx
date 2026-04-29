@@ -118,31 +118,23 @@ export function ComponentPicker({ category, selected, build, onSelect }: Props) 
       >
         {selected ? (
           <span className={styles.selectedLabel}>
-            <CategoryIcon category={category} size={16} className={styles.iconSvg} />
+            {selected.image_url ? (
+              <img src={selected.image_url} alt={selected.name} className={styles.thumbnail} />
+            ) : (
+              <CategoryIcon category={category} size={20} className={styles.iconSvg} />
+            )}
             <span className={styles.selectedName}>
-              {selected.brand ? `${selected.brand} ` : ''}{selected.name}
+              {selected.brand && !selected.name.toLowerCase().startsWith(selected.brand.toLowerCase()) ? `${selected.brand} ` : ''}
+              {selected.name}
             </span>
           </span>
         ) : (
           <span className={styles.placeholder}>
-            <CategoryIcon category={category} size={16} className={styles.iconSvg} />
-            Sélectionner...
+            <span className={styles.plusIcon}>+</span> Choisir {CATEGORY_LABELS[category]}
           </span>
         )}
         <span className={styles.chevron}>{open ? '▲' : '▼'}</span>
       </button>
-
-      {/* Clear */}
-      {selected && (
-        <button
-          type="button"
-          className={styles.clear}
-          onClick={(e) => { e.stopPropagation(); onSelect(null); }}
-          aria-label="Retirer ce composant"
-        >
-          ×
-        </button>
-      )}
 
       {/* Dropdown */}
       {open && (
@@ -235,7 +227,9 @@ function ComponentRow({
     >
       <div className={styles.itemMain}>
         <div className={styles.itemName}>
-          {component.brand && <span className={styles.brand}>{component.brand}</span>}
+          {component.brand && !component.name.toLowerCase().startsWith(component.brand.toLowerCase()) && (
+            <span className={styles.brand}>{component.brand}</span>
+          )}
           <span>{component.name}</span>
         </div>
 

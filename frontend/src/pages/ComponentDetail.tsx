@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getComponentBySlug, getPrices, getPriceHistory } from '../api';
 import { PriceHistoryChart } from '../components/PriceHistoryChart';
+import { Skeleton, SkeletonText } from '../components/Skeleton';
 import type { Component, PriceOffer, PriceHistoryEntry } from '../types';
 import { CATEGORY_LABELS } from '../types';
 import styles from './ComponentDetail.module.css';
@@ -39,7 +40,26 @@ export function ComponentDetail() {
   }, [slug]);
 
   if (loading) {
-    return <div className={styles.loading}>Chargement…</div>;
+    return (
+      <div className={styles.page}>
+        <Link to="/" className={styles.back}>← Retour au configurateur</Link>
+        <div className={styles.hero}>
+          <Skeleton height={30} width={120} style={{ marginBottom: '1rem' }} />
+          <Skeleton height={45} width="60%" style={{ marginBottom: '0.5rem' }} />
+          <SkeletonText lines={2} width="80%" />
+        </div>
+        <div className={styles.grid}>
+          <div className={styles.card}>
+            <Skeleton height={30} width={200} style={{ marginBottom: '1.5rem' }} />
+            <SkeletonText lines={4} />
+          </div>
+          <div className={styles.card}>
+            <Skeleton height={30} width={200} style={{ marginBottom: '1.5rem' }} />
+            <Skeleton height={150} />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error || !component) {

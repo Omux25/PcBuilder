@@ -52,10 +52,14 @@
 .main {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
-  padding: 1.25rem 1.5rem;
+  grid-template-columns: 2.2fr 1fr;
+  gap: 1.5rem;
+  padding: 1.5rem 2rem;
   align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .main { grid-template-columns: 1.5fr 1fr; }
 }
 
 @media (max-width: 900px) {
@@ -76,39 +80,47 @@
 /* ── Price nav ───────────────────────────────────────────────────────────────── */
 
 .priceNav {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: .75rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: .5rem;
+  gap: 0.5rem;
+  margin-bottom: -0.5rem; /* pull table closer */
 }
 
 .priceNavLabel {
-  font-size: .8rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: .05em;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.2rem;
 }
 
 .priceNavBtns {
   display: flex;
   flex-wrap: wrap;
-  gap: .4rem;
+  gap: 0.5rem;
 }
 
 .priceNavBtn {
-  padding: .3rem .7rem;
-  background: var(--bg);
+  padding: 0.4rem 0.8rem;
+  background: var(--surface);
   border: 1px solid var(--border);
-  color: var(--text-muted);
-  font-size: .8rem;
-  border-radius: 999px;
-  transition: all .15s;
+  color: var(--text-2);
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: var(--radius);
+  transition: all 0.15s;
 }
-.priceNavBtn:hover { border-color: var(--accent); color: var(--text); }
-.priceNavBtn.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+
+.priceNavBtn:hover {
+  background: var(--surface-2);
+  border-color: var(--border-2);
+}
+
+.priceNavBtn.active {
+  background: var(--accent-blue);
+  color: var(--bg);
+  border-color: var(--accent-blue);
+  box-shadow: 0 4px 12px rgba(137, 180, 250, 0.2);
+}
 
 /* ── Footer ─────────────────────────────────────────────────────────────────── */
 
