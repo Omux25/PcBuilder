@@ -22,7 +22,14 @@ import { logActivity } from '../../services/adminService.js';
 import { AppError } from '../../utils/errors.js';
 import type { ComponentInput } from '../../schemas/componentSchemas.js';
 
-const adminComponentsRouter = new Hono();
+type AdminEnv = {
+  Variables: {
+    admin: { id: number };
+    validatedBody: unknown;
+  }
+};
+
+const adminComponentsRouter = new Hono<AdminEnv>();
 
 adminComponentsRouter.use('/*', authMiddleware);
 
@@ -140,7 +147,7 @@ adminComponentsRouter.post('/import', async (c) => {
   for (let i = 0; i < body.length; i++) {
     const row = body[i] as Record<string, unknown>;
     try {
-      await createComponent(row);
+      await createComponent(row as unknown as ComponentInput);
       results.imported++;
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes('unique')) {

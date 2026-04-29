@@ -151,11 +151,11 @@ authRouter.post('/login', async (c) => {
 
   let rows: Array<{ id: number; username: string; password_hash: string }>;
   try {
-    rows = await sql`
+    rows = (await sql`
       SELECT id, username, password_hash FROM admins
       WHERE username = ${username}
       LIMIT 1
-    `;
+    `) as { id: number; username: string; password_hash: string }[];
   } catch {
     return c.json({ error: { code: 'UNAUTHORIZED', message: 'Identifiants invalides' } }, 401);
   }
