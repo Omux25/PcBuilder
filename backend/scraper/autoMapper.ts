@@ -45,8 +45,10 @@ export interface AutoMapResult {
  * Runs the DNA matcher against all pending unmatched_listings.
  * Creates scraper_mapping entries for confident matches.
  * Leaves unrecognized products (accessories, bundles, etc.) for admin review.
+ *
+ * @param onProgress - optional callback called after each listing is processed
  */
-export async function autoMap(): Promise<AutoMapResult> {
+export async function autoMap(onProgress?: (done: number, total: number) => void): Promise<AutoMapResult> {
   let mapped = 0;
   let skipped = 0;
 
@@ -86,34 +88,30 @@ export async function autoMap(): Promise<AutoMapResult> {
 
     if (!match) {
       skipped++;
-      continue;
+    } else {
+      try {
+        await _sql`
+          INSERT INTO scraper_mappings (component_id, retailer_id, product_url, product_identifier)
+          VALUES (
+            ${match.componentId},
+            ${listing.retailer_id},
+            ${listing.product_url},
+            ${listing.scraped_name}
+          )
+          ON CONFLICT (retailer_id, product_url) DO NOTHING
+        `;
+        await _sql`
+          UPDATE unmatched_listings
+          SET status = 'linked', linked_component_id = ${match.componentId}
+          WHERE id = ${listing.id}
+        `;
+        mapped++;
+      } catch {
+        skipped++;
+      }
     }
 
-    try {
-      // Create the scraper_mapping
-      await _sql`
-        INSERT INTO scraper_mappings (component_id, retailer_id, product_url, product_identifier)
-        VALUES (
-          ${match.componentId},
-          ${listing.retailer_id},
-          ${listing.product_url},
-          ${listing.scraped_name}
-        )
-        ON CONFLICT (retailer_id, product_url) DO NOTHING
-      `;
-
-      // Mark the listing as linked
-      await _sql`
-        UPDATE unmatched_listings
-        SET status = 'linked', linked_component_id = ${match.componentId}
-        WHERE id = ${listing.id}
-      `;
-
-      mapped++;
-    } catch {
-      // Conflict or DB error — skip silently, listing stays pending
-      skipped++;
-    }
+    onProgress?.(mapped + skipped, pending.length);
   }
 
   if (mapped > 0) {
