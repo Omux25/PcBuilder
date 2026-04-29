@@ -43,7 +43,8 @@ export function ComponentPicker({ category, selected, build, onSelect }: Props) 
   delete buildContext[category];
 
   const fetchComponents = useCallback((searchTerm: string, pageNum: number) => {
-    setLoading(true);
+    // Stale-while-revalidate: only show skeleton on first load, not re-fetches
+    setLoading((prev) => prev || components.length === 0);
     setError(null);
     smartSearch({
       category,
