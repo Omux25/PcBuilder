@@ -19,6 +19,7 @@ import {
   deleteComponent,
 } from '../../services/componentService.js';
 import { logActivity } from '../../services/adminService.js';
+import { AppError } from '../../utils/errors.js';
 import type { ComponentInput } from '../../schemas/componentSchemas.js';
 
 const adminComponentsRouter = new Hono();
@@ -60,8 +61,8 @@ adminComponentsRouter.put('/:id', validateComponent, async (c) => {
 
     return c.json(component);
   } catch (err: unknown) {
-    if (err instanceof Error && (err as NodeJS.ErrnoException).code === 'COMPONENT_NOT_FOUND') {
-      return c.json({ error: { code: 'NOT_FOUND', message: err.message } }, 404);
+    if (err instanceof AppError) {
+      return c.json(err.toJSON(), err.statusCode as any);
     }
     throw err;
   }
@@ -86,11 +87,8 @@ adminComponentsRouter.delete('/:id', async (c) => {
 
     return c.json({ message: `Component ${id} deleted successfully.` });
   } catch (err: unknown) {
-    if (err instanceof Error && (err as NodeJS.ErrnoException).code === 'COMPONENT_NOT_FOUND') {
-      return c.json({ error: { code: 'NOT_FOUND', message: err.message } }, 404);
-    }
-    if (err instanceof Error && (err as NodeJS.ErrnoException).code === 'COMPONENT_HAS_DEPENDENCIES') {
-      return c.json({ error: { code: 'CONFLICT', message: err.message } }, 409);
+    if (err instanceof AppError) {
+      return c.json(err.toJSON(), err.statusCode as any);
     }
     throw err;
   }

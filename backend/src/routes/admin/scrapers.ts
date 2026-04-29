@@ -11,6 +11,7 @@ import { Hono } from 'hono';
 import { authMiddleware } from '../../middleware/auth.js';
 import { getRetailers, getRetailerById } from '../../services/retailerService.js';
 import { runScrapingSession } from '../../../scraper/session.js';
+import { AppError } from '../../utils/errors.js';
 
 const adminScrapersRouter = new Hono();
 
@@ -53,8 +54,8 @@ adminScrapersRouter.post('/:retailerId/run', async (c) => {
   try {
     await getRetailerById(retailerId);
   } catch (err: unknown) {
-    if (err instanceof Error && (err as NodeJS.ErrnoException).code === 'RETAILER_NOT_FOUND') {
-      return c.json({ error: { code: 'NOT_FOUND', message: err.message } }, 404);
+    if (err instanceof AppError) {
+      return c.json(err.toJSON(), err.statusCode as any);
     }
     throw err;
   }

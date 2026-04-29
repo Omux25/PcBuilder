@@ -13,6 +13,7 @@ import { Hono } from 'hono';
 import { authMiddleware } from '../../middleware/auth.js';
 import { getRetailers, getRetailerById, createRetailer, updateRetailer } from '../../services/retailerService.js';
 import { logActivity } from '../../services/adminService.js';
+import { AppError } from '../../utils/errors.js';
 
 const adminRetailersRouter = new Hono();
 
@@ -91,8 +92,8 @@ adminRetailersRouter.put('/:id', async (c) => {
 
     return c.json(retailer);
   } catch (err: unknown) {
-    if (err instanceof Error && (err as NodeJS.ErrnoException).code === 'RETAILER_NOT_FOUND') {
-      return c.json({ error: { code: 'NOT_FOUND', message: err.message } }, 404);
+    if (err instanceof AppError) {
+      return c.json(err.toJSON(), err.statusCode as any);
     }
     throw err;
   }
@@ -116,8 +117,8 @@ adminRetailersRouter.delete('/:id', async (c) => {
 
     return c.json({ message: `Retailer ${id} deactivated.` });
   } catch (err: unknown) {
-    if (err instanceof Error && (err as NodeJS.ErrnoException).code === 'RETAILER_NOT_FOUND') {
-      return c.json({ error: { code: 'NOT_FOUND', message: err.message } }, 404);
+    if (err instanceof AppError) {
+      return c.json(err.toJSON(), err.statusCode as any);
     }
     throw err;
   }

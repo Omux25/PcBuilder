@@ -5,21 +5,11 @@
  * Requirements: 4.1, 4.3
  */
 
-import { sql as bunSql } from 'bun';
+import { getSql } from '../db/index.js';
+import { AppError } from '../utils/errors.js';
 
-// ── Dependency injection ─────────────────────────────────────────────────────
-
-type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
-
-let _sql: SqlFn = bunSql as unknown as SqlFn;
-
-export function setSql(mockSql: SqlFn): void {
-  _sql = mockSql;
-}
-
-export function resetSql(): void {
-  _sql = bunSql as unknown as SqlFn;
-}
+// Re-export DI helpers from centralized module for test compatibility
+export { setSql, resetSql } from '../db/index.js';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,8 +38,9 @@ export interface RetailerWithStats extends Retailer {
  * @param includeInactive - If true, includes inactive retailers (default false)
  */
 async function getRetailers(includeInactive = false): Promise<RetailerWithStats[]> {
+  const sql = getSql();
   if (includeInactive) {
-    return _sql`
+    return sql`
       SELECT
         r.*,
         COUNT(p.id) AS price_records_count
@@ -60,7 +51,7 @@ async function getRetailers(includeInactive = false): Promise<RetailerWithStats[
     ` as Promise<RetailerWithStats[]>;
   }
 
-  return _sql`
+  return sql`
     SELECT
       r.*,
       COUNT(p.id) AS price_records_count
@@ -77,7 +68,8 @@ async function getRetailers(includeInactive = false): Promise<RetailerWithStats[
  * Throws RETAILER_NOT_FOUND if no retailer matches.
  */
 async function getRetailerById(id: number): Promise<RetailerWithStats> {
-  const rows = (await _sql`
+  const sql = getSql();
+  const rows = (await sql`
     SELECT
       r.*,
       COUNT(p.id) AS price_records_count
@@ -89,9 +81,7 @@ async function getRetailerById(id: number): Promise<RetailerWithStats> {
   `) as RetailerWithStats[];
 
   if (rows.length === 0) {
-    const err = new Error(`Retailer with id ${id} not found`);
-    (err as NodeJS.ErrnoException).code = 'RETAILER_NOT_FOUND';
-    throw err;
+    throw new AppError('RETAILER_NOT_FOUND', `Retailer with id ${id} not found`, 404);
   }
 
   return rows[0];
@@ -108,7 +98,8 @@ async function createRetailer(data: {
   scraping_interval_hours?: number;
   notes?: string;
 }): Promise<Retailer> {
-  const rows = (await _sql`
+  const sql = getSql();
+  const rows = (await sql`
     INSERT INTO retailers (name, base_url, logo_url, country, is_active, scraping_interval_hours, notes)
     VALUES (
       ${data.name},
@@ -141,7 +132,8 @@ async function updateRetailer(
     notes: string;
   }>
 ): Promise<Retailer> {
-  const rows = (await _sql`
+  const sql = getSql();
+  const rows = (await sql`
     UPDATE retailers SET
       name                    = COALESCE(${data.name ?? null}, name),
       base_url                = COALESCE(${data.base_url ?? null}, base_url),
@@ -155,9 +147,7 @@ async function updateRetailer(
   `) as Retailer[];
 
   if (rows.length === 0) {
-    const err = new Error(`Retailer with id ${id} not found`);
-    (err as NodeJS.ErrnoException).code = 'RETAILER_NOT_FOUND';
-    throw err;
+    throw new AppError('RETAILER_NOT_FOUND', `Retailer with id ${id} not found`, 404);
   }
 
   return rows[0];
@@ -170,7 +160,8 @@ async function updateScrapeStatus(
   id: number,
   status: 'SUCCESS' | 'PARTIAL' | 'FAILED'
 ): Promise<void> {
-  await _sql`
+  const sql = getSql();
+  await sql`
     UPDATE retailers
     SET last_scrape_at = NOW(), last_scrape_status = ${status}
     WHERE id = ${id}

@@ -13,6 +13,7 @@ import { Hono } from 'hono';
 import { authMiddleware } from '../../middleware/auth.js';
 import { getPresets, getPresetById, createPreset, updatePreset, deletePreset } from '../../services/presetService.js';
 import { logActivity } from '../../services/adminService.js';
+import { AppError } from '../../utils/errors.js';
 
 const adminPresetsRouter = new Hono();
 
@@ -93,8 +94,8 @@ adminPresetsRouter.put('/:id', async (c) => {
 
     return c.json(preset);
   } catch (err: unknown) {
-    if (err instanceof Error && (err as NodeJS.ErrnoException).code === 'PRESET_NOT_FOUND') {
-      return c.json({ error: { code: 'NOT_FOUND', message: err.message } }, 404);
+    if (err instanceof AppError) {
+      return c.json(err.toJSON(), err.statusCode as any);
     }
     throw err;
   }
@@ -118,8 +119,8 @@ adminPresetsRouter.delete('/:id', async (c) => {
 
     return c.json({ message: `Preset build ${id} deleted.` });
   } catch (err: unknown) {
-    if (err instanceof Error && (err as NodeJS.ErrnoException).code === 'PRESET_NOT_FOUND') {
-      return c.json({ error: { code: 'NOT_FOUND', message: err.message } }, 404);
+    if (err instanceof AppError) {
+      return c.json(err.toJSON(), err.statusCode as any);
     }
     throw err;
   }

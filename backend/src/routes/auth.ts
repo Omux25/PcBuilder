@@ -9,10 +9,10 @@
  */
 
 import { Hono } from 'hono';
-import { sql } from 'bun';
+import { getSql } from '../db/index.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 
 const authRouter = new Hono();
 
@@ -20,12 +20,19 @@ const authRouter = new Hono();
 // Simple in-memory rate limiter: max 10 login attempts per IP per minute.
 
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+const MAX_MAP_SIZE = 10_000;
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
   const entry = loginAttempts.get(ip);
 
   if (!entry || now > entry.resetAt) {
+    // Clean up stale entries periodically to prevent unbounded growth
+    if (loginAttempts.size > MAX_MAP_SIZE) {
+      for (const [key, val] of loginAttempts) {
+        if (now > val.resetAt) loginAttempts.delete(key);
+      }
+    }
     loginAttempts.set(ip, { count: 1, resetAt: now + 60_000 });
     return false;
   }
@@ -34,6 +41,14 @@ function isRateLimited(ip: string): boolean {
   if (entry.count > 10) return true;
   return false;
 }
+
+// Clean up stale rate-limit entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of loginAttempts) {
+    if (now > val.resetAt) loginAttempts.delete(key);
+  }
+}, 5 * 60_000).unref?.();
 
 // ── Refresh token helpers ────────────────────────────────────────────────────
 
@@ -46,19 +61,14 @@ function generateRefreshToken(): string {
 }
 
 /**
- * Hashes a raw refresh token with bcrypt before storing in the DB.
- * Cost factor 10 — fast enough for login, strong enough for storage.
- * If the DB is compromised, raw tokens cannot be recovered from hashes.
+ * Creates a SHA-256 hash of a refresh token for database storage.
+ * SHA-256 is used instead of bcrypt because refresh tokens are already
+ * high-entropy random values (not user-chosen passwords), so a fast
+ * hash is sufficient. This allows O(1) lookup by hash instead of
+ * the O(N) bcrypt comparison loop that was used before.
  */
-async function hashRefreshToken(raw: string): Promise<string> {
-  return bcrypt.hash(raw, 10);
-}
-
-/**
- * Verifies a raw refresh token against a stored bcrypt hash.
- */
-async function verifyRefreshToken(raw: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(raw, hash);
+function hashRefreshToken(raw: string): string {
+  return createHash('sha256').update(raw).digest('hex');
 }
 
 const ACCESS_TOKEN_EXPIRY  = '15m';
@@ -68,7 +78,14 @@ const COOKIE_NAME = 'refresh_token';
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function getSecret(): string {
-  return process.env.JWT_SECRET ?? 'changeme';
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      'JWT_SECRET must be set and at least 32 characters long. ' +
+      'Generate one with: openssl rand -hex 32'
+    );
+  }
+  return secret;
 }
 
 function makeAccessToken(adminId: number, username: string): string {
@@ -105,6 +122,7 @@ function getRefreshTokenFromCookie(c: any): string | null {
 // ── POST /api/auth/login ─────────────────────────────────────────────────────
 
 authRouter.post('/login', async (c) => {
+  const sql = getSql();
   const ip = c.req.header('x-forwarded-for') ?? c.req.header('x-real-ip') ?? 'unknown';
 
   if (isRateLimited(ip)) {
@@ -156,10 +174,10 @@ authRouter.post('/login', async (c) => {
   // Generate tokens
   const accessToken  = makeAccessToken(admin.id, admin.username);
   const rawRefresh   = generateRefreshToken();
-  const refreshHash  = await hashRefreshToken(rawRefresh);
+  const refreshHash  = hashRefreshToken(rawRefresh);
   const expiresAt    = refreshTokenExpiry();
 
-  // Store refresh token HASH in DB — never the raw token
+  // Store SHA-256 hash in DB — never the raw token
   await sql`
     INSERT INTO refresh_tokens (admin_id, token, expires_at)
     VALUES (${admin.id}, ${refreshHash}, ${expiresAt.toISOString()})
@@ -176,36 +194,30 @@ authRouter.post('/login', async (c) => {
 // ── POST /api/auth/refresh ───────────────────────────────────────────────────
 
 authRouter.post('/refresh', async (c) => {
+  const sql = getSql();
   const rawToken = getRefreshTokenFromCookie(c);
 
   if (!rawToken) {
     return c.json({ error: { code: 'UNAUTHORIZED', message: 'Jeton de rafraîchissement manquant' } }, 401);
   }
 
-  // Fetch all non-expired tokens — we must compare hashes since we can't
-  // query by raw value. Limit to recent tokens to keep this fast.
+  // SHA-256 lookup — O(1) instead of O(N) bcrypt scan
+  const tokenHash = hashRefreshToken(rawToken);
+
   const rows = await sql`
-    SELECT rt.id, rt.admin_id, rt.token AS token_hash, rt.expires_at, a.username
+    SELECT rt.id, rt.admin_id, a.username
     FROM refresh_tokens rt
     JOIN admins a ON a.id = rt.admin_id
-    WHERE rt.expires_at > NOW()
-    ORDER BY rt.expires_at DESC
-    LIMIT 50
-  ` as { id: number; admin_id: number; token_hash: string; expires_at: string; username: string }[];
+    WHERE rt.token = ${tokenHash}
+      AND rt.expires_at > NOW()
+    LIMIT 1
+  ` as { id: number; admin_id: number; username: string }[];
 
-  // Find the matching token by comparing raw value against stored hashes
-  let matched: typeof rows[0] | null = null;
-  for (const row of rows) {
-    if (await verifyRefreshToken(rawToken, row.token_hash)) {
-      matched = row;
-      break;
-    }
-  }
-
-  if (!matched) {
+  if (rows.length === 0) {
     return c.json({ error: { code: 'UNAUTHORIZED', message: 'Jeton de rafraîchissement invalide' } }, 401);
   }
 
+  const matched = rows[0];
   const accessToken = makeAccessToken(matched.admin_id, matched.username);
 
   return c.json({
@@ -217,23 +229,13 @@ authRouter.post('/refresh', async (c) => {
 // ── POST /api/auth/logout ────────────────────────────────────────────────────
 
 authRouter.post('/logout', async (c) => {
+  const sql = getSql();
   const rawToken = getRefreshTokenFromCookie(c);
 
   if (rawToken) {
-    // Find and delete the matching hashed token
-    const rows = await sql`
-      SELECT id, token AS token_hash FROM refresh_tokens
-      WHERE expires_at > NOW()
-      ORDER BY expires_at DESC
-      LIMIT 50
-    ` as { id: number; token_hash: string }[];
-
-    for (const row of rows) {
-      if (await verifyRefreshToken(rawToken, row.token_hash)) {
-        await sql`DELETE FROM refresh_tokens WHERE id = ${row.id}`;
-        break;
-      }
-    }
+    // SHA-256 lookup — O(1) deletion
+    const tokenHash = hashRefreshToken(rawToken);
+    await sql`DELETE FROM refresh_tokens WHERE token = ${tokenHash}`;
   }
 
   clearRefreshCookie(c);
