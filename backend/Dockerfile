@@ -1,4 +1,4 @@
-FROM oven/bun:1.3-alpine
+FROM oven/bun:1.3-alpine AS base
 
 WORKDIR /app
 
@@ -6,14 +6,13 @@ WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production
 
-# Copy source code
+# Copy source code only (not scripts, tests, or SQL files)
 COPY src/ ./src/
 COPY scraper/ ./scraper/
 COPY tsconfig.json ./
 
-# Copy frontend build output (mounted at build time or pre-built)
-# The frontend/dist directory is served as static files in production
-COPY --chown=bun:bun . .
+# Run as non-root user for security
+USER bun
 
 EXPOSE 3000
 
