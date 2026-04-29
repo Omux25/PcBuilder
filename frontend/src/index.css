@@ -1,35 +1,39 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:          #0f1117;
-  --surface:     #1a1d27;
-  --surface-2:   #1e1e2e;
-  --surface-3:   #313244;
-  --border:      #2a2d3a;
-  --border-2:    #45475a;
-  --accent:      #6366f1;
-  --accent-h:    #818cf8;
-  --accent-blue: #89b4fa;
+  --bg:          #f8fafc;
+  --surface:     #ffffff;
+  --surface-2:   #f1f5f9;
+  --surface-3:   #e2e8f0;
+  --border:      #e2e8f0;
+  --border-2:    #cbd5e1;
+  --accent:      #4f46e5;
+  --accent-h:    #4338ca;
+  --accent-blue: #3b82f6;
   --danger:      #ef4444;
-  --danger-soft: #f38ba8;
+  --danger-soft: #dc2626;
   --warning:     #f59e0b;
-  --warning-soft:#f9e2af;
+  --warning-soft:#d97706;
   --success:     #22c55e;
-  --success-soft:#a6e3a1;
-  --text:        #e2e8f0;
-  --text-2:      #cdd6f4;
-  --text-muted:  #94a3b8;
-  --text-dim:    #6c7086;
+  --success-soft:#16a34a;
+  --text:        #0f172a;
+  --text-2:      #1e293b;
+  --text-muted:  #475569;
+  --text-dim:    #64748b;
   --radius:      8px;
   --radius-lg:   12px;
 
+  --shadow-sm:   0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md:   0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg:   0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
   /* Semantic tint backgrounds — used for badges and highlighted rows */
-  --success-tint:  #14532d;       /* dark green bg for compatible badge */
-  --danger-tint:   #450a0a;       /* dark red bg for incompatible badge */
-  --warning-tint:  #78350f;       /* dark amber bg for warning items */
-  --success-row:   rgba(20,83,45,0.13);   /* subtle green row highlight */
-  --danger-row:    rgba(69,10,10,0.20);   /* subtle red row highlight */
-  --warning-row:   rgba(120,53,15,0.20);  /* subtle amber row highlight */
+  --success-tint:  #dcfce7;
+  --danger-tint:   #fee2e2;
+  --warning-tint:  #fef3c7;
+  --success-row:   rgba(34, 197, 94, 0.04);
+  --danger-row:    rgba(239, 68, 68, 0.04);
+  --warning-row:   rgba(245, 158, 11, 0.04);
 
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   font-size: 15px;

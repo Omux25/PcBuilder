@@ -2,6 +2,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
@@ -39,6 +40,7 @@
   font-size: .75rem;
   text-transform: uppercase;
   letter-spacing: .04em;
+  background: var(--surface-2);
   border-bottom: 1px solid var(--border);
 }
 
@@ -50,7 +52,7 @@
 
 .table tr:last-child td { border-bottom: none; }
 
-.cheapest td { background: rgba(137, 180, 250, 0.05); }
+.cheapest td { background: var(--success-row); }
 
 .price { font-weight: 700; color: var(--text); white-space: nowrap; }
 
