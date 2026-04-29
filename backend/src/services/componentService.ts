@@ -79,10 +79,12 @@ async function getComponents(
   const limit = Math.min(100, Math.max(1, filters.limit ?? 20));
   const offset = (page - 1) * limit;
 
-  // Escape SQL LIKE wildcards in the search term so user input like '%' or '_'
-  // is treated as a literal character, not a wildcard.
-  const safeSearch = search
-    ? search.replace(/%/g, '\\%').replace(/_/g, '\\_')
+  // Normalize search: strip hyphens and special chars so "intel 14 4343" matches "i7-14343"
+  const normalizedSearch = search
+    ? search.replace(/[-_./,;:()]/g, ' ').replace(/\s+/g, ' ').trim()
+    : null;
+  const safeSearch = normalizedSearch
+    ? normalizedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_')
     : null;
 
   // Build WHERE conditions as an array, then join with AND.
@@ -97,9 +99,9 @@ async function getComponents(
       AND (${ram_type ?? null}::text IS NULL OR ram_type = ${ram_type ?? null})
       AND (${brand ?? null}::text IS NULL OR LOWER(brand) = LOWER(${brand ?? null}))
       AND (${safeSearch}::text IS NULL OR (
-            LOWER(name) LIKE LOWER('%' || ${safeSearch} || '%') ESCAPE '\\'
+            LOWER(REGEXP_REPLACE(name, '[-_./,;:()\s]+', ' ', 'g')) LIKE LOWER('%' || ${safeSearch} || '%') ESCAPE '\\'
             OR LOWER(brand) LIKE LOWER('%' || ${safeSearch} || '%') ESCAPE '\\'
-            OR LOWER(slug) LIKE LOWER('%' || ${safeSearch} || '%') ESCAPE '\\'
+            OR LOWER(REGEXP_REPLACE(slug, '[-_./,;:()\s]+', ' ', 'g')) LIKE LOWER('%' || ${safeSearch} || '%') ESCAPE '\\'
           ))
     ORDER BY name ASC
     LIMIT ${limit} OFFSET ${offset}
