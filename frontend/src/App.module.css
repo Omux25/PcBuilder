@@ -4,15 +4,19 @@
   flex-direction: column;
 }
 
-/* ── Header ─────────────────────────────────────────────────────────────────── */
+/* ── Header ─────────────────────────────────────────────────────────────── */
 
 .header {
-  padding: 1.25rem 1.5rem;
+  padding: 0.85rem 2rem;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 50;
 }
 
 .logoLink {
@@ -20,10 +24,13 @@
 }
 
 .logo {
-  font-size: 1.4rem;
+  font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: -.02em;
   margin: 0;
+  background: linear-gradient(135deg, var(--text) 0%, var(--accent-blue) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .sub { color: var(--accent-h); }
@@ -37,102 +44,48 @@
   color: var(--text-muted);
   text-decoration: none;
   font-size: 0.85rem;
-  padding: 0.3rem 0.6rem;
-  border-radius: 6px;
+  font-weight: 500;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
   transition: all 0.15s;
 }
 
 .navLink:hover {
   color: var(--text);
-  background: var(--bg);
+  background: var(--surface-2);
+  border-color: var(--border);
+  text-decoration: none;
 }
 
-/* ── Main layout ─────────────────────────────────────────────────────────────── */
+/* ── Main ───────────────────────────────────────────────────────────────── */
 
 .main {
   flex: 1;
-  display: grid;
-  grid-template-columns: 2.2fr 1fr;
-  gap: 1.5rem;
-  padding: 1.5rem 2rem;
-  align-items: start;
+  max-width: 960px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem;
 }
 
-@media (max-width: 1024px) {
-  .main { grid-template-columns: 1.5fr 1fr; }
-}
-
-@media (max-width: 900px) {
-  .main { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 480px) {
-  .main { padding: .75rem; gap: .75rem; }
-  .header { padding: 1rem .75rem; }
-}
-
-.left, .right {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-/* ── Price nav ───────────────────────────────────────────────────────────────── */
-
-.priceNav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: -0.5rem; /* pull table closer */
-}
-
-.priceNavLabel {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 0.2rem;
-}
-
-.priceNavBtns {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.priceNavBtn {
-  padding: 0.4rem 0.8rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-2);
-  font-size: 0.85rem;
-  font-weight: 500;
-  border-radius: var(--radius);
-  transition: all 0.15s;
-}
-
-.priceNavBtn:hover {
-  background: var(--surface-2);
-  border-color: var(--border-2);
-}
-
-.priceNavBtn.active {
-  background: var(--accent-blue);
-  color: var(--bg);
-  border-color: var(--accent-blue);
-  box-shadow: 0 4px 12px rgba(137, 180, 250, 0.2);
-}
-
-/* ── Footer ─────────────────────────────────────────────────────────────────── */
+/* ── Footer ─────────────────────────────────────────────────────────────── */
 
 .footer {
-  padding: .75rem 1.5rem;
+  padding: .75rem 2rem;
   border-top: 1px solid var(--border);
-  font-size: .8rem;
-  color: var(--text-muted);
+  font-size: .78rem;
+  color: var(--text-dim);
   text-align: center;
 }
 
-/* ── Lazy load fallback ──────────────────────────────────────────────────────── */
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .header { padding: 0.75rem 1rem; }
+  .main { padding: 1rem 0.75rem; }
+}
+
+/* ── Lazy-load fallback ─────────────────────────────────────────────────── */
 
 .loading {
   padding: 3rem;
