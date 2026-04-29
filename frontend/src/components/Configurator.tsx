@@ -3,7 +3,6 @@
  * Shows a compact summary card when a component is selected.
  */
 
-import { Link } from 'react-router-dom';
 import { ComponentPicker } from './ComponentPicker';
 import type { Component, ComponentCategory, BuildConfig } from '../types';
 import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';

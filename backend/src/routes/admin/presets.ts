@@ -15,7 +15,14 @@ import { getPresets, getPresetById, createPreset, updatePreset, deletePreset } f
 import { logActivity } from '../../services/adminService.js';
 import { AppError } from '../../utils/errors.js';
 
-const adminPresetsRouter = new Hono();
+type AdminEnv = {
+  Variables: {
+    admin: { id: number };
+    validatedBody: unknown;
+  }
+};
+
+const adminPresetsRouter = new Hono<AdminEnv>();
 
 adminPresetsRouter.use('/*', authMiddleware);
 

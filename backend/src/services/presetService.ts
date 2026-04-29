@@ -110,8 +110,7 @@ async function getPresetById(id: number): Promise<PresetBuild> {
 
   const components: Record<string, PresetComponent> = {};
   for (const row of componentRows) {
-    const { category, ...component } = row;
-    components[category] = component;
+    components[row.category] = row;
   }
 
   const incomplete = Object.values(components).some((c) => !c.is_active);

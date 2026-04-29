@@ -15,7 +15,14 @@ import { getRetailers, getRetailerById, createRetailer, updateRetailer } from '.
 import { logActivity } from '../../services/adminService.js';
 import { AppError } from '../../utils/errors.js';
 
-const adminRetailersRouter = new Hono();
+type AdminEnv = {
+  Variables: {
+    admin: { id: number };
+    validatedBody: unknown;
+  }
+};
+
+const adminRetailersRouter = new Hono<AdminEnv>();
 
 adminRetailersRouter.use('/*', authMiddleware);
 
