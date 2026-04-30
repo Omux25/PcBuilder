@@ -38,16 +38,17 @@ export interface PresetBuild {
 // ── Service Functions ────────────────────────────────────────────────────────
 
 /**
- * Returns all active preset builds with their components.
+ * Returns all preset builds with their components.
  * Flags a preset as `incomplete` if any of its components are inactive.
  *
- * @param useCase - Optional filter by use case
+ * @param useCase        - Optional filter by use case
+ * @param includeInactive - If true, includes inactive presets (default false)
  */
-async function getPresets(useCase?: string): Promise<PresetBuild[]> {
+async function getPresets(useCase?: string, includeInactive = false): Promise<PresetBuild[]> {
   const sql = getSql();
   const presetRows = (await sql`
     SELECT * FROM preset_builds
-    WHERE is_active = true
+    WHERE (${includeInactive ? null : true}::boolean IS NULL OR is_active = true)
       AND (${useCase ?? null}::text IS NULL OR use_case = ${useCase ?? null})
     ORDER BY use_case, name
   `) as Omit<PresetBuild, 'components' | 'incomplete'>[];
@@ -64,7 +65,7 @@ async function getPresets(useCase?: string): Promise<PresetBuild[]> {
     FROM preset_build_components pbc
     JOIN components c ON c.id = pbc.component_id
     JOIN preset_builds pb ON pb.id = pbc.preset_build_id
-    WHERE pb.is_active = true
+    WHERE (${includeInactive ? null : true}::boolean IS NULL OR pb.is_active = true)
       AND (${useCase ?? null}::text IS NULL OR pb.use_case = ${useCase ?? null})
   `) as (PresetComponent & { preset_build_id: number; category: string })[];
 
@@ -129,32 +130,36 @@ async function createPreset(data: {
   total_price_estimate?: number;
   components: Record<string, number>;
 }): Promise<PresetBuild> {
-  // Insert preset
+  // Insert preset and component links in a transaction to prevent partial state
+  // if the server crashes between the preset insert and the component link inserts.
   const sql = getSql();
-  const presetRows = (await sql`
-    INSERT INTO preset_builds (name, description, use_case, total_price_estimate, is_active)
-    VALUES (
-      ${data.name},
-      ${data.description ?? null},
-      ${data.use_case},
-      ${data.total_price_estimate ?? null},
-      true
-    )
-    RETURNING *
-  `) as Omit<PresetBuild, 'components' | 'incomplete'>[];
+  let presetId: number;
 
-  const preset = presetRows[0];
+  await sql.begin(async (tx) => {
+    const presetRows = (await tx`
+      INSERT INTO preset_builds (name, description, use_case, total_price_estimate, is_active)
+      VALUES (
+        ${data.name},
+        ${data.description ?? null},
+        ${data.use_case},
+        ${data.total_price_estimate ?? null},
+        true
+      )
+      RETURNING *
+    `) as Omit<PresetBuild, 'components' | 'incomplete'>[];
 
-  // Insert component links
-  for (const [category, componentId] of Object.entries(data.components)) {
-    await sql`
-      INSERT INTO preset_build_components (preset_build_id, component_id, category)
-      VALUES (${preset.id}, ${componentId}, ${category})
-      ON CONFLICT (preset_build_id, category) DO UPDATE SET component_id = ${componentId}
-    `;
-  }
+    presetId = presetRows[0].id;
 
-  return getPresetById(preset.id);
+    for (const [category, componentId] of Object.entries(data.components)) {
+      await tx`
+        INSERT INTO preset_build_components (preset_build_id, component_id, category)
+        VALUES (${presetId}, ${componentId}, ${category})
+        ON CONFLICT (preset_build_id, category) DO UPDATE SET component_id = ${componentId}
+      `;
+    }
+  });
+
+  return getPresetById(presetId!);
 }
 
 /**
@@ -187,15 +192,18 @@ async function updatePreset(
     throw new AppError('PRESET_NOT_FOUND', `Preset build with id ${id} not found`, 404);
   }
 
-  // Replace component links if provided
+  // Replace component links if provided — wrapped in a transaction to prevent
+  // partial state if the server crashes between DELETE and re-inserts.
   if (data.components) {
-    await sql`DELETE FROM preset_build_components WHERE preset_build_id = ${id}`;
-    for (const [category, componentId] of Object.entries(data.components)) {
-      await sql`
-        INSERT INTO preset_build_components (preset_build_id, component_id, category)
-        VALUES (${id}, ${componentId}, ${category})
-      `;
-    }
+    await sql.begin(async (tx) => {
+      await tx`DELETE FROM preset_build_components WHERE preset_build_id = ${id}`;
+      for (const [category, componentId] of Object.entries(data.components!)) {
+        await tx`
+          INSERT INTO preset_build_components (preset_build_id, component_id, category)
+          VALUES (${id}, ${componentId}, ${category})
+        `;
+      }
+    });
   }
 
   return getPresetById(id);

@@ -14,13 +14,8 @@ import { authMiddleware } from '../../middleware/auth.js';
 import { getPresets, getPresetById, createPreset, updatePreset, deletePreset } from '../../services/presetService.js';
 import { logActivity } from '../../services/adminService.js';
 import { AppError } from '../../utils/errors.js';
-
-type AdminEnv = {
-  Variables: {
-    admin: { id: number };
-    validatedBody: unknown;
-  }
-};
+import type { AdminEnv } from './types.js';
+import { parseId } from './types.js';
 
 const adminPresetsRouter = new Hono<AdminEnv>();
 
@@ -30,7 +25,7 @@ const VALID_USE_CASES = ['gaming', 'workstation', 'office', 'budget'] as const;
 
 // GET /api/admin/presets
 adminPresetsRouter.get('/', async (c) => {
-  const presets = await getPresets(); // no filter — returns all active
+  const presets = await getPresets(undefined, true); // include inactive for admin view
   return c.json({ presets });
 });
 
@@ -72,8 +67,8 @@ adminPresetsRouter.post('/', async (c) => {
 
 // PUT /api/admin/presets/:id
 adminPresetsRouter.put('/:id', async (c) => {
-  const id = Number(c.req.param('id'));
-  if (!Number.isInteger(id) || id <= 0) {
+  const id = parseId(c.req.param('id'));
+  if (id === null) {
     return c.json({ error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } }, 400);
   }
 
@@ -102,7 +97,7 @@ adminPresetsRouter.put('/:id', async (c) => {
     return c.json(preset);
   } catch (err: unknown) {
     if (err instanceof AppError) {
-      return c.json(err.toJSON(), err.statusCode as any);
+      return c.json(err.toJSON(), err.statusCode);
     }
     throw err;
   }
@@ -110,8 +105,8 @@ adminPresetsRouter.put('/:id', async (c) => {
 
 // DELETE /api/admin/presets/:id
 adminPresetsRouter.delete('/:id', async (c) => {
-  const id = Number(c.req.param('id'));
-  if (!Number.isInteger(id) || id <= 0) {
+  const id = parseId(c.req.param('id'));
+  if (id === null) {
     return c.json({ error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } }, 400);
   }
 
@@ -127,7 +122,7 @@ adminPresetsRouter.delete('/:id', async (c) => {
     return c.json({ message: `Preset build ${id} deleted.` });
   } catch (err: unknown) {
     if (err instanceof AppError) {
-      return c.json(err.toJSON(), err.statusCode as any);
+      return c.json(err.toJSON(), err.statusCode);
     }
     throw err;
   }
