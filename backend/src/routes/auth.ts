@@ -9,48 +9,14 @@
  */
 
 import { Hono } from 'hono';
+import type { Context } from 'hono';
 import { getSql } from '../db/index.js';
+import { isRateLimited } from '../utils/rateLimiter.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { randomBytes, createHash } from 'crypto';
 
 const authRouter = new Hono();
-
-// ── Rate limiter ─────────────────────────────────────────────────────────────
-// Simple in-memory rate limiter: max 10 login attempts per IP per minute.
-
-const loginAttempts = new Map<string, { count: number; resetAt: number }>();
-const MAX_MAP_SIZE = 10_000;
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = loginAttempts.get(ip);
-
-  if (!entry || now > entry.resetAt) {
-    // Clean up stale entries periodically to prevent unbounded growth
-    if (loginAttempts.size > MAX_MAP_SIZE) {
-      for (const [key, val] of loginAttempts) {
-        if (now > val.resetAt) loginAttempts.delete(key);
-      }
-    }
-    loginAttempts.set(ip, { count: 1, resetAt: now + 60_000 });
-    return false;
-  }
-
-  entry.count++;
-  if (entry.count > 10) return true;
-  return false;
-}
-
-// Clean up stale rate-limit entries every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, val] of loginAttempts) {
-    if (now > val.resetAt) loginAttempts.delete(key);
-  }
-}, 5 * 60_000).unref?.();
-
-// ── Refresh token helpers ────────────────────────────────────────────────────
 
 /**
  * Generates a cryptographically strong 32-byte random token (256 bits).
@@ -71,7 +37,7 @@ function hashRefreshToken(raw: string): string {
   return createHash('sha256').update(raw).digest('hex');
 }
 
-const ACCESS_TOKEN_EXPIRY  = '15m';
+const ACCESS_TOKEN_EXPIRY  = process.env.JWT_EXPIRES_IN || '15m';
 const REFRESH_TOKEN_EXPIRY_DAYS = 7;
 const COOKIE_NAME = 'refresh_token';
 
@@ -98,22 +64,24 @@ function refreshTokenExpiry(): Date {
   return d;
 }
 
-function setRefreshCookie(c: any, token: string): void {
+function setRefreshCookie(c: Context, token: string): void {
   const expires = refreshTokenExpiry();
+  const secure  = process.env.NODE_ENV === 'production' ? '; Secure' : '';
   c.header(
     'Set-Cookie',
-    `${COOKIE_NAME}=${token}; HttpOnly; Path=/; SameSite=Strict; Expires=${expires.toUTCString()}`,
+    `${COOKIE_NAME}=${token}; HttpOnly; Path=/; SameSite=Strict; Expires=${expires.toUTCString()}${secure}`,
   );
 }
 
-function clearRefreshCookie(c: any): void {
+function clearRefreshCookie(c: Context): void {
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
   c.header(
     'Set-Cookie',
-    `${COOKIE_NAME}=; HttpOnly; Path=/; SameSite=Strict; Max-Age=0`,
+    `${COOKIE_NAME}=; HttpOnly; Path=/; SameSite=Strict; Max-Age=0${secure}`,
   );
 }
 
-function getRefreshTokenFromCookie(c: any): string | null {
+function getRefreshTokenFromCookie(c: Context): string | null {
   const cookieHeader = c.req.header('cookie') ?? '';
   const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]+)`));
   return match ? match[1] : null;
@@ -125,9 +93,9 @@ authRouter.post('/login', async (c) => {
   const sql = getSql();
   const ip = c.req.header('x-forwarded-for') ?? c.req.header('x-real-ip') ?? 'unknown';
 
-  if (isRateLimited(ip)) {
+  if (await isRateLimited(`rate_limit:login:${ip}`, 10, 60)) {
     return c.json(
-      { error: { code: 'RATE_LIMITED', message: 'Trop de tentatives de connexion. Réessayez dans une minute.' } },
+      { error: { code: 'RATE_LIMITED', message: 'Too many login attempts. Please try again in a minute.' } },
       429,
     );
   }
@@ -136,17 +104,17 @@ authRouter.post('/login', async (c) => {
   try {
     body = await c.req.json();
   } catch {
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Identifiants invalides' } }, 401);
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' } }, 401);
   }
 
   if (!body || typeof body !== 'object') {
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Identifiants invalides' } }, 401);
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' } }, 401);
   }
 
   const { username, password } = body as Record<string, unknown>;
 
   if (typeof username !== 'string' || typeof password !== 'string') {
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Identifiants invalides' } }, 401);
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' } }, 401);
   }
 
   let rows: Array<{ id: number; username: string; password_hash: string }>;
@@ -157,18 +125,18 @@ authRouter.post('/login', async (c) => {
       LIMIT 1
     `) as { id: number; username: string; password_hash: string }[];
   } catch {
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Identifiants invalides' } }, 401);
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' } }, 401);
   }
 
   if (rows.length === 0) {
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Identifiants invalides' } }, 401);
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' } }, 401);
   }
 
   const admin = rows[0];
   const passwordMatch = await bcrypt.compare(password, admin.password_hash);
 
   if (!passwordMatch) {
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Identifiants invalides' } }, 401);
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' } }, 401);
   }
 
   // Generate tokens
@@ -198,7 +166,7 @@ authRouter.post('/refresh', async (c) => {
   const rawToken = getRefreshTokenFromCookie(c);
 
   if (!rawToken) {
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Jeton de rafraîchissement manquant' } }, 401);
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Refresh token missing' } }, 401);
   }
 
   // SHA-256 lookup — O(1) instead of O(N) bcrypt scan
@@ -214,11 +182,24 @@ authRouter.post('/refresh', async (c) => {
   ` as { id: number; admin_id: number; username: string }[];
 
   if (rows.length === 0) {
-    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Jeton de rafraîchissement invalide' } }, 401);
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid refresh token' } }, 401);
   }
 
   const matched = rows[0];
   const accessToken = makeAccessToken(matched.admin_id, matched.username);
+
+  // Rotate refresh token: delete old, issue new
+  const newRawRefresh  = generateRefreshToken();
+  const newRefreshHash = hashRefreshToken(newRawRefresh);
+  const newExpiresAt   = refreshTokenExpiry();
+
+  await sql`DELETE FROM refresh_tokens WHERE id = ${matched.id}`;
+  await sql`
+    INSERT INTO refresh_tokens (admin_id, token, expires_at)
+    VALUES (${matched.admin_id}, ${newRefreshHash}, ${newExpiresAt.toISOString()})
+  `;
+
+  setRefreshCookie(c, newRawRefresh);
 
   return c.json({
     access_token: accessToken,
@@ -243,3 +224,21 @@ authRouter.post('/logout', async (c) => {
 });
 
 export { authRouter };
+
+// ── Expired token cleanup ─────────────────────────────────────────────────────
+// Call startRefreshTokenCleanup() from server.ts to begin the cleanup interval.
+// Keeping this out of module-level side effects prevents the timer from firing
+// when auth.ts is imported in tests.
+
+let _cleanupInterval: ReturnType<typeof setInterval> | null = null;
+
+export function startRefreshTokenCleanup(): void {
+  if (_cleanupInterval) return; // already running
+  _cleanupInterval = setInterval(async () => {
+    try {
+      const sql = getSql();
+      await sql`DELETE FROM refresh_tokens WHERE expires_at < NOW()`;
+    } catch { /* non-critical — will retry next interval */ }
+  }, 6 * 60 * 60 * 1000); // every 6 hours
+  _cleanupInterval.unref?.();
+}
