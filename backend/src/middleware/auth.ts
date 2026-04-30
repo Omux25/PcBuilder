@@ -25,7 +25,7 @@ export async function authMiddleware(c: Context, next: Next): Promise<Response |
       {
         error: {
           code: 'UNAUTHORIZED',
-          message: 'En-tête d\'autorisation manquant ou malformé',
+          message: 'Missing or malformed Authorization header',
         },
       },
       401,
@@ -40,7 +40,7 @@ export async function authMiddleware(c: Context, next: Next): Promise<Response |
       {
         error: {
           code: 'UNAUTHORIZED',
-          message: 'Erreur de configuration serveur : JWT_SECRET non défini',
+          message: 'Server configuration error: JWT_SECRET is not set',
         },
       },
       401,
@@ -57,7 +57,7 @@ export async function authMiddleware(c: Context, next: Next): Promise<Response |
         {
           error: {
             code: 'UNAUTHORIZED',
-            message: 'Jeton expiré',
+            message: 'Token expired',
           },
         },
         401,
@@ -68,7 +68,7 @@ export async function authMiddleware(c: Context, next: Next): Promise<Response |
       {
         error: {
           code: 'UNAUTHORIZED',
-          message: 'Jeton invalide',
+          message: 'Invalid token',
         },
       },
       401,
