@@ -1,14 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { getAdminPresets, deleteAdminPreset } from '../api';
+import type { AdminPreset } from '../api';
 import styles from './Presets.module.css';
 
 const USE_CASE_LABELS: Record<string, string> = {
   gaming: 'Gaming', workstation: 'Workstation', office: 'Bureau', budget: 'Budget',
 };
 
+interface PresetComponent {
+  id: number;
+  name: string;
+  brand: string | null;
+}
+
 export function Presets() {
-  const [presets, setPresets] = useState<any[]>([]);
+  const [presets, setPresets] = useState<AdminPreset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
@@ -16,7 +23,7 @@ export function Presets() {
   function load() {
     setLoading(true);
     getAdminPresets()
-      .then((data: any) => setPresets(data.presets ?? []))
+      .then((data) => setPresets(data.presets ?? []))
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }
@@ -62,7 +69,7 @@ export function Presets() {
                 )}
 
                 <div className={styles.componentList}>
-                  {Object.entries(p.components ?? {}).map(([cat, comp]: [string, any]) => (
+                  {Object.entries((p.components as Record<string, PresetComponent>) ?? {}).map(([cat, comp]) => (
                     <div key={cat} className={styles.componentRow}>
                       <span className={styles.cat}>{cat}</span>
                       <span className={styles.compName}>{comp.brand ? `${comp.brand} ` : ''}{comp.name}</span>

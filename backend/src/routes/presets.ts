@@ -37,7 +37,7 @@ presetsRouter.get('/:id', async (c) => {
     return c.json(preset);
   } catch (err: unknown) {
     if (err instanceof AppError) {
-      return c.json(err.toJSON(), err.statusCode as any);
+      return c.json(err.toJSON(), err.statusCode);
     }
     throw err;
   }
