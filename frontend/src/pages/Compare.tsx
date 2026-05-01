@@ -77,7 +77,7 @@ export function Compare() {
   // Load components whenever URL ids change
   useEffect(() => {
     if (ids.length === 0) {
-      setItems([null, null]);
+      setItems(Array(MAX_COMPARE).fill(null));
       setLoading(false);
       return;
     }
