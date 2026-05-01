@@ -67,17 +67,17 @@ Used in frontend URLs: `/components/amd-ryzen-7-7700x`.
 
 ## Scraper registry
 
-`backend/scraper/session.ts` maintains a `SCRAPER_REGISTRY` array mapping scraper instances to their retailer database IDs:
+`backend/scraper/session.ts` maintains a `SCRAPER_REGISTRY` array mapping scraper run functions to their retailer database IDs:
 
 ```typescript
-const SCRAPER_REGISTRY = [
-  { id: 10, name: 'UltraPC',      instance: () => new UltraPcScraper(),   method: 'scrapeAllCategories' },
-  { id: 11, name: 'NextLevel PC', instance: () => new NextLevelScraper(), method: 'scrapeAllCategories' },
-  { id: 13, name: 'SetupGame',    instance: () => new SetupGameScraper(), method: 'scrapeAllCategories' },
+const SCRAPER_REGISTRY: { id: number; name: string; run: () => Promise<ScrapedPrice[]> }[] = [
+  { id: 10, name: 'UltraPC',      run: () => new UltraPcScraper().scrapeAllCategories()   },
+  { id: 11, name: 'NextLevel PC', run: () => new NextLevelScraper().scrapeAllCategories() },
+  { id: 13, name: 'SetupGame',    run: () => new SetupGameScraper().scrapeAllCategories() },
 ];
 ```
 
-The IDs must match the actual `retailers.id` values in the database. When adding a new retailer, add its scraper here with the correct database ID.
+Each entry has a typed `run` function that returns a `Promise<ScrapedPrice[]>`. The IDs must match the actual `retailers.id` values in the database. When adding a new retailer, add its scraper here with the correct database ID.
 
 ---
 

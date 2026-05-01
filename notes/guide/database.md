@@ -12,7 +12,7 @@ This guide explains the database design decisions and how to work with the schem
 
 Run all migrations:
 ```powershell
-wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun src/db/migrate.ts"
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/apps/backend && ~/.bun/bin/bun src/db/migrate.ts"
 ```
 
 ---

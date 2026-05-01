@@ -119,6 +119,28 @@ All critical and high-priority issues from the improvement report resolved:
 - Added 38 new tests: `slugService` (20), `retailerService` (9), `presetService` (9), compatibility Zod validation (5)
 - Fixed flaky rate limiter timing test (1100ms → 1500ms buffer)
 
+### Phase 14 — Codebase Audit Round 7 (May 2026)
+
+- Injectable clock in `rateLimiter.ts` (`setNow`/`resetRateLimiter`) — eliminates timing-sensitive test flakiness; rewrote test to use fake time
+- `presets.ts` now uses `parseId()` — consistent with all other routes
+- Removed unnecessary `setSql`/`resetSql` re-exports from `componentService.ts` and `presetService.ts`; all test imports updated to use `db/index.ts` directly
+- `dashboard.ts` auth middleware moved to `router.use('/*', ...)` — consistent with all other admin routers
+- `marketTrends.ts` NaN guard: non-numeric `?days=` or `?limit=` params now fall back to defaults instead of passing `NaN` to SQL
+- Bulk import now coerces `supported_motherboards` from pipe-separated CSV strings (same as `supported_ram_types`)
+- Pinned `zod`, `undici`, `papaparse` to exact versions in `package.json`
+- `notes/reference/database.md` intro corrected: "12 tables" → "13 tables"
+- `notes/reference/api.md` bulk import response shape corrected: added `total_rows`, `errors` is now array of objects
+
+### Phase 15 — Codebase Audit Round 8 (May 2026)
+
+- Fixed 4 wrong return types in `admin/src/api.ts`: `getAdminLogs`, `getUnmatchedListings`, `runAllScrapers`, `runScraper` — all now match actual backend response shapes; removed unused `PaginatedResponse<T>` generic
+- Removed defensive workarounds in `Scrapers.tsx` and `Unmatched.tsx` that masked the type mismatches
+- Removed redundant `setSql`/`resetSql` re-exports from `adminService.ts`, `priceHistoryService.ts`, `retailerService.ts`, `slugService.ts`; updated all 6 affected test files to import from `db/index.ts` directly
+- Removed duplicate UltraPC DDR4 category URL (`37-memoire-vive-ddr4`) — kept only parent `35-memoire-vive-pc`; eliminates redundant HTTP requests and double-scraping of DDR4 products
+- Fixed footer retailer links in `frontend/src/App.tsx` — changed non-clickable `<span>` elements to real `<a>` tags pointing to retailer websites
+- Deleted empty `packages/` directory (leftover from unused monorepo setup)
+- Deleted raw AI chat log files from `.kiro/specs/gemini/`
+
 ---
 
 ## What's left (optional)

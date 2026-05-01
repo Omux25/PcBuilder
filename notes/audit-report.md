@@ -127,10 +127,18 @@ All critical and high-priority issues from both audit rounds are resolved. The b
 - `backend/src/utils/__tests__/rateLimiter.test.ts` — fixed flaky timing test (1100ms → 1500ms buffer for 1s window expiry)
 - **483 tests passing across 34 files**
 
-**Round 6 fixes (May 2026 — this session):**
-- `backend/src/utils/componentMatcher.ts` — motherboard DNA now extracts model suffix tokens (Z790 D vs Z790 S now distinguishable); case/cooling DNA keeps color tokens (black/white) as differentiators; cooling removes synthetic "air" token that caused all air cooler matches to fail; PSU guard improved to not reject model-embedded wattage PSUs like "Seasonic A650BN"
-- `frontend/src/context/CompareContext.tsx` — exported `MAX_COMPARE` as single source of truth; removed wrong `// Limit to 3` comment
-- `frontend/src/pages/Compare.tsx` — imports `MAX_COMPARE` from context (no more duplicate); initial state uses `Array(MAX_COMPARE).fill(null)`; all `colSpan` calculations corrected
-- `frontend/src/pages/ComponentDetail.tsx` — compare button now uses `CompareContext` (adds to tray + shows active state) instead of a plain link that bypassed the tray
-- `frontend/src/pages/CategoryBrowse.tsx` — `enrichWithPrices` replaced raw `fetch()` GET (wrong HTTP method, ignored `VITE_API_BASE_URL`, silently failed) with proper `smartSearch()` POST via `api.ts` — prices on browse page now actually load
-- **548 tests passing across 39 files**
+**Round 8 fixes (May 2026 — this session):**
+- `admin/src/api.ts` — fixed 4 wrong return types:
+  - `getAdminLogs` now returns `LogsResponse` (`{ logs: LogEntry[], count: number }`) instead of `PaginatedResponse<LogEntry>`
+  - `getUnmatchedListings` now returns `UnmatchedListingsResponse` (`{ listings: UnmatchedListing[] }`) instead of `PaginatedResponse<UnmatchedListing>`
+  - `runAllScrapers` now returns `{ message: string; status: string }` (removed non-existent `job_ids`, `retailers_count`)
+  - `runScraper` now returns `{ status: string; retailer_id: number }` (removed non-existent `job_id`)
+  - `PaginatedResponse<T>` generic removed (was unused after the above fixes)
+- `admin/src/pages/Scrapers.tsx` — removed defensive `data.logs ?? data.data ?? []` workaround (type is now correct)
+- `admin/src/pages/Unmatched.tsx` — removed defensive `data.listings ?? data.data ?? []` workaround (type is now correct)
+- `backend/src/services/adminService.ts`, `priceHistoryService.ts`, `retailerService.ts`, `slugService.ts` — removed redundant `setSql`/`resetSql` re-exports (canonical source is `db/index.ts`); all 6 affected test files updated to import from `db/index.js` directly
+- `backend/scraper/scrapers/ultrapcScraper.ts` — removed duplicate DDR4 category URL (`37-memoire-vive-ddr4`); kept only the parent `35-memoire-vive-pc` which covers all RAM; added explanatory comment
+- `frontend/src/App.tsx` — footer retailer links changed from non-clickable `<span>` to real `<a>` tags pointing to the actual retailer websites
+- `packages/` — deleted empty directory (leftover from unused monorepo setup)
+- `.kiro/specs/gemini/` — deleted raw AI chat log files (`gemini chats.txt`, `gemini scrap.txt`) that didn't belong in the specs directory
+- **548 tests passing across 39 files. 0 failures.**

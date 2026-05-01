@@ -9,7 +9,7 @@ This guide explains the backend architecture — how the pieces fit together.
 ## Directory structure
 
 ```
-backend/
+apps/backend/
 ├── src/
 │   ├── app.ts              — Hono app: mounts all routers, global error handler
 │   ├── server.ts           — Entry point: starts Bun.serve()
@@ -100,7 +100,7 @@ HTTP request
 
 ## Dependency injection pattern
 
-All database access goes through `getSql()` from `backend/src/db/index.ts`. This allows tests to inject a mock SQL function:
+All database access goes through `getSql()` from `apps/backend/src/db/index.ts`. This allows tests to inject a mock SQL function:
 
 ```typescript
 import { setSql, resetSql } from '../db/index.js';
@@ -115,7 +115,7 @@ Never import `sql` directly from `bun` in route handlers or services — always 
 
 ## Error handling
 
-All errors use `AppError` from `backend/src/utils/errors.ts`:
+All errors use `AppError` from `apps/backend/src/utils/errors.ts`:
 
 ```typescript
 throw new AppError('COMPONENT_NOT_FOUND', 'Component with id 42 not found', 404);
