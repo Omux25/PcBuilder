@@ -10,67 +10,74 @@ start
 
 :User opens PC Builder platform;
 
-:Display Configurator with 7 empty slots:\n• CPU\n• Motherboard\n• GPU\n• RAM\n• Storage\n• PSU\n• Case;
+:Display Configurator with 8 empty slots:\n• CPU  • Motherboard  • GPU  • RAM\n• Storage  • PSU  • Case  • Cooling;
 
 partition "Component Selection Loop" {
   repeat
-    :User clicks a component category;
-    
-    :Fetch component list\nGET /api/components?category=<cat>;
-    
-    :Display available components\nfor selected category;
-    
+    :User clicks a component category\nor uses Smart Search;
+
+    fork
+      :Browse by category\nGET /api/components?category=<cat>;
+    fork again
+      :Smart search with filters\nGET /api/components/smart-search;
+    end fork
+
+    :Display component list\n(with lowest price + stock status);
+
     :User selects a component;
-    
-    :Add component to BuildConfiguration;
-    
-    :Call compatibility validation\nPOST /api/compatibility/validate;
-    
+
+    :Update BuildConfiguration state\n(React frontend);
+
+    :POST /api/compatibility/validate\n{ cpu, motherboard, gpu, ram, storage, psu, case };
+
     if (Socket mismatch?) then (yes)
-      #pink:Display error:\n"CPU socket incompatible\nwith Motherboard";
+      #pink:Error: "CPU socket incompatible\nwith Motherboard";
     endif
-    
+
     if (RAM type mismatch?) then (yes)
-      #pink:Display error:\n"RAM type not supported\nby Motherboard";
+      #pink:Error: "RAM type not supported\nby Motherboard";
     endif
-    
-    if (GPU too long?) then (yes)
-      #pink:Display error:\n"GPU does not fit in Case";
+
+    if (GPU too long for case?) then (yes)
+      #pink:Error: "GPU does not fit in Case";
     endif
-    
+
     if (RAM frequency exceeded?) then (yes)
-      #yellow:Display warning:\n"RAM frequency exceeds\nMotherboard max";
+      #yellow:Warning: "RAM will run at\nMotherboard max frequency";
     endif
-    
+
     if (PSU underpowered?) then (yes)
-      #yellow:Display warning:\n"PSU wattage below\nrecommended";
+      #yellow:Warning: "PSU below recommended\nwattage (TDP × 1.2)";
     endif
-    
-    :Update Build Summary:\n• Show selected component\n• Show total TDP\n• Show recommended PSU wattage\n• Highlight incompatible components;
-    
-  repeat while (More components to select?) is (yes)
+
+    :Update Build Summary:\n• Selected component\n• Total TDP (Σ all TDPs)\n• Recommended PSU wattage\n• Compatibility status;
+
+  repeat while (More components to add?) is (yes)
   -> no;
 }
 
 partition "Price Comparison" {
-  :User clicks on a component\nto view price offers;
-  
-  :Fetch price offers\nGET /api/components/:id/prices;
-  
-  if (Offers available?) then (no)
-    #lightgray:Display message:\n"Component not available\nfrom any retailer";
+  :User clicks a component\nto view price offers;
+
+  :GET /api/components/:id/prices;
+
+  if (Price offers available?) then (no)
+    #lightgray:Display: "Not available\nfrom any retailer";
     stop
   else (yes)
-    :Display price offers sorted\nby ascending price:\n• Retailer name\n• Price (MAD)\n• Stock availability\n• Last updated date;
+    :Display price table sorted by price:\n• Retailer name + logo\n• Price (MAD)\n• Variant label (e.g. "Sapphire Pulse")\n• Stock availability\n• Last updated;
   endif
-  
-  :User clicks on a retailer offer;
-  
+
+  if (User wants price history?) then (yes)
+    :GET /api/components/:id/price-history;
+    :Display price chart over time;
+  endif
+
+  :User clicks a retailer offer;
+
   :Open retailer product page\nin new browser tab;
-  
-  :User lands on retailer website;
-  
-  :User completes purchase\non retailer's site;
+
+  :User completes purchase\non retailer's website;
 }
 
 stop

@@ -6,7 +6,7 @@
 
 **Team:** Salmane ELHJOUJI (backend) · Ghali KHARMOUDY (frontend)
 **School:** EMSI Orangers, Casablanca · **Deadline:** May 11, 2026
-**Status:** Complete — 324 tests passing
+**Status:** Complete — all tests passing
 
 ---
 
@@ -17,7 +17,19 @@ If you're new to the project, read in this order:
 1. [What the platform does and how it's built](features/compatibility-engine.md) — start with the core feature
 2. [How to run everything locally](reference/dev-setup.md) — get the stack running
 3. [API reference](reference/api.md) — all endpoints in one place
-4. [Database schema](reference/database.md) — all 14 tables explained
+4. [Database schema](reference/database.md) — all 13 tables explained
+
+---
+
+## Guide
+
+How-to guides for working with the codebase — architecture decisions, key concepts, and the database schema.
+
+| File | What it covers |
+|---|---|
+| [guide/architecture.md](guide/architecture.md) | Directory structure, API routes table, request lifecycle, DI pattern |
+| [guide/concepts.md](guide/concepts.md) | Compatibility rules, DNA matching, variant model, scraper registry |
+| [guide/database.md](guide/database.md) | Schema overview, category/column table, design decisions |
 
 ---
 
@@ -27,7 +39,7 @@ How each major feature works — the what, why, and how.
 
 | File | What it covers |
 |---|---|
-| [features/compatibility-engine.md](features/compatibility-engine.md) | The 6 compatibility rules, how errors vs warnings work, TDP calculation |
+| [features/compatibility-engine.md](features/compatibility-engine.md) | The 8 compatibility rules, how errors vs warnings work, TDP calculation |
 | [features/price-comparison.md](features/price-comparison.md) | Price offers, variant model, price history, how the scraper feeds the UI |
 | [features/scraping-system.md](features/scraping-system.md) | How scrapers work, the DNA matcher, aggregator, scheduler |
 | [features/authentication.md](features/authentication.md) | JWT access tokens, refresh tokens, rate limiting, bcrypt |
@@ -43,15 +55,26 @@ Precise technical reference — look things up here.
 | File | What it covers |
 |---|---|
 | [reference/api.md](reference/api.md) | Every API route — method, URL, params, response shape |
-| [reference/database.md](reference/database.md) | All 14 tables, columns, constraints, indexes |
+| [reference/database.md](reference/database.md) | All 13 tables, columns, constraints, indexes |
 | [reference/dev-setup.md](reference/dev-setup.md) | Prerequisites, migrations, running the stack, running tests |
 | [reference/stack.md](reference/stack.md) | Every technology choice and why it was made |
 
 ---
 
+## Task Explainers
+
+Per-task explainers added after each completed implementation task.
+
+| File | What it covers |
+|---|---|
+| [task-explainers/README.md](task-explainers/README.md) | Index of all explainers |
+| [task-explainers/task-cleanup-codebase-audit.md](task-explainers/task-cleanup-codebase-audit.md) | Codebase cleanup — 13 bugs fixed |
+
+---
+
 ## Diagrams
 
-PlantUML source files — committed to Git. Rendered PNGs are in `diagrams/rendered/`.
+PlantUML source files — committed to Git. Rendered PNGs are in `diagrams/rendered/` (gitignored).
 
 | File | Type | What it shows |
 |---|---|---|
@@ -67,6 +90,12 @@ To regenerate PNGs:
 ```bash
 java -DPLANTUML_LIMIT_SIZE=8192 -jar plantuml.jar -tpng notes/diagrams/*.puml -o rendered
 ```
+
+---
+
+## Glossary
+
+[glossary.md](glossary.md) — Key terms and definitions used throughout the codebase.
 
 ---
 

@@ -91,30 +91,33 @@ For listings that still couldn't be matched, extracts structured specs from the 
 - **RAM** — DDR type, frequency, capacity extracted from name
 - **Storage** — capacity and interface type extracted from name
 - **Motherboard** — socket and RAM type inferred from chipset
-
-Case, cooling, and PSU stay for admin review — too many variants to reliably extract specs.
+- **PSU** — wattage extracted from name (requires explicit wattage + efficiency keyword)
+- **Cooling** — AIO size extracted from name; air coolers matched by brand/model keywords
+- **Case** — form factor inferred from name (ATX/mATX/ITX)
 
 ### Step 3 — autoMap() pass 2
 Runs the DNA matcher again to link listings to the newly created entries.
 
 ### Quality checks
-Run `bun scripts/verify_catalog_builder.ts` after any catalog builder run to check for missing required fields, category mismatches, and duplicates.
+Run `bun scripts/tools/db_health_check.ts` for a full database integrity check.
 
-Run `bun scripts/db_health_check.ts` for a full database integrity check.
+---
 
-### Step 1 — UltraPC stock check
+## How the aggregator processes scraped prices
+
+### Aggregator step 1 — UltraPC stock check
 
 For UltraPC only: before processing, the aggregator checks real-time stock status via the PrestaShop AJAX endpoint for all mapped products. This is done in bulk to avoid checking all 2164 scraped products.
 
-### Step 2 — Resolve mappings
+### Aggregator step 2 — Resolve mappings
 
 For each scraped product URL, the aggregator queries `scraper_mappings` to find the corresponding `component_id`. If no mapping exists, the product goes into `unmatched_listings`.
 
-### Step 3 — Group by (component, retailer)
+### Aggregator step 3 — Group by (component, retailer)
 
 Multiple scraped products can map to the same component at the same retailer (different AIB variants of the same GPU, for example). The aggregator groups them and picks the best one: cheapest in-stock offer, or cheapest out-of-stock if all variants are out of stock.
 
-### Step 4 — Extract variant
+### Aggregator step 4 — Extract variant
 
 For each product, `variantExtractor.ts` extracts a human-readable label and structured details from the scraped product name:
 
@@ -126,15 +129,15 @@ For each product, `variantExtractor.ts` extracts a human-readable label and stru
 | Storage | "Gen4" | `{ pcie_gen: "Gen4", form_factor: "M.2 2280" }` |
 | PSU | "Fully modular ATX 3.0" | `{ modularity: "Fully modular", atx_version: "ATX 3.0" }` |
 
-### Step 5 — UPSERT price
+### Aggregator step 5 — UPSERT price
 
 The aggregator UPSERTs into the `prices` table using `(component_id, retailer_id, product_url)` as the conflict key. If the row exists, it updates price, stock, variant label, and last_updated.
 
-### Step 6 — Record price history
+### Aggregator step 6 — Record price history
 
 If the price changed since the last scrape, a new row is inserted into `price_history`. This table only grows — it never updates. It's the source of data for the price history chart.
 
-### Step 7 — Handle unmatched
+### Aggregator step 7 — Handle unmatched
 
 Products with no mapping in `scraper_mappings` are inserted into `unmatched_listings` (skipped if already there). Admins can review these in the admin panel and either link them to a component or dismiss them.
 
@@ -208,20 +211,18 @@ Inactive retailers (`is_active = false`) are skipped entirely.
 
 ## Operational scripts
 
-Several scripts in `backend/scripts/` support the scraping workflow:
+Several scripts in `backend/scripts/tools/` support the scraping workflow:
 
 | Script | What it does |
 |---|---|
+| `db_health_check.ts` | Full database integrity check |
 | `run_all_scrapes.ts` | Manually trigger all scrapers and aggregate results |
-| `remap_all.ts` | Re-run DNA matching across all unmatched listings |
-| `shadow_run_matcher.ts` | Dry-run the matcher → outputs CSV for manual review |
-| `evaluate_matcher.ts` | Precision/recall evaluation against the golden dataset |
-| `auto_map_ultrapc.ts` | Auto-map UltraPC products using DNA matcher |
-| `auto_map_nextlevel.ts` | Auto-map NextLevel products |
-| `auto_map_setupgame.ts` | Auto-map SetupGame products |
-| `time_scrapers.ts` | Benchmark each scraper's performance |
+| `run_catalog_builder.ts` | Run the catalog builder on unmatched listings |
+| `backfill_slugs.ts` | Backfill slugs for components missing them |
+| `check_mbs.ts` | Check motherboard data integrity |
+| `import_benchmarks.ts` | Import benchmark scores from JSON |
 
-The golden dataset (`backend/tests/fixtures/golden_dataset.json`) contains 50 manually verified (product name → component) pairs used to measure matcher accuracy.
+The golden dataset (`backend/src/__tests__/fixtures/golden_dataset.json`) contains 50 manually verified (product name → component) pairs used to measure matcher accuracy.
 
 ---
 

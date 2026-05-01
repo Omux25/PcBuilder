@@ -1,6 +1,6 @@
 # Database Reference
 
-All 14 tables in the PostgreSQL database. Migration files are in `backend/src/db/migrations/`.
+All 13 application tables in the PostgreSQL database, plus the internal `_migrations` tracking table. Migration files are in `backend/src/db/migrations/` (001–018).
 
 ---
 
@@ -8,11 +8,13 @@ All 14 tables in the PostgreSQL database. Migration files are in `backend/src/db
 
 Each migration is a numbered SQL file. Run them in order on a fresh database to produce the exact schema. All scripts use `IF NOT EXISTS` — safe to run multiple times.
 
+The migration runner (`backend/src/db/migrate.ts`) also creates a `_migrations` table to track which files have already been applied, making it safe to re-run without re-applying completed migrations.
+
 ```bash
 # Run all migrations (WSL2)
 psql -U pc_builder_user -d pc_builder -f backend/src/db/migrations/001_create_components.sql
 psql -U pc_builder_user -d pc_builder -f backend/src/db/migrations/002_create_retailers.sql
-# ... continue through 014
+# ... continue through 018
 ```
 
 ---
@@ -36,7 +38,7 @@ The central table. Stores all 8 component categories in a single polymorphic tab
 | `created_at` | TIMESTAMPTZ | Auto-set on insert |
 | `updated_at` | TIMESTAMPTZ | Auto-updated on change |
 
-Compatibility fields (NULL when not applicable): `socket`, `supported_ram_types`, `max_ram_frequency`, `ram_type`, `frequency_mhz`, `length_mm`, `max_gpu_length_mm`, `wattage`, `tdp`.
+Compatibility fields (NULL when not applicable): `socket`, `supported_ram_types`, `max_ram_frequency`, `ram_type`, `frequency_mhz`, `length_mm`, `max_gpu_length_mm`, `wattage`, `tdp`, `benchmark_score`.
 
 Indexes: `category`, `slug`, `brand`, `is_active`
 
@@ -56,10 +58,10 @@ Moroccan e-commerce sites that sell PC components.
 | `is_active` | BOOLEAN DEFAULT true | Inactive = skipped by scheduler |
 | `scraping_interval_hours` | INTEGER DEFAULT 24 | How often to scrape |
 | `last_scrape_at` | TIMESTAMPTZ | When the last scrape ran |
-| `last_scrape_status` | VARCHAR(20) | "success" or "error" |
+| `last_scrape_status` | VARCHAR(20) | `SUCCESS`, `PARTIAL`, or `FAILED` |
 | `notes` | TEXT | Admin notes |
 
-Active retailers: UltraPC (id=10), NextLevel (id=11), SetupGame (id=12)
+Active retailers: UltraPC (id=10), NextLevel (id=11), SetupGame (id=13)
 
 ---
 
@@ -97,7 +99,7 @@ Structured log entries from the scraping system.
 | `message` | TEXT | Log message |
 | `created_at` | TIMESTAMPTZ | |
 
-Index: `created_at DESC`
+Indexes: `created_at`, `level`, `site`
 
 ---
 

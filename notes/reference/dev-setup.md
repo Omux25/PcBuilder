@@ -61,6 +61,12 @@ Bun loads `.env` automatically — no extra steps needed.
 ### 3. Run all migrations
 
 ```powershell
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun src/db/migrate.ts"
+```
+
+Or run them manually in order (001–018) if you prefer:
+
+```powershell
 $base = "/mnt/c/Headquarters/Projects/PcBuilder/backend/src/db/migrations"
 $migrations = @(
   "001_create_components.sql", "002_create_retailers.sql", "003_create_prices.sql",
@@ -68,7 +74,9 @@ $migrations = @(
   "007_expand_retailers.sql", "008_create_scraper_mappings.sql", "009_create_price_history.sql",
   "010_create_preset_builds.sql", "011_create_unmatched_listings.sql",
   "012_create_admin_activity_log.sql", "013_create_refresh_tokens.sql",
-  "014_prices_variant_model.sql"
+  "014_prices_variant_model.sql", "015_add_benchmark_score.sql",
+  "016_fix_ram_types_encoding.sql", "017_add_trigram_index.sql",
+  "018_hash_refresh_tokens.sql"
 )
 foreach ($m in $migrations) {
   wsl -d Ubuntu -- bash -c "echo '2525' | sudo -S -u postgres psql -d pc_builder -f $base/$m"
@@ -79,10 +87,12 @@ foreach ($m in $migrations) {
 
 ```powershell
 $db = "echo '2525' | sudo -S -u postgres psql -d pc_builder"
-# Core seed (retailers + admin account)
-wsl -d Ubuntu -- bash -c "$db -f /mnt/c/Headquarters/Projects/PcBuilder/backend/seed_retailers.sql"
-# Component catalog (305+ components)
-wsl -d Ubuntu -- bash -c "$db -f /mnt/c/Headquarters/Projects/PcBuilder/backend/seed_catalog_v2.sql"
+# Retailers + admin account
+wsl -d Ubuntu -- bash -c "$db -f /mnt/c/Headquarters/Projects/PcBuilder/backend/seed/01_retailers.sql"
+# Component catalog
+wsl -d Ubuntu -- bash -c "$db -f /mnt/c/Headquarters/Projects/PcBuilder/backend/seed/02_catalog.sql"
+# Preset builds
+wsl -d Ubuntu -- bash -c "$db -f /mnt/c/Headquarters/Projects/PcBuilder/backend/seed/03_presets.sql"
 ```
 
 Admin credentials: `admin` / `admin123`
@@ -123,7 +133,7 @@ wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/admin && ~/.
 wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun test 2>&1"
 ```
 
-Expected: **324 pass, 0 fail** across 26 files.
+Expected: **all tests pass** across 31 files.
 
 Test categories:
 - Unit tests — compatibility engine, middleware, services, routes, DNA matcher
@@ -134,26 +144,23 @@ Test categories:
 
 ## Running scripts
 
-One-off scripts in `backend/scripts/` are run directly with Bun:
+One-off scripts in `backend/scripts/tools/` are run directly with Bun:
 
 ```powershell
 # Run all scrapers manually
-wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun scripts/run_all_scrapes.ts"
-
-# Re-map unmatched listings using DNA matcher
-wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun scripts/remap_all.ts"
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun scripts/tools/run_all_scrapes.ts"
 
 # Run catalog builder on pending unmatched listings
-wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun scripts/run_catalog_builder.ts"
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun scripts/tools/run_catalog_builder.ts"
 
 # Full database health check
-wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun scripts/db_health_check.ts"
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun scripts/tools/db_health_check.ts"
 
-# Coverage stats
-wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun scripts/db_stats.ts"
+# Backfill slugs for components missing them
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun scripts/tools/backfill_slugs.ts"
 
-# Evaluate matcher precision/recall
-wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun scripts/evaluate_matcher.ts"
+# Import benchmark scores from JSON
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun scripts/tools/import_benchmarks.ts"
 ```
 
 ---

@@ -14,33 +14,44 @@ participant "Retailer\nWebsite" as retailer
 
 == View Price Offers ==
 
-user -> ui : Click on a component\nto compare prices
+user -> ui : Click component\nto compare prices
 ui -> api : GET /api/components/:id/prices
 api -> service : getPricesByComponentId(id)
 
-service -> db : SELECT p.price, p.in_stock,\np.product_url, p.last_updated,\nr.name AS retailer_name\nFROM prices p\nJOIN retailers r ON r.id = p.retailer_id\nWHERE p.component_id = $1\nORDER BY p.price ASC
+service -> db : SELECT r.id, r.name, p.price, p.in_stock,\n  p.product_url, p.variant_label,\n  p.variant_details, p.last_updated\nFROM prices p\nJOIN retailers r ON r.id = p.retailer_id\nWHERE p.component_id = $1\nORDER BY p.in_stock DESC, p.price ASC
 
 db --> service : PriceOffer[]
 service --> api : PriceOffer[]
 
 alt No offers available
-  api --> ui : HTTP 200 []\n(empty array)
-  ui --> user : "Component not available\nfrom any referenced retailer"
+  api --> ui : HTTP 200 []
+  ui --> user : "Not available from any retailer"
 else Offers available
-  api --> ui : HTTP 200 PriceOffer[]\n(sorted by ascending price)
-  ui --> user : Display price table:\n• Retailer name\n• Price (MAD)\n• Stock availability\n• Last updated date
+  api --> ui : HTTP 200 PriceOffer[]
+  ui --> user : Display price table:\n• Retailer name\n• Price (MAD)\n• Variant label (e.g. "Sapphire Pulse", "BOX")\n• Stock status\n• Last updated
 end
+
+== View Price History (optional) ==
+
+user -> ui : Click "Price History"
+ui -> api : GET /api/components/:id/price-history
+api -> db : SELECT price, in_stock, recorded_at\nFROM price_history\nWHERE component_id = $1\nORDER BY recorded_at DESC
+db --> api : PriceHistory[]
+api --> ui : HTTP 200 PriceHistory[]
+ui --> user : Display price chart over time
 
 == Retailer Redirect ==
 
-user -> ui : Click on a retailer offer
+user -> ui : Click a retailer offer
 ui -> ui : window.open(product_url, '_blank')
+
 note right of ui
   The platform opens the retailer's
   product page in a new browser tab.
   No payment or transaction happens
-  on our platform.
+  on this platform.
 end note
+
 ui --> retailer : Browser navigates to\nretailer product page
 retailer --> user : Retailer website\n(purchase handled externally)
 

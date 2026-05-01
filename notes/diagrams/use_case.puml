@@ -14,73 +14,99 @@ actor "Scraping Bot\n(Bun.cron)" as scraper
 rectangle "PC Builder Platform" {
 
   package "Build Configuration" {
-    usecase "Select Component\nby Category" as UC1
-    usecase "View Compatible\nComponents" as UC2
-    usecase "Evaluate\nCompatibility" as UC3
-    usecase "Generate\nCompatibility Warning" as UC3W
-    usecase "View Build Summary\n(TDP + PSU)" as UC4
-    usecase "Reset Build" as UC5
+    usecase "Browse Components\nby Category" as UC1
+    usecase "Search Components\n(Smart Search)" as UC2
+    usecase "Select Component" as UC3
+    usecase "Validate\nCompatibility" as UC4
+    usecase "Generate\nCompatibility Warning" as UC4W
+    usecase "View Build Summary\n(TDP + PSU)" as UC5
+    usecase "Reset Build" as UC6
   }
 
   package "Price Comparison" {
-    usecase "View Price Offers\nby Retailer" as UC6
-    usecase "Compare Prices\n(sorted ascending)" as UC7
-    usecase "Redirect to\nRetailer Website" as UC8
+    usecase "View Price Offers\nby Retailer" as UC7
+    usecase "View Price History\n(Chart)" as UC8
+    usecase "Compare Variants\n(AIB, Packaging)" as UC9
+    usecase "Redirect to\nRetailer Website" as UC10
   }
 
-  package "Compatibility Rules" {
-    usecase "Check CPU /\nMotherboard Socket" as UC9
-    usecase "Check RAM Type\n& Frequency" as UC10
-    usecase "Check GPU /\nCase Clearance" as UC11
-    usecase "Calculate TDP &\nRecommend PSU" as UC12
+  package "Preset Builds" {
+    usecase "Browse Preset\nBuilds" as UC11
+    usecase "Load Preset\ninto Configurator" as UC12
   }
 
   package "Administration" {
     usecase "Login (JWT)" as UC13
-    usecase "Add / Edit /\nDelete Component" as UC14
-    usecase "View Scraper\nLogs" as UC15
+    usecase "View Dashboard\nStats" as UC14
+    usecase "Add / Edit /\nDelete Component" as UC15
+    usecase "Bulk Import\nComponents (CSV)" as UC16
+    usecase "Manage Retailers" as UC17
+    usecase "Trigger Manual\nScrape" as UC18
+    usecase "Link Unmatched\nListings" as UC19
+    usecase "Manage Preset\nBuilds" as UC20
+    usecase "View Scraper\nLogs" as UC21
   }
 
   package "Data Collection" {
-    usecase "Update Component\nPrices & Inventory" as UC16
-    usecase "Normalize &\nAggregate Data" as UC17
-    usecase "Log Scraping\nSession" as UC18
+    usecase "Scrape Retailer\nWebsites" as UC22
+    usecase "Resolve Mappings\n(DNA Matcher)" as UC23
+    usecase "Update Prices\n& Variants" as UC24
+    usecase "Record Price\nHistory" as UC25
+    usecase "Auto-Map\nUnmatched Listings" as UC26
+    usecase "Auto-Create\nCatalog Entries" as UC27
+    usecase "Log Scraping\nSession" as UC28
   }
 }
 
 ' User associations
 user --> UC1
+user --> UC2
 user --> UC3
 user --> UC4
 user --> UC5
 user --> UC6
 user --> UC7
 user --> UC8
+user --> UC9
+user --> UC11
 
 ' Include: always happens
-UC1 .> UC2 : <<include>>
-UC3 .> UC9 : <<include>>
-UC3 .> UC10 : <<include>>
-UC3 .> UC11 : <<include>>
-UC3 .> UC12 : <<include>>
-UC6 .> UC7 : <<include>>
+UC3 .> UC4 : <<include>>
+UC4 .> UC5 : <<include>>
+UC7 .> UC9 : <<include>>
+UC12 .> UC4 : <<include>>
 
-' Extend: only when condition is met (warning/error case)
-UC3W .> UC3 : <<extend>>
-
-' Redirect only when user chooses an offer
-UC8 .> UC7 : <<extend>>
+' Extend: only when condition is met
+UC4W .> UC4 : <<extend>>
+UC10 .> UC7 : <<extend>>
 
 ' Admin associations
 admin --> UC13
 admin --> UC14
 admin --> UC15
+admin --> UC16
+admin --> UC17
+admin --> UC18
+admin --> UC19
+admin --> UC20
+admin --> UC21
+
 UC14 .> UC13 : <<include>>
 UC15 .> UC13 : <<include>>
+UC16 .> UC13 : <<include>>
+UC17 .> UC13 : <<include>>
+UC18 .> UC13 : <<include>>
+UC19 .> UC13 : <<include>>
+UC20 .> UC13 : <<include>>
+UC21 .> UC13 : <<include>>
 
 ' Scraping Bot associations
-scraper --> UC16
-UC16 .> UC17 : <<include>>
-UC17 .> UC18 : <<include>>
+scraper --> UC22
+UC22 .> UC23 : <<include>>
+UC23 .> UC24 : <<include>>
+UC24 .> UC25 : <<include>>
+UC22 .> UC26 : <<include>>
+UC26 .> UC27 : <<extend>>
+UC22 .> UC28 : <<include>>
 
 @enduml

@@ -1,5 +1,6 @@
 # Generated/rendered artifacts (binary/regeneratable — not for Git)
 notes/diagrams/rendered/
+notes/diagrams/rendered2/
 notes/spec/rendered/
 
 # docs/ folder — fully replaced by notes/
@@ -37,3 +38,6 @@ npm-debug.log*
 
 # PlantUML jar (build tool binary — not for Git)
 plantuml.jar
+
+.gemini/
+gha-creds-*.json

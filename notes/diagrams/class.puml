@@ -2,11 +2,9 @@
 !theme plain
 skinparam classAttributeIconSize 0
 skinparam dpi 150
-skinparam pageMargin 10
-skinparam nodesep 60
-skinparam ranksep 80
-skinparam wrapWidth 200
-skinparam maxMessageSize 200
+skinparam nodesep 50
+skinparam ranksep 70
+skinparam wrapWidth 220
 
 title PC Builder Platform — Class Diagram
 
@@ -14,22 +12,29 @@ title PC Builder Platform — Class Diagram
 
 abstract class Component {
   + id: number
+  + slug: string
   + name: string
   + brand: string
   + category: ComponentCategory
+  + description: string
+  + specs: JSONB
+  + image_url: string
+  + release_year: number
+  + is_active: boolean
   + tdp: number
   + created_at: Date
   + updated_at: Date
 }
 
 enum ComponentCategory {
-  CPU
-  MOTHERBOARD
-  GPU
-  RAM
-  STORAGE
-  PSU
-  CASE
+  cpu
+  motherboard
+  gpu
+  ram
+  storage
+  psu
+  case
+  cooling
 }
 
 class CPU {
@@ -50,7 +55,7 @@ class GPU {
 }
 
 class RAM {
-  + ram_type: string
+  + ram_type: "DDR4" | "DDR5"
   + frequency_mhz: number
   + tdp: number
 }
@@ -67,11 +72,20 @@ class Case {
   + max_gpu_length_mm: number
 }
 
+class Cooling {
+  + tdp: number
+}
+
 class Retailer {
   + id: number
   + name: string
   + base_url: string
-  + active: boolean
+  + logo_url: string
+  + country: string
+  + is_active: boolean
+  + scraping_interval_hours: number
+  + last_scrape_at: Date
+  + last_scrape_status: "SUCCESS" | "PARTIAL" | "FAILED"
 }
 
 class Price {
@@ -81,21 +95,47 @@ class Price {
   + price: number
   + in_stock: boolean
   + product_url: string
+  + variant_label: string
+  + variant_details: JSONB
   + last_updated: Date
 }
 
-class ScraperLog {
+class PriceHistory {
   + id: number
-  + level: LogLevel
-  + site: string
-  + message: string
+  + component_id: number
+  + retailer_id: number
+  + price: number
+  + in_stock: boolean
+  + recorded_at: Date
+}
+
+class ScraperMapping {
+  + id: number
+  + component_id: number
+  + retailer_id: number
+  + product_url: string
+  + product_identifier: string
   + created_at: Date
 }
 
-enum LogLevel {
-  INFO
-  WARNING
-  ERROR
+class UnmatchedListing {
+  + id: number
+  + retailer_id: number
+  + product_url: string
+  + scraped_name: string
+  + scraped_price: number
+  + status: "pending" | "linked" | "dismissed"
+  + linked_component_id: number
+  + scraped_at: Date
+}
+
+class PresetBuild {
+  + id: number
+  + name: string
+  + description: string
+  + use_case: "gaming" | "workstation" | "office" | "budget"
+  + total_price_estimate: number
+  + is_active: boolean
 }
 
 class Admin {
@@ -105,7 +145,23 @@ class Admin {
   + created_at: Date
 }
 
-' ─── CONFIGURATION ───────────────────────────────────────────────────────────
+class RefreshToken {
+  + id: number
+  + admin_id: number
+  + token: string
+  + expires_at: Date
+  + created_at: Date
+}
+
+class ScraperLog {
+  + id: number
+  + level: "INFO" | "WARNING" | "ERROR"
+  + site: string
+  + message: string
+  + created_at: Date
+}
+
+' ─── BUILD CONFIGURATION (Frontend State) ────────────────────────────────────
 
 class BuildConfiguration {
   + cpu?: CPU
@@ -115,77 +171,99 @@ class BuildConfiguration {
   + storage?: Storage
   + psu?: PSU
   + case?: Case
-  + /totalWattage: number
-  + /totalPrice: number
+  + /totalTdp: number
+  + /recommendedPsu: number
 }
 
 note right of BuildConfiguration
-  /totalWattage and /totalPrice
+  /totalTdp and /recommendedPsu
   are derived attributes (UML "/").
-  Computed at runtime from
-  selected components.
+  Computed from selected components.
+  Managed as React state on the frontend.
 end note
 
 ' ─── SERVICES ────────────────────────────────────────────────────────────────
 
 class ComponentService {
-  - db: BunSQL
-  + getComponents(filters): Promise<Component[]>
-  + getComponentById(id): Promise<Component>
-  + getPricesByComponentId(id): Promise<PriceOffer[]>
-  + createComponent(data): Promise<Component>
-  + updateComponent(id, data): Promise<Component>
-  + deleteComponent(id): Promise<void>
+  + getComponents(filters): ComponentListResult
+  + getComponentById(id): Component
+  + getComponentBySlug(slug): Component
+  + getPricesByComponentId(id): PriceOffer[]
+  + createComponent(data): Component
+  + updateComponent(id, data): Component
+  + deactivateComponent(id): Component
+  + deleteComponent(id): void
 }
 
 class CompatibilityEngine {
   + validateCompatibility(build): CompatibilityResult
+  -- Rules --
   - checkSocketMatch(cpu, mb): void
   - checkRamType(ram, mb): void
   - checkRamFrequency(ram, mb): void
-  - checkGpuClearance(gpu, c): void
-  - calculateTotalTdp(components): number
+  - checkGpuClearance(gpu, case): void
+  - calculateTotalTdp(build): number
   - checkPsuWattage(psu, recommended): void
 }
 
 class AuthService {
-  - db: BunSQL
-  + login(username, password): Promise<string>
-  + verifyToken(token): Promise<Admin>
-  + hashPassword(password): Promise<string>
-  + comparePassword(password, hash): Promise<boolean>
+  + login(username, password): TokenPair
+  + refreshToken(token): TokenPair
+  + logout(token): void
+  + verifyAccessToken(token): AdminPayload
 }
 
 ' ─── SCRAPING ────────────────────────────────────────────────────────────────
 
 abstract class BaseScraper {
-  # retailer_id: number
-  # component_mappings: Map<string, number>
-  + {abstract} scrape(): Promise<ScrapedPrice[]>
-  # fetch(url): Promise<string>
-  # parseHtml(html): CheerioAPI
+  + siteName: string
+  + {abstract} extractPrices($: CheerioAPI): ScrapedPrice[]
+  + scrape(url): ScrapedPrice[]
+  # fetchAndParse(url): CheerioAPI
 }
 
 class Site1Scraper {
-  + scrape(): Promise<ScrapedPrice[]>
+  + scrapeListingPage(): ScrapedPrice[]
 }
 
 class Site2Scraper {
-  + scrape(): Promise<ScrapedPrice[]>
+  + scrapeAllProducts(): ScrapedPrice[]
+}
+
+class UltraPcScraper {
+  + scrapeAllCategories(): ScrapedPrice[]
+  + checkStock(prices): void
+}
+
+class NextLevelScraper {
+  + scrapeAllCategories(): ScrapedPrice[]
+}
+
+class SetupGameScraper {
+  + scrapeAllCategories(): ScrapedPrice[]
 }
 
 class Aggregator {
-  - db: BunSQL
-  + aggregate(results): Promise<void>
-  - upsertPrice(price): Promise<void>
-  - logSummary(updated, errors): Promise<void>
+  + aggregate(prices): AggregateResult
+  - resolveMapping(price): component_id
+  - upsertPrice(price, variant): void
+  - recordHistory(price): void
+  - markMissingAsOutOfStock(retailerId, scrapedUrls): void
+}
+
+class AutoMapper {
+  + autoMap(): AutoMapResult
+  - findBestMatch(name, catalog): Match
+}
+
+class CatalogBuilder {
+  + buildFromUnmatched(): BuildResult
 }
 
 class Scheduler {
-  - scrapers: BaseScraper[]
-  - aggregator: Aggregator
   + start(): void
-  - runScrapingSession(): Promise<void>
+  - runDueRetailers(): void
+  - runScrapingSession(): void
 }
 
 ' ─── DTOs ────────────────────────────────────────────────────────────────────
@@ -205,10 +283,13 @@ class CompatibilityIssue {
 }
 
 class PriceOffer {
+  + retailer_id: number
   + retailer_name: string
   + price: number
   + in_stock: boolean
   + product_url: string
+  + variant_label: string
+  + variant_details: JSONB
   + last_updated: Date
 }
 
@@ -218,12 +299,12 @@ class ScrapedPrice {
   + price: number
   + in_stock: boolean
   + product_url: string
-  + scraped_at: Date
+  + product_name: string
 }
 
 ' ─── RELATIONSHIPS ───────────────────────────────────────────────────────────
 
-' Inheritance
+' Component inheritance
 Component <|-- CPU
 Component <|-- Motherboard
 Component <|-- GPU
@@ -231,14 +312,20 @@ Component <|-- RAM
 Component <|-- Storage
 Component <|-- PSU
 Component <|-- Case
+Component <|-- Cooling
 Component -- ComponentCategory
-ScraperLog -- LogLevel
 
-' Domain
-Component "1" -- "0..*" Price
-Retailer "1" -- "0..*" Price
+' Domain associations
+Component "1" -- "0..*" Price : has prices
+Component "1" -- "0..*" PriceHistory : has history
+Component "1" -- "0..*" ScraperMapping : mapped via
+Retailer "1" -- "0..*" Price : provides
+Retailer "1" -- "0..*" ScraperMapping : has mappings
+Retailer "1" -- "0..*" UnmatchedListing : has unmatched
+Admin "1" -- "0..*" RefreshToken : has sessions
+PresetBuild "1" o-- "1..8" Component : contains
 
-' Configuration
+' Build configuration (frontend)
 BuildConfiguration o-- CPU
 BuildConfiguration o-- Motherboard
 BuildConfiguration o-- GPU
@@ -248,20 +335,31 @@ BuildConfiguration o-- PSU
 BuildConfiguration o-- Case
 
 ' Services
-ComponentService ..> Component
-ComponentService ..> PriceOffer
-CompatibilityEngine ..> BuildConfiguration
-CompatibilityEngine ..> CompatibilityResult
+ComponentService ..> Component : manages
+ComponentService ..> PriceOffer : returns
+CompatibilityEngine ..> BuildConfiguration : validates
+CompatibilityEngine ..> CompatibilityResult : produces
 CompatibilityResult o-- CompatibilityIssue
-AuthService ..> Admin
+AuthService ..> Admin : authenticates
+AuthService ..> RefreshToken : manages
 
 ' Scraping
 BaseScraper <|-- Site1Scraper
 BaseScraper <|-- Site2Scraper
-BaseScraper ..> ScrapedPrice
-Aggregator ..> ScrapedPrice
-Aggregator ..> Price
-Scheduler "1" o-- "many" BaseScraper
-Scheduler --> Aggregator
+BaseScraper <|-- UltraPcScraper
+BaseScraper <|-- NextLevelScraper
+BaseScraper <|-- SetupGameScraper
+BaseScraper ..> ScrapedPrice : produces
+Aggregator ..> ScrapedPrice : consumes
+Aggregator ..> Price : upserts
+Aggregator ..> PriceHistory : records
+Aggregator ..> UnmatchedListing : creates
+AutoMapper ..> UnmatchedListing : resolves
+AutoMapper ..> ScraperMapping : creates
+CatalogBuilder ..> UnmatchedListing : reads
+CatalogBuilder ..> Component : creates
+Scheduler --> Aggregator : calls
+Scheduler --> AutoMapper : calls
+Scheduler --> CatalogBuilder : calls
 
 @enduml
