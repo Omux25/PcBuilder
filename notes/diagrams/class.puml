@@ -1,29 +1,23 @@
-@startuml Class Diagram
+@startuml class
 !theme plain
-skinparam classAttributeIconSize 0
-skinparam dpi 150
-skinparam nodesep 50
-skinparam ranksep 70
-skinparam wrapWidth 220
+skinparam classBackgroundColor #FAFAFA
+skinparam classBorderColor #555
+skinparam arrowColor #333
+hide empty members
 
-title PC Builder Platform — Class Diagram
+title PC Builder Maroc — Domain Model
 
-' ─── DOMAIN MODEL ────────────────────────────────────────────────────────────
+' ── Core domain ──────────────────────────────────────────────────────────────
 
 abstract class Component {
-  + id: number
-  + slug: string
-  + name: string
-  + brand: string
-  + category: ComponentCategory
-  + description: string
-  + specs: JSONB
-  + image_url: string
-  + release_year: number
-  + is_active: boolean
-  + tdp: number
-  + created_at: Date
-  + updated_at: Date
+  +id: int
+  +name: string
+  +brand: string
+  +category: ComponentCategory
+  +slug: string
+  +specs: JSONB
+  +is_active: bool
+  +benchmark_score: int
 }
 
 enum ComponentCategory {
@@ -38,273 +32,48 @@ enum ComponentCategory {
 }
 
 class CPU {
-  + socket: string
-  + tdp: number
+  +socket: string
+  +tdp: int
 }
 
 class Motherboard {
-  + socket: string
-  + supported_ram_types: string[]
-  + max_ram_frequency: number
-  + tdp: number
+  +socket: string
+  +supported_ram_types: string[]
+  +max_ram_frequency: int
+  +form_factor: string
+  +tdp: int
 }
 
 class GPU {
-  + length_mm: number
-  + tdp: number
+  +length_mm: int
+  +tdp: int
 }
 
 class RAM {
-  + ram_type: "DDR4" | "DDR5"
-  + frequency_mhz: number
-  + tdp: number
+  +ram_type: string
+  +frequency_mhz: int
+  +tdp: int
 }
 
 class Storage {
-  + tdp: number
+  +tdp: int
 }
 
 class PSU {
-  + wattage: number
+  +wattage: int
 }
 
 class Case {
-  + max_gpu_length_mm: number
+  +max_gpu_length_mm: int
+  +max_cooler_height_mm: int
+  +supported_motherboards: string[]
 }
 
 class Cooling {
-  + tdp: number
+  +height_mm: int
+  +tdp: int
 }
 
-class Retailer {
-  + id: number
-  + name: string
-  + base_url: string
-  + logo_url: string
-  + country: string
-  + is_active: boolean
-  + scraping_interval_hours: number
-  + last_scrape_at: Date
-  + last_scrape_status: "SUCCESS" | "PARTIAL" | "FAILED"
-}
-
-class Price {
-  + id: number
-  + component_id: number
-  + retailer_id: number
-  + price: number
-  + in_stock: boolean
-  + product_url: string
-  + variant_label: string
-  + variant_details: JSONB
-  + last_updated: Date
-}
-
-class PriceHistory {
-  + id: number
-  + component_id: number
-  + retailer_id: number
-  + price: number
-  + in_stock: boolean
-  + recorded_at: Date
-}
-
-class ScraperMapping {
-  + id: number
-  + component_id: number
-  + retailer_id: number
-  + product_url: string
-  + product_identifier: string
-  + created_at: Date
-}
-
-class UnmatchedListing {
-  + id: number
-  + retailer_id: number
-  + product_url: string
-  + scraped_name: string
-  + scraped_price: number
-  + status: "pending" | "linked" | "dismissed"
-  + linked_component_id: number
-  + scraped_at: Date
-}
-
-class PresetBuild {
-  + id: number
-  + name: string
-  + description: string
-  + use_case: "gaming" | "workstation" | "office" | "budget"
-  + total_price_estimate: number
-  + is_active: boolean
-}
-
-class Admin {
-  + id: number
-  + username: string
-  + password_hash: string
-  + created_at: Date
-}
-
-class RefreshToken {
-  + id: number
-  + admin_id: number
-  + token: string
-  + expires_at: Date
-  + created_at: Date
-}
-
-class ScraperLog {
-  + id: number
-  + level: "INFO" | "WARNING" | "ERROR"
-  + site: string
-  + message: string
-  + created_at: Date
-}
-
-' ─── BUILD CONFIGURATION (Frontend State) ────────────────────────────────────
-
-class BuildConfiguration {
-  + cpu?: CPU
-  + motherboard?: Motherboard
-  + gpu?: GPU
-  + ram?: RAM
-  + storage?: Storage
-  + psu?: PSU
-  + case?: Case
-  + /totalTdp: number
-  + /recommendedPsu: number
-}
-
-note right of BuildConfiguration
-  /totalTdp and /recommendedPsu
-  are derived attributes (UML "/").
-  Computed from selected components.
-  Managed as React state on the frontend.
-end note
-
-' ─── SERVICES ────────────────────────────────────────────────────────────────
-
-class ComponentService {
-  + getComponents(filters): ComponentListResult
-  + getComponentById(id): Component
-  + getComponentBySlug(slug): Component
-  + getPricesByComponentId(id): PriceOffer[]
-  + createComponent(data): Component
-  + updateComponent(id, data): Component
-  + deactivateComponent(id): Component
-  + deleteComponent(id): void
-}
-
-class CompatibilityEngine {
-  + validateCompatibility(build): CompatibilityResult
-  -- Rules --
-  - checkSocketMatch(cpu, mb): void
-  - checkRamType(ram, mb): void
-  - checkRamFrequency(ram, mb): void
-  - checkGpuClearance(gpu, case): void
-  - calculateTotalTdp(build): number
-  - checkPsuWattage(psu, recommended): void
-}
-
-class AuthService {
-  + login(username, password): TokenPair
-  + refreshToken(token): TokenPair
-  + logout(token): void
-  + verifyAccessToken(token): AdminPayload
-}
-
-' ─── SCRAPING ────────────────────────────────────────────────────────────────
-
-abstract class BaseScraper {
-  + siteName: string
-  + {abstract} extractPrices($: CheerioAPI): ScrapedPrice[]
-  + scrape(url): ScrapedPrice[]
-  # fetchAndParse(url): CheerioAPI
-}
-
-class Site1Scraper {
-  + scrapeListingPage(): ScrapedPrice[]
-}
-
-class Site2Scraper {
-  + scrapeAllProducts(): ScrapedPrice[]
-}
-
-class UltraPcScraper {
-  + scrapeAllCategories(): ScrapedPrice[]
-  + checkStock(prices): void
-}
-
-class NextLevelScraper {
-  + scrapeAllCategories(): ScrapedPrice[]
-}
-
-class SetupGameScraper {
-  + scrapeAllCategories(): ScrapedPrice[]
-}
-
-class Aggregator {
-  + aggregate(prices): AggregateResult
-  - resolveMapping(price): component_id
-  - upsertPrice(price, variant): void
-  - recordHistory(price): void
-  - markMissingAsOutOfStock(retailerId, scrapedUrls): void
-}
-
-class AutoMapper {
-  + autoMap(): AutoMapResult
-  - findBestMatch(name, catalog): Match
-}
-
-class CatalogBuilder {
-  + buildFromUnmatched(): BuildResult
-}
-
-class Scheduler {
-  + start(): void
-  - runDueRetailers(): void
-  - runScrapingSession(): void
-}
-
-' ─── DTOs ────────────────────────────────────────────────────────────────────
-
-class CompatibilityResult {
-  + compatible: boolean
-  + total_tdp: number
-  + recommended_psu_wattage: number
-  + errors: CompatibilityIssue[]
-  + warnings: CompatibilityIssue[]
-}
-
-class CompatibilityIssue {
-  + rule: string
-  + components: string[]
-  + message: string
-}
-
-class PriceOffer {
-  + retailer_id: number
-  + retailer_name: string
-  + price: number
-  + in_stock: boolean
-  + product_url: string
-  + variant_label: string
-  + variant_details: JSONB
-  + last_updated: Date
-}
-
-class ScrapedPrice {
-  + component_id: number
-  + retailer_id: number
-  + price: number
-  + in_stock: boolean
-  + product_url: string
-  + product_name: string
-}
-
-' ─── RELATIONSHIPS ───────────────────────────────────────────────────────────
-
-' Component inheritance
 Component <|-- CPU
 Component <|-- Motherboard
 Component <|-- GPU
@@ -313,53 +82,73 @@ Component <|-- Storage
 Component <|-- PSU
 Component <|-- Case
 Component <|-- Cooling
-Component -- ComponentCategory
+Component --> ComponentCategory
 
-' Domain associations
-Component "1" -- "0..*" Price : has prices
-Component "1" -- "0..*" PriceHistory : has history
-Component "1" -- "0..*" ScraperMapping : mapped via
-Retailer "1" -- "0..*" Price : provides
-Retailer "1" -- "0..*" ScraperMapping : has mappings
-Retailer "1" -- "0..*" UnmatchedListing : has unmatched
-Admin "1" -- "0..*" RefreshToken : has sessions
-PresetBuild "1" o-- "1..8" Component : contains
+' ── Pricing ──────────────────────────────────────────────────────────────────
 
-' Build configuration (frontend)
-BuildConfiguration o-- CPU
-BuildConfiguration o-- Motherboard
-BuildConfiguration o-- GPU
-BuildConfiguration o-- RAM
-BuildConfiguration o-- Storage
-BuildConfiguration o-- PSU
-BuildConfiguration o-- Case
+class Retailer {
+  +id: int
+  +name: string
+  +base_url: string
+  +is_active: bool
+  +scraping_interval_hours: int
+}
 
-' Services
-ComponentService ..> Component : manages
-ComponentService ..> PriceOffer : returns
-CompatibilityEngine ..> BuildConfiguration : validates
-CompatibilityEngine ..> CompatibilityResult : produces
-CompatibilityResult o-- CompatibilityIssue
-AuthService ..> Admin : authenticates
-AuthService ..> RefreshToken : manages
+class Price {
+  +price: decimal
+  +in_stock: bool
+  +product_url: string
+  +variant_label: string
+  +last_updated: timestamp
+}
 
-' Scraping
-BaseScraper <|-- Site1Scraper
-BaseScraper <|-- Site2Scraper
-BaseScraper <|-- UltraPcScraper
-BaseScraper <|-- NextLevelScraper
-BaseScraper <|-- SetupGameScraper
-BaseScraper ..> ScrapedPrice : produces
-Aggregator ..> ScrapedPrice : consumes
+class PriceHistory {
+  +price: decimal
+  +in_stock: bool
+  +recorded_at: timestamp
+}
+
+Component "1" *-- "0..*" Price
+Retailer "1" *-- "0..*" Price
+Component "1" *-- "0..*" PriceHistory
+Retailer "1" *-- "0..*" PriceHistory
+
+' ── Scraping ─────────────────────────────────────────────────────────────────
+
+class ScraperMapping {
+  +product_url: string
+  +product_identifier: string
+}
+
+class UnmatchedListing {
+  +scraped_name: string
+  +scraped_price: decimal
+  +product_url: string
+  +status: string
+}
+
+Component "1" *-- "0..*" ScraperMapping
+Retailer "1" *-- "0..*" ScraperMapping
+Retailer "1" *-- "0..*" UnmatchedListing
+
+' ── Services ─────────────────────────────────────────────────────────────────
+
+class CompatibilityEngine {
+  +validateCompatibility(build): CompatibilityResult
+}
+
+class DNAMatcher {
+  +findBestMatch(name, catalog): Component
+  +extractDna(name, category): string[]
+}
+
+class Aggregator {
+  +aggregate(prices): AggregateResult
+}
+
+CompatibilityEngine ..> Component : uses
+DNAMatcher ..> Component : matches to
 Aggregator ..> Price : upserts
-Aggregator ..> PriceHistory : records
 Aggregator ..> UnmatchedListing : creates
-AutoMapper ..> UnmatchedListing : resolves
-AutoMapper ..> ScraperMapping : creates
-CatalogBuilder ..> UnmatchedListing : reads
-CatalogBuilder ..> Component : creates
-Scheduler --> Aggregator : calls
-Scheduler --> AutoMapper : calls
-Scheduler --> CatalogBuilder : calls
 
 @enduml

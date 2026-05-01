@@ -136,3 +136,40 @@ Scraper runs (every hour)
 ```
 
 No manual intervention needed for products the matcher can identify. Products the matcher cannot categorize (cases, coolers, PSUs, accessories, bundles) stay in `unmatched_listings` for admin review.
+
+---
+
+## Market Trends
+
+The Market Trends feature surfaces components whose price has changed significantly over a recent window. It's powered by the `GET /api/market-trends` endpoint and displayed on the Market Trends page in the frontend.
+
+### How it works
+
+The endpoint queries `price_history` to find the cheapest in-stock price for each component on the first and last day of the requested window. It then computes the absolute and percentage change, and returns only components that moved in the requested direction (drops or hikes).
+
+Only components that are currently in stock are included — a price drop on an out-of-stock item isn't useful to the user.
+
+### Query parameters
+
+| Parameter | Default | Description |
+|---|---|---|
+| `type` | `drops` | `drops` (price decreased) or `hikes` (price increased) |
+| `days` | `7` | Lookback window in days (min 1, max 30) |
+| `limit` | `20` | Max results (min 1, max 50) |
+| `category` | — | Filter to one component category |
+
+Invalid numeric values for `days` or `limit` fall back to defaults silently — no 400 error.
+
+### Response fields
+
+| Field | Description |
+|---|---|
+| `price_before` | Cheapest in-stock price on the first day of the window |
+| `price_after` | Cheapest in-stock price on the last day of the window |
+| `diff_amount` | Absolute price difference (always positive) |
+| `change_pct` | Percentage change, rounded to 1 decimal place |
+| `type` | `drops` or `hikes` — echoed from the request |
+
+### Frontend display
+
+The Market Trends page shows two tabs: Price Drops and Price Hikes. Each tab shows a card grid with the component image, name, price before/after, and the percentage change. A stock visibility toggle lets users hide out-of-stock items globally.

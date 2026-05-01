@@ -1,85 +1,55 @@
-@startuml Activity Diagram
+@startuml activity
 !theme plain
-skinparam activityDiamondBackgroundColor #lightgray
-skinparam activityStartColor #green
-skinparam activityEndColor #red
+skinparam activityBackgroundColor #FAFAFA
+skinparam activityBorderColor #555
+skinparam arrowColor #333
+skinparam diamondBackgroundColor #FFF8DC
+skinparam swimlaneBackgroundColor #F8F8F8
 
-title PC Builder Platform — Activity Diagram\n(Complete User Flow)
+title PC Builder Maroc — User Activity Flow
 
+|User|
 start
+:Open PC Builder;
+:Browse component catalog\n(search / filter by category);
 
-:User opens PC Builder platform;
+repeat
+  :Select a component\nfor a build slot;
+  :Frontend calls\nPOST /api/compatibility/validate;
 
-:Display Configurator with 8 empty slots:\n• CPU  • Motherboard  • GPU  • RAM\n• Storage  • PSU  • Case  • Cooling;
+  |Backend|
+  :Run 8 compatibility rules\nagainst current build;
+  :Return errors, warnings,\ntotal TDP, recommended PSU;
 
-partition "Component Selection Loop" {
-  repeat
-    :User clicks a component category\nor uses Smart Search;
-
-    fork
-      :Browse by category\nGET /api/components?category=<cat>;
-    fork again
-      :Smart search with filters\nGET /api/components/smart-search;
-    end fork
-
-    :Display component list\n(with lowest price + stock status);
-
-    :User selects a component;
-
-    :Update BuildConfiguration state\n(React frontend);
-
-    :POST /api/compatibility/validate\n{ cpu, motherboard, gpu, ram, storage, psu, case };
-
-    if (Socket mismatch?) then (yes)
-      #pink:Error: "CPU socket incompatible\nwith Motherboard";
-    endif
-
-    if (RAM type mismatch?) then (yes)
-      #pink:Error: "RAM type not supported\nby Motherboard";
-    endif
-
-    if (GPU too long for case?) then (yes)
-      #pink:Error: "GPU does not fit in Case";
-    endif
-
-    if (RAM frequency exceeded?) then (yes)
-      #yellow:Warning: "RAM will run at\nMotherboard max frequency";
-    endif
-
-    if (PSU underpowered?) then (yes)
-      #yellow:Warning: "PSU below recommended\nwattage (TDP × 1.2)";
-    endif
-
-    :Update Build Summary:\n• Selected component\n• Total TDP (Σ all TDPs)\n• Recommended PSU wattage\n• Compatibility status;
-
-  repeat while (More components to add?) is (yes)
-  -> no;
-}
-
-partition "Price Comparison" {
-  :User clicks a component\nto view price offers;
-
-  :GET /api/components/:id/prices;
-
-  if (Price offers available?) then (no)
-    #lightgray:Display: "Not available\nfrom any retailer";
-    stop
-  else (yes)
-    :Display price table sorted by price:\n• Retailer name + logo\n• Price (MAD)\n• Variant label (e.g. "Sapphire Pulse")\n• Stock availability\n• Last updated;
+  |User|
+  if (Compatibility errors?) then (yes)
+    :See error highlighted\n(e.g. socket mismatch);
+    :Change component;
+  else (no)
+    :See green status\nor warnings;
   endif
+repeat while (More slots to fill?) is (yes)
+-> no;
 
-  if (User wants price history?) then (yes)
-    :GET /api/components/:id/price-history;
-    :Display price chart over time;
-  endif
+:View price comparison\nfor a component;
 
-  :User clicks a retailer offer;
+|Backend|
+:GET /api/components/:id/prices\nReturn all offers sorted\nin-stock first, cheapest first;
 
-  :Open retailer product page\nin new browser tab;
+|User|
+:Compare prices across\nUltraPC / NextLevel / SetupGame;
 
-  :User completes purchase\non retailer's website;
-}
+if (Want price history?) then (yes)
+  :View price history chart\n(last 30 days);
+endif
 
-stop
+if (Ready to buy?) then (yes)
+  :Click "Go to shop";
+  :Redirected to retailer\nwebsite (external);
+  stop
+else (no)
+  :Save build URL\n(components encoded in URL);
+  stop
+endif
 
 @enduml

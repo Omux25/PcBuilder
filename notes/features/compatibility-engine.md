@@ -2,7 +2,7 @@
 
 The compatibility engine is the core feature of the platform. It takes a partial PC build and tells the user which parts are incompatible and why — before they spend money.
 
-**File:** `backend/src/services/compatibilityService.ts`
+**File:** `apps/backend/src/services/compatibilityService.ts`
 **Route:** `POST /api/compatibility/validate`
 
 ---
@@ -165,7 +165,7 @@ The `compatible` field in the response is `true` only when the `errors` array is
 
 The `BuildSummary` component calls `POST /api/compatibility/validate` with a 300ms debounce every time the build changes. It uses an `AbortController` to cancel in-flight requests if a new one starts before the previous one completes.
 
-Rule codes like `socket_mismatch` are mapped to human-readable French labels via `RULE_LABELS` in `frontend/src/types.ts` before being shown to the user.
+Rule codes like `socket_mismatch` are mapped to human-readable French labels via `RULE_LABELS` in `shared/types.ts` before being shown to the user.
 
 ---
 

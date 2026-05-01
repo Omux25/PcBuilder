@@ -8,7 +8,7 @@ This guide explains the database design decisions and how to work with the schem
 
 ## Schema overview
 
-19 migrations, 13 tables. All migrations are in `backend/src/db/migrations/` numbered 001–019.
+19 migrations, 13 tables. All migrations are in `apps/backend/src/db/migrations/` numbered 001–019.
 
 Run all migrations:
 ```powershell
@@ -38,7 +38,7 @@ All categories also have: `name` (required), `brand`, `slug`, `description`, `sp
 
 ## Adding a new table or column
 
-1. Create a new migration file: `backend/src/db/migrations/0XX_description.sql`
+1. Create a new migration file: `apps/backend/src/db/migrations/0XX_description.sql`
 2. Number it sequentially — check the current highest number first
 3. Use `IF NOT EXISTS` / `IF NOT EXISTS` guards so migrations are idempotent
 4. Update the TypeScript interface in the relevant service file

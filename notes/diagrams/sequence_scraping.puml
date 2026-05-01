@@ -1,120 +1,56 @@
-@startuml Sequence - Scraping Session
+@startuml sequence_scraping
 !theme plain
-skinparam sequenceMessageAlign center
-skinparam responseMessageBelowArrow true
+skinparam sequenceArrowColor #333
+skinparam sequenceParticipantBackgroundColor #FAFAFA
+skinparam sequenceParticipantBorderColor #555
+skinparam sequenceLifeLineBorderColor #AAA
+autonumber
 
-title Sequence Diagram: Automated Price Scraping (Background Process)
+title Sequence 2 — Automated Price Scraping
 
-participant "Bun.cron\n(Hourly)" as cron
-participant "Scraping\nSession" as session
-participant "Site Scrapers\n(×5)" as scrapers
-participant "Aggregator" as agg
-participant "Auto-Mapper" as mapper
-participant "Catalog\nBuilder" as builder
-database "PostgreSQL\n(Bun.sql)" as db
+participant "Bun.cron()\nScheduler" as CRON
+participant "ScrapingSession" as SS
+participant "Scrapers\n(UltraPC / NextLevel\n/ SetupGame)" as SC
+participant "Aggregator" as AGG
+participant "DNAMatcher\n+ CatalogBuilder" as DNA
+database "PostgreSQL" as DB
 
-== Scheduled Trigger (Every Hour) ==
+CRON -> SS : runScrapingSession()\n[triggered every N hours]
 
-cron -> db : SELECT id, name FROM retailers\nWHERE is_active = true\nAND (last_scrape_at IS NULL\n  OR last_scrape_at < NOW() - interval)
+SS -> SC : scrapeAllCategories()\n[up to 2 scrapers in parallel]
+SC -> SC : Fetch HTML pages\nvia undici + cheerio\n(retry ×3 on failure)
+SC --> SS : ScrapedPrice[]\n{ retailer_id, name, price,\nin_stock, product_url }
 
-alt No retailers due
-  cron -> cron : Skip — nothing to do
-else Retailers due
-  cron -> session : runScrapingSession()
-  activate session
-  session -> db : INSERT INTO scraper_logs\n{ level: 'INFO', message: 'Session started' }
-end
+SS -> AGG : aggregate(allPrices)
 
-== Scraping Phase (5 Retailers) ==
-
-loop For each retailer scraper\n(Site1, Site2, UltraPC, NextLevel, SetupGame)
-  session -> scrapers : scrapeAllProducts() / scrapeListingPage()
-  activate scrapers
-
-  scrapers -> scrapers : undici.fetch(url, { User-Agent })\nwith 30s timeout + 3-attempt\nexponential backoff retry
-
-  alt HTTP error (4xx/5xx) — no retry
-    scrapers --> session : throws Error
-    session -> db : INSERT INTO scraper_logs\n{ level: 'ERROR', site, message }
-  else Network/timeout error — retry up to 3×
-    scrapers -> scrapers : Wait 2s, 4s between retries
-    scrapers --> session : throws Error after 3 attempts
-    session -> db : INSERT INTO scraper_logs\n{ level: 'ERROR', site, message }
-  else Success
-    scrapers -> scrapers : cheerio.load(html)\nextractPrices($) → ScrapedPrice[]
-    scrapers --> session : ScrapedPrice[]
-    deactivate scrapers
-    session -> db : INSERT INTO scraper_logs\n{ level: 'INFO', message: 'N prices scraped' }
+loop for each ScrapedPrice
+  AGG -> DB : SELECT scraper_mappings\nWHERE product_url = ?
+  alt mapping found
+    AGG -> DB : UPSERT prices\n(component_id, retailer_id, product_url)
+    AGG -> DB : INSERT price_history\n(only if price changed)
+  else no mapping
+    AGG -> DB : INSERT unmatched_listings\n(if not already there)
   end
 end
 
-== Aggregation Phase ==
+AGG --> SS : { updated, unmatched, errors }
 
-session -> agg : aggregate(allScrapedPrices)
-activate agg
+SS -> DNA : autoMap()\n[DNA matcher on pending listings]
+DNA -> DB : SELECT unmatched_listings\nWHERE status = 'pending'
+DNA -> DB : SELECT components (catalog)
+DNA -> DNA : extractDna(name, category)\nscoreDnaMatch(tokens, catalog)\nthreshold: 1.0 (0.8 for case/cooling)
+DNA -> DB : INSERT scraper_mappings\nfor confident matches
+DNA --> SS : { mapped }
 
-loop For each ScrapedPrice
-  agg -> db : SELECT component_id FROM scraper_mappings\nWHERE retailer_id = $1 AND product_url = $2
+SS -> DNA : buildFromUnmatched()\n[auto-create catalog entries]
+DNA -> DB : INSERT components\nfrom unmatched product names\n(CPU/GPU/RAM/Storage/MB only)
+DNA --> SS : { created }
 
-  alt No mapping found
-    agg -> db : INSERT INTO unmatched_listings\n(retailer_id, product_url, scraped_name, price)\nON CONFLICT DO NOTHING
-  else Mapping found
-    agg -> agg : extractVariant(product_name, category)\n→ { label, details }
-    agg -> db : INSERT INTO prices\n(component_id, retailer_id, price, in_stock,\n product_url, variant_label, variant_details)\nON CONFLICT (component_id, retailer_id, product_url)\nDO UPDATE SET price, in_stock, variant_label, ...
-
-    alt Price changed since last scrape
-      agg -> db : INSERT INTO price_history\n(component_id, retailer_id, price, in_stock)
-    end
-  end
+opt new catalog entries were created
+  SS -> DNA : autoMap() — second pass
+  DNA --> SS : { mapped }
 end
 
-note right of agg
-  UltraPC only: checks actual stock
-  via PrestaShop AJAX for mapped
-  products before aggregation.
-end note
-
-agg -> db : UPDATE prices SET in_stock = false\nfor mapped URLs not seen in this scrape\n(handles retailers that hide OOS products)
-
-agg --> session : { updated, unmatched, errors }
-deactivate agg
-
-== Auto-Mapping Phase ==
-
-session -> mapper : autoMap()
-activate mapper
-mapper -> db : SELECT id, name, brand, category\nFROM components WHERE is_active = true
-mapper -> db : SELECT id, retailer_id, product_url, scraped_name\nFROM unmatched_listings WHERE status = 'pending'
-
-loop For each pending listing
-  mapper -> mapper : findBestMatch(scraped_name, catalog)\nDNA score: 1.0 required\n(0.8 allowed for case/cooling)
-
-  alt Confident match found
-    mapper -> db : INSERT INTO scraper_mappings\n(component_id, retailer_id, product_url)
-    mapper -> db : UPDATE unmatched_listings\nSET status = 'linked'
-  else No match
-    mapper -> mapper : Leave for admin review
-  end
-end
-
-mapper --> session : { mapped, skipped }
-deactivate mapper
-
-== Catalog Builder Phase ==
-
-session -> builder : buildFromUnmatched()
-activate builder
-builder -> db : SELECT pending unmatched listings\nfor CPU, GPU, RAM, storage, motherboard
-builder -> builder : Parse product name\nExtract brand, model, specs
-builder -> db : INSERT INTO components\n(name, brand, category, specs, slug)
-builder --> session : { created }
-deactivate builder
-
-alt New catalog entries created
-  session -> mapper : autoMap() — second pass\nto match newly added entries
-end
-
-session -> db : INSERT INTO scraper_logs\n{ level: 'INFO', message: 'Session complete:\nN updated, M unmatched, X auto-mapped' }
-deactivate session
+SS -> DB : INSERT scraper_logs\n"Session complete: N updated,\nM unmatched, K auto-mapped"
 
 @enduml

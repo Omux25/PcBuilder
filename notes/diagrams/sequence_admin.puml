@@ -1,0 +1,61 @@
+@startuml sequence_admin
+!theme plain
+skinparam sequenceArrowColor #333
+skinparam sequenceParticipantBackgroundColor #FAFAFA
+skinparam sequenceParticipantBorderColor #555
+skinparam sequenceLifeLineBorderColor #AAA
+autonumber
+
+title Sequence 3 — Admin: Login & Component Management
+
+actor "Admin" as A
+participant "Admin Panel\n(React)" as ADM
+participant "POST /api/auth/login" as LOGIN
+participant "Admin Routes\n(JWT-protected)" as API
+participant "ComponentService" as SVC
+database "PostgreSQL" as DB
+
+== Login ==
+
+A -> ADM : Enter username + password
+ADM -> LOGIN : POST /api/auth/login\n{ username, password }
+LOGIN -> DB : SELECT admins WHERE username = ?
+DB --> LOGIN : admin row (password_hash)
+LOGIN -> LOGIN : bcrypt.compare(password, hash)
+
+alt invalid credentials
+  LOGIN --> ADM : 401 Unauthorized
+  ADM --> A : "Invalid credentials"
+else valid
+  LOGIN -> DB : INSERT refresh_tokens (hash, expires 7d)
+  LOGIN --> ADM : 200 { access_token (15min JWT) }\n+ Set-Cookie: refresh_token (HttpOnly, 7d)
+  ADM --> A : Redirect to Dashboard
+end
+
+== Create a Component ==
+
+A -> ADM : Fill component form\n(category: cpu, socket: AM5, ...)
+ADM -> API : POST /api/admin/components\nAuthorization: Bearer <token>\nbody: { category, name, socket, ... }
+API -> API : authMiddleware — verify JWT
+API -> API : validateComponent — Zod schema\nfor the given category
+API -> SVC : createComponent(data)
+SVC -> DB : INSERT INTO components\nRETURNING *
+DB --> SVC : new component row
+SVC -> DB : INSERT admin_activity_log\n(action: component_created)
+SVC --> API : component object
+API --> ADM : 201 Created — component
+ADM --> A : Component appears in list
+
+== Link an Unmatched Listing ==
+
+A -> ADM : Open Unmatched Listings page
+ADM -> API : GET /api/admin/unmatched-listings?status=pending
+API --> ADM : { listings: [...] }
+A -> ADM : Click "Link" on a listing\nSearch and select a component
+ADM -> API : POST /api/admin/unmatched-listings/:id/link\n{ component_id: 42 }
+API -> DB : INSERT scraper_mappings\n(component_id, retailer_id, product_url)\nON CONFLICT DO UPDATE
+API -> DB : UPDATE unmatched_listings\nSET status = 'linked'
+API --> ADM : 200 { success: true }
+ADM --> A : Listing marked as linked\n(next scrape will price it correctly)
+
+@enduml

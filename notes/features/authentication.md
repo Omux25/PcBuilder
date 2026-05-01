@@ -28,7 +28,7 @@ Every protected request must include the access token in the Authorization heade
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-The `authMiddleware` in `backend/src/middleware/auth.ts` verifies this token on every admin route. If the token is missing, expired, or invalid, it returns HTTP 401.
+The `authMiddleware` in `apps/backend/src/middleware/auth.ts` verifies this token on every admin route. If the token is missing, expired, or invalid, it returns HTTP 401.
 
 ### Refreshing the access token
 
@@ -132,7 +132,7 @@ The rate limiter uses a `Map<string, { count, resetAt }>` keyed by IP address. I
 
 ## Admin panel token handling
 
-The admin panel (`admin/src/api.ts`) handles token lifecycle automatically:
+The admin panel (`apps/admin/src/api.ts`) handles token lifecycle automatically:
 
 1. On login: stores access token in memory (not localStorage — avoids XSS)
 2. On every API call: attaches `Authorization: Bearer <token>` header

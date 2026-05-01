@@ -1,6 +1,6 @@
 # Admin Panel
 
-The admin panel is a separate React + Vite application (`admin/`) that gives administrators full control over the platform. It runs on port 5174 in development and is served at `/admin` in production.
+The admin panel is a separate React + Vite application (`apps/admin/`) that gives administrators full control over the platform. It runs on port 5174 in development and is served at `/admin` in production.
 
 All admin panel pages require authentication. The panel handles token refresh automatically — admins stay logged in for 7 days without interruption.
 
@@ -108,7 +108,7 @@ This log is shown in the dashboard's recent activity feed and provides an audit 
 
 ## Token refresh in the API client
 
-`admin/src/api.ts` wraps all fetch calls with automatic token refresh:
+`apps/admin/src/api.ts` wraps all fetch calls with automatic token refresh:
 
 ```
 API call fails with 401

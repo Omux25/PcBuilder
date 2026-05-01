@@ -240,6 +240,101 @@ Validate a PC build. All components are optional — only rules where both requi
 
 ---
 
+### `GET /api/builds/presets`
+
+List all active preset builds.
+
+**Query parameters:**
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `use_case` | string | — | Filter by use case: `gaming`, `workstation`, `office`, `budget` |
+
+**Response 200:**
+```json
+{
+  "presets": [
+    {
+      "id": 1,
+      "name": "Budget Gaming Build",
+      "description": "A solid entry-level gaming PC",
+      "use_case": "gaming",
+      "total_price_estimate": 8500.00,
+      "is_active": true,
+      "incomplete": false,
+      "components": {
+        "cpu":  { "id": 10, "slug": "amd-ryzen-5-7600x", "name": "Ryzen 5 7600X", "brand": "AMD", "image_url": null, "is_active": true },
+        "gpu":  { "id": 42, "slug": "nvidia-rtx-4070", "name": "RTX 4070", "brand": "NVIDIA", "image_url": null, "is_active": true }
+      },
+      "created_at": "2026-04-01T00:00:00Z",
+      "updated_at": "2026-04-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+`incomplete` is `true` when at least one component in the preset has `is_active = false` (deactivated from the catalog). The preset is still returned — the frontend can warn the user.
+
+---
+
+### `GET /api/builds/presets/:id`
+
+Single preset build by numeric ID.
+
+**Response 200:** Full preset object (same shape as above, unwrapped — not in an array).
+
+**Errors:**
+- `400` — id is not a positive integer
+- `404` — preset not found
+
+---
+
+### `GET /api/market-trends`
+
+Components whose price has changed significantly over a recent window. Used by the Market Trends page to show price drops and hikes.
+
+**Query parameters:**
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `type` | string | `drops` | `drops` (price decreased) or `hikes` (price increased) |
+| `days` | integer | `7` | Lookback window in days (min 1, max 30) |
+| `limit` | integer | `20` | Max results to return (min 1, max 50) |
+| `category` | string | — | Filter by component category |
+
+**Response 200:**
+```json
+{
+  "trends": [
+    {
+      "component_id": 42,
+      "name": "RTX 4070 Ti",
+      "brand": "NVIDIA",
+      "slug": "nvidia-rtx-4070-ti",
+      "category": "gpu",
+      "image_url": null,
+      "price_before": 4500.00,
+      "price_after": 3999.00,
+      "diff_amount": 501.00,
+      "change_pct": 11.1,
+      "type": "drops"
+    }
+  ],
+  "days": 7,
+  "type": "drops",
+  "total": 1
+}
+```
+
+- `price_before` — cheapest in-stock price on the first day of the window
+- `price_after` — cheapest in-stock price on the last day of the window
+- `diff_amount` — absolute price difference (always positive)
+- `change_pct` — percentage change, rounded to 1 decimal place
+- Only components currently in stock are included
+- Invalid `days` or `limit` values fall back to defaults (no 400 error)
+
+---
+
 ### `POST /api/auth/login`
 
 Admin login.

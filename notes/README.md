@@ -61,39 +61,22 @@ Precise technical reference — look things up here.
 
 ---
 
-## Task Explainers
-
-Per-task explainers added after each completed implementation task.
-
-| File | What it covers |
-|---|---|
-| [task-explainers/README.md](task-explainers/README.md) | Index of all explainers |
-| [task-explainers/task-cleanup-codebase-audit.md](task-explainers/task-cleanup-codebase-audit.md) | Codebase cleanup — 13 bugs fixed (Round 1) |
-| [task-explainers/task-cleanup-codebase-audit-round2.md](task-explainers/task-cleanup-codebase-audit-round2.md) | Codebase cleanup — 9 bugs fixed (Round 2) |
-| [task-explainers/task-cleanup-codebase-audit-round3.md](task-explainers/task-cleanup-codebase-audit-round3.md) | Codebase cleanup — 10 fixes (Round 3) |
-| [task-explainers/task-cleanup-codebase-audit-round5.md](task-explainers/task-cleanup-codebase-audit-round5.md) | Codebase cleanup — 6 fixes (Round 5) |
-| [task-explainers/task-cleanup-codebase-audit-round7.md](task-explainers/task-cleanup-codebase-audit-round7.md) | Codebase cleanup — 10 fixes (Round 7) |
-| [task-explainers/task-cleanup-codebase-audit-round8.md](task-explainers/task-cleanup-codebase-audit-round8.md) | Codebase cleanup — 8 fixes (Round 8) |
-
----
-
 ## Diagrams
 
-PlantUML source files — committed to Git. Rendered PNGs are in `diagrams/rendered/` (gitignored).
+PlantUML source files — committed to Git. Rendered PNGs go in `diagrams/rendered/` (gitignored).
 
 | File | Type | What it shows |
 |---|---|---|
-| [diagrams/use_case.puml](diagrams/use_case.puml) | Use Case | Actors and all system use cases |
-| [diagrams/class.puml](diagrams/class.puml) | Class | Domain model, services, scrapers |
-| [diagrams/activity.puml](diagrams/activity.puml) | Activity | Complete user flow |
-| [diagrams/sequence_1_compatibility.puml](diagrams/sequence_1_compatibility.puml) | Sequence | Compatibility validation flow |
-| [diagrams/sequence_2_price_comparison.puml](diagrams/sequence_2_price_comparison.puml) | Sequence | Price comparison and retailer redirect |
-| [diagrams/sequence_3_admin.puml](diagrams/sequence_3_admin.puml) | Sequence | Admin login and component management |
-| [diagrams/sequence_scraping.puml](diagrams/sequence_scraping.puml) | Sequence | Daily price scraping background process |
+| [diagrams/use_case.puml](diagrams/use_case.puml) | Use Case | All actors and use cases — user, admin, scheduler |
+| [diagrams/class.puml](diagrams/class.puml) | Class | Domain model — components, pricing, scraping, services |
+| [diagrams/activity.puml](diagrams/activity.puml) | Activity | Full user journey — build, validate, compare, buy |
+| [diagrams/sequence_compatibility.puml](diagrams/sequence_compatibility.puml) | Sequence | Compatibility validation — rules, TDP, response |
+| [diagrams/sequence_scraping.puml](diagrams/sequence_scraping.puml) | Sequence | Automated scraping — scrapers, aggregator, DNA matcher |
+| [diagrams/sequence_admin.puml](diagrams/sequence_admin.puml) | Sequence | Admin flow — login, create component, link listing |
 
 To regenerate PNGs:
 ```bash
-java -DPLANTUML_LIMIT_SIZE=8192 -jar plantuml.jar -tpng notes/diagrams/*.puml -o rendered
+java -jar plantuml.jar -tpng notes/diagrams/*.puml -o rendered
 ```
 
 ---

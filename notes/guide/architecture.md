@@ -125,3 +125,19 @@ The global error handler in `app.ts` catches these and returns the standard erro
 ```json
 { "error": { "code": "COMPONENT_NOT_FOUND", "message": "Component with id 42 not found" } }
 ```
+
+---
+
+## Implementation notes
+
+**Search query:** `GET /api/components` uses a CTE to compute `search_text` once and reference it in both `WHERE` and `ORDER BY`. Individual search tokens are LIKE-escaped before being passed to the query — user input containing `%` or `_` is treated as literals, not SQL wildcards.
+
+**ID validation:** All admin routes use `parseId()` from `apps/backend/src/utils/errors.ts` to validate and parse numeric URL parameters. Returns `null` on invalid input — the route handler returns 400.
+
+**Rate limiting:** `POST /api/auth/login` uses an in-memory fixed-window store (10 attempts/IP/minute). Resets on server restart — acceptable for single-process deployment.
+
+**PSU and TDP:** PSU is excluded from the `total_tdp` sum. It supplies power — it doesn't consume it. Only CPU, motherboard, GPU, RAM, storage, case, and cooling contribute to TDP.
+
+**Bulk import:** Runs row-by-row with per-row error handling. No transaction — each row either succeeds or is counted as failed/skipped. The response always returns exact counts: `imported / skipped (slug collision) / failed`.
+
+**All error messages are in English.** French display text lives exclusively in `shared/types.ts` (`RULE_LABELS`, `RULE_TOOLTIPS`, `CATEGORY_LABELS`).
