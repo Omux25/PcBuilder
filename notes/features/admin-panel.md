@@ -53,7 +53,7 @@ For adding many components at once.
 3. Resolve duplicate slug conflicts (keep existing / overwrite / skip)
 4. Click Import — see results: X imported, Y skipped, Z failed
 
-The import runs in a database transaction. If the server crashes mid-import, no partial data is committed.
+The import runs row-by-row. Each row is validated and inserted independently. If a row fails, it is counted as failed and the import continues. Successfully imported rows are not rolled back on later failures.
 
 ### Retailers
 

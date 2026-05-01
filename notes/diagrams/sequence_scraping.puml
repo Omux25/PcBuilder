@@ -1,72 +1,120 @@
-@startuml Sequence - Daily Price Scraping
+@startuml Sequence - Scraping Session
 !theme plain
 skinparam sequenceMessageAlign center
 skinparam responseMessageBelowArrow true
 
-title Sequence Diagram: Daily Price Scraping (Background Process)
+title Sequence Diagram: Automated Price Scraping (Background Process)
 
-participant "Bun.cron\nScheduler" as cron
-participant "Site1Scraper\n(cheerio+undici)" as s1
-participant "Site2Scraper\n(cheerio+undici)" as s2
+participant "Bun.cron\n(Hourly)" as cron
+participant "Scraping\nSession" as session
+participant "Site Scrapers\n(×5)" as scrapers
 participant "Aggregator" as agg
+participant "Auto-Mapper" as mapper
+participant "Catalog\nBuilder" as builder
 database "PostgreSQL\n(Bun.sql)" as db
 
-== Scheduled Trigger (Every 24h) ==
+== Scheduled Trigger (Every Hour) ==
 
-cron -> cron : Cron expression: '0 0 * * *'\n(midnight daily)
-activate cron
+cron -> db : SELECT id, name FROM retailers\nWHERE is_active = true\nAND (last_scrape_at IS NULL\n  OR last_scrape_at < NOW() - interval)
 
-cron -> db : INSERT INTO scraper_logs\n{ level: 'INFO',\n  message: 'Scraping session started' }
-
-== Site 1 Scraping ==
-
-cron -> s1 : scrape()
-activate s1
-
-s1 -> s1 : undici.fetch(site1_url)
-s1 -> s1 : cheerio.load(html)
-s1 -> s1 : Extract:\n• price\n• in_stock\n• product_url\nper component_id
-
-alt Success
-  s1 --> cron : ScrapedPrice[]
-  deactivate s1
-else Error (timeout / HTML changed / HTTP 429)
-  s1 --> cron : throws Error
-  deactivate s1
-  cron -> db : INSERT INTO scraper_logs\n{ level: 'ERROR',\n  site: 'site1',\n  message: error.message }
-  note right : Continue to next scraper\nwithout interruption
+alt No retailers due
+  cron -> cron : Skip — nothing to do
+else Retailers due
+  cron -> session : runScrapingSession()
+  activate session
+  session -> db : INSERT INTO scraper_logs\n{ level: 'INFO', message: 'Session started' }
 end
 
-== Site 2 Scraping ==
+== Scraping Phase (5 Retailers) ==
 
-cron -> s2 : scrape()
-activate s2
+loop For each retailer scraper\n(Site1, Site2, UltraPC, NextLevel, SetupGame)
+  session -> scrapers : scrapeAllProducts() / scrapeListingPage()
+  activate scrapers
 
-s2 -> s2 : undici.fetch(site2_url)
-s2 -> s2 : cheerio.load(html)
-s2 -> s2 : Extract:\n• price\n• in_stock\n• product_url\nper component_id
+  scrapers -> scrapers : undici.fetch(url, { User-Agent })\nwith 30s timeout + 3-attempt\nexponential backoff retry
 
-alt Success
-  s2 --> cron : ScrapedPrice[]
-  deactivate s2
-else Error
-  s2 --> cron : throws Error
-  deactivate s2
-  cron -> db : INSERT INTO scraper_logs\n{ level: 'ERROR',\n  site: 'site2',\n  message: error.message }
+  alt HTTP error (4xx/5xx) — no retry
+    scrapers --> session : throws Error
+    session -> db : INSERT INTO scraper_logs\n{ level: 'ERROR', site, message }
+  else Network/timeout error — retry up to 3×
+    scrapers -> scrapers : Wait 2s, 4s between retries
+    scrapers --> session : throws Error after 3 attempts
+    session -> db : INSERT INTO scraper_logs\n{ level: 'ERROR', site, message }
+  else Success
+    scrapers -> scrapers : cheerio.load(html)\nextractPrices($) → ScrapedPrice[]
+    scrapers --> session : ScrapedPrice[]
+    deactivate scrapers
+    session -> db : INSERT INTO scraper_logs\n{ level: 'INFO', message: 'N prices scraped' }
+  end
 end
 
-== Aggregation ==
+== Aggregation Phase ==
 
-cron -> agg : aggregate(allResults)
+session -> agg : aggregate(allScrapedPrices)
 activate agg
 
 loop For each ScrapedPrice
-  agg -> db : INSERT INTO prices\n(component_id, retailer_id, price,\n in_stock, product_url, last_updated)\nON CONFLICT (component_id, retailer_id)\nDO UPDATE SET\n  price = EXCLUDED.price,\n  in_stock = EXCLUDED.in_stock,\n  product_url = EXCLUDED.product_url,\n  last_updated = NOW()
+  agg -> db : SELECT component_id FROM scraper_mappings\nWHERE retailer_id = $1 AND product_url = $2
+
+  alt No mapping found
+    agg -> db : INSERT INTO unmatched_listings\n(retailer_id, product_url, scraped_name, price)\nON CONFLICT DO NOTHING
+  else Mapping found
+    agg -> agg : extractVariant(product_name, category)\n→ { label, details }
+    agg -> db : INSERT INTO prices\n(component_id, retailer_id, price, in_stock,\n product_url, variant_label, variant_details)\nON CONFLICT (component_id, retailer_id, product_url)\nDO UPDATE SET price, in_stock, variant_label, ...
+
+    alt Price changed since last scrape
+      agg -> db : INSERT INTO price_history\n(component_id, retailer_id, price, in_stock)
+    end
+  end
 end
 
-agg -> db : INSERT INTO scraper_logs\n{ level: 'INFO',\n  message: 'Session complete:\n  X components updated, Y errors' }
+note right of agg
+  UltraPC only: checks actual stock
+  via PrestaShop AJAX for mapped
+  products before aggregation.
+end note
 
+agg -> db : UPDATE prices SET in_stock = false\nfor mapped URLs not seen in this scrape\n(handles retailers that hide OOS products)
+
+agg --> session : { updated, unmatched, errors }
 deactivate agg
-deactivate cron
+
+== Auto-Mapping Phase ==
+
+session -> mapper : autoMap()
+activate mapper
+mapper -> db : SELECT id, name, brand, category\nFROM components WHERE is_active = true
+mapper -> db : SELECT id, retailer_id, product_url, scraped_name\nFROM unmatched_listings WHERE status = 'pending'
+
+loop For each pending listing
+  mapper -> mapper : findBestMatch(scraped_name, catalog)\nDNA score: 1.0 required\n(0.8 allowed for case/cooling)
+
+  alt Confident match found
+    mapper -> db : INSERT INTO scraper_mappings\n(component_id, retailer_id, product_url)
+    mapper -> db : UPDATE unmatched_listings\nSET status = 'linked'
+  else No match
+    mapper -> mapper : Leave for admin review
+  end
+end
+
+mapper --> session : { mapped, skipped }
+deactivate mapper
+
+== Catalog Builder Phase ==
+
+session -> builder : buildFromUnmatched()
+activate builder
+builder -> db : SELECT pending unmatched listings\nfor CPU, GPU, RAM, storage, motherboard
+builder -> builder : Parse product name\nExtract brand, model, specs
+builder -> db : INSERT INTO components\n(name, brand, category, specs, slug)
+builder --> session : { created }
+deactivate builder
+
+alt New catalog entries created
+  session -> mapper : autoMap() — second pass\nto match newly added entries
+end
+
+session -> db : INSERT INTO scraper_logs\n{ level: 'INFO', message: 'Session complete:\nN updated, M unmatched, X auto-mapped' }
+deactivate session
 
 @enduml

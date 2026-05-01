@@ -1,22 +1,22 @@
 # Project Roadmap
 
-> **Status: Complete** — all phases done, 324 tests passing.
+> **Status: Complete** — all phases done, tests passing, recent enhancements added.
 
 ---
 
-## Current state (April 28, 2026)
+## Current state (May 1, 2026)
 
 | Area | Status |
 |---|---|
 | Backend API (all routes) | ✅ Done |
-| Compatibility engine (6 rules) | ✅ Done |
+| Compatibility engine (8 rules) | ✅ Done |
 | Scraping system (3 real retailers) | ✅ Done |
 | DNA-based component matcher | ✅ Done |
 | Variant model (prices per product URL) | ✅ Done |
 | React frontend (configurator, detail page) | ✅ Done |
 | Admin panel (separate Vite app) | ✅ Done |
 | Deployment setup (Docker + nginx) | ✅ Done |
-| Post-launch fixes (improvement report) | ✅ Done |
+| Post-launch fixes & Enhancements | ✅ Done |
 
 ---
 
@@ -58,6 +58,11 @@ Migrations 006–013, 305+ component catalog, updated services (priceHistory, re
 
 UltraPC scraper (279 mapped products), NextLevel scraper, SetupGame scraper, DNA-based component matcher (`componentMatcher.ts`), variant extractor (`variantExtractor.ts`), migration 014 (variant model), aggregator v2 (groups variants, UltraPC stock check), auto-mapping scripts, precision/recall evaluation tooling.
 
+### Phase 10 — Feature Enhancements (Late April 2026)
+- **Compare System Overhaul:** Added global state, UI tray, 1v1 head-to-head format, duel analysis, performance summary, and external benchmark links.
+- **Market Trends:** Renamed from price drops, added price hike tracking, enhanced price drop realism, and added a global stock visibility toggle.
+- **Technical Debt Resolved:** Fixed backend TypeScript errors (in `variantExtractor` and `unmatched` router) and resolved critical React Hooks violations in the frontend.
+
 ### Post-launch fixes
 
 All critical and high-priority issues from the improvement report resolved:
@@ -76,15 +81,24 @@ All critical and high-priority issues from the improvement report resolved:
 | Escape key on picker | Added keydown handler |
 | BuildSummary debounce | Added 300ms debounce + AbortController |
 | RULE_LABELS missing | Added to types.ts, used in BuildSummary |
-| deleteComponent race | Wrapped in transaction |
+| deleteComponent race | Fixed with atomic CTE — dependency check and DELETE in a single SQL statement |
 | Promise.all in dashboard | Changed to Promise.allSettled |
 | Dynamic import in scrapers | Replaced with static import |
+
+### Phase 11 — Codebase Audit Round 2 (May 2026)
+
+- Fixed compatibility Rules 5 & 6 silently dead: added `height_mm`, `supported_motherboards`, `max_cooler_height_mm` to schemas + migration 019
+- Fixed PSU TDP incorrectly included in `total_tdp` sum
+- Fixed `createPreset` not transactional — wrapped in `sql.begin()`
+- Fixed LIKE token injection: individual search tokens now escaped
+- Extracted `parseId()` helper to eliminate duplicated ID validation across admin routes
+- Merged duplicate `getPriceHistory` SQL queries into one nullable-param query
+- Deleted `site1Scraper.ts` / `site2Scraper.ts` placeholder files and their tests
+- Deleted stale `.gitkeep` files in routes and middleware directories
 
 ---
 
 ## What's left (optional)
 
-- Property-based tests for slug uniqueness, pagination correctness, price history insertion (marked optional in spec)
 - Presets page in the frontend (deferred — needs more scraper data first)
-- Redis-backed rate limiting for production (current in-memory limiter resets on server restart)
-- Hashed refresh tokens (current implementation stores UUID directly)
+- Redis-backed rate limiting for production (current in-memory limiter resets on server restart — acceptable for single-process deployment)

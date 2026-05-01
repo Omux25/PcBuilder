@@ -33,7 +33,7 @@ A user selects components one by one in the configurator. After each selection, 
 
 ---
 
-## The 6 rules
+## The 8 rules
 
 Rules only fire when **both** required components are present in the build. A partial build (e.g. only CPU selected) will not trigger socket_mismatch because there's no motherboard to compare against.
 
@@ -89,14 +89,14 @@ RTX 4090 (336mm)  +  Case max 300mm  → gpu_too_long error
 
 **Applies to:** All components
 
-The engine sums the TDP (Thermal Design Power) of every component in the build and calculates the minimum recommended PSU wattage with a 20% safety margin.
+The engine sums the TDP (Thermal Design Power) of every component in the build and calculates the minimum recommended PSU wattage with a 50% safety margin.
 
 ```
 total_tdp = sum of all component TDPs
-recommended_psu_wattage = ceil(total_tdp × 1.2)
+recommended_psu_wattage = ceil(total_tdp × 1.5)
 ```
 
-The 20% margin exists because:
+The 50% margin exists because:
 - PSUs degrade over time and lose efficiency
 - Running a PSU at 100% capacity shortens its lifespan
 - Power draw spikes during load can exceed the rated TDP
@@ -121,6 +121,32 @@ If the selected PSU's wattage is below the recommended minimum, the build may be
 Recommended: 456W  +  PSU 550W  → no warning
 Recommended: 456W  +  PSU 450W  → psu_underpowered warning
 ```
+
+### Rule 7 — Form factor mismatch (error)
+
+**Applies to:** Motherboard + Case
+
+The motherboard's form factor must be supported by the case. An ATX motherboard will not physically fit in a case that only supports mATX or Mini-ITX.
+
+```
+ATX Motherboard  +  ATX Mid Tower  → compatible
+ATX Motherboard  +  Mini-ITX Case  → form_factor_mismatch error
+```
+
+The case's `supported_motherboards` field lists the accepted form factors (e.g. `["ATX", "mATX", "Mini-ITX"]`).
+
+### Rule 8 — Cooler too tall (error)
+
+**Applies to:** Cooling + Case
+
+Air coolers have a height in mm. If the cooler is taller than the case's `max_cooler_height_mm`, it will not fit with the side panel on.
+
+```
+Noctua NH-D15 (165mm)  +  Case max 170mm  → compatible
+Noctua NH-D15 (165mm)  +  Case max 155mm  → cooler_too_tall error
+```
+
+AIO liquid coolers are not affected by this rule — they mount to the case radiator slots, not inside the case.
 
 ---
 

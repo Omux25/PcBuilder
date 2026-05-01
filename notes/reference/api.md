@@ -40,6 +40,7 @@ Paginated list of active components.
 | `ram_type` | string | — | Filter by RAM type (`DDR4`, `DDR5`) |
 | `brand` | string | — | Filter by brand (e.g. `AMD`, `Intel`) |
 | `search` | string | — | Full-text search across name, brand, slug |
+| `ids` | string | — | Comma-separated list of component IDs for batch lookup (e.g. `1,2,3`). When provided, bypasses pagination and returns only those components. Used by the frontend to restore builds from URL. |
 | `page` | integer | 1 | Page number |
 | `limit` | integer | 20 | Items per page (max 100) |
 
@@ -155,9 +156,18 @@ Price history for a component.
 
 ---
 
-### `GET /api/components/smart-search`
+### `POST /api/components/smart-search`
 
 Search with compatibility filtering and price data. Used by the ComponentPicker in the configurator.
+
+**Request body (JSON):**
+```json
+{
+  "build": {
+    "cpu": { "socket": "AM5", "tdp": 105 }
+  }
+}
+```
 
 **Query parameters:**
 
@@ -165,7 +175,9 @@ Search with compatibility filtering and price data. Used by the ComponentPicker 
 |---|---|---|---|
 | `category` | string | yes | Category to search within |
 | `search` | string | — | Search term |
-| `build` | JSON string | — | Current build state for compatibility filtering |
+| `brand` | string | — | Filter by brand |
+| `socket` | string | — | Filter by socket |
+| `ram_type` | string | — | Filter by RAM type |
 | `page` | integer | — | Page number |
 | `limit` | integer | — | Items per page |
 
@@ -181,12 +193,15 @@ Search with compatibility filtering and price data. Used by the ComponentPicker 
       "slug": "amd-ryzen-7-7700x",
       "lowest_price": 2199.00,
       "in_stock": true,
-      "compatible": true
+      "compatibility": "compatible",
+      "compatibility_issues": []
     }
   ],
   "total": 12
 }
 ```
+
+`compatibility` is one of `"compatible"`, `"incompatible"`, or `"unknown"`. `"unknown"` means no other components are in the build yet, so no rules could fire. `compatibility_issues` contains the error messages for incompatible components.
 
 **Errors:**
 - `400` — category is missing or build is invalid JSON
@@ -236,10 +251,10 @@ Admin login.
 
 **Response 200:**
 ```json
-{ "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
+{ "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", "expires_in": 900 }
 ```
 
-Also sets an HttpOnly cookie: `refresh_token=<uuid>; HttpOnly; SameSite=Strict; Max-Age=604800`
+Also sets an HttpOnly cookie: `refresh_token=<hex>; HttpOnly; SameSite=Strict; Max-Age=604800`
 
 **Errors:**
 - `401` — invalid credentials (same message for wrong username or wrong password)
@@ -253,7 +268,7 @@ Get a new access token using the refresh cookie.
 
 **Response 200:**
 ```json
-{ "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
+{ "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", "expires_in": 900 }
 ```
 
 **Errors:**
@@ -267,7 +282,7 @@ Invalidate the refresh token and clear the cookie.
 
 **Response 200:**
 ```json
-{ "message": "Déconnecté avec succès" }
+{ "success": true }
 ```
 
 ---
@@ -289,15 +304,21 @@ Dashboard stats, price chart, and recent activity.
 {
   "stats": {
     "total_components": 305,
+    "components_by_category": { "cpu": 45, "gpu": 60 },
+    "total_retailers": 3,
     "active_retailers": 3,
-    "total_prices": 1240,
-    "unmatched_listings": 47
+    "total_price_records": 1240,
+    "unmatched_listings_count": 47,
+    "last_scrape": {
+      "time": "2026-04-28T10:00:00Z",
+      "status": "SUCCESS"
+    }
   },
-  "price_chart": [
+  "price_updates_chart": [
     { "date": "2026-04-28", "count": 312 }
   ],
   "recent_activity": [
-    { "admin_id": 1, "action": "created", "entity_type": "component", "entity_id": 42, "created_at": "..." }
+    { "id": 1, "admin_id": 1, "action": "component_created", "entity_type": "component", "entity_id": 42, "created_at": "..." }
   ]
 }
 ```
@@ -322,7 +343,20 @@ Update a component. Partial updates supported.
 
 ### `DELETE /api/admin/components/:id`
 
-Delete a component. Returns `409` if the component has linked prices or scraper mappings — deactivate instead.
+Delete a component. Returns `409` if the component has linked prices or scraper mappings — use the deactivate endpoint instead.
+
+### `POST /api/admin/components/:id/deactivate`
+
+Soft-delete a component: sets `is_active = false`. The component is hidden from the public API but its price history, scraper mappings, and prices are preserved. Use this when `DELETE` returns `409`.
+
+**Response 200:**
+```json
+{ "message": "Component 42 deactivated successfully.", "component": { ... } }
+```
+
+**Errors:**
+- `400` — id is not a positive integer
+- `404` — component not found
 
 ### `POST /api/admin/components/import`
 

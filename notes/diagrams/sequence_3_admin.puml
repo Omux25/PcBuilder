@@ -6,69 +6,88 @@ skinparam responseMessageBelowArrow true
 title Sequence Diagram 3: Admin Login & Component Management
 
 actor "Administrator" as admin
-participant "HTTP Client\n(e.g. Postman)" as client
+participant "Admin UI\n(React)" as ui
 participant "Hono API\n(Bun)" as api
-participant "Auth\nMiddleware\n(JWT)" as jwt
-participant "Zod\nMiddleware" as zod
+participant "Auth\nMiddleware" as jwt
 participant "Auth\nService" as authservice
+participant "Component\nService" as compservice
 database "PostgreSQL\n(Bun.sql)" as db
 
 == Authentication ==
 
-admin -> client : POST /api/auth/login\n{ username, password }
-client -> api : HTTP POST /api/auth/login
-api -> authservice : login(username, password)
+admin -> ui : Enter username + password
+ui -> api : POST /api/auth/login\n{ username, password }
 
-authservice -> db : SELECT id, username, password_hash\nFROM admins\nWHERE username = $1\nLIMIT 1
+note right of api
+  Rate-limited: 10 attempts
+  per minute per IP address.
+end note
+
+api -> authservice : login(username, password)
+authservice -> db : SELECT id, username, password_hash\nFROM admins WHERE username = $1
 db --> authservice : Admin row
 
 authservice -> authservice : bcrypt.compare(password, hash)
 
 alt Invalid credentials
-  authservice --> api : passwordMatch = false
-  api --> client : HTTP 401\n{ error: { code: "UNAUTHORIZED",\n  message: "Invalid credentials" } }
-  client --> admin : Login failed
+  authservice --> api : throw UnauthorizedError
+  api --> ui : HTTP 401\n{ error: { code: "UNAUTHORIZED" } }
+  ui --> admin : Login failed
 else Valid credentials
-  authservice -> authservice : jwt.sign({ id, username },\nJWT_SECRET, { expiresIn: '8h' })
-  authservice --> api : JWT token
-  api --> client : HTTP 200\n{ token: "eyJhbGci..." }
-  client --> admin : Login successful\nToken received
+  authservice -> db : INSERT INTO refresh_tokens\n(admin_id, token, expires_at)
+  authservice --> api : { accessToken (15min JWT),\n  refreshToken (7-day) }
+  api --> ui : HTTP 200\n{ accessToken, refreshToken }
+  ui --> admin : Login successful
 end
 
 == Add a Component (Protected Route) ==
 
-admin -> client : POST /api/admin/components\nAuthorization: Bearer <token>\n{ category: "cpu", name: "...",\n  socket: "AM5", tdp: 65 }
-
-client -> api : HTTP POST /api/admin/components\n+ Authorization header
+admin -> ui : Fill component form\n(category: "cpu", name, socket, tdp)
+ui -> api : POST /api/admin/components\nAuthorization: Bearer <accessToken>\n{ category, name, socket, tdp, ... }
 
 api -> jwt : authMiddleware(request)
-jwt -> jwt : Extract token from\n"Bearer <token>"
+jwt -> jwt : Extract Bearer token
 jwt -> jwt : jwt.verify(token, JWT_SECRET)
 
 alt Token invalid or expired
   jwt --> api : throw UnauthorizedError
-  api --> client : HTTP 401\n{ error: { code: "UNAUTHORIZED" } }
-  client --> admin : Access denied
+  api --> ui : HTTP 401\n{ error: { code: "UNAUTHORIZED" } }
+  ui --> admin : Session expired — please log in again
 else Token valid
-  jwt -> jwt : c.set('admin', payload)
-  jwt --> api : next()
+  jwt --> api : next() — admin payload set in context
 end
 
-api -> zod : validateComponent(request)
-zod -> zod : Read category = "cpu"\nSelect cpuSchema
-zod -> zod : cpuSchema.safeParse(body)
+note right of api
+  Zod middleware selects the
+  correct schema by category
+  and validates the body.
+end note
 
-alt Validation fails (e.g. missing socket)
-  zod --> api : ZodError
-  api --> client : HTTP 400\n{ error: { code: "VALIDATION_ERROR",\n  fields: ["socket"] } }
-  client --> admin : Validation error
+alt Validation fails (e.g. missing socket for CPU)
+  api --> ui : HTTP 400\n{ error: { code: "VALIDATION_ERROR",\n  fields: ["socket"] } }
+  ui --> admin : Show field errors
 else Validation passes
-  zod --> api : next()
+  api -> compservice : createComponent(data)
+  compservice -> db : INSERT INTO components\n(slug, name, brand, category,\n socket, tdp, ...)\nRETURNING *
+  db --> compservice : New component row
+  compservice --> api : Component
+  api -> db : INSERT INTO admin_activity_log\n(admin_id, action, entity_type, entity_id)
+  api --> ui : HTTP 201 Component
+  ui --> admin : Component created successfully
 end
 
-api -> db : INSERT INTO components\n(name, category, socket, tdp, ...)\nVALUES ($1, $2, $3, $4, ...)\nRETURNING *
-db --> api : New component row
-api --> client : HTTP 201\n{ id: 42, name: "...", category: "cpu", ... }
-client --> admin : Component created successfully
+== Token Refresh ==
+
+ui -> api : POST /api/auth/refresh\n{ refreshToken }
+api -> db : SELECT * FROM refresh_tokens\nWHERE token = $1 AND expires_at > NOW()
+db --> api : Token row
+
+alt Token not found or expired
+  api --> ui : HTTP 401\n{ error: { code: "UNAUTHORIZED" } }
+  ui --> admin : Session expired — please log in again
+else Token valid
+  api -> db : DELETE old refresh token\nINSERT new refresh token
+  api --> ui : HTTP 200\n{ accessToken (new), refreshToken (new) }
+end
 
 @enduml

@@ -70,11 +70,11 @@ The server signs it with `JWT_SECRET` from the environment. Anyone can read the 
 ### What the middleware checks
 
 ```
-No Authorization header?          → 401 "En-tête d'autorisation manquant"
-Doesn't start with "Bearer "?     → 401 "En-tête d'autorisation manquant"
-JWT_SECRET not set?               → 401 "Erreur de configuration serveur"
-Token expired?                    → 401 "Jeton expiré"
-Invalid signature or malformed?   → 401 "Jeton invalide"
+No Authorization header?          → 401 "Missing or malformed Authorization header"
+Doesn't start with "Bearer "?     → 401 "Missing or malformed Authorization header"
+JWT_SECRET not set?               → 401 "Server configuration error: JWT_SECRET is not set"
+Token expired?                    → 401 "Token expired"
+Invalid signature or malformed?   → 401 "Invalid token"
 Valid token                       → attach admin payload to context, continue
 ```
 

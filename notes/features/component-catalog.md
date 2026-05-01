@@ -143,4 +143,4 @@ All entries include correct specs JSONB, slug, brand, and release_year.
 
 Admins can import components in bulk via the admin panel's BulkImport page. It accepts CSV or JSON files, previews the first 10 rows with validation status, handles duplicate slug conflicts, and shows a results summary (imported/skipped/failed counts).
 
-The import runs in a database transaction — if any row fails validation, the entire import is rolled back.
+The import runs row-by-row with per-row error handling. If a row fails validation, it is counted as failed and the import continues with the next row. Successfully imported rows are committed immediately — there is no rollback on partial failure. The response always shows the exact counts: imported / skipped (slug collision) / failed.
