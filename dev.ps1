@@ -9,19 +9,19 @@ Write-Host ""
 
 # Backend - Bun hot reload on port 3000
 Write-Host "Starting Backend  -> http://localhost:3000" -ForegroundColor Green
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'BACKEND - Bun/Hono' -ForegroundColor Green; wsl -d Ubuntu -- bash -c 'cd /mnt/c/Headquarters/Projects/PcBuilder/backend; ~/.bun/bin/bun --hot src/server.ts'"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'BACKEND - Bun/Hono' -ForegroundColor Green; wsl -d Ubuntu -- bash -c 'cd /mnt/c/Headquarters/Projects/PcBuilder/apps/backend; ~/.bun/bin/bun --hot src/server.ts'"
 
 Start-Sleep -Milliseconds 1000
 
 # Frontend - Vite via Bun on port 5173
 Write-Host "Starting Frontend -> http://localhost:5173" -ForegroundColor Blue
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'FRONTEND - Vite' -ForegroundColor Blue; wsl -d Ubuntu -- bash -c 'cd /mnt/c/Headquarters/Projects/PcBuilder/frontend; ~/.bun/bin/bun run dev'"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'FRONTEND - Vite' -ForegroundColor Blue; wsl -d Ubuntu -- bash -c 'cd /mnt/c/Headquarters/Projects/PcBuilder/apps/frontend; ~/.bun/bin/bun run dev'"
 
 Start-Sleep -Milliseconds 1000
 
 # Admin panel - Vite via Bun on port 5174
 Write-Host "Starting Admin    -> http://localhost:5174/admin" -ForegroundColor Magenta
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'ADMIN - Vite' -ForegroundColor Magenta; wsl -d Ubuntu -- bash -c 'cd /mnt/c/Headquarters/Projects/PcBuilder/admin; ~/.bun/bin/bun run dev'"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'ADMIN - Vite' -ForegroundColor Magenta; wsl -d Ubuntu -- bash -c 'cd /mnt/c/Headquarters/Projects/PcBuilder/apps/admin; ~/.bun/bin/bun run dev'"
 
 Write-Host ""
 Write-Host "All 3 processes started in separate windows." -ForegroundColor Cyan

@@ -1,0 +1,210 @@
+.page {
+  animation: fadeIn 0.3s var(--ease-out);
+}
+
+.pageHeader {
+  margin-bottom: 2rem;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  margin-bottom: 1rem;
+  transition: color 0.15s;
+}
+
+.back:hover {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  margin-bottom: 0.4rem;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+/* ── Groups ────────────────────────────────────────────────────────────── */
+
+.group {
+  margin-bottom: 2.5rem;
+}
+
+.groupTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--accent-glow);
+  display: inline-block;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.25rem;
+}
+
+/* ── Preset card ──────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s var(--ease-out);
+  box-shadow: var(--shadow-md);
+  animation: slideUp 0.4s var(--ease-out);
+}
+
+.card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--accent-glow);
+  transform: translateY(-2px);
+}
+
+.incomplete {
+  opacity: 0.7;
+  border-style: dashed;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.cardName {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.incompleteBadge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--warning-soft);
+  background: var(--warning-tint);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.cardDesc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+}
+
+.componentList {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+}
+
+.componentRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  background: var(--surface-2);
+}
+
+.inactive {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.componentCat {
+  color: var(--text-dim);
+  font-weight: 500;
+  flex-shrink: 0;
+  min-width: 85px;
+}
+
+.componentName {
+  color: var(--text);
+  font-weight: 600;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.price {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.loadBtn {
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.loadBtn:hover:not(:disabled) {
+  background: var(--accent-h);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.loadBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.empty {
+  color: var(--text-dim);
+  text-align: center;
+  padding: 2rem;
+}
+
+.error {
+  color: var(--danger);
+  text-align: center;
+  padding: 2rem;
+}
+
+@media (max-width: 640px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+}
