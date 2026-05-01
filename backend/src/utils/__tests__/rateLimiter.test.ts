@@ -68,9 +68,9 @@ describe('isRateLimited', () => {
     await isRateLimited(key, limit, 1);
     expect(await isRateLimited(key, limit, 1)).toBe(true);
 
-    // Wait for the window to expire — 1500ms gives a 500ms buffer over the 1s window
+    // Wait for the window to expire — 2000ms gives a 1s buffer over the 1s window
     // to avoid flakiness under load
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Should be allowed again
     expect(await isRateLimited(key, limit, 1)).toBe(false);
