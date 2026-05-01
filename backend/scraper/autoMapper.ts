@@ -14,17 +14,12 @@
  * unknown models) stay in unmatched_listings for admin review.
  */
 
-import { sql as bunSql } from 'bun';
 import { findBestMatch, type CatalogComponent } from '../src/utils/componentMatcher.js';
 import { logger } from './utils/logger.js';
+import { getSql, setSql, resetSql } from '../src/db/index.js';
 
-// ── Dependency injection ──────────────────────────────────────────────────────
-
-type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
-let _sql: SqlFn = bunSql as unknown as SqlFn;
-
-export function setSql(mockSql: SqlFn): void { _sql = mockSql; }
-export function resetSql(): void { _sql = bunSql as unknown as SqlFn; }
+// Re-export DI helpers so tests can inject a mock SQL function.
+export { setSql, resetSql };
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -52,8 +47,10 @@ export async function autoMap(onProgress?: (done: number, total: number) => void
   let mapped = 0;
   let skipped = 0;
 
+  const sql = getSql();
+
   // Load all active catalog components once
-  const components = (await _sql`
+  const components = (await sql`
     SELECT id, name, brand, category
     FROM components
     WHERE is_active = true
@@ -62,7 +59,7 @@ export async function autoMap(onProgress?: (done: number, total: number) => void
   if (components.length === 0) return { mapped, skipped };
 
   // Fetch all pending unmatched listings (status = 'pending', has a scraped name)
-  const pending = (await _sql`
+  const pending = (await sql`
     SELECT id, retailer_id, product_url, scraped_name
     FROM unmatched_listings
     WHERE status = 'pending'
@@ -90,7 +87,7 @@ export async function autoMap(onProgress?: (done: number, total: number) => void
       skipped++;
     } else {
       try {
-        await _sql`
+        await sql`
           INSERT INTO scraper_mappings (component_id, retailer_id, product_url, product_identifier)
           VALUES (
             ${match.componentId},
@@ -100,7 +97,7 @@ export async function autoMap(onProgress?: (done: number, total: number) => void
           )
           ON CONFLICT (retailer_id, product_url) DO NOTHING
         `;
-        await _sql`
+        await sql`
           UPDATE unmatched_listings
           SET status = 'linked', linked_component_id = ${match.componentId}
           WHERE id = ${listing.id}

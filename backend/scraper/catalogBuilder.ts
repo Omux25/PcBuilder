@@ -11,18 +11,13 @@
  * Fix 5: HTML entity decoding before processing (&#8211; → –, &rsquo; → ', etc.)
  */
 
-import { sql as bunSql } from 'bun';
 import { componentSlug, generateUniqueSlug } from '../src/utils/slugify.js';
 import { scoreDnaMatch, type CatalogComponent } from '../src/utils/componentMatcher.js';
 import { logger } from './utils/logger.js';
+import { getSql, setSql, resetSql } from '../src/db/index.js';
 
-// ── Dependency injection ──────────────────────────────────────────────────────
-
-type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
-let _sql: SqlFn = bunSql as unknown as SqlFn;
-
-export function setSql(mockSql: SqlFn): void { _sql = mockSql; }
-export function resetSql(): void { _sql = bunSql as unknown as SqlFn; }
+// Re-export DI helpers so tests can inject a mock SQL function.
+export { setSql, resetSql };
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -493,8 +488,10 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
   let created = 0;
   let skipped = 0;
 
+  const sql = getSql();
+
   // Only process listings that are still pending (autoMap already ran)
-  const pending = (await _sql`
+  const pending = (await sql`
     SELECT ul.id, ul.retailer_id, ul.product_url, ul.scraped_name
     FROM unmatched_listings ul
     WHERE ul.status = 'pending'
@@ -506,13 +503,13 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
   if (pending.length === 0) return { created, skipped };
 
   // Load existing slugs for deduplication
-  const existingSlugsRows = (await _sql`
+  const existingSlugsRows = (await sql`
     SELECT slug FROM components WHERE slug IS NOT NULL
   `) as { slug: string }[];
   const existingSlugs = new Set(existingSlugsRows.map(r => r.slug));
 
   // Load existing components for DNA dedup check
-  const existingComponents = (await _sql`
+  const existingComponents = (await sql`
     SELECT id, name, brand, category FROM components WHERE is_active = true
   `) as CatalogComponent[];
 
@@ -536,12 +533,12 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
 
     if (dnaMatch) {
       try {
-        await _sql`
+        await sql`
           INSERT INTO scraper_mappings (component_id, retailer_id, product_url, product_identifier)
           VALUES (${dnaMatch.id}, ${listing.retailer_id}, ${listing.product_url}, ${scrapedName})
           ON CONFLICT (retailer_id, product_url) DO NOTHING
         `;
-        await _sql`
+        await sql`
           UPDATE unmatched_listings SET status = 'linked', linked_component_id = ${dnaMatch.id}
           WHERE id = ${listing.id}
         `;
@@ -560,7 +557,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         if (!specs) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
         const slug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
         existingSlugs.add(slug);
-        insertResult = (await _sql`
+        insertResult = (await sql`
           INSERT INTO components (slug, name, brand, category, socket, tdp, is_active)
           VALUES (${slug}, ${cleanedName}, ${brand}, 'cpu', ${specs.socket}, ${specs.tdp}, true)
           ON CONFLICT (slug) DO NOTHING RETURNING id
@@ -570,7 +567,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         const specs = extractGpuSpecs(scrapedName);
         const slug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
         existingSlugs.add(slug);
-        insertResult = (await _sql`
+        insertResult = (await sql`
           INSERT INTO components (slug, name, brand, category, length_mm, tdp, is_active)
           VALUES (${slug}, ${cleanedName}, ${brand}, 'gpu', ${specs.length_mm}, ${specs.tdp}, true)
           ON CONFLICT (slug) DO NOTHING RETURNING id
@@ -581,7 +578,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         if (!specs) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
         const slug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
         existingSlugs.add(slug);
-        insertResult = (await _sql`
+        insertResult = (await sql`
           INSERT INTO components (slug, name, brand, category, ram_type, frequency_mhz, is_active)
           VALUES (${slug}, ${cleanedName}, ${brand}, 'ram', ${specs.ram_type}, ${specs.frequency_mhz}, true)
           ON CONFLICT (slug) DO NOTHING RETURNING id
@@ -592,7 +589,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         if (!specs) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
         const slug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
         existingSlugs.add(slug);
-        insertResult = (await _sql`
+        insertResult = (await sql`
           INSERT INTO components (slug, name, brand, category, is_active)
           VALUES (${slug}, ${cleanedName}, ${brand}, 'storage', true)
           ON CONFLICT (slug) DO NOTHING RETURNING id
@@ -603,7 +600,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         if (!specs) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
         const slug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
         existingSlugs.add(slug);
-        insertResult = (await _sql`
+        insertResult = (await sql`
           INSERT INTO components (
             slug, name, brand, category, socket,
             supported_ram_types, max_ram_frequency, is_active
@@ -621,7 +618,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         if (!specs) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
         const slug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
         existingSlugs.add(slug);
-        insertResult = (await _sql`
+        insertResult = (await sql`
           INSERT INTO components (slug, name, brand, category, wattage, is_active)
           VALUES (${slug}, ${cleanedName}, ${brand}, 'psu', ${specs.wattage}, true)
           ON CONFLICT (slug) DO NOTHING RETURNING id
@@ -633,7 +630,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         if (!specs) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
         const slug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
         existingSlugs.add(slug);
-        insertResult = (await _sql`
+        insertResult = (await sql`
           INSERT INTO components (slug, name, brand, category, tdp, is_active)
           VALUES (${slug}, ${cleanedName}, ${brand}, 'cooling', ${specs.tdp}, true)
           ON CONFLICT (slug) DO NOTHING RETURNING id
@@ -644,7 +641,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         const specs = extractCaseSpecs(scrapedName);
         const slug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
         existingSlugs.add(slug);
-        insertResult = (await _sql`
+        insertResult = (await sql`
           INSERT INTO components (slug, name, brand, category, max_gpu_length_mm, is_active)
           VALUES (${slug}, ${cleanedName}, ${brand}, 'case', ${specs.max_gpu_length_mm}, true)
           ON CONFLICT (slug) DO NOTHING RETURNING id
@@ -656,12 +653,12 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
       const newId = insertResult[0].id;
       existingComponents.push({ id: newId, name: cleanedName, brand, category });
 
-      await _sql`
+      await sql`
         INSERT INTO scraper_mappings (component_id, retailer_id, product_url, product_identifier)
         VALUES (${newId}, ${listing.retailer_id}, ${listing.product_url}, ${scrapedName})
         ON CONFLICT (retailer_id, product_url) DO NOTHING
       `;
-      await _sql`
+      await sql`
         UPDATE unmatched_listings SET status = 'linked', linked_component_id = ${newId}
         WHERE id = ${listing.id}
       `;
