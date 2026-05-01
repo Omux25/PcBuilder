@@ -18,6 +18,8 @@ For a full explanation of how the system works, see [../../notes/features/scrapi
 | `scrapers/ultrapcScraper.ts` | Scrapes ultrapc.ma (PrestaShop) — 279 mapped products |
 | `scrapers/nextlevelScraper.ts` | Scrapes nextlevelpc.ma — category-based pagination |
 | `scrapers/setupgameScraper.ts` | Scrapes setupgame.ma |
+| `scrapers/site1Scraper.ts` | **Template** — listing-page pattern (one URL, many products). Copy and adapt for a new retailer. |
+| `scrapers/site2Scraper.ts` | **Template** — individual-page pattern (one URL per product). Copy and adapt for a new retailer. |
 
 ---
 
@@ -40,3 +42,13 @@ Scraper finds product URL
 ```
 
 Unmatched listings are reviewed in the admin panel. Linking a listing creates a `scraper_mappings` entry — future scrapes will automatically match that product.
+
+---
+
+## Adding a new retailer
+
+1. Insert a row into the `retailers` table and note the assigned `id`.
+2. Copy `scrapers/site1Scraper.ts` (listing-page pattern) or `scrapers/site2Scraper.ts` (individual-page pattern) as your starting point.
+3. Follow the `HOW TO ADAPT` instructions at the top of the template file.
+4. Add an entry to `SCRAPER_REGISTRY` in `session.ts` with the correct database `id`.
+5. The template tests in `scrapers/__tests__/` show the expected test structure — write equivalent tests for your new scraper.

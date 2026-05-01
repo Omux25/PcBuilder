@@ -18,20 +18,10 @@ import { sql as bunSql } from 'bun';
 import type { ScrapedPrice } from './scrapers/baseScraper.js';
 import { UltraPcScraper } from './scrapers/ultrapcScraper.js';
 import { extractVariant } from '../src/utils/variantExtractor.js';
+import { getSql, setSql, resetSql } from '../src/db/index.js';
 
-// ── Dependency injection ──────────────────────────────────────────────────────
-
-type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
-
-let _sql: SqlFn = bunSql as unknown as SqlFn;
-
-export function setSql(mockSql: SqlFn): void {
-  _sql = mockSql;
-}
-
-export function resetSql(): void {
-  _sql = bunSql as unknown as SqlFn;
-}
+// Re-export DI helpers so tests can inject a mock SQL function.
+export { setSql, resetSql };
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -50,11 +40,17 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
 
   if (prices.length === 0) return { updated, unmatched, errors };
 
+  const sql = getSql();
+
+  // isRealSql: true when running in production (real Bun.sql), false when mocked in tests.
+  // Used to gate batch array queries (bunSql(array)) that only work with the real client,
+  // and to skip the UltraPC stock check in tests.
+  const isRealSql = (sql as unknown) === (bunSql as unknown);
+
   // UltraPC stock check — only in production (skip when SQL is mocked in tests)
-  const isRealSql = _sql === (bunSql as unknown as SqlFn);
   const ultrapcPrices = prices.filter(p => p.retailer_id === 10);
   if (isRealSql && ultrapcPrices.length > 0) {
-    const mappedUrls = (await _sql`
+    const mappedUrls = (await sql`
       SELECT product_url FROM scraper_mappings WHERE retailer_id = 10
     `) as { product_url: string }[];
     const mappedSet = new Set(mappedUrls.map(r => r.product_url));
@@ -64,24 +60,51 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
     }
   }
 
+  // Pre-fetch all mappings for the involved retailers to avoid O(N) queries.
+  // Bun.sql supports array parameters via bunSql(array) — only usable with the real client.
+  // When sql is mocked in tests, fall back to per-item lookup in Phase 1.
+  const retailerIds = [...new Set(prices.map(p => p.retailer_id))];
+  let mappingMap = new Map<string, { component_id: number; category: string }>();
+
+  if (isRealSql) {
+    try {
+      const allMappings = (await bunSql`
+        SELECT sm.retailer_id, sm.product_url, sm.component_id, c.category
+        FROM scraper_mappings sm
+        JOIN components c ON c.id = sm.component_id
+        WHERE sm.retailer_id IN ${bunSql(retailerIds)}
+      `) as { retailer_id: number; product_url: string; component_id: number; category: string }[];
+
+      for (const m of allMappings) mappingMap.set(`${m.retailer_id}|${m.product_url}`, m);
+    } catch {
+      mappingMap = new Map(); // fall back to per-item
+    }
+  }
+
   // Phase 1: resolve mappings.
-  // Each product URL gets its own price row — no variant merging.
-  // We track (component_id, retailer_id, product_url) as the unique key.
+  // In production: uses the pre-fetched mappingMap (batch query above).
+  // In tests (mocked SQL): mappingMap is empty, so falls back to per-item sql query.
   const resolvedPrices: (ScrapedPrice & { component_id: number; category: string })[] = [];
 
   for (const p of prices) {
     try {
-      const mappings = (await _sql`
-        SELECT sm.component_id, c.category
-        FROM scraper_mappings sm
-        JOIN components c ON c.id = sm.component_id
-        WHERE sm.retailer_id = ${p.retailer_id}
-          AND sm.product_url  = ${p.product_url}
-        LIMIT 1
-      `) as { component_id: number; category: string }[];
+      let mapping = mappingMap.get(`${p.retailer_id}|${p.product_url}`);
 
-      if (mappings.length === 0) {
-        await _sql`
+      // Per-item fallback for test mocks (mappingMap is empty when sql is mocked)
+      if (!mapping && !isRealSql) {
+        const rows = (await sql`
+          SELECT sm.component_id, c.category
+          FROM scraper_mappings sm
+          JOIN components c ON c.id = sm.component_id
+          WHERE sm.retailer_id = ${p.retailer_id}
+            AND sm.product_url  = ${p.product_url}
+          LIMIT 1
+        `) as { component_id: number; category: string }[];
+        if (rows.length > 0) mapping = rows[0];
+      }
+
+      if (!mapping) {
+        await sql`
           INSERT INTO unmatched_listings (retailer_id, product_url, scraped_name, scraped_price)
           VALUES (${p.retailer_id}, ${p.product_url}, ${p.product_name ?? ''}, ${p.price})
           ON CONFLICT (retailer_id, product_url) DO NOTHING
@@ -92,8 +115,8 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
 
       resolvedPrices.push({
         ...p,
-        component_id: mappings[0].component_id,
-        category: mappings[0].category,
+        component_id: mapping.component_id,
+        category: mapping.category,
       });
     } catch (err) {
       errors++;
@@ -101,22 +124,32 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
     }
   }
 
+  // Pre-fetch current prices for the resolved products to check for price drops.
+  // Only in production — tests don't need this optimization.
+  let priceMap = new Map<string, number>();
+  if (isRealSql && resolvedPrices.length > 0) {
+    try {
+      const currentPrices = (await bunSql`
+        SELECT component_id, retailer_id, product_url, price
+        FROM prices
+        WHERE retailer_id IN ${bunSql(retailerIds)}
+      `) as { component_id: number; retailer_id: number; product_url: string; price: number }[];
+
+      for (const cp of currentPrices) {
+        priceMap.set(`${cp.component_id}|${cp.retailer_id}|${cp.product_url}`, Number(cp.price));
+      }
+    } catch {
+      // Non-critical — price history deduplication will just insert every time
+    }
+  }
+
   // Phase 2: UPSERT one row per (component_id, retailer_id, product_url)
-  // with variant label and details extracted from the product name.
   for (const p of resolvedPrices) {
     try {
       const { label: variantLabel, details: variantDetails } =
         extractVariant(p.product_name ?? '', p.category);
 
-      const currentPrices = (await _sql`
-        SELECT price FROM prices
-        WHERE component_id = ${p.component_id}
-          AND retailer_id  = ${p.retailer_id}
-          AND product_url  = ${p.product_url}
-        LIMIT 1
-      `) as { price: number }[];
-
-      await _sql`
+      await sql`
         INSERT INTO prices (
           component_id, retailer_id, price, in_stock, product_url,
           variant_label, variant_details, last_updated
@@ -136,9 +169,9 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
           last_updated    = NOW()
       `;
 
-      const lastPrice = currentPrices.length > 0 ? Number(currentPrices[0].price) : null;
+      const lastPrice = priceMap.get(`${p.component_id}|${p.retailer_id}|${p.product_url}`) ?? null;
       if (lastPrice === null || lastPrice !== p.price) {
-        await _sql`
+        await sql`
           INSERT INTO price_history (component_id, retailer_id, price, in_stock)
           VALUES (${p.component_id}, ${p.retailer_id}, ${p.price}, ${p.in_stock})
         `;
@@ -158,7 +191,6 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
   // This handles retailers (like NextLevel) that only show in-stock products in listings —
   // if a product URL we have a mapping for didn't appear in the scrape, it sold out.
   if (isRealSql && prices.length > 0) {
-    const retailerIds = [...new Set(prices.map(p => p.retailer_id))];
     const scrapedUrls = new Set(prices.map(p => p.product_url));
 
     for (const retailerId of retailerIds) {
@@ -167,7 +199,7 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
 
       try {
         // Get all mapped URLs for this retailer that are currently marked in_stock
-        const mappedInStock = (await _sql`
+        const mappedInStock = (await sql`
           SELECT p.product_url
           FROM prices p
           JOIN scraper_mappings sm ON sm.component_id = p.component_id
@@ -180,7 +212,7 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
         // Mark as out of stock any that weren't in this scrape
         for (const row of mappedInStock) {
           if (!scrapedUrls.has(row.product_url)) {
-            await _sql`
+            await sql`
               UPDATE prices SET in_stock = false, last_updated = NOW()
               WHERE retailer_id = ${retailerId}
                 AND product_url = ${row.product_url}

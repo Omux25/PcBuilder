@@ -31,6 +31,7 @@ const GPU_MODEL_TIERS: Record<string, string[]> = {
 };
 
 export interface GpuVariantDetails {
+  [key: string]: unknown;
   aib_partner?: string;
   model_tier?: string;
   cooling_slots?: string; // "2-slot" | "2.5-slot" | "3-slot"
@@ -78,6 +79,7 @@ export function extractGpuVariant(productName: string): { label: string; details
 export type CpuPackaging = 'BOX' | 'Tray' | 'MPK' | 'OEM';
 
 export interface CpuVariantDetails {
+  [key: string]: unknown;
   packaging: CpuPackaging;
   has_igpu?: boolean;
   has_3d_vcache?: boolean;
@@ -114,6 +116,7 @@ export function extractCpuVariant(productName: string): { label: string; details
 // ── RAM ───────────────────────────────────────────────────────────────────────
 
 export interface RamVariantDetails {
+  [key: string]: unknown;
   kit_config?: string;   // "2x16GB", "1x32GB"
   memory_profile?: string; // "XMP" | "EXPO" | "JEDEC"
   cas_latency?: number;
@@ -155,6 +158,7 @@ export function extractRamVariant(productName: string): { label: string; details
 // ── Storage ───────────────────────────────────────────────────────────────────
 
 export interface StorageVariantDetails {
+  [key: string]: unknown;
   form_factor?: string;  // "M.2 2280" | "M.2 2230" | "2.5 SATA"
   pcie_gen?: string;     // "Gen3" | "Gen4" | "Gen5" | "SATA"
   has_heatsink?: boolean;
@@ -191,6 +195,7 @@ export function extractStorageVariant(productName: string): { label: string; det
 // ── PSU ───────────────────────────────────────────────────────────────────────
 
 export interface PsuVariantDetails {
+  [key: string]: unknown;
   modularity?: string;   // "Non-modular" | "Semi-modular" | "Fully modular"
   atx_version?: string;  // "ATX 2.0" | "ATX 3.0" | "ATX 3.1"
   color?: string;
@@ -231,6 +236,7 @@ export function extractPsuVariant(productName: string): { label: string; details
 // ── Cooling ───────────────────────────────────────────────────────────────────
 
 export interface CoolingVariantDetails {
+  [key: string]: unknown;
   color?: string;
   size_mm?: number;
 }
@@ -255,6 +261,7 @@ export function extractCoolingVariant(productName: string): { label: string; det
 // ── Case ──────────────────────────────────────────────────────────────────────
 
 export interface CaseVariantDetails {
+  [key: string]: unknown;
   color?: string;
 }
 
@@ -272,6 +279,7 @@ export function extractCaseVariant(productName: string): { label: string; detail
 // ── Motherboard ───────────────────────────────────────────────────────────────
 
 export interface MotherboardVariantDetails {
+  [key: string]: unknown;
   ddr_standard?: 'DDR4' | 'DDR5';
   revision?: string;
 }

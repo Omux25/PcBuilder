@@ -15,18 +15,22 @@ const PRICES: ScrapedPrice[] = [
 
 /**
  * Creates a mock SQL that simulates the new aggregator flow:
- * - scraper_mappings lookup → returns mapping with component_id + category
- * - current prices lookup → returns [] (no existing price)
+ * - Batch scraper_mappings lookup → returns one mapping per price
+ * - Batch current prices lookup → returns [] (no existing price)
  * - UPSERT prices
  * - INSERT price_history
  */
 function makeMappedSql(componentId: number) {
   return (strings: TemplateStringsArray, ...values: unknown[]) => {
     const query = strings.join('?');
-    if (query.includes('scraper_mappings')) {
-      return Promise.resolve([{ component_id: componentId, category: 'cpu' }]);
+    // Batch mapping lookup — return one mapping per price in PRICES
+    if (query.includes('scraper_mappings') && query.includes('JOIN components')) {
+      return Promise.resolve(
+        PRICES.map(p => ({ retailer_id: p.retailer_id, product_url: p.product_url, component_id: componentId, category: 'cpu' }))
+      );
     }
-    if (query.includes('FROM prices')) {
+    // Batch current prices lookup
+    if (query.includes('FROM prices') && query.includes('retailer_id')) {
       return Promise.resolve([]);
     }
     return Promise.resolve([]);

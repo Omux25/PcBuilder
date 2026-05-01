@@ -1,86 +1,87 @@
 /**
  * Scraping session — the core scraping logic, separated from the cron scheduler.
- * Import this file to trigger a session without starting the cron job.
- *
+ * Manages the execution of multiple scrapers with concurrency control.
+ * 
  * Requirements: 6.6, 9.1, 9.2
  */
 
+import PQueue from 'p-queue';
 import { logger } from './utils/logger.js';
 import { aggregate } from './aggregator.js';
 import { autoMap } from './autoMapper.js';
 import { buildFromUnmatched } from './catalogBuilder.js';
-import { Site1Scraper } from './scrapers/site1Scraper.js';
-import { Site2Scraper } from './scrapers/site2Scraper.js';
 import { UltraPcScraper } from './scrapers/ultrapcScraper.js';
 import { NextLevelScraper } from './scrapers/nextlevelScraper.js';
 import { SetupGameScraper } from './scrapers/setupgameScraper.js';
 import type { ScrapedPrice } from './scrapers/baseScraper.js';
 
-export async function runScrapingSession(): Promise<void> {
-  await logger.info('Scraping session started');
+interface ScraperInstance {
+  [key: string]: () => Promise<ScrapedPrice[]>;
+}
+
+/**
+ * Registry of available scrapers mapped to their retailer IDs (from database).
+ * This allows targeted scraping of specific retailers.
+ *
+ * Retailer IDs match the actual rows in the `retailers` table:
+ *   UltraPC   → id 10
+ *   NextLevel → id 11
+ *   SetupGame → id 13
+ */
+const SCRAPER_REGISTRY = [
+  { id: 10, name: 'UltraPC',      instance: () => new UltraPcScraper(),   method: 'scrapeAllCategories' },
+  { id: 11, name: 'NextLevel PC', instance: () => new NextLevelScraper(), method: 'scrapeAllCategories' },
+  { id: 13, name: 'SetupGame',    instance: () => new SetupGameScraper(), method: 'scrapeAllCategories' },
+];
+
+/**
+ * Runs a full or partial scraping session.
+ * 
+ * @param targetRetailerId - If provided, only run the scraper for this specific retailer.
+ */
+export async function runScrapingSession(targetRetailerId?: number): Promise<void> {
+  const sessionType = targetRetailerId ? `Targeted (Retailer ${targetRetailerId})` : 'Full';
+  await logger.info(`Scraping session started: ${sessionType}`);
 
   const allPrices: ScrapedPrice[] = [];
+  
+  // Initialize concurrency queue (limit to 2 to avoid overwhelming resources/getting blocked)
+  const queue = new PQueue({ concurrency: 2 });
 
-  const site1 = new Site1Scraper();
-  try {
-    const prices = await site1.scrapeListingPage();
-    allPrices.push(...prices);
-    await logger.info(`Site1: scraped ${prices.length} price(s)`, site1.siteName);
-  } catch (err) {
-    await logger.error(
-      `Site1 scraping failed: ${err instanceof Error ? err.message : String(err)}`,
-      site1.siteName,
-    );
+  // Filter scrapers based on targetRetailerId
+  const scrapersToRun = targetRetailerId 
+    ? SCRAPER_REGISTRY.filter(s => s.id === targetRetailerId)
+    : SCRAPER_REGISTRY;
+
+  if (scrapersToRun.length === 0 && targetRetailerId) {
+    await logger.warn(`No scraper found for retailer ID ${targetRetailerId}`);
+    return;
   }
 
-  const site2 = new Site2Scraper();
-  try {
-    const prices = await site2.scrapeAllProducts();
-    allPrices.push(...prices);
-    await logger.info(`Site2: scraped ${prices.length} price(s)`, site2.siteName);
-  } catch (err) {
-    await logger.error(
-      `Site2 scraping failed: ${err instanceof Error ? err.message : String(err)}`,
-      site2.siteName,
-    );
+  await Promise.all(scrapersToRun.map(config => 
+    queue.add(async () => {
+      const scraper = config.instance() as unknown as ScraperInstance;
+      try {
+        await logger.info(`Starting ${config.name} scraper...`);
+        const prices = await scraper[config.method]();
+        allPrices.push(...prices);
+        await logger.info(`${config.name}: scraped ${prices.length} price(s)`);
+      } catch (err) {
+        await logger.error(
+          `${config.name} scraping failed: ${err instanceof Error ? err.message : String(err)}`,
+          config.name
+        );
+      }
+    })
+  ));
+
+  if (allPrices.length === 0) {
+    await logger.info('Session complete: 0 updated, 0 unmatched, 0 error(s)');
+    return;
   }
 
-  const ultrapc = new UltraPcScraper();
-  try {
-    const prices = await ultrapc.scrapeAllCategories();
-    allPrices.push(...prices);
-    await logger.info(`UltraPC: scraped ${prices.length} price(s)`, ultrapc.siteName);
-  } catch (err) {
-    await logger.error(
-      `UltraPC scraping failed: ${err instanceof Error ? err.message : String(err)}`,
-      ultrapc.siteName,
-    );
-  }
-
-  const nextlevel = new NextLevelScraper();
-  try {
-    const prices = await nextlevel.scrapeAllCategories();
-    allPrices.push(...prices);
-    await logger.info(`NextLevel: scraped ${prices.length} price(s)`, nextlevel.siteName);
-  } catch (err) {
-    await logger.error(
-      `NextLevel scraping failed: ${err instanceof Error ? err.message : String(err)}`,
-      nextlevel.siteName,
-    );
-  }
-
-  const setupgame = new SetupGameScraper();
-  try {
-    const prices = await setupgame.scrapeAllCategories();
-    allPrices.push(...prices);
-    await logger.info(`SetupGame: scraped ${prices.length} price(s)`, setupgame.siteName);
-  } catch (err) {
-    await logger.error(
-      `SetupGame scraping failed: ${err instanceof Error ? err.message : String(err)}`,
-      setupgame.siteName,
-    );
-  }
-
+  // ── Data Processing Phase ──────────────────────────────────────────────────
+  
   const { updated, unmatched, errors } = await aggregate(allPrices);
 
   // Auto-map any new unmatched listings using the DNA matcher.

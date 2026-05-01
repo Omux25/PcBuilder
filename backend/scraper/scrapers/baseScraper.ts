@@ -24,7 +24,12 @@ import type { CheerioAPI } from 'cheerio';
  * The aggregator will UPSERT this into the `prices` table.
  */
 export interface ScrapedPrice {
-  /** Foreign key — must match an existing row in `components.id` */
+  /**
+   * Placeholder — always set to 0 by production scrapers.
+   * The aggregator resolves the real component_id from `scraper_mappings`
+   * using (retailer_id, product_url) as the lookup key.
+   * Only the legacy site1Scraper pattern sets this to a real value.
+   */
   component_id: number;
   /** Foreign key — must match an existing row in `retailers.id` */
   retailer_id: number;
