@@ -48,10 +48,17 @@ export const psuSchema = baseSchema.extend({
 
 export const caseSchema = baseSchema.extend({
   max_gpu_length_mm: z.number(),
+  // Rule 5 (form_factor_mismatch): list of supported motherboard form factors
+  // e.g. ['ATX', 'mATX', 'Mini-ITX']
+  supported_motherboards: z.array(z.string().min(1)).optional(),
+  // Rule 6 (cooler_too_tall): maximum CPU cooler height in mm
+  max_cooler_height_mm: z.number().optional(),
 });
 
 export const coolingSchema = baseSchema.extend({
   tdp: z.number().optional(),
+  // Rule 6 (cooler_too_tall): cooler height in mm — required for the rule to fire
+  height_mm: z.number().optional(),
 });
 
 // ── Category → schema map ────────────────────────────────────────────────────
@@ -83,5 +90,5 @@ export type ComponentInput =
   | (z.infer<typeof ramSchema>         & { category: 'ram';         description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
   | (z.infer<typeof storageSchema>     & { category: 'storage';     description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
   | (z.infer<typeof psuSchema>         & { category: 'psu';         description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
-  | (z.infer<typeof caseSchema>        & { category: 'case';        description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
+  | (z.infer<typeof caseSchema>        & { category: 'case';        description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number; form_factor?: string })
   | (z.infer<typeof coolingSchema>     & { category: 'cooling';     description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number });

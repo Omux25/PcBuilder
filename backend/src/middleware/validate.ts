@@ -30,7 +30,7 @@ export async function validateComponent(c: Context, next: Next): Promise<Respons
       {
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Le corps de la requête doit être du JSON valide',
+          message: 'Request body must be valid JSON',
           fields: [],
         },
       },
@@ -49,7 +49,7 @@ export async function validateComponent(c: Context, next: Next): Promise<Respons
       {
         error: {
           code: 'VALIDATION_ERROR',
-          message: `Le champ 'category' est requis et doit être l'un de : ${Object.keys(componentSchemas).join(', ')}`,
+          message: `Field 'category' is required and must be one of: ${Object.keys(componentSchemas).join(', ')}`,
           fields: ['category'],
         },
       },
@@ -67,7 +67,7 @@ export async function validateComponent(c: Context, next: Next): Promise<Respons
       {
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Validation échouée',
+          message: 'Validation failed',
           fields,
         },
       },

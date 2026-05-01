@@ -14,13 +14,8 @@ import { authMiddleware } from '../../middleware/auth.js';
 import { getRetailers, getRetailerById, createRetailer, updateRetailer } from '../../services/retailerService.js';
 import { logActivity } from '../../services/adminService.js';
 import { AppError } from '../../utils/errors.js';
-
-type AdminEnv = {
-  Variables: {
-    admin: { id: number };
-    validatedBody: unknown;
-  }
-};
+import type { AdminEnv } from './types.js';
+import { parseId } from './types.js';
 
 const adminRetailersRouter = new Hono<AdminEnv>();
 
@@ -68,8 +63,8 @@ adminRetailersRouter.post('/', async (c) => {
 
 // PUT /api/admin/retailers/:id
 adminRetailersRouter.put('/:id', async (c) => {
-  const id = Number(c.req.param('id'));
-  if (!Number.isInteger(id) || id <= 0) {
+  const id = parseId(c.req.param('id'));
+  if (id === null) {
     return c.json({ error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } }, 400);
   }
 
@@ -100,7 +95,7 @@ adminRetailersRouter.put('/:id', async (c) => {
     return c.json(retailer);
   } catch (err: unknown) {
     if (err instanceof AppError) {
-      return c.json(err.toJSON(), err.statusCode as any);
+      return c.json(err.toJSON(), err.statusCode);
     }
     throw err;
   }
@@ -108,8 +103,8 @@ adminRetailersRouter.put('/:id', async (c) => {
 
 // DELETE /api/admin/retailers/:id — soft delete (set is_active = false)
 adminRetailersRouter.delete('/:id', async (c) => {
-  const id = Number(c.req.param('id'));
-  if (!Number.isInteger(id) || id <= 0) {
+  const id = parseId(c.req.param('id'));
+  if (id === null) {
     return c.json({ error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } }, 400);
   }
 
@@ -125,7 +120,7 @@ adminRetailersRouter.delete('/:id', async (c) => {
     return c.json({ message: `Retailer ${id} deactivated.` });
   } catch (err: unknown) {
     if (err instanceof AppError) {
-      return c.json(err.toJSON(), err.statusCode as any);
+      return c.json(err.toJSON(), err.statusCode);
     }
     throw err;
   }

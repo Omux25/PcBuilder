@@ -70,7 +70,7 @@ describe('Logger — DB integration', () => {
 
 describe('Aggregator — DB integration', () => {
   const TEST_PRICE: ScrapedPrice = {
-    component_id: 1,
+    component_id: 0, // ignored by aggregator — resolved from scraper_mappings
     retailer_id:  1,
     price:        1299.99,
     in_stock:     true,

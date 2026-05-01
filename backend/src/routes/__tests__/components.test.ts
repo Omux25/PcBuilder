@@ -129,7 +129,7 @@ describe('GET /api/components/:id', () => {
     expect(res.status).toBe(404);
 
     const body = await res.json();
-    expect(body.error.code).toBe('NOT_FOUND');
+    expect(body.error.code).toBe('COMPONENT_NOT_FOUND');
   });
 
   test('returns 400 when id is not a number', async () => {

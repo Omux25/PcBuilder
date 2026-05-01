@@ -10,15 +10,10 @@
 // @ts-nocheck
 import { describe, test, beforeAll, afterAll } from 'bun:test';
 import * as fc from 'fast-check';
-import { logger, setSql, resetSql } from '../../routes/admin/logs.js';
 
-// The logs route uses Bun.sql directly (not via a service).
-// We test the filtering logic by calling the route through the Hono app
-// and mocking the SQL layer via the admin logs router's internal sql.
-
-// Since the logs route imports sql from 'bun' directly (not injectable),
-// we test the filtering property at the HTTP level using the app,
-// with a mock that returns controlled data.
+// The logs route uses getSql() from db/index.ts (DI-injectable).
+// We test the filtering property at the HTTP level using the Hono app
+// with a valid JWT — validation logic runs without a real DB connection.
 
 import { Hono } from 'hono';
 import jwt from 'jsonwebtoken';

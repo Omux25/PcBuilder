@@ -9,16 +9,19 @@
  */
 
 import { Hono } from 'hono';
-import { sql } from 'bun';
+import { getSql } from '../../db/index.js';
 import { authMiddleware } from '../../middleware/auth.js';
 import { logActivity } from '../../services/adminService.js';
+import type { AdminEnv } from './types.js';
+import { parseId } from './types.js';
 
-const adminUnmatchedRouter = new Hono();
+const adminUnmatchedRouter = new Hono<AdminEnv>();
 
 adminUnmatchedRouter.use('/*', authMiddleware);
 
 // GET /api/admin/unmatched-listings?status=pending&retailer_id=1
 adminUnmatchedRouter.get('/', async (c) => {
+  const sql = getSql();
   const status     = c.req.query('status');
   const retailerId = c.req.query('retailer_id') ? Number(c.req.query('retailer_id')) : undefined;
 
@@ -39,10 +42,11 @@ adminUnmatchedRouter.get('/', async (c) => {
 
 // POST /api/admin/unmatched-listings/:id/link
 adminUnmatchedRouter.post('/:id/link', async (c) => {
-  const id    = Number(c.req.param('id'));
+  const sql = getSql();
+  const id = parseId(c.req.param('id'));
   const admin = c.get('admin') as { id: number } | undefined;
 
-  if (!Number.isInteger(id) || id <= 0) {
+  if (id === null) {
     return c.json({ error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } }, 400);
   }
 
@@ -102,8 +106,9 @@ adminUnmatchedRouter.post('/:id/link', async (c) => {
 
 // POST /api/admin/unmatched-listings/:id/dismiss
 adminUnmatchedRouter.post('/:id/dismiss', async (c) => {
-  const id = Number(c.req.param('id'));
-  if (!Number.isInteger(id) || id <= 0) {
+  const sql = getSql();
+  const id = parseId(c.req.param('id'));
+  if (id === null) {
     return c.json({ error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } }, 400);
   }
 

@@ -8,14 +8,14 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { secureHeaders } from 'hono/secure-headers';
 import { serveStatic } from 'hono/bun';
 import { authRouter } from './routes/auth.js';
 import { componentsRouter } from './routes/components.js';
-import { pricesRouter } from './routes/prices.js';
 import { compatibilityRouter } from './routes/compatibility.js';
 import { healthRouter } from './routes/health.js';
 import { presetsRouter } from './routes/presets.js';
-import { smartSearchRouter } from './routes/smartSearch.js';
+import { marketTrendsRouter } from './routes/marketTrends.js';
 import { adminComponentsRouter } from './routes/admin/components.js';
 import { adminLogsRouter } from './routes/admin/logs.js';
 import { adminDashboardRouter } from './routes/admin/dashboard.js';
@@ -26,6 +26,9 @@ import { adminPresetsRouter } from './routes/admin/presets.js';
 import { AppError } from './utils/errors.js';
 
 const app = new Hono();
+
+// ── Security Headers ─────────────────────────────────────────────────────────
+app.use('*', secureHeaders());
 
 // ── Request logging ──────────────────────────────────────────────────────────
 app.use('*', logger());
@@ -51,11 +54,10 @@ app.use('/api/*', cors({
 
 app.route('/api/auth', authRouter);
 app.route('/api/builds/presets', presetsRouter);
-app.route('/api/components/smart-search', smartSearchRouter); // MUST be before /api/components (avoids /:id catch-all)
 app.route('/api/components', componentsRouter);
-app.route('/api/components', pricesRouter);          // GET /api/components/:id/prices
 app.route('/api/compatibility', compatibilityRouter);
 app.route('/api/health', healthRouter);
+app.route('/api/market-trends', marketTrendsRouter);
 
 // ── Protected routes ──────────────────────────────────────────────────────────
 
@@ -74,7 +76,7 @@ app.notFound((c) => {
     {
       error: {
         code: 'NOT_FOUND',
-        message: `Route ${c.req.method} ${c.req.path} introuvable`,
+        message: `Route ${c.req.method} ${c.req.path} not found`,
       },
     },
     404,
@@ -87,7 +89,7 @@ app.notFound((c) => {
 
 app.onError((err, c) => {
   if (err instanceof AppError) {
-    return c.json(err.toJSON(), err.statusCode as any);
+    return c.json(err.toJSON(), err.statusCode);
   }
 
   console.error('[Unhandled error]', err);
@@ -95,7 +97,7 @@ app.onError((err, c) => {
     {
       error: {
         code: 'INTERNAL_ERROR',
-        message: 'Une erreur inattendue s\'est produite',
+        message: 'An unexpected error occurred',
       },
     },
     500,

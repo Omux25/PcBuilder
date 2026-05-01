@@ -13,7 +13,7 @@
 
 import { Hono } from 'hono';
 import { authMiddleware } from '../../middleware/auth.js';
-import { sql } from 'bun';
+import { getSql } from '../../db/index.js';
 
 const adminLogsRouter = new Hono();
 
@@ -26,6 +26,7 @@ const MAX_LIMIT = 500;
 
 // GET /api/admin/logs
 adminLogsRouter.get('/', async (c) => {
+  const sql = getSql();
   const levelParam = c.req.query('level');
   const siteParam  = c.req.query('site');
   const limitParam = c.req.query('limit');
@@ -66,42 +67,16 @@ adminLogsRouter.get('/', async (c) => {
   const level = levelParam as typeof VALID_LEVELS[number] | undefined;
   const site  = siteParam;
 
-  // Build query — Bun.sql parameterizes all values automatically
-  let rows: ScraperLog[];
-
-  if (level && site) {
-    rows = await sql`
-      SELECT id, level, site, message, created_at
-      FROM scraper_logs
-      WHERE level = ${level}
-        AND site  = ${site}
-      ORDER BY created_at DESC
-      LIMIT ${limit}
-    ` as ScraperLog[];
-  } else if (level) {
-    rows = await sql`
-      SELECT id, level, site, message, created_at
-      FROM scraper_logs
-      WHERE level = ${level}
-      ORDER BY created_at DESC
-      LIMIT ${limit}
-    ` as ScraperLog[];
-  } else if (site) {
-    rows = await sql`
-      SELECT id, level, site, message, created_at
-      FROM scraper_logs
-      WHERE site = ${site}
-      ORDER BY created_at DESC
-      LIMIT ${limit}
-    ` as ScraperLog[];
-  } else {
-    rows = await sql`
-      SELECT id, level, site, message, created_at
-      FROM scraper_logs
-      ORDER BY created_at DESC
-      LIMIT ${limit}
-    ` as ScraperLog[];
-  }
+  // Single query with nullable parameters — avoids 4-branch if/else.
+  // Bun.sql treats null parameters as "skip this condition" when cast to the right type.
+  const rows = await sql`
+    SELECT id, level, site, message, created_at
+    FROM scraper_logs
+    WHERE (${level ?? null}::text IS NULL OR level = ${level ?? null})
+      AND (${site ?? null}::text IS NULL OR site  = ${site ?? null})
+    ORDER BY created_at DESC
+    LIMIT ${limit}
+  ` as ScraperLog[];
 
   return c.json({ logs: rows, count: rows.length });
 });

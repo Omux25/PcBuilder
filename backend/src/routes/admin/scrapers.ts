@@ -12,42 +12,39 @@ import { authMiddleware } from '../../middleware/auth.js';
 import { getRetailers, getRetailerById } from '../../services/retailerService.js';
 import { runScrapingSession } from '../../../scraper/session.js';
 import { AppError } from '../../utils/errors.js';
+import { parseId } from './types.js';
 
 const adminScrapersRouter = new Hono();
 
 adminScrapersRouter.use('/*', authMiddleware);
 
+// Global lock for full session
+let fullSessionRunning = false;
 // Track running jobs to prevent duplicates (in-memory — sufficient for single-process)
 const runningJobs = new Set<number>();
 
 // POST /api/admin/scrapers/run-all
 adminScrapersRouter.post('/run-all', async (c) => {
-  const retailers = await getRetailers(false); // active only
-
-  const jobIds: string[] = [];
-  for (const retailer of retailers) {
-    if (runningJobs.has(retailer.id)) continue;
-
-    const jobId = `scrape-${retailer.id}-${Date.now()}`;
-    jobIds.push(jobId);
-
-    runningJobs.add(retailer.id);
-    (async () => {
-      try {
-        await runScrapingSession();
-      } finally {
-        runningJobs.delete(retailer.id);
-      }
-    })();
+  if (fullSessionRunning) {
+    return c.json({ error: { code: 'CONFLICT', message: 'A full scraping session is already running' } }, 409);
   }
 
-  return c.json({ message: 'Scraping jobs started', job_ids: jobIds, retailers_count: jobIds.length });
+  fullSessionRunning = true;
+  (async () => {
+    try {
+      await runScrapingSession();
+    } finally {
+      fullSessionRunning = false;
+    }
+  })();
+
+  return c.json({ message: 'Full scraping session started', status: 'started' });
 });
 
 // POST /api/admin/scrapers/:retailerId/run
 adminScrapersRouter.post('/:retailerId/run', async (c) => {
-  const retailerId = Number(c.req.param('retailerId'));
-  if (!Number.isInteger(retailerId) || retailerId <= 0) {
+  const retailerId = parseId(c.req.param('retailerId'));
+  if (retailerId === null) {
     return c.json({ error: { code: 'VALIDATION_ERROR', message: 'retailerId must be a positive integer' } }, 400);
   }
 
@@ -55,7 +52,7 @@ adminScrapersRouter.post('/:retailerId/run', async (c) => {
     await getRetailerById(retailerId);
   } catch (err: unknown) {
     if (err instanceof AppError) {
-      return c.json(err.toJSON(), err.statusCode as any);
+      return c.json(err.toJSON(), err.statusCode);
     }
     throw err;
   }
@@ -67,18 +64,16 @@ adminScrapersRouter.post('/:retailerId/run', async (c) => {
     );
   }
 
-  const jobId = `scrape-${retailerId}-${Date.now()}`;
-
   runningJobs.add(retailerId);
   (async () => {
     try {
-      await runScrapingSession();
+      await runScrapingSession(retailerId);
     } finally {
       runningJobs.delete(retailerId);
     }
   })();
 
-  return c.json({ job_id: jobId, status: 'started', retailer_id: retailerId });
+  return c.json({ status: 'started', retailer_id: retailerId });
 });
 
 export { adminScrapersRouter };
