@@ -12,18 +12,19 @@ docs/
 
 # Dependencies
 node_modules/
+apps/*/node_modules/
 
 # Environment variables
 .env
-backend/.env
-frontend/.env
-admin/.env
+apps/backend/.env
+apps/frontend/.env
+apps/admin/.env
 
 # Build outputs
 dist/
 build/
-frontend/dist/
-admin/dist/
+apps/frontend/dist/
+apps/admin/dist/
 
 # OS
 .DS_Store

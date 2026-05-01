@@ -4,7 +4,7 @@ A price comparator and compatibility checker for PC components in Morocco. Users
 
 **Team:** Salmane ELHJOUJI (backend) · Ghali KHARMOUDY (frontend)
 **School:** EMSI Orangers, Casablanca · **Deadline:** May 11, 2026
-**Status:** Complete — 324 tests passing
+**Status:** Complete — 548 tests passing
 
 ---
 
@@ -36,9 +36,10 @@ A price comparator and compatibility checker for PC components in Morocco. Users
 
 ```
 PcBuilder/
-├── backend/          ← Bun + Hono API server + scraping system
-├── frontend/         ← React + Vite (user-facing, port 5173)
-├── admin/            ← React + Vite (admin panel, port 5174)
+├── apps/
+│   ├── backend/      ← Bun + Hono API server + scraping system
+│   ├── frontend/     ← React + Vite (user-facing, port 5173)
+│   └── admin/        ← React + Vite (admin panel, port 5174)
 ├── notes/            ← Project documentation
 │   ├── features/     ← How each feature works
 │   └── reference/    ← API, database, dev setup, stack
@@ -86,10 +87,10 @@ For first-time setup (migrations, seed data, dependencies), see [notes/reference
 ## Running tests
 
 ```powershell
-wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/backend && ~/.bun/bin/bun test 2>&1"
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/apps/backend && ~/.bun/bin/bun test 2>&1"
 ```
 
-Expected: 324 pass, 0 fail across 26 files.
+Expected: 548 pass, 0 fail across 39 files.
 
 ---
 

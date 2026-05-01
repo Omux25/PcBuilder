@@ -1,0 +1,314 @@
+[
+  {
+    "scraped_title": "Gigabyte GeForce RTX 4090 GAMING OC 24G",
+    "catalog_slug": "nvidia-rtx-4090",
+    "expected_action": "match",
+    "reason": "Standard RTX 4090 with OC suffix — must not match 4080."
+  },
+  {
+    "scraped_title": "MSI GeForce RTX 4070 Ti SUPER 16G GAMING X SLIM",
+    "catalog_slug": "nvidia-rtx-4070-ti-super",
+    "expected_action": "match",
+    "reason": "Ti SUPER variant — must not match plain Ti or plain 4070."
+  },
+  {
+    "scraped_title": "ASUS TUF Gaming GeForce RTX 4070 Ti OC Edition 12GB",
+    "catalog_slug": "nvidia-rtx-4070-ti",
+    "expected_action": "match",
+    "reason": "Ti without SUPER — must not match Ti SUPER."
+  },
+  {
+    "scraped_title": "Zotac Gaming GeForce RTX 4070 SUPER Twin Edge OC 12GB",
+    "catalog_slug": "nvidia-rtx-4070-super",
+    "expected_action": "match",
+    "reason": "SUPER without Ti — must not match Ti SUPER or plain 4070."
+  },
+  {
+    "scraped_title": "Palit GeForce RTX 4070 Dual OC 12GB GDDR6X",
+    "catalog_slug": "nvidia-rtx-4070",
+    "expected_action": "match",
+    "reason": "Plain 4070 — must not match 4070 Ti or 4070 SUPER."
+  },
+  {
+    "scraped_title": "Sapphire PULSE AMD Radeon RX 7900 XTX 24GB",
+    "catalog_slug": "amd-rx-7900-xtx",
+    "expected_action": "match",
+    "reason": "XTX variant — must not match XT."
+  },
+  {
+    "scraped_title": "PowerColor Fighter AMD Radeon RX 7900 XT 20GB",
+    "catalog_slug": "amd-rx-7900-xt",
+    "expected_action": "match",
+    "reason": "XT variant — must not match XTX."
+  },
+  {
+    "scraped_title": "Gigabyte Radeon RX 7900 GRE Gaming OC 16G",
+    "catalog_slug": "amd-rx-7900-gre",
+    "expected_action": "match",
+    "reason": "GRE variant — must not match XT or XTX."
+  },
+  {
+    "scraped_title": "MSI GeForce RTX 4060 Ti GAMING X 8G",
+    "catalog_slug": "nvidia-rtx-4060-ti",
+    "expected_action": "match",
+    "reason": "4060 Ti — must not match plain 4060."
+  },
+  {
+    "scraped_title": "ASUS Dual GeForce RTX 4060 OC Edition 8GB",
+    "catalog_slug": "nvidia-rtx-4060",
+    "expected_action": "match",
+    "reason": "Plain 4060 — must not match 4060 Ti."
+  },
+  {
+    "scraped_title": "Gigabyte GeForce RTX 3060 Ti GAMING OC 8G",
+    "catalog_slug": "nvidia-rtx-3060-ti",
+    "expected_action": "match",
+    "reason": "3060 Ti — must not match plain 3060."
+  },
+  {
+    "scraped_title": "MSI GeForce RTX 3060 VENTUS 2X 12G OC",
+    "catalog_slug": "nvidia-rtx-3060",
+    "expected_action": "match",
+    "reason": "Plain 3060 — must not match 3060 Ti."
+  },
+  {
+    "scraped_title": "AMD Ryzen 5 7600X Box",
+    "catalog_slug": "amd-ryzen-5-7600x",
+    "expected_action": "match",
+    "reason": "7600X — must not match plain 7600."
+  },
+  {
+    "scraped_title": "AMD Ryzen 5 7600 Tray",
+    "catalog_slug": "amd-ryzen-5-7600",
+    "expected_action": "match",
+    "reason": "Plain 7600 — must not match 7600X."
+  },
+  {
+    "scraped_title": "AMD Ryzen 7 7800X3D Box",
+    "catalog_slug": "amd-ryzen-7-7800x3d",
+    "expected_action": "match",
+    "reason": "X3D variant — must not match plain 7800X."
+  },
+  {
+    "scraped_title": "AMD Ryzen 9 7950X3D Tray",
+    "catalog_slug": "amd-ryzen-9-7950x3d",
+    "expected_action": "match",
+    "reason": "9 7950X3D — must not match 7950X."
+  },
+  {
+    "scraped_title": "Intel Core i5-13400F Box",
+    "catalog_slug": "intel-core-i5-13400f",
+    "expected_action": "match",
+    "reason": "13400F (no iGPU) — must not match i5-13400 or i5-13600K."
+  },
+  {
+    "scraped_title": "Intel Core i5-13600K Tray",
+    "catalog_slug": "intel-core-i5-13600k",
+    "expected_action": "match",
+    "reason": "13600K — must not match 13600KF."
+  },
+  {
+    "scraped_title": "Intel Core i5-13600KF Box",
+    "catalog_slug": "intel-core-i5-13600kf",
+    "expected_action": "match",
+    "reason": "13600KF — must not match 13600K."
+  },
+  {
+    "scraped_title": "Intel Core i7-13700K Box",
+    "catalog_slug": "intel-core-i7-13700k",
+    "expected_action": "match",
+    "reason": "13700K — must not match 13700KF."
+  },
+  {
+    "scraped_title": "Intel Core i7-13700KF Tray",
+    "catalog_slug": "intel-core-i7-13700kf",
+    "expected_action": "match",
+    "reason": "13700KF — must not match 13700K."
+  },
+  {
+    "scraped_title": "Intel Core i9-14900K Box",
+    "catalog_slug": "intel-core-i9-14900k",
+    "expected_action": "match",
+    "reason": "14900K — must not match 14900KF or 14900KS."
+  },
+  {
+    "scraped_title": "Intel Core i9-14900KF Tray",
+    "catalog_slug": "intel-core-i9-14900kf",
+    "expected_action": "match",
+    "reason": "14900KF — must not match 14900K."
+  },
+  {
+    "scraped_title": "Corsair Vengeance RGB 32GB (2x16GB) DDR5 6000MHz C36",
+    "catalog_slug": "gskill-trident-z5-32gb-ddr5-6000",
+    "expected_action": "ignore",
+    "reason": "Corsair Vengeance DDR5 6000 32GB — but no exact catalog entry for this brand+speed combo. Should not match G.Skill Trident Z5."
+  },
+  {
+    "scraped_title": "Corsair Vengeance DDR5 32GB 5600MHz",
+    "catalog_slug": "corsair-vengeance-ddr5-32gb-5600",
+    "expected_action": "match",
+    "reason": "Exact match — 32GB DDR5 5600."
+  },
+  {
+    "scraped_title": "Corsair Vengeance DDR5 16GB 5600MHz",
+    "catalog_slug": "corsair-vengeance-ddr5-16gb-5600",
+    "expected_action": "match",
+    "reason": "16GB — must not match 32GB entry."
+  },
+  {
+    "scraped_title": "G.Skill Trident Z5 2x16GB DDR5 6000MHz CL30",
+    "catalog_slug": "gskill-trident-z5-32gb-ddr5-6000",
+    "expected_action": "match",
+    "reason": "Kit notation 2x16GB must resolve to 32GB catalog entry."
+  },
+  {
+    "scraped_title": "G.Skill Trident Z5 2x8GB DDR5 6000MHz CL30",
+    "catalog_slug": "gskill-trident-z5-16gb-ddr5-6000",
+    "expected_action": "match",
+    "reason": "Kit notation 2x8GB must resolve to 16GB catalog entry, not 32GB."
+  },
+  {
+    "scraped_title": "Kingston FURY Beast DDR4 32GB 3200MHz",
+    "catalog_slug": "kingston-fury-beast-32gb-ddr4-3200",
+    "expected_action": "match",
+    "reason": "DDR4 32GB 3200 — must not match DDR5 or 16GB entry."
+  },
+  {
+    "scraped_title": "Kingston FURY Beast DDR4 16GB 3200MHz",
+    "catalog_slug": "kingston-fury-beast-16gb-ddr4-3200",
+    "expected_action": "match",
+    "reason": "DDR4 16GB — must not match 32GB entry."
+  },
+  {
+    "scraped_title": "Kingston FURY Beast DDR5 32GB 5200MHz",
+    "catalog_slug": "kingston-fury-beast-32gb-ddr5-5200",
+    "expected_action": "match",
+    "reason": "DDR5 — must not match DDR4 entry with same capacity."
+  },
+  {
+    "scraped_title": "Samsung 990 PRO 1TB NVMe M.2 PCIe 4.0",
+    "catalog_slug": "samsung-990-pro-1tb",
+    "expected_action": "match",
+    "reason": "990 PRO 1TB — must not match 980 PRO or 990 EVO."
+  },
+  {
+    "scraped_title": "Samsung 980 PRO 1TB NVMe M.2",
+    "catalog_slug": "samsung-980-pro-1tb",
+    "expected_action": "match",
+    "reason": "980 PRO — must not match 990 PRO (different generation)."
+  },
+  {
+    "scraped_title": "Samsung 970 EVO Plus 1TB NVMe",
+    "catalog_slug": "samsung-970-evo-plus-1tb",
+    "expected_action": "match",
+    "reason": "970 EVO Plus — must not match 980 PRO or 990 PRO."
+  },
+  {
+    "scraped_title": "WD Black SN850X 1TB NVMe M.2",
+    "catalog_slug": "wd-black-sn850x-1tb",
+    "expected_action": "match",
+    "reason": "SN850X — must not match SN770."
+  },
+  {
+    "scraped_title": "WD Black SN770 1TB NVMe",
+    "catalog_slug": "wd-black-sn770-1tb",
+    "expected_action": "match",
+    "reason": "SN770 — must not match SN850X."
+  },
+  {
+    "scraped_title": "Corsair RM850x 850W 80+ Gold Fully Modular",
+    "catalog_slug": "corsair-rm850x",
+    "expected_action": "match",
+    "reason": "850W Gold — must not match 750W or 1000W."
+  },
+  {
+    "scraped_title": "Corsair RM750x 750W 80+ Gold",
+    "catalog_slug": "corsair-rm750x",
+    "expected_action": "match",
+    "reason": "750W — must not match 850W."
+  },
+  {
+    "scraped_title": "Seasonic Focus GX-850 850W 80+ Gold",
+    "catalog_slug": "seasonic-focus-gx-850",
+    "expected_action": "match",
+    "reason": "Seasonic 850W Gold — must not match 750W."
+  },
+  {
+    "scraped_title": "be quiet! Straight Power 11 750W 80+ Platinum",
+    "catalog_slug": "be-quiet-straight-power-11-750w",
+    "expected_action": "match",
+    "reason": "750W Platinum — must not match 650W Gold."
+  },
+  {
+    "scraped_title": "MSI MAG Z790 TOMAHAWK WIFI DDR5 LGA1700",
+    "catalog_slug": "msi-z790-tomahawk-wifi",
+    "expected_action": "match",
+    "reason": "Z790 LGA1700 — must not match B760 or Z690."
+  },
+  {
+    "scraped_title": "ASUS ROG STRIX B550-F GAMING WIFI AM4",
+    "catalog_slug": "asus-rog-strix-b550-f",
+    "expected_action": "match",
+    "reason": "B550 AM4 — must not match B650 AM5."
+  },
+  {
+    "scraped_title": "MSI B650 GAMING PLUS WIFI AM5 DDR5",
+    "catalog_slug": "msi-b650-gaming-plus-wifi",
+    "expected_action": "match",
+    "reason": "B650 AM5 — must not match B550 AM4."
+  },
+  {
+    "scraped_title": "ASRock B650E PG Riptide WiFi AM5",
+    "catalog_slug": "asrock-b650e-pg-riptide-wifi",
+    "expected_action": "match",
+    "reason": "B650E (Extreme) — must not match plain B650."
+  },
+  {
+    "scraped_title": "Corsair 4000D Airflow Tempered Glass Black ATX",
+    "catalog_slug": "corsair-4000d-airflow",
+    "expected_action": "match",
+    "reason": "4000D Airflow — must not match 5000D Airflow."
+  },
+  {
+    "scraped_title": "Corsair 5000D Airflow Tempered Glass White ATX",
+    "catalog_slug": "corsair-5000d-airflow",
+    "expected_action": "match",
+    "reason": "5000D — must not match 4000D."
+  },
+  {
+    "scraped_title": "Lian Li O11 Dynamic EVO ATX Mid Tower",
+    "catalog_slug": "lian-li-o11-dynamic-evo",
+    "expected_action": "match",
+    "reason": "O11 Dynamic EVO — must not match plain O11 Dynamic."
+  },
+  {
+    "scraped_title": "Random Office Mouse Logitech M185 Black",
+    "catalog_slug": null,
+    "expected_action": "ignore",
+    "reason": "Peripheral — must be confidently rejected."
+  },
+  {
+    "scraped_title": "Câble HDMI 2.1 8K 2m",
+    "catalog_slug": null,
+    "expected_action": "ignore",
+    "reason": "Accessory — must be rejected."
+  },
+  {
+    "scraped_title": "Pâte thermique Arctic MX-4 4g",
+    "catalog_slug": null,
+    "expected_action": "ignore",
+    "reason": "Thermal paste — must be rejected."
+  },
+  {
+    "scraped_title": "PC Gamer Ryzen 5 7600X RTX 4070 32GB DDR5",
+    "catalog_slug": null,
+    "expected_action": "ignore",
+    "reason": "Pre-built PC bundle — must not match any single component."
+  },
+  {
+    "scraped_title": "AMD Ryzen 5 7600X + MSI B650 GAMING PLUS Bundle",
+    "catalog_slug": null,
+    "expected_action": "ignore",
+    "reason": "Bundle product — must not match a single component."
+  }
+]

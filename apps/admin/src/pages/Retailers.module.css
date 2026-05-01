@@ -1,0 +1,12 @@
+.page { padding: 1.5rem; max-width: 1100px; }
+.title { margin-bottom: 1.5rem; }
+.loading, .error { padding: 1rem; color: var(--text-muted); }
+.error { color: var(--danger-soft); }
+.name { font-weight: 500; }
+.url  { font-size: 0.75rem; color: var(--text-dim); }
+.date { font-size: 0.82rem; color: var(--text-muted); }
+.toggleBtn { background: none; padding: 0; display: flex; }
+.badge { font-size: 0.72rem; font-weight: 600; padding: 0.1rem 0.4rem; border-radius: 4px; text-transform: uppercase; }
+.success { background: rgba(166,227,161,0.15); color: var(--success-soft); }
+.failed  { background: rgba(243,139,168,0.15); color: var(--danger-soft); }
+.partial { background: rgba(249,226,175,0.15); color: var(--warning-soft); }
