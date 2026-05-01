@@ -1,9 +1,10 @@
 .configurator {
   background: var(--surface);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   border: 1px solid var(--border);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
+  animation: slideUp 0.4s var(--ease-out);
 }
 
 /* ── Header ─────────────────────────────────────────────────────────────── */
@@ -14,6 +15,7 @@
   justify-content: space-between;
   padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
 }
 
 .headerLeft {
@@ -23,7 +25,7 @@
 }
 
 .title {
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--text);
   margin: 0;
@@ -32,8 +34,12 @@
 .badge {
   font-size: 0.72rem;
   font-weight: 600;
-  padding: 0.2rem 0.55rem;
+  padding: 0.2rem 0.6rem;
   border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  animation: scaleIn 0.2s var(--ease-spring);
 }
 
 .badgeOk {
@@ -78,31 +84,31 @@
 }
 
 .table thead th {
-  padding: 0.65rem 1.5rem;
-  font-size: 0.7rem;
+  padding: 0.6rem 1.5rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   background: var(--surface-2);
   border-bottom: 1px solid var(--border);
   text-align: left;
 }
 
-.thCat { width: 16%; }
-.thSel { width: 52%; }
+.thCat { width: 18%; }
+.thSel { width: 48%; }
 .thPrice { width: 22%; text-align: right; }
-.thAct { width: 10%; text-align: center; }
+.thAct { width: 12%; text-align: center; }
 
 /* ── Rows ──────────────────────────────────────────────────────────────── */
 
 .row {
   cursor: default;
-  transition: background 0.1s;
+  transition: background 0.15s var(--ease-out);
 }
 
 .row td {
-  padding: 0.65rem 1.5rem;
+  padding: 0.7rem 1.5rem;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
@@ -126,15 +132,29 @@
 
 /* ── Cells ─────────────────────────────────────────────────────────────── */
 
-.catCell {}
-
-.catLabel {
-  font-weight: 600;
-  color: var(--text-2);
-  font-size: 0.88rem;
+.catCell {
+  user-select: none;
 }
 
-.selCell { }
+.catLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--text-2);
+  font-size: 0.86rem;
+}
+
+.catIcon {
+  color: var(--text-dim);
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.rowFilled .catIcon {
+  color: var(--accent);
+}
+
 
 .priceCell {
   text-align: right;
@@ -150,12 +170,17 @@
   font-weight: 700;
   color: var(--text);
   font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .chevron {
   font-size: 0.55rem;
   color: var(--text-dim);
-  transition: transform 0.2s;
+  transition: transform 0.2s var(--ease-out);
+}
+
+.rowOpen .chevron {
+  transform: rotate(180deg);
 }
 
 .actCell {
@@ -166,11 +191,11 @@
   background: none;
   border: none;
   color: var(--text-dim);
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   line-height: 1;
   cursor: pointer;
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
   transition: all 0.15s;
 }
 
@@ -190,6 +215,7 @@
   background: var(--surface-2);
   padding: 0.75rem 1.5rem 0.75rem 1.5rem !important;
   border-left: 3px solid var(--accent);
+  animation: slideDown 0.2s var(--ease-out);
 }
 
 /* ── Total footer ──────────────────────────────────────────────────────── */
@@ -213,6 +239,7 @@
   font-weight: 800;
   font-size: 1.1rem;
   color: var(--accent);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Compatibility footer ──────────────────────────────────────────────── */
@@ -223,6 +250,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  animation: fadeIn 0.3s var(--ease-out);
 }
 
 .compatErr, .compatWarn {
@@ -230,7 +258,7 @@
   align-items: baseline;
   gap: 0.4rem;
   font-size: 0.82rem;
-  padding: 0.4rem 0.6rem;
+  padding: 0.45rem 0.65rem;
   border-radius: var(--radius);
 }
 
@@ -259,6 +287,7 @@
   font-weight: 600;
   color: var(--success);
   background: var(--success-row);
+  animation: fadeIn 0.3s var(--ease-out);
 }
 
 .tdpInfo {

@@ -3,6 +3,7 @@
  *
  * Features:
  * - 8 component slots with searchable ComponentPicker
+ * - Category icons for visual identification
  * - Click a selected row to expand inline price comparison
  * - Total price footer row
  * - Integrated compatibility validation
@@ -11,17 +12,17 @@
 import { useState, useEffect, Fragment } from 'react';
 import { ComponentPicker } from './ComponentPicker';
 import { InlinePrices } from './InlinePrices';
-import type { Component, ComponentCategory, BuildConfig, CompatibilityResult } from '../types';
+import { CategoryIcon } from './CategoryIcon';
+import type { Component, ComponentCategory, CompatibilityResult } from '../types';
 import { CATEGORY_LABELS, CATEGORY_ORDER, RULE_LABELS } from '../types';
 import { validateBuild } from '../api';
+import { useBuild } from '../context/BuildContext';
+import { calculateBuildTotalPrice } from '../utils/buildUtils';
 import styles from './Configurator.module.css';
 
-interface Props {
-  build: BuildConfig;
-  onChange: (build: BuildConfig) => void;
-}
-
-export function Configurator({ build, onChange }: Props) {
+export function Configurator() {
+  const { build, setBuild } = useBuild();
+  const totalPrice = calculateBuildTotalPrice(build);
   const [expandedCat, setExpandedCat] = useState<ComponentCategory | null>(null);
   const [compat, setCompat] = useState<CompatibilityResult | null>(null);
 
@@ -42,25 +43,17 @@ export function Configurator({ build, onChange }: Props) {
     const next = { ...build };
     if (component) {
       next[category] = component;
-      setExpandedCat(category);
     } else {
       delete next[category];
       if (expandedCat === category) setExpandedCat(null);
     }
-    onChange(next);
+    setBuild(next);
   }
 
   function toggleExpand(cat: ComponentCategory) {
     if (!build[cat]) return;
     setExpandedCat(expandedCat === cat ? null : cat);
   }
-
-  const totalPrice = CATEGORY_ORDER.reduce((sum, cat) => {
-    const comp = build[cat];
-    if (!comp) return sum;
-    const price = (comp as any).lowest_price;
-    return price ? sum + price : sum;
-  }, 0);
 
   return (
     <section className={styles.configurator}>
@@ -76,7 +69,7 @@ export function Configurator({ build, onChange }: Props) {
         </div>
         <button
           className={styles.resetBtn}
-          onClick={() => { onChange({}); setExpandedCat(null); }}
+          onClick={() => { setBuild({}); setExpandedCat(null); }}
           disabled={!hasComponents}
         >
           Réinitialiser
@@ -97,7 +90,7 @@ export function Configurator({ build, onChange }: Props) {
           <tbody>
             {CATEGORY_ORDER.map((cat) => {
               const selected = build[cat];
-              const price = selected ? (selected as any).lowest_price : null;
+              const price = selected ? (selected as Component & { lowest_price?: number | null }).lowest_price : null;
               const isExpanded = expandedCat === cat && !!selected;
 
               return (
@@ -107,7 +100,10 @@ export function Configurator({ build, onChange }: Props) {
                     onClick={() => toggleExpand(cat)}
                   >
                     <td className={styles.catCell}>
-                      <span className={styles.catLabel}>{CATEGORY_LABELS[cat]}</span>
+                      <span className={styles.catLabel}>
+                        <CategoryIcon category={cat} size={16} className={styles.catIcon} />
+                        {CATEGORY_LABELS[cat]}
+                      </span>
                     </td>
                     <td className={styles.selCell} onClick={(e) => e.stopPropagation()}>
                       <ComponentPicker
@@ -123,7 +119,7 @@ export function Configurator({ build, onChange }: Props) {
                           <span className={styles.priceVal}>
                             {price ? `${price.toLocaleString('fr-MA')} MAD` : '—'}
                           </span>
-                          <span className={styles.chevron}>{isExpanded ? '▲' : '▼'}</span>
+                          <span className={styles.chevron}>▼</span>
                         </div>
                       )}
                     </td>
