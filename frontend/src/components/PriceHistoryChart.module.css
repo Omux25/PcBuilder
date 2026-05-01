@@ -1,14 +1,10 @@
 .chart {
-  width: 100%;
   margin-top: 0.5rem;
 }
 
 .empty {
-  padding: 1.5rem;
-  text-align: center;
   color: var(--text-dim);
   font-size: 0.85rem;
-  background: var(--surface);
-  border-radius: var(--radius);
-  border: 1px dashed var(--border);
+  font-style: italic;
+  padding: 1rem 0;
 }

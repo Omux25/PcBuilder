@@ -59,19 +59,26 @@ export interface SmartSearchResult {
 export async function smartSearch(params: {
   category: ComponentCategory;
   search?: string;
+  brand?: string;
+  socket?: string;
+  ram_type?: string;
   build?: BuildConfig;
   page?: number;
   limit?: number;
 }): Promise<SmartSearchResult> {
   const qs = new URLSearchParams();
   qs.set('category', params.category);
-  if (params.search)  qs.set('search', params.search);
-  if (params.page)    qs.set('page', String(params.page));
-  if (params.limit)   qs.set('limit', String(params.limit));
-  if (params.build && Object.keys(params.build).length > 0) {
-    qs.set('build', JSON.stringify(params.build));
-  }
-  return request<SmartSearchResult>(`/components/smart-search?${qs.toString()}`);
+  if (params.search)   qs.set('search',   params.search);
+  if (params.brand)    qs.set('brand',    params.brand);
+  if (params.socket)   qs.set('socket',   params.socket);
+  if (params.ram_type) qs.set('ram_type', params.ram_type);
+  if (params.page)     qs.set('page',     String(params.page));
+  if (params.limit)    qs.set('limit',    String(params.limit));
+  
+  return request<SmartSearchResult>(`/components/smart-search?${qs.toString()}`, {
+    method: 'POST',
+    body: JSON.stringify({ build: params.build || {} })
+  });
 }
 
 /** Fetch paginated components with optional filters. */
@@ -91,6 +98,13 @@ export async function getComponents(params: GetComponentsParams = {}): Promise<C
 /** Fetch a single component by ID. */
 export function getComponentById(id: number): Promise<Component> {
   return request<Component>(`/components/${id}`);
+}
+
+/** Fetch multiple components by their IDs. */
+export async function getComponentsByIds(ids: number[]): Promise<Component[]> {
+  if (ids.length === 0) return [];
+  const res = await request<{ components: Component[] }>(`/components?ids=${ids.join(',')}`);
+  return res.components;
 }
 
 /** Fetch a single component by slug. */
@@ -135,7 +149,43 @@ export function validateBuild(build: BuildConfig): Promise<CompatibilityResult> 
   });
 }
 
-// ── Presets ───────────────────────────────────────────────────────────────────
+// ── Market Trends ─────────────────────────────────────────────────────────────
+
+export interface MarketTrend {
+  component_id: number;
+  name: string;
+  brand: string | null;
+  slug: string;
+  category: string;
+  image_url: string | null;
+  price_before: number;
+  price_after: number;
+  diff_amount: number;
+  change_pct: number;
+  type: 'drops' | 'hikes';
+}
+
+export interface MarketTrendsResult {
+  trends: MarketTrend[];
+  days: number;
+  type: 'drops' | 'hikes';
+  total: number;
+}
+
+export async function getMarketTrends(params: {
+  days?: number;
+  limit?: number;
+  category?: string;
+  type?: 'drops' | 'hikes';
+} = {}): Promise<MarketTrendsResult> {
+  const qs = new URLSearchParams();
+  if (params.days)     qs.set('days',     String(params.days));
+  if (params.limit)    qs.set('limit',    String(params.limit));
+  if (params.category) qs.set('category', params.category);
+  if (params.type)     qs.set('type',     params.type);
+  const query = qs.toString() ? `?${qs.toString()}` : '';
+  return request<MarketTrendsResult>(`/market-trends${query}`);
+}
 
 /** Fetch preset builds, optionally filtered by use case. */
 export async function getPresets(useCase?: string): Promise<PresetBuild[]> {

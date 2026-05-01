@@ -27,6 +27,7 @@ export interface Component {
   max_gpu_length_mm?: number;
   wattage?: number;
   tdp?: number;
+  benchmark_score?: number;
   created_at: string;
   updated_at: string;
 }
@@ -100,6 +101,8 @@ export const RULE_LABELS: Record<string, string> = {
   ram_frequency_exceeded:'Fréquence RAM dépassée',
   gpu_too_long:          'GPU trop long pour le boîtier',
   psu_underpowered:      'Alimentation insuffisante',
+  form_factor_mismatch:  'Format de carte mère incompatible',
+  cooler_too_tall:       'Refroidissement trop haut pour le boîtier',
 };
 
 export const RULE_TOOLTIPS: Record<string, string> = {
@@ -108,6 +111,8 @@ export const RULE_TOOLTIPS: Record<string, string> = {
   ram_frequency_exceeded:'La RAM fonctionnera à une vitesse inférieure, limitée par la carte mère ou le processeur.',
   gpu_too_long:          'La carte graphique est trop longue et ne rentrera pas physiquement dans ce boîtier.',
   psu_underpowered:      'L\'alimentation choisie n\'offre pas assez de puissance pour faire tourner ces composants de manière stable.',
+  form_factor_mismatch:  'La carte mère ne rentre pas dans ce boîtier. Vérifiez les formats supportés (ATX, mATX, ITX).',
+  cooler_too_tall:       'Le ventirad CPU est trop haut pour ce boîtier. Vérifiez la hauteur maximale supportée.',
 };
 
 export const CATEGORY_ORDER: ComponentCategory[] = [

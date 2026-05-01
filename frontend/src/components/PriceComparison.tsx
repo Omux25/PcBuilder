@@ -9,6 +9,7 @@ import { getPrices } from '../api';
 import type { Component, PriceOffer } from '../types';
 import { CATEGORY_LABELS } from '../types';
 import { SkeletonText } from './Skeleton';
+import { formatDate } from '../utils/date';
 import styles from './PriceComparison.module.css';
 
 interface Props {
@@ -128,7 +129,7 @@ export function PriceComparison({ component }: Props) {
                       </span>
                     </td>
                     <td className={`${styles.date} ${styles.dateCol}`}>
-                      {new Date(offer.last_updated).toLocaleDateString('fr-MA')}
+                      {formatDate(offer.last_updated)}
                     </td>
                     <td>
                       <a

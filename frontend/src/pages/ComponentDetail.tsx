@@ -4,21 +4,29 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { GitCompare, ShoppingCart, ArrowLeft } from 'lucide-react';
 import { getComponentBySlug, getPrices, getPriceHistory } from '../api';
 import { PriceHistoryChart } from '../components/PriceHistoryChart';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
-import type { Component, PriceOffer, PriceHistoryEntry } from '../types';
+import type { Component, PriceOffer, PriceHistoryEntry, ComponentCategory } from '../types';
 import { CATEGORY_LABELS } from '../types';
 import styles from './ComponentDetail.module.css';
 
-export function ComponentDetail() {
-  const { slug } = useParams<{ slug: string }>();
+interface Props {
+  onAddToBuild?: (component: Component) => void;
+}
+
+export function ComponentDetail({ onAddToBuild }: Props = {}) {
+  const { slug }   = useParams<{ slug: string }>();
+  const navigate   = useNavigate();
   const [component, setComponent] = useState<Component | null>(null);
-  const [prices, setPrices] = useState<PriceOffer[]>([]);
-  const [history, setHistory] = useState<PriceHistoryEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [prices, setPrices]       = useState<PriceOffer[]>([]);
+  const [history, setHistory]     = useState<PriceHistoryEntry[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState<string | null>(null);
+  const [addedToBuild, setAddedToBuild] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -39,24 +47,33 @@ export function ComponentDetail() {
       .finally(() => setLoading(false));
   }, [slug]);
 
+  function handleAddToBuild() {
+    if (!component) return;
+    if (onAddToBuild) {
+      onAddToBuild(component);
+    } else {
+      // Navigate to home with this component pre-selected via URL
+      navigate(`/?${component.category}=${component.id}`);
+    }
+    setAddedToBuild(true);
+    setTimeout(() => setAddedToBuild(false), 2000);
+  }
+
   if (loading) {
     return (
       <div className={styles.page}>
-        <Link to="/" className={styles.back}>← Retour au configurateur</Link>
-        <div className={styles.hero}>
-          <Skeleton height={30} width={120} style={{ marginBottom: '1rem' }} />
-          <Skeleton height={45} width="60%" style={{ marginBottom: '0.5rem' }} />
-          <SkeletonText lines={2} width="80%" />
+        <Link to="/" className={styles.back}><ArrowLeft size={14} /> Retour</Link>
+        <div className={styles.heroLayout}>
+          <Skeleton height={160} width={160} style={{ borderRadius: '12px', flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <Skeleton height={24} width={120} style={{ marginBottom: '0.75rem' }} />
+            <Skeleton height={40} width="70%" style={{ marginBottom: '0.5rem' }} />
+            <SkeletonText lines={2} />
+          </div>
         </div>
         <div className={styles.grid}>
-          <div className={styles.card}>
-            <Skeleton height={30} width={200} style={{ marginBottom: '1.5rem' }} />
-            <SkeletonText lines={4} />
-          </div>
-          <div className={styles.card}>
-            <Skeleton height={30} width={200} style={{ marginBottom: '1.5rem' }} />
-            <Skeleton height={150} />
-          </div>
+          <div className={styles.card}><Skeleton height={30} width={200} style={{ marginBottom: '1.5rem' }} /><SkeletonText lines={4} /></div>
+          <div className={styles.card}><Skeleton height={30} width={200} style={{ marginBottom: '1.5rem' }} /><Skeleton height={150} /></div>
         </div>
       </div>
     );
@@ -72,30 +89,85 @@ export function ComponentDetail() {
   }
 
   const specs = component.specs as Record<string, unknown> | undefined;
+  const inStockPrices = prices.filter(p => p.in_stock);
+  const lowestPrice = inStockPrices.length > 0
+    ? Math.min(...inStockPrices.map(p => Number(p.price)))
+    : prices.length > 0 ? Math.min(...prices.map(p => Number(p.price))) : null;
 
   return (
     <div className={styles.page}>
-      <Link to="/" className={styles.back}>← Retour au configurateur</Link>
+      <Link to={`/browse/${component.category}`} className={styles.back}>
+        <ArrowLeft size={14} /> {CATEGORY_LABELS[component.category as ComponentCategory] ?? 'Retour'}
+      </Link>
 
-      {/* Hero */}
-      <div className={styles.hero}>
+      {/* ── Hero ──────────────────────────────────────────────────────── */}
+      <div className={styles.heroLayout}>
+        {/* Product image */}
+        <div className={styles.heroImage}>
+          {component.image_url ? (
+            <img src={component.image_url} alt={component.name} className={styles.productImg} />
+          ) : (
+            <div className={styles.productImgPlaceholder}>
+              <CategoryIcon category={component.category as ComponentCategory} size={48} />
+            </div>
+          )}
+        </div>
+
+        {/* Info */}
         <div className={styles.heroInfo}>
-          <div className={styles.categoryBadge}>
-            {CATEGORY_LABELS[component.category]}
+          <div className={styles.heroTopRow}>
+            <span className={styles.categoryBadge}>
+              <CategoryIcon category={component.category as ComponentCategory} size={12} />
+              {CATEGORY_LABELS[component.category as ComponentCategory] ?? component.category}
+            </span>
+            {component.release_year && (
+              <span className={styles.year}>{component.release_year}</span>
+            )}
           </div>
+
           <h1 className={styles.name}>
             {component.brand && <span className={styles.brand}>{component.brand} </span>}
             {component.name}
           </h1>
-          {component.release_year && (
-            <span className={styles.year}>{component.release_year}</span>
-          )}
+
           {component.description && (
             <p className={styles.description}>{component.description}</p>
           )}
+
+          {/* Price + CTA */}
+          <div className={styles.heroPriceRow}>
+            {lowestPrice !== null && (
+              <div className={styles.heroPrice}>
+                <span className={styles.heroPriceLabel}>À partir de</span>
+                <span className={styles.heroPriceVal}>
+                  {lowestPrice.toLocaleString('fr-MA')} MAD
+                </span>
+                {inStockPrices.length > 0 && (
+                  <span className={styles.inStockBadge}>En stock</span>
+                )}
+              </div>
+            )}
+
+            <div className={styles.heroCtas}>
+              <button
+                className={`${styles.addToBuildBtn} ${addedToBuild ? styles.addToBuildBtnDone : ''}`}
+                onClick={handleAddToBuild}
+              >
+                {addedToBuild ? '✓ Ajouté' : <><ShoppingCart size={15} /> Ajouter à la config</>}
+              </button>
+              <Link
+                to={`/compare?ids=${component.id}`}
+                className={styles.compareBtn}
+                title="Comparer ce composant"
+              >
+                <GitCompare size={15} /> Comparer
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* ── Content grid ──────────────────────────────────────────────── */}
       <div className={styles.grid}>
         {/* Specs */}
         {specs && Object.keys(specs).length > 0 && (
@@ -126,14 +198,15 @@ export function ComponentDetail() {
               <thead>
                 <tr>
                   <th>Revendeur</th>
+                  <th>Variante</th>
                   <th>Prix</th>
                   <th>Stock</th>
                   <th>Mis à jour</th>
                 </tr>
               </thead>
               <tbody>
-                {prices.map((offer) => (
-                  <tr key={offer.retailer_id}>
+                {prices.map((offer, i) => (
+                  <tr key={`${offer.retailer_id}-${i}`}>
                     <td>
                       <a
                         href={offer.product_url}
@@ -144,8 +217,11 @@ export function ComponentDetail() {
                         {offer.retailer_name} ↗
                       </a>
                     </td>
+                    <td className={styles.variantCell}>
+                      {offer.variant_label ?? '—'}
+                    </td>
                     <td className={styles.price}>
-                      {offer.price.toLocaleString('fr-MA')} MAD
+                      {Number(offer.price).toLocaleString('fr-MA')} MAD
                     </td>
                     <td>
                       <span className={offer.in_stock ? styles.inStock : styles.outStock}>
