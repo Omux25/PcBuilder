@@ -145,9 +145,10 @@ function validateCompatibility(build: {
   }
 
   // Rule 7 — TDP calculation
-  // PSU is excluded from the sum: it supplies power, it doesn't consume it
-  // (its own idle draw is negligible and already factored into efficiency ratings).
-  const componentKeys = ['cpu', 'motherboard', 'gpu', 'ram', 'storage', 'case', 'cooling'] as const;
+  // PSU is excluded from the sum: it supplies power, it doesn't consume it.
+  // Case is excluded: it's a passive enclosure with no power draw.
+  // (cpu, motherboard, gpu, ram, storage, cooling)
+  const componentKeys = ['cpu', 'motherboard', 'gpu', 'ram', 'storage', 'cooling'] as const;
   const total_tdp = componentKeys.reduce((sum, key) => {
     const component = build[key];
     return sum + (component && component.tdp != null ? component.tdp : 0);

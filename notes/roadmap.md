@@ -96,6 +96,29 @@ All critical and high-priority issues from the improvement report resolved:
 - Deleted `site1Scraper.ts` / `site2Scraper.ts` placeholder files and their tests
 - Deleted stale `.gitkeep` files in routes and middleware directories
 
+### Phase 12 — Codebase Audit Round 3 (May 2026)
+
+- Merged duplicate `getRetailers()` SQL queries into one nullable-param query
+- Bulk import coercion now covers `max_cooler_height_mm`, `height_mm`, `benchmark_score` (migration 019 fields)
+- Removed `case` from TDP sum in compatibility engine (passive enclosure, no power draw)
+- Deleted remaining stale `.gitkeep` files in `scraper/scrapers/` and `scraper/utils/`
+- Fixed architecture guide migration count (`001–018` → `001–019`)
+- Replaced manual cookie regex in `auth.ts` with Hono's `getCookie()` helper
+- Deleted unused Vite boilerplate assets (`react.svg`, `vite.svg`) from frontend and admin
+- Moved `ScraperLog` interface to top of `admin/logs.ts`
+- Replaced dynamic `import('./api')` in `App.tsx` with static import
+- Replaced `ScraperInstance` index-signature interface in `session.ts` with typed `run` function references
+- Added clarifying comments to `docker-compose.yml` and `adminService.ts`
+
+### Phase 13 — Codebase Audit Round 5 (May 2026)
+
+- Deleted dead `BuildSummary.tsx` component and its CSS module (superseded by inline display in `Configurator.tsx`)
+- Deleted stale `backend/src/schemas/.gitkeep` and empty `backend/scripts/sql/` directory
+- Added input length caps to login route (username ≤ 128, password ≤ 256)
+- Added Zod validation to `POST /api/compatibility/validate` — malformed component slots now return HTTP 400
+- Added 38 new tests: `slugService` (20), `retailerService` (9), `presetService` (9), compatibility Zod validation (5)
+- Fixed flaky rate limiter timing test (1100ms → 1500ms buffer)
+
 ---
 
 ## What's left (optional)

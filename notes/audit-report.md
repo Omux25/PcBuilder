@@ -83,7 +83,13 @@ No explicit `any` types exist in the admin panel.
 
 **Status:** ✅ Accurate | ✅ Complete structure
 
-All documentation reflects the current codebase state.
+All documentation reflects the current codebase state. Fixes applied in this session:
+- Migration count updated to 19 (001–019) across all docs
+- `components` table compatibility columns (`supported_motherboards`, `max_cooler_height_mm`, `form_factor`, `height_mm`) documented
+- API reference error shape comment corrected (removed "en français")
+- Scraper run-all/single-run response shapes corrected
+- Logs endpoint response shape corrected (added `count` field, max limit updated to 500)
+- Round 2 task explainer added to `notes/task-explainers/`
 
 ---
 
@@ -96,3 +102,27 @@ A global search for `TODO`, `FIXME`, and `HACK` across all `.ts`, `.tsx`, and `.
 ## Summary
 
 All critical and high-priority issues from both audit rounds are resolved. The backend is clean, fully tested, English-only, and all documentation is accurate and complete.
+
+**Round 3 fixes (May 2026 — this session):**
+- `frontend/src/types.ts` — `Component` interface now includes all 4 compatibility columns from migration 019
+- `backend/src/utils/errors.ts` — `parseId()` moved here from `admin/types.ts` (correct shared location)
+- `backend/src/routes/admin/types.ts` — re-exports `parseId` from `utils/errors.ts`
+- `backend/src/routes/components.ts` — all inline ID validation replaced with `parseId()`
+- `backend/src/routes/admin/scrapers.ts` — `Hono<AdminEnv>` type applied, unused import removed
+- `admin/src/api.ts` — `LogEntry` type corrected to match actual scraper logs shape
+- `backend/src/utils/__tests__/variantExtractor.test.ts` — 67 new tests covering all 8 category extractors
+- `backend/src/utils/__tests__/rateLimiter.test.ts` — 8 new tests covering rate limiting behavior
+- **438 tests passing across 31 files**
+
+**Round 5 fixes (May 2026 — this session):**
+- `frontend/src/components/BuildSummary.tsx` + `BuildSummary.module.css` — deleted dead component (superseded by inline compatibility display in `Configurator.tsx`)
+- `backend/src/schemas/.gitkeep` — deleted stale gitkeep (directory has real content)
+- `backend/scripts/sql/` — deleted empty directory
+- `backend/src/routes/auth.ts` — added input length caps on login (username ≤ 128, password ≤ 256) to prevent oversized DB queries
+- `backend/src/routes/compatibility.ts` — added Zod validation on all component slots; malformed inputs (e.g. `{ cpu: "string" }`) now return HTTP 400 instead of silently skipping rules
+- `backend/src/routes/__tests__/compatibility.test.ts` — added 5 new tests covering the Zod validation (malformed slot, wrong numeric type, wrong array type, null tdp, unknown keys)
+- `backend/src/services/__tests__/slugService.test.ts` — new test file: 20 tests covering `slugify`, `componentSlug`, `generateUniqueSlug`, and `getUniqueSlug` (DB-backed)
+- `backend/src/services/__tests__/retailerService.test.ts` — new test file: 9 tests covering `getRetailers`, `getRetailerById`, `createRetailer`, `updateRetailer`
+- `backend/src/services/__tests__/presetService.test.ts` — new test file: 9 tests covering `getPresets`, `getPresetById`, `deletePreset`
+- `backend/src/utils/__tests__/rateLimiter.test.ts` — fixed flaky timing test (1100ms → 1500ms buffer for 1s window expiry)
+- **483 tests passing across 34 files**

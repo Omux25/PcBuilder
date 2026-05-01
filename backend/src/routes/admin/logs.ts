@@ -15,6 +15,18 @@ import { Hono } from 'hono';
 import { authMiddleware } from '../../middleware/auth.js';
 import { getSql } from '../../db/index.js';
 
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface ScraperLog {
+  id: number;
+  level: 'INFO' | 'WARNING' | 'ERROR';
+  site: string | null;
+  message: string;
+  created_at: string;
+}
+
+// ── Router ───────────────────────────────────────────────────────────────────
+
 const adminLogsRouter = new Hono();
 
 // All routes in this file require a valid JWT
@@ -80,15 +92,5 @@ adminLogsRouter.get('/', async (c) => {
 
   return c.json({ logs: rows, count: rows.length });
 });
-
-// ── Types ────────────────────────────────────────────────────────────────────
-
-interface ScraperLog {
-  id: number;
-  level: 'INFO' | 'WARNING' | 'ERROR';
-  site: string | null;
-  message: string;
-  created_at: string;
-}
 
 export { adminLogsRouter };

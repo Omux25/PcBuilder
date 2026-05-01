@@ -76,7 +76,7 @@ $migrations = @(
   "012_create_admin_activity_log.sql", "013_create_refresh_tokens.sql",
   "014_prices_variant_model.sql", "015_add_benchmark_score.sql",
   "016_fix_ram_types_encoding.sql", "017_add_trigram_index.sql",
-  "018_hash_refresh_tokens.sql"
+  "018_hash_refresh_tokens.sql", "019_add_compatibility_columns.sql"
 )
 foreach ($m in $migrations) {
   wsl -d Ubuntu -- bash -c "echo '2525' | sudo -S -u postgres psql -d pc_builder -f $base/$m"

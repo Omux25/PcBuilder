@@ -8,6 +8,9 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-pc_builder_pass_2024}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # initdb.d only runs on a fresh volume (first start).
+      # The backend's migrate.ts runner tracks applied migrations in _migrations
+      # and is idempotent — safe to run on every start even if initdb.d already ran.
       - ./backend/src/db/migrations:/docker-entrypoint-initdb.d:ro
     ports:
       - "5432:5432"

@@ -222,7 +222,10 @@ adminComponentsRouter.post('/import', async (c) => {
 
       // 2. Data Coercion (CSV values are strings, Zod needs numbers for some fields)
       const coercedRow = { ...row };
-      const numericFields = ['tdp', 'wattage', 'length_mm', 'max_gpu_length_mm', 'max_ram_frequency', 'frequency_mhz', 'release_year'];
+      const numericFields = [
+        'tdp', 'wattage', 'length_mm', 'max_gpu_length_mm', 'max_ram_frequency',
+        'frequency_mhz', 'release_year', 'max_cooler_height_mm', 'height_mm', 'benchmark_score',
+      ];
       for (const field of numericFields) {
         if (row[field] && typeof row[field] === 'string') {
           const val = parseFloat(row[field]);

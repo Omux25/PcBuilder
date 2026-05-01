@@ -8,7 +8,7 @@ This guide explains the database design decisions and how to work with the schem
 
 ## Schema overview
 
-18 migrations, 13 tables. All migrations are in `backend/src/db/migrations/` numbered 001–018.
+19 migrations, 13 tables. All migrations are in `backend/src/db/migrations/` numbered 001–019.
 
 Run all migrations:
 ```powershell
@@ -24,13 +24,13 @@ The `components` table is polymorphic — all 8 categories share one table. Cate
 | Category | Required columns | Optional columns |
 |---|---|---|
 | `cpu` | `socket` | `tdp` |
-| `motherboard` | `socket`, `supported_ram_types`, `max_ram_frequency` | `tdp` |
+| `motherboard` | `socket`, `supported_ram_types`, `max_ram_frequency` | `tdp`, `form_factor` |
 | `gpu` | `length_mm` | `tdp` |
 | `ram` | `ram_type`, `frequency_mhz` | `tdp` |
 | `storage` | — | `tdp` |
 | `psu` | `wattage` | — |
-| `case` | `max_gpu_length_mm` | — |
-| `cooling` | — | `tdp` |
+| `case` | `max_gpu_length_mm` | `supported_motherboards`, `max_cooler_height_mm` |
+| `cooling` | — | `tdp`, `height_mm` |
 
 All categories also have: `name` (required), `brand`, `slug`, `description`, `specs` (JSONB), `image_url`, `release_year`, `is_active`.
 

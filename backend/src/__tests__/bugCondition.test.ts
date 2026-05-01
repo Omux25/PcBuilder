@@ -263,6 +263,16 @@ describe('Bug Condition: parseId helper exists in admin/types.ts', () => {
       join(import.meta.dirname, '../routes/admin/types.ts'),
       'utf-8'
     );
+    // parseId is defined in utils/errors.ts and re-exported from admin/types.ts
+    // so admin routes only need one import. Check that it is exported from here.
+    expect(src).toContain('parseId');
+  });
+
+  test('parseId is defined in utils/errors.ts', async () => {
+    const src = await readFile(
+      join(import.meta.dirname, '../utils/errors.ts'),
+      'utf-8'
+    );
     expect(src).toContain('export function parseId');
   });
 });

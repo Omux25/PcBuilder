@@ -25,6 +25,11 @@ export interface Component {
   frequency_mhz?: number;
   length_mm?: number;
   max_gpu_length_mm?: number;
+  // Compatibility columns added in migration 019
+  supported_motherboards?: string[];  // Case: Rule 5 (form_factor_mismatch)
+  max_cooler_height_mm?: number;      // Case: Rule 6 (cooler_too_tall)
+  form_factor?: string;               // Motherboard/Case: Rule 5
+  height_mm?: number;                 // Cooling: Rule 6 (cooler_too_tall)
   wattage?: number;
   tdp?: number;
   benchmark_score?: number;

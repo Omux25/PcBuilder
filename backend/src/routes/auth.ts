@@ -10,6 +10,7 @@
 
 import { Hono } from 'hono';
 import type { Context } from 'hono';
+import { getCookie } from 'hono/cookie';
 import { getSql } from '../db/index.js';
 import { isRateLimited } from '../utils/rateLimiter.js';
 import bcrypt from 'bcrypt';
@@ -82,9 +83,7 @@ function clearRefreshCookie(c: Context): void {
 }
 
 function getRefreshTokenFromCookie(c: Context): string | null {
-  const cookieHeader = c.req.header('cookie') ?? '';
-  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]+)`));
-  return match ? match[1] : null;
+  return getCookie(c, COOKIE_NAME) ?? null;
 }
 
 // ── POST /api/auth/login ─────────────────────────────────────────────────────
@@ -114,6 +113,12 @@ authRouter.post('/login', async (c) => {
   const { username, password } = body as Record<string, unknown>;
 
   if (typeof username !== 'string' || typeof password !== 'string') {
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' } }, 401);
+  }
+
+  // Reject oversized inputs before hitting the database.
+  // Legitimate usernames/passwords are never this long.
+  if (username.length > 128 || password.length > 256) {
     return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' } }, 401);
   }
 

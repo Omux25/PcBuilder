@@ -9,6 +9,7 @@ This directory contains explainers for completed implementation tasks. Each file
 | File | Task | What it covers |
 |---|---|---|
 | [task-cleanup-codebase-audit.md](task-cleanup-codebase-audit.md) | Codebase Cleanup — Audit Round 1 | 13 bugs fixed: dead code, migration numbering, DI bypass, scraper registry IDs, broken transaction wrapper, missing UI labels, doc inaccuracies |
+| [task-cleanup-codebase-audit-round2.md](task-cleanup-codebase-audit-round2.md) | Codebase Cleanup — Audit Round 2 | 9 bugs fixed: compatibility rules 5 & 6 silently dead, PSU TDP inflation, non-transactional preset creation, LIKE token injection, duplicated ID validation, duplicate SQL query, placeholder scraper files, stale .gitkeep files |
 
 ---
 

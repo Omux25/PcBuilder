@@ -39,25 +39,14 @@ export interface RetailerWithStats extends Retailer {
  */
 async function getRetailers(includeInactive = false): Promise<RetailerWithStats[]> {
   const sql = getSql();
-  if (includeInactive) {
-    return sql`
-      SELECT
-        r.*,
-        COUNT(p.id) AS price_records_count
-      FROM retailers r
-      LEFT JOIN prices p ON p.retailer_id = r.id
-      GROUP BY r.id
-      ORDER BY r.name ASC
-    ` as Promise<RetailerWithStats[]>;
-  }
-
+  // Single query with nullable active filter — avoids duplicating the SQL.
   return sql`
     SELECT
       r.*,
       COUNT(p.id) AS price_records_count
     FROM retailers r
     LEFT JOIN prices p ON p.retailer_id = r.id
-    WHERE r.is_active = true
+    WHERE (${includeInactive ? null : true}::boolean IS NULL OR r.is_active = true)
     GROUP BY r.id
     ORDER BY r.name ASC
   ` as Promise<RetailerWithStats[]>;

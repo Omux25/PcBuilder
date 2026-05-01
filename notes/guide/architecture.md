@@ -28,7 +28,7 @@ backend/
 │   └── db/
 │       ├── index.ts        — Centralized getSql() with DI support
 │       ├── migrate.ts      — Migration runner
-│       └── migrations/     — SQL migration files (001–018)
+│       └── migrations/     — SQL migration files (001–019)
 └── scraper/
     ├── session.ts          — Core scraping logic
     ├── scheduler.ts        — Bun.cron() job
