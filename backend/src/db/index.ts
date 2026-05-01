@@ -10,7 +10,11 @@
 
 import { sql as bunSql } from 'bun';
 
-type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
+export type SqlFn = {
+  (strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
+  begin<T>(cb: (tx: SqlFn) => Promise<T>): Promise<T>;
+  unsafe(query: string, params?: unknown[]): Promise<unknown[]>;
+};
 
 let _sql: SqlFn = bunSql as unknown as SqlFn;
 

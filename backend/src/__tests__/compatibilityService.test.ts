@@ -192,7 +192,7 @@ describe('TDP calculation', () => {
       storage: { tdp: 5 },
     });
     expect(result.total_tdp).toBe(301);
-    expect(result.recommended_psu_wattage).toBe(Math.ceil(301 * 1.2)); // 362
+    expect(result.recommended_psu_wattage).toBe(Math.ceil(301 * 1.5)); // 452
   });
 
   test('null/undefined TDP values are treated as 0', () => {
@@ -202,7 +202,7 @@ describe('TDP calculation', () => {
       gpu: { length_mm: 300, tdp: 100 },
     });
     expect(result.total_tdp).toBe(100);
-    expect(result.recommended_psu_wattage).toBe(Math.ceil(100 * 1.2)); // 120
+    expect(result.recommended_psu_wattage).toBe(Math.ceil(100 * 1.5)); // 150
   });
 
   test('empty build → total_tdp=0, recommended_psu_wattage=0', () => {
@@ -212,7 +212,7 @@ describe('TDP calculation', () => {
   });
 
   test('recommended_psu_wattage uses Math.ceil', () => {
-    // total_tdp=1 → 1 * 1.2 = 1.2 → ceil = 2
+    // total_tdp=1 → 1 * 1.5 = 1.5 → ceil = 2
     const result = validateCompatibility({ cpu: makeCpu('AM5', 1) });
     expect(result.recommended_psu_wattage).toBe(2);
   });
@@ -224,7 +224,7 @@ describe('TDP calculation', () => {
 
 describe('psu_underpowered', () => {
   test('PSU 350 W with recommended 362 W → psu_underpowered warning', () => {
-    // total_tdp=301 → recommended=362
+    // total_tdp=301 → recommended=ceil(301*1.5)=452
     const result = validateCompatibility({
       cpu: makeCpu('AM5', 65),
       motherboard: makeMotherboard('AM5', ['DDR5'], 6000, 15),
@@ -233,33 +233,34 @@ describe('psu_underpowered', () => {
       storage: { tdp: 5 },
       psu: makePsu(350),
     });
-    expect(result.recommended_psu_wattage).toBe(362);
+    expect(result.recommended_psu_wattage).toBe(452);
     const psuWarnings = result.warnings.filter(w => w.rule === 'psu_underpowered');
     expect(psuWarnings).toHaveLength(1);
     expect(psuWarnings[0].components).toEqual(['psu']);
   });
 
   test('PSU 400 W with recommended 362 W → no psu_underpowered warning', () => {
+    // total_tdp=301 → recommended=452 — 400W IS underpowered now, use 500W instead
     const result = validateCompatibility({
       cpu: makeCpu('AM5', 65),
       motherboard: makeMotherboard('AM5', ['DDR5'], 6000, 15),
       gpu: makeGpu(300, 200),
       ram: makeRam('DDR5', 4800, 16),
       storage: { tdp: 5 },
-      psu: makePsu(400),
+      psu: makePsu(500),
     });
-    expect(result.recommended_psu_wattage).toBe(362);
+    expect(result.recommended_psu_wattage).toBe(452);
     const psuWarnings = result.warnings.filter(w => w.rule === 'psu_underpowered');
     expect(psuWarnings).toHaveLength(0);
   });
 
   test('PSU wattage equal to recommended → no psu_underpowered warning', () => {
-    // total_tdp=100 → recommended=120
+    // total_tdp=100 → recommended=ceil(100*1.5)=150
     const result = validateCompatibility({
       gpu: makeGpu(300, 100),
-      psu: makePsu(120),
+      psu: makePsu(150),
     });
-    expect(result.recommended_psu_wattage).toBe(120);
+    expect(result.recommended_psu_wattage).toBe(150);
     const psuWarnings = result.warnings.filter(w => w.rule === 'psu_underpowered');
     expect(psuWarnings).toHaveLength(0);
   });
@@ -300,5 +301,144 @@ describe('compatible flag', () => {
     expect(result.warnings.length).toBeGreaterThan(0);
     expect(result.errors).toHaveLength(0);
     expect(result.compatible).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rule 5 — form_factor_mismatch
+// ---------------------------------------------------------------------------
+
+describe('form_factor_mismatch', () => {
+  test('ATX motherboard + ATX case → no form_factor_mismatch error', () => {
+    const result = validateCompatibility({
+      motherboard: { socket: 'AM5', supported_ram_types: ['DDR5'], max_ram_frequency: 6000, form_factor: 'ATX' },
+      case: { max_gpu_length_mm: 380, supported_motherboards: ['ATX', 'mATX', 'Mini-ITX'] },
+    });
+    const errors = result.errors.filter(e => e.rule === 'form_factor_mismatch');
+    expect(errors).toHaveLength(0);
+    expect(result.compatible).toBe(true);
+  });
+
+  test('ATX motherboard + Mini-ITX case → form_factor_mismatch error', () => {
+    const result = validateCompatibility({
+      motherboard: { socket: 'AM5', supported_ram_types: ['DDR5'], max_ram_frequency: 6000, form_factor: 'ATX' },
+      case: { max_gpu_length_mm: 300, supported_motherboards: ['Mini-ITX'] },
+    });
+    const errors = result.errors.filter(e => e.rule === 'form_factor_mismatch');
+    expect(errors).toHaveLength(1);
+    expect(errors[0].components).toEqual(['motherboard', 'case']);
+    expect(result.compatible).toBe(false);
+  });
+
+  test('no form_factor on motherboard → no form_factor_mismatch error (rule skipped)', () => {
+    const result = validateCompatibility({
+      motherboard: { socket: 'AM5', supported_ram_types: ['DDR5'], max_ram_frequency: 6000 },
+      case: { max_gpu_length_mm: 300, supported_motherboards: ['Mini-ITX'] },
+    });
+    const errors = result.errors.filter(e => e.rule === 'form_factor_mismatch');
+    expect(errors).toHaveLength(0);
+  });
+
+  test('no supported_motherboards on case → no form_factor_mismatch error (rule skipped)', () => {
+    const result = validateCompatibility({
+      motherboard: { socket: 'AM5', supported_ram_types: ['DDR5'], max_ram_frequency: 6000, form_factor: 'ATX' },
+      case: { max_gpu_length_mm: 380 },
+    });
+    const errors = result.errors.filter(e => e.rule === 'form_factor_mismatch');
+    expect(errors).toHaveLength(0);
+  });
+
+  test('only motherboard present (no case) → no form_factor_mismatch error', () => {
+    const result = validateCompatibility({
+      motherboard: { socket: 'AM5', supported_ram_types: ['DDR5'], max_ram_frequency: 6000, form_factor: 'ATX' },
+    });
+    const errors = result.errors.filter(e => e.rule === 'form_factor_mismatch');
+    expect(errors).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rule 6 — cooler_too_tall
+// ---------------------------------------------------------------------------
+
+describe('cooler_too_tall', () => {
+  test('cooler 155 mm + case max 165 mm → no cooler_too_tall error', () => {
+    const result = validateCompatibility({
+      cooling: { height_mm: 155, tdp: 150 },
+      case: { max_gpu_length_mm: 380, max_cooler_height_mm: 165 },
+    });
+    const errors = result.errors.filter(e => e.rule === 'cooler_too_tall');
+    expect(errors).toHaveLength(0);
+    expect(result.compatible).toBe(true);
+  });
+
+  test('cooler 170 mm + case max 155 mm → cooler_too_tall error', () => {
+    const result = validateCompatibility({
+      cooling: { height_mm: 170, tdp: 150 },
+      case: { max_gpu_length_mm: 380, max_cooler_height_mm: 155 },
+    });
+    const errors = result.errors.filter(e => e.rule === 'cooler_too_tall');
+    expect(errors).toHaveLength(1);
+    expect(errors[0].components).toEqual(['cooling', 'case']);
+    expect(result.compatible).toBe(false);
+  });
+
+  test('cooler height equal to case max → no cooler_too_tall error', () => {
+    const result = validateCompatibility({
+      cooling: { height_mm: 165, tdp: 150 },
+      case: { max_gpu_length_mm: 380, max_cooler_height_mm: 165 },
+    });
+    const errors = result.errors.filter(e => e.rule === 'cooler_too_tall');
+    expect(errors).toHaveLength(0);
+  });
+
+  test('no height_mm on cooling → no cooler_too_tall error (rule skipped)', () => {
+    const result = validateCompatibility({
+      cooling: { tdp: 150 },
+      case: { max_gpu_length_mm: 380, max_cooler_height_mm: 155 },
+    });
+    const errors = result.errors.filter(e => e.rule === 'cooler_too_tall');
+    expect(errors).toHaveLength(0);
+  });
+
+  test('no max_cooler_height_mm on case → no cooler_too_tall error (rule skipped)', () => {
+    const result = validateCompatibility({
+      cooling: { height_mm: 170, tdp: 150 },
+      case: { max_gpu_length_mm: 380 },
+    });
+    const errors = result.errors.filter(e => e.rule === 'cooler_too_tall');
+    expect(errors).toHaveLength(0);
+  });
+
+  test('only cooling present (no case) → no cooler_too_tall error', () => {
+    const result = validateCompatibility({
+      cooling: { height_mm: 170, tdp: 150 },
+    });
+    const errors = result.errors.filter(e => e.rule === 'cooler_too_tall');
+    expect(errors).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rule 7 — PSU excluded from TDP sum
+// ---------------------------------------------------------------------------
+
+describe('TDP calculation — PSU excluded', () => {
+  test('PSU tdp is NOT included in total_tdp', () => {
+    const result = validateCompatibility({
+      cpu: makeCpu('AM5', 65),
+      psu: makePsu(650, 50), // PSU has tdp=50 but should not be summed
+    });
+    // Only cpu tdp (65) should be counted — not psu tdp (50)
+    expect(result.total_tdp).toBe(65);
+  });
+
+  test('recommended_psu_wattage is based only on component TDP, not PSU self-draw', () => {
+    const result = validateCompatibility({
+      gpu: makeGpu(300, 200),
+      psu: makePsu(400, 100), // PSU tdp=100 must not inflate the recommendation
+    });
+    expect(result.total_tdp).toBe(200);
+    expect(result.recommended_psu_wattage).toBe(Math.ceil(200 * 1.5)); // 300
   });
 });

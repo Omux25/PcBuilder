@@ -1,6 +1,15 @@
 /**
  * Compatibility Engine — Business Logic
- * Validates a PC build configuration against six compatibility rules.
+ * Validates a PC build configuration against 8 compatibility rules.
+ *
+ * Rule 1: socket_mismatch        — error   (CPU + Motherboard)
+ * Rule 2: ram_type_mismatch      — error   (RAM + Motherboard)
+ * Rule 3: ram_frequency_exceeded — warning (RAM + Motherboard)
+ * Rule 4: gpu_too_long           — error   (GPU + Case)
+ * Rule 5: form_factor_mismatch   — error   (Motherboard + Case)
+ * Rule 6: cooler_too_tall        — error   (Cooling + Case)
+ * Rule 7: TDP calculation        — always  (cpu, motherboard, gpu, ram, storage, case, cooling — PSU excluded)
+ * Rule 8: psu_underpowered       — warning (PSU)
  *
  * Requirements: 2.1, 2.2, 3.1, 3.2, 3.3, 4.1, 4.2, 5.1, 5.2, 5.3
  */
@@ -10,12 +19,13 @@
  *
  * @param {Object} build - The build configuration
  * @param {Object} [build.cpu]         - { socket, tdp, ... }
- * @param {Object} [build.motherboard] - { socket, supported_ram_types, max_ram_frequency, tdp, ... }
+ * @param {Object} [build.motherboard] - { socket, supported_ram_types, max_ram_frequency, form_factor, tdp, ... }
  * @param {Object} [build.gpu]         - { length_mm, tdp, ... }
  * @param {Object} [build.ram]         - { ram_type, frequency_mhz, tdp, ... }
  * @param {Object} [build.storage]     - { tdp, ... }
- * @param {Object} [build.psu]         - { wattage, tdp, ... }
- * @param {Object} [build.case]        - { max_gpu_length_mm, tdp, ... }
+ * @param {Object} [build.psu]         - { wattage, ... }
+ * @param {Object} [build.case]        - { max_gpu_length_mm, supported_motherboards, max_cooler_height_mm, ... }
+ * @param {Object} [build.cooling]     - { height_mm, tdp, ... }
  *
  * @returns {{
  *   compatible: boolean,
@@ -26,18 +36,32 @@
  * }}
  */
 function validateCompatibility(build: {
-  cpu?: { socket: string; tdp?: number | null };
-  motherboard?: { socket: string; supported_ram_types: string[]; max_ram_frequency: number; tdp?: number | null };
-  gpu?: { length_mm: number; tdp?: number | null };
-  ram?: { ram_type: string; frequency_mhz: number; tdp?: number | null };
-  storage?: { tdp?: number | null };
-  psu?: { wattage: number; tdp?: number | null };
-  case?: { max_gpu_length_mm: number; tdp?: number | null };
+  cpu?: { socket: string; tdp?: number | null; specs?: Record<string, unknown> };
+  motherboard?: {
+    socket: string;
+    supported_ram_types: string[];
+    max_ram_frequency: number;
+    tdp?: number | null;
+    form_factor?: string;
+    specs?: Record<string, unknown>;
+  };
+  gpu?: { length_mm: number; tdp?: number | null; specs?: Record<string, unknown> };
+  ram?: { ram_type: string; frequency_mhz: number; tdp?: number | null; specs?: Record<string, unknown> };
+  storage?: { tdp?: number | null; specs?: Record<string, unknown> };
+  psu?: { wattage: number; tdp?: number | null; specs?: Record<string, unknown> };
+  case?: {
+    max_gpu_length_mm: number;
+    tdp?: number | null;
+    supported_motherboards?: string[];
+    max_cooler_height_mm?: number;
+    specs?: Record<string, unknown>;
+  };
+  cooling?: { height_mm?: number; supported_sockets?: string[]; tdp?: number | null; specs?: Record<string, unknown> };
 }) {
   const errors = [];
   const warnings = [];
 
-  const { cpu, motherboard, gpu, ram, storage, psu } = build;
+  const { cpu, motherboard, gpu, ram, storage, psu, cooling } = build;
   const pcCase = build.case;
 
   // Rule 1 — socket_mismatch (error)
@@ -46,7 +70,7 @@ function validateCompatibility(build: {
       errors.push({
         rule: 'socket_mismatch',
         components: ['cpu', 'motherboard'],
-        message: `Le socket du CPU (${cpu.socket}) est incompatible avec le socket de la carte mère (${motherboard.socket}).`,
+        message: `CPU socket (${cpu.socket}) is not compatible with motherboard socket (${motherboard.socket}).`,
       });
     }
   }
@@ -57,7 +81,7 @@ function validateCompatibility(build: {
       errors.push({
         rule: 'ram_type_mismatch',
         components: ['ram', 'motherboard'],
-        message: `Le type de RAM (${ram.ram_type}) n'est pas pris en charge par la carte mère. Types supportés : ${motherboard.supported_ram_types.join(', ')}.`,
+        message: `RAM type (${ram.ram_type}) is not supported by this motherboard. Supported types: ${motherboard.supported_ram_types.join(', ')}.`,
       });
     }
   }
@@ -68,7 +92,7 @@ function validateCompatibility(build: {
       warnings.push({
         rule: 'ram_frequency_exceeded',
         components: ['ram', 'motherboard'],
-        message: `La fréquence de la RAM (${ram.frequency_mhz} MHz) dépasse le maximum supporté par la carte mère (${motherboard.max_ram_frequency} MHz). La RAM fonctionnera à ${motherboard.max_ram_frequency} MHz.`,
+        message: `RAM frequency (${ram.frequency_mhz} MHz) exceeds the motherboard maximum (${motherboard.max_ram_frequency} MHz). RAM will run at ${motherboard.max_ram_frequency} MHz.`,
       });
     }
   }
@@ -79,27 +103,65 @@ function validateCompatibility(build: {
       errors.push({
         rule: 'gpu_too_long',
         components: ['gpu', 'case'],
-        message: `La longueur du GPU (${gpu.length_mm} mm) dépasse l'espace disponible dans le boîtier (${pcCase.max_gpu_length_mm} mm).`,
+        message: `GPU length (${gpu.length_mm} mm) exceeds the available space in the case (${pcCase.max_gpu_length_mm} mm).`,
       });
     }
   }
 
-  // Rule 5 — TDP calculation
-  const componentKeys = ['cpu', 'motherboard', 'gpu', 'ram', 'storage', 'psu', 'case'] as const;
+  // Rule 5 — form_factor_mismatch (error)
+  if (motherboard && pcCase) {
+    const mbSpecs = motherboard.specs || {};
+    const mbFormFactor = motherboard.form_factor || mbSpecs.form_factor;
+
+    const caseSpecs = pcCase.specs || {};
+    const caseSupported = pcCase.supported_motherboards || caseSpecs.supported_motherboards;
+
+    if (mbFormFactor && Array.isArray(caseSupported)) {
+      if (!caseSupported.includes(mbFormFactor)) {
+        errors.push({
+          rule: 'form_factor_mismatch',
+          components: ['motherboard', 'case'],
+          message: `Motherboard form factor (${mbFormFactor}) is not supported by this case. Supported formats: ${caseSupported.join(', ')}.`,
+        });
+      }
+    }
+  }
+
+  // Rule 6 — cooler_too_tall (error)
+  if (cooling && pcCase) {
+    const coolerSpecs = cooling.specs || {};
+    const coolerHeight = cooling.height_mm || coolerSpecs.height_mm;
+
+    const caseSpecs = pcCase.specs || {};
+    const maxCoolerHeight = pcCase.max_cooler_height_mm || caseSpecs.max_cooler_height_mm;
+
+    if (coolerHeight && maxCoolerHeight && coolerHeight > maxCoolerHeight) {
+      errors.push({
+        rule: 'cooler_too_tall',
+        components: ['cooling', 'case'],
+        message: `CPU cooler height (${coolerHeight} mm) exceeds the case maximum (${maxCoolerHeight} mm).`,
+      });
+    }
+  }
+
+  // Rule 7 — TDP calculation
+  // PSU is excluded from the sum: it supplies power, it doesn't consume it
+  // (its own idle draw is negligible and already factored into efficiency ratings).
+  const componentKeys = ['cpu', 'motherboard', 'gpu', 'ram', 'storage', 'case', 'cooling'] as const;
   const total_tdp = componentKeys.reduce((sum, key) => {
     const component = build[key];
     return sum + (component && component.tdp != null ? component.tdp : 0);
   }, 0);
 
-  const recommended_psu_wattage = Math.ceil(total_tdp * 1.2);
+  const recommended_psu_wattage = Math.ceil(total_tdp * 1.5);
 
-  // Rule 6 — psu_underpowered (warning)
+  // Rule 8 — psu_underpowered (warning)
   if (psu) {
     if (psu.wattage < recommended_psu_wattage) {
       warnings.push({
         rule: 'psu_underpowered',
         components: ['psu'],
-        message: `La puissance de l'alimentation (${psu.wattage} W) est inférieure à la puissance recommandée (${recommended_psu_wattage} W).`,
+        message: `PSU wattage (${psu.wattage} W) is below the recommended minimum (${recommended_psu_wattage} W).`,
       });
     }
   }

@@ -53,7 +53,7 @@ describe('GET /api/components/:id — 404', () => {
     expect(res.status).toBe(404);
 
     const body = await res.json();
-    expect(body.error.code).toBe('NOT_FOUND');
+    expect(body.error.code).toBe('COMPONENT_NOT_FOUND');
   });
 
   test('returns 400 for a non-numeric ID', async () => {
@@ -74,7 +74,7 @@ describe('GET /api/components/:id/prices — 404', () => {
     expect(res.status).toBe(404);
 
     const body = await res.json();
-    expect(body.error.code).toBe('NOT_FOUND');
+    expect(body.error.code).toBe('COMPONENT_NOT_FOUND');
   });
 });
 

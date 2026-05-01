@@ -37,25 +37,7 @@ async function getPriceHistory(
   days: number = 30
 ): Promise<PriceHistoryEntry[]> {
   const sql = getSql();
-  if (retailerId !== undefined) {
-    return sql`
-      SELECT
-        ph.id,
-        ph.component_id,
-        ph.retailer_id,
-        r.name AS retailer_name,
-        ph.price,
-        ph.in_stock,
-        ph.recorded_at
-      FROM price_history ph
-      JOIN retailers r ON r.id = ph.retailer_id
-      WHERE ph.component_id = ${componentId}
-        AND ph.retailer_id  = ${retailerId}
-        AND ph.recorded_at >= NOW() - (${days} || ' days')::INTERVAL
-      ORDER BY ph.recorded_at ASC
-    ` as Promise<PriceHistoryEntry[]>;
-  }
-
+  // Single query with nullable retailer filter — avoids duplicating the SQL.
   return sql`
     SELECT
       ph.id,
@@ -68,6 +50,7 @@ async function getPriceHistory(
     FROM price_history ph
     JOIN retailers r ON r.id = ph.retailer_id
     WHERE ph.component_id = ${componentId}
+      AND (${retailerId ?? null}::int IS NULL OR ph.retailer_id = ${retailerId ?? null})
       AND ph.recorded_at >= NOW() - (${days} || ' days')::INTERVAL
     ORDER BY ph.recorded_at ASC
   ` as Promise<PriceHistoryEntry[]>;
@@ -76,8 +59,6 @@ async function getPriceHistory(
 /**
  * Records a price change in price_history — only if the price differs from
  * the most recent recorded price for this (component, retailer) pair.
- *
- * Called by the aggregator after every successful scrape.
  *
  * @param componentId - The component's primary key
  * @param retailerId  - The retailer's primary key
@@ -91,7 +72,6 @@ async function recordPriceChange(
   price: number,
   inStock: boolean
 ): Promise<boolean> {
-  // Get the most recent recorded price for this pair
   const sql = getSql();
   const recent = (await sql`
     SELECT price FROM price_history
@@ -101,7 +81,6 @@ async function recordPriceChange(
     LIMIT 1
   `) as { price: number }[];
 
-  // Only insert if price changed (or no history exists yet)
   const lastPrice = recent.length > 0 ? Number(recent[0].price) : null;
   if (lastPrice !== null && lastPrice === price) {
     return false;

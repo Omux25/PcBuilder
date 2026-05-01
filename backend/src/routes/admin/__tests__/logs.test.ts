@@ -19,33 +19,10 @@ function makeToken() {
 
 // ── Mock SQL ─────────────────────────────────────────────────────────────────
 
-// We need to intercept Bun.sql calls. The logs route imports `sql` from 'bun'
-// directly (not via a service with setSql), so we test the route's HTTP
-// behaviour by mocking at the module level using Bun's module mock.
-
-const MOCK_LOGS = [
-  {
-    id: 3,
-    level: 'ERROR',
-    site: 'site1.ma',
-    message: 'Failed to fetch product page',
-    created_at: '2024-06-03T10:00:00Z',
-  },
-  {
-    id: 2,
-    level: 'WARNING',
-    site: 'site2.ma',
-    message: 'HTML structure changed',
-    created_at: '2024-06-02T09:00:00Z',
-  },
-  {
-    id: 1,
-    level: 'INFO',
-    site: null,
-    message: 'Scraping session started',
-    created_at: '2024-06-01T08:00:00Z',
-  },
-];
+// The logs route uses getSql() from db/index.ts (DI-injectable since the
+// DI fix in the cleanup spec). Full DB-level tests are in the PBT file.
+// Here we only test auth guards, input validation, and response shape —
+// none of which require a real DB connection.
 
 // ── Auth guard tests ──────────────────────────────────────────────────────────
 

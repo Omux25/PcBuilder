@@ -37,6 +37,7 @@ export interface ActivityEntry {
   entity_id?: number;
   details?: Record<string, unknown>;
   created_at: string;
+  admin_username?: string;
 }
 
 // ── Service Functions ────────────────────────────────────────────────────────
@@ -134,7 +135,7 @@ async function getRecentActivity(limit: number = 10): Promise<ActivityEntry[]> {
       al.entity_id,
       al.details,
       al.created_at,
-      a.email AS admin_email
+      a.username AS admin_username
     FROM admin_activity_log al
     JOIN admins a ON a.id = al.admin_id
     ORDER BY al.created_at DESC

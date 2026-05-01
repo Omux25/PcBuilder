@@ -23,7 +23,7 @@ describe('validateComponent middleware', () => {
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.error.code).toBe('VALIDATION_ERROR');
-    expect(json.error.message).toContain('JSON valide');
+    expect(json.error.message).toContain('valid JSON');
   });
 
   test('returns 400 when category is missing', async () => {
@@ -75,7 +75,7 @@ describe('validateComponent middleware', () => {
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.error.code).toBe('VALIDATION_ERROR');
-    expect(json.error.message).toBe('Validation échouée');
+    expect(json.error.message).toBe('Validation failed');
     expect(json.error.fields).toContain('socket');
   });
 

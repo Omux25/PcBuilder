@@ -180,7 +180,7 @@ describe('PBT 2.5 — TDP calculation', () => {
     ));
   });
 
-  test('recommended_psu_wattage = ceil(total_tdp * 1.2)', () => {
+  test('recommended_psu_wattage = ceil(total_tdp * 1.5)', () => {
     fc.assert(fc.property(
       tdpArb, tdpArb,
       (cpuTdp, gpuTdp) => {
@@ -188,7 +188,7 @@ describe('PBT 2.5 — TDP calculation', () => {
           cpu: { socket: 'AM5', tdp: cpuTdp },
           gpu: { length_mm: 300, tdp: gpuTdp },
         });
-        const expected = Math.ceil((cpuTdp + gpuTdp) * 1.2);
+        const expected = Math.ceil((cpuTdp + gpuTdp) * 1.5);
         return result.recommended_psu_wattage === expected;
       },
     ));
