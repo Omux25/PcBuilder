@@ -8,7 +8,7 @@ import styles from './Components.module.css';
 const CATEGORIES = ['cpu', 'motherboard', 'gpu', 'ram', 'storage', 'psu', 'case', 'cooling'];
 
 export function Components() {
-  const [components, setComponents] = useState<any[]>([]);
+  const [components, setComponents] = useState<AdminComponent[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +28,7 @@ export function Components() {
     if (category) params.category = category;
 
     getAdminComponents(params)
-      .then((data: any) => {
+      .then((data) => {
         setComponents(data.components ?? []);
         setTotal(data.total ?? 0);
       })
@@ -44,7 +44,7 @@ export function Components() {
     load();
   }
 
-  async function handleToggleActive(component: any) {
+  async function handleToggleActive(component: AdminComponent) {
     try {
       await updateAdminComponent(component.id, { ...component, is_active: !component.is_active });
       load();
@@ -65,7 +65,7 @@ export function Components() {
 
   const totalPages = Math.ceil(total / LIMIT);
 
-  function openModal(component: any = null) {
+  function openModal(component: AdminComponent | null = null) {
     setEditingComponent(component);
     setModalOpen(true);
   }

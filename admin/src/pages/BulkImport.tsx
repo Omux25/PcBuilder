@@ -3,7 +3,15 @@ import { Upload } from 'lucide-react';
 import { getAccessToken } from '../api';
 import styles from './BulkImport.module.css';
 
-async function importComponents(file: File): Promise<any> {
+interface ImportResult {
+  total_rows: number;
+  imported: number;
+  skipped: number;
+  failed: number;
+  errors?: Array<{ row: number; message: string }>;
+}
+
+async function importComponents(file: File): Promise<ImportResult> {
   const formData = new FormData();
   formData.append('file', file);
 
@@ -21,7 +29,7 @@ async function importComponents(file: File): Promise<any> {
 
 export function BulkImport() {
   const [file, setFile] = useState<File | null>(null);
-  const [result, setResult] = useState<any | null>(null);
+  const [result, setResult] = useState<ImportResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -86,10 +94,10 @@ export function BulkImport() {
             <div className={`${styles.stat} ${styles.danger}`}><span>{result.failed}</span>Echecs</div>
           </div>
 
-          {result.errors?.length > 0 && (
+          {(result.errors?.length ?? 0) > 0 && (
             <div className={styles.errorList}>
               <h3>Erreurs</h3>
-              {result.errors.map((e: any, i: number) => (
+              {result.errors?.map((e, i) => (
                 <div key={i} className={styles.errorRow}>
                   <span className={styles.rowNum}>Ligne {e.row}</span>
                   <span>{e.message}</span>
@@ -102,3 +110,4 @@ export function BulkImport() {
     </div>
   );
 }
+

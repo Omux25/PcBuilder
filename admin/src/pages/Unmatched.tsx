@@ -1,20 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Link2, X } from 'lucide-react';
 import { getUnmatchedListings, linkUnmatched, dismissUnmatched, searchComponents } from '../api';
+import type { UnmatchedListing, AdminComponent } from '../api';
 import styles from './Unmatched.module.css';
 
 export function Unmatched() {
-  const [listings, setListings] = useState<any[]>([]);
+  const [listings, setListings] = useState<UnmatchedListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [linkTarget, setLinkTarget] = useState<any | null>(null);
+  const [linkTarget, setLinkTarget] = useState<UnmatchedListing | null>(null);
   const [componentSearch, setComponentSearch] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<AdminComponent[]>([]);
 
   function load() {
     setLoading(true);
     getUnmatchedListings({ status: 'pending' })
-      .then((data: any) => setListings(data.listings ?? []))
+      .then((data: { listings?: UnmatchedListing[]; data?: UnmatchedListing[] }) => setListings(data.listings ?? data.data ?? []))
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }
@@ -23,7 +24,7 @@ export function Unmatched() {
 
   async function handleSearch() {
     if (!componentSearch.trim()) return;
-    const data: any = await searchComponents(componentSearch);
+    const data = await searchComponents(componentSearch);
     setSearchResults(data.components ?? []);
   }
 
@@ -116,7 +117,7 @@ export function Unmatched() {
 
             {searchResults.length > 0 && (
               <ul className={styles.resultList}>
-                {searchResults.map((c: any) => (
+                {searchResults.map((c) => (
                   <li key={c.id} className={styles.resultItem} onClick={() => handleLink(c.id)}>
                     <span className={styles.resultName}>{c.brand ? `${c.brand} ` : ''}{c.name}</span>
                     <span className={styles.resultCat}>{c.category}</span>

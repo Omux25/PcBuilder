@@ -1,32 +1,43 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Play, PlayCircle } from 'lucide-react';
 import { getAdminRetailers, getAdminLogs, runScraper, runAllScrapers } from '../api';
+import type { AdminRetailer } from '../api';
 import styles from './Scrapers.module.css';
 
+interface ScraperLog {
+  id: number;
+  level: string;
+  site?: string;
+  message: string;
+  created_at: string;
+}
+
 export function Scrapers() {
-  const [retailers, setRetailers] = useState<any[]>([]);
-  const [logs, setLogs] = useState<any[]>([]);
+  const [retailers, setRetailers] = useState<AdminRetailer[]>([]);
+  const [logs, setLogs] = useState<ScraperLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState<Set<number>>(new Set());
   const [logLevel, setLogLevel] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  function loadRetailers() {
+  const loadRetailers = useCallback(() => {
     getAdminRetailers()
-      .then((data: any) => setRetailers(data.retailers ?? []))
+      .then((data) => setRetailers(data.retailers ?? []))
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }
+  }, []);
 
-  function loadLogs() {
+  const loadLogs = useCallback(() => {
     const params: Record<string, string> = { limit: '100' };
     if (logLevel) params.level = logLevel;
     getAdminLogs(params)
-      .then((data: any) => setLogs(data.logs ?? []));
-  }
+      .then((data: { logs?: ScraperLog[]; data?: ScraperLog[] }) => setLogs(data.logs ?? data.data ?? []));
+  }, [logLevel]);
 
-  useEffect(() => { loadRetailers(); loadLogs(); }, []);
-  useEffect(() => { loadLogs(); }, [logLevel]);
+  useEffect(() => {
+    loadRetailers();
+    loadLogs();
+  }, [loadRetailers, loadLogs]);
 
   async function handleRunOne(retailerId: number) {
     setRunning((prev) => new Set(prev).add(retailerId));
@@ -75,12 +86,12 @@ export function Scrapers() {
               <tr key={r.id}>
                 <td>{r.name}</td>
                 <td className={styles.date}>
-                  {r.last_scrape_at ? new Date(r.last_scrape_at).toLocaleString('fr-MA') : '—'}
+                  {r.last_scrape_at ? new Date(r.last_scrape_at as string).toLocaleString('fr-MA') : '—'}
                 </td>
                 <td>
                   {r.last_scrape_status && (
-                    <span className={`${styles.badge} ${styles[r.last_scrape_status.toLowerCase()]}`}>
-                      {r.last_scrape_status}
+                    <span className={`${styles.badge} ${styles[(r.last_scrape_status as string).toLowerCase()]}`}>
+                      {r.last_scrape_status as string}
                     </span>
                   )}
                 </td>
@@ -117,7 +128,7 @@ export function Scrapers() {
           {logs.length === 0 ? (
             <p className={styles.empty}>Aucun log.</p>
           ) : (
-            logs.map((log: any) => (
+            logs.map((log) => (
               <div key={log.id} className={`${styles.logEntry} ${styles[log.level?.toLowerCase()]}`}>
                 <span className={styles.logLevel}>{log.level}</span>
                 {log.site && <span className={styles.logSite}>[{log.site}]</span>}
@@ -131,3 +142,4 @@ export function Scrapers() {
     </div>
   );
 }
+
