@@ -13,9 +13,8 @@ import { getComponentById, getPrices } from '../api';
 import { CategoryIcon } from '../components/CategoryIcon';
 import type { Component, PriceOffer, ComponentCategory } from '../types';
 import { CATEGORY_LABELS } from '../types';
+import { MAX_COMPARE } from '../context/CompareContext';
 import styles from './Compare.module.css';
-
-const MAX_COMPARE = 2;
 
 // Helper for external links
 function getExternalLinks(name: string, category: string) {
@@ -72,7 +71,7 @@ export function Compare() {
   const idsParam = searchParams.get('ids') ?? '';
   const ids = useMemo(() => idsParam ? idsParam.split(',').map(Number).filter(Boolean) : [], [idsParam]);
 
-  const [items, setItems] = useState<(ComponentWithPrices | null)[]>([null, null]);
+  const [items, setItems] = useState<(ComponentWithPrices | null)[]>(Array(MAX_COMPARE).fill(null));
   const [loading, setLoading] = useState(ids.length > 0);
 
   // Load components whenever URL ids change
@@ -101,9 +100,9 @@ export function Compare() {
         }
       })
     ).then(results => {
-      // Pad to at least 2 slots
+      // Pad to MAX_COMPARE slots
       const padded = [...results];
-      while (padded.length < 2) padded.push(null);
+      while (padded.length < MAX_COMPARE) padded.push(null);
       setItems(padded);
     }).finally(() => setLoading(false));
   }, [idsParam]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -294,7 +293,7 @@ export function Compare() {
           <tbody>
             {/* Price row */}
             <tr className={styles.sectionHeader}>
-              <td colSpan={items.length + (canAddMore ? 2 : 1)}>Prix</td>
+              <td colSpan={1 + items.length + (canAddMore ? 1 : 0)}>Prix</td>
             </tr>
             <tr>
               <td className={styles.specLabel}>Meilleur prix</td>
@@ -341,7 +340,7 @@ export function Compare() {
 
             {/* Spec rows */}
             <tr className={styles.sectionHeader}>
-              <td colSpan={items.length + (canAddMore ? 2 : 1)}>Analyse de Performance</td>
+              <td colSpan={1 + items.length + (canAddMore ? 1 : 0)}>Analyse de Performance</td>
             </tr>
             <tr>
               <td className={styles.specLabel}>Rapport Performance/Prix</td>
@@ -361,7 +360,7 @@ export function Compare() {
             </tr>
 
             <tr className={styles.sectionHeader}>
-              <td colSpan={items.length + (canAddMore ? 2 : 1)}>Spécifications</td>
+              <td colSpan={1 + items.length + (canAddMore ? 1 : 0)}>Spécifications</td>
             </tr>
             {activeRows.map(row => {
               const bestVal = getBestValue(row);

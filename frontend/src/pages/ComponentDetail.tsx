@@ -10,6 +10,7 @@ import { getComponentBySlug, getPrices, getPriceHistory } from '../api';
 import { PriceHistoryChart } from '../components/PriceHistoryChart';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
+import { useCompare } from '../context/CompareContext';
 import type { Component, PriceOffer, PriceHistoryEntry, ComponentCategory } from '../types';
 import { CATEGORY_LABELS } from '../types';
 import styles from './ComponentDetail.module.css';
@@ -21,6 +22,7 @@ interface Props {
 export function ComponentDetail({ onAddToBuild }: Props = {}) {
   const { slug }   = useParams<{ slug: string }>();
   const navigate   = useNavigate();
+  const { addToCompare, removeFromCompare, isInCompare } = useCompare();
   const [component, setComponent] = useState<Component | null>(null);
   const [prices, setPrices]       = useState<PriceOffer[]>([]);
   const [history, setHistory]     = useState<PriceHistoryEntry[]>([]);
@@ -155,13 +157,22 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
               >
                 {addedToBuild ? '✓ Ajouté' : <><ShoppingCart size={15} /> Ajouter à la config</>}
               </button>
-              <Link
-                to={`/compare?ids=${component.id}`}
-                className={styles.compareBtn}
-                title="Comparer ce composant"
+              <button
+                className={`${styles.compareBtn} ${component && isInCompare(component.id) ? styles.compareBtnActive : ''}`}
+                title={component && isInCompare(component.id) ? 'Retirer de la comparaison' : 'Ajouter à la comparaison'}
+                onClick={() => {
+                  if (!component) return;
+                  if (isInCompare(component.id)) {
+                    removeFromCompare(component.id);
+                  } else {
+                    addToCompare(component.id);
+                    navigate(`/compare?ids=${component.id}`);
+                  }
+                }}
               >
-                <GitCompare size={15} /> Comparer
-              </Link>
+                <GitCompare size={15} />
+                {component && isInCompare(component.id) ? 'Dans la comparaison' : 'Comparer'}
+              </button>
             </div>
           </div>
         </div>

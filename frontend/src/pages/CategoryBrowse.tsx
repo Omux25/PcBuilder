@@ -15,7 +15,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, ArrowUpDown, ExternalLink, GitCompare } from 'lucide-react';
-import { getComponents } from '../api';
+import { getComponents, smartSearch } from '../api';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { Skeleton } from '../components/Skeleton';
 import type { Component, ComponentCategory } from '../types';
@@ -522,19 +522,18 @@ function ComponentCard({
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Fetch lowest prices for a list of components in one batch call. */
+/** Fetch lowest prices for a list of components using the smart-search POST endpoint. */
 async function enrichWithPrices(
   components: Component[],
   category: string,
 ): Promise<(Component & { lowest_price?: number | null; in_stock?: boolean })[]> {
+  if (components.length === 0) return components;
   try {
-    const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
-    const res = await fetch(
-      `${BASE}/components/smart-search?category=${encodeURIComponent(category)}&limit=100`,
-    );
-    if (!res.ok) return components;
-    const data = await res.json() as { components: Array<{ id: number; lowest_price: number | null; in_stock: boolean }> };
-    const priceMap = new Map(data.components.map(c => [c.id, { lowest_price: c.lowest_price, in_stock: c.in_stock }]));
+    const { components: enriched } = await smartSearch({
+      category: category as ComponentCategory,
+      limit: 100,
+    });
+    const priceMap = new Map(enriched.map(c => [c.id, { lowest_price: c.lowest_price, in_stock: c.in_stock }]));
     return components.map(c => ({ ...c, ...priceMap.get(c.id) }));
   } catch {
     return components;
