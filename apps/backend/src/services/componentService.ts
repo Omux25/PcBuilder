@@ -9,53 +9,9 @@ import { getSql } from '../db/index.js';
 import { getUniqueSlug } from './slugService.js';
 import { AppError } from '../utils/errors.js';
 import type { ComponentInput } from '../schemas/componentSchemas.js';
+import { Component, PriceOffer } from '@shared/types';
 
 // ── Types ────────────────────────────────────────────────────────────────────
-
-export interface Component {
-  id: number;
-  slug: string;
-  name: string;
-  brand?: string;
-  category: string;
-  description?: string;
-  specs?: Record<string, unknown>;
-  image_url?: string;
-  release_year?: number;
-  is_active: boolean;
-  // Legacy flat columns — still used by compatibility engine
-  socket?: string;
-  supported_ram_types?: string[];
-  max_ram_frequency?: number;
-  ram_type?: string;
-  frequency_mhz?: number;
-  length_mm?: number;
-  max_gpu_length_mm?: number;
-  // Case: supported motherboard form factors (Rule 5 — form_factor_mismatch)
-  supported_motherboards?: string[];
-  // Case: max CPU cooler height in mm (Rule 6 — cooler_too_tall)
-  max_cooler_height_mm?: number;
-  // Case/Motherboard: form factor string (e.g. 'ATX', 'mATX', 'Mini-ITX')
-  form_factor?: string;
-  // Cooling: cooler height in mm (Rule 6 — cooler_too_tall)
-  height_mm?: number;
-  wattage?: number;
-  tdp?: number;
-  benchmark_score?: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface PriceOffer {
-  retailer_id: number;
-  retailer_name: string;
-  price: number;
-  in_stock: boolean;
-  product_url: string;
-  variant_label: string | null;
-  variant_details: Record<string, unknown> | null;
-  last_updated: string;
-}
 
 export interface ComponentListResult {
   components: Component[];

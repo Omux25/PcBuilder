@@ -5,6 +5,7 @@
  */
 
 import { getSql } from '../db/index.js';
+import { DashboardData } from '@shared/types';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,7 +42,28 @@ export interface ActivityEntry {
 
 /**
  * Returns all dashboard statistics in a single aggregated query set.
+ * Aligns with the DashboardData interface from @shared/types.
  */
+async function getDashboardData(): Promise<DashboardData> {
+  const [stats, updates, activity] = await Promise.all([
+    getDashboardStats(),
+    getPriceUpdatesChart(14),
+    getRecentActivity(10)
+  ]);
+
+  return {
+    stats,
+    price_updates_chart: updates,
+    recent_activity: activity.map(a => ({
+      id: a.id,
+      action: a.action,
+      entity_type: a.entity_type ?? null,
+      entity_id: a.entity_id ?? null,
+      created_at: a.created_at
+    }))
+  };
+}
+
 async function getDashboardStats(): Promise<DashboardStats> {
   const [componentStats, retailerStats, priceStats, unmatchedStats, scrapeStats] =
     await Promise.allSettled([
@@ -170,4 +192,4 @@ async function logActivity(
   `;
 }
 
-export { getDashboardStats, getPriceUpdatesChart, getRecentActivity, logActivity };
+export { getDashboardData, getDashboardStats, getPriceUpdatesChart, getRecentActivity, logActivity };

@@ -4,7 +4,7 @@ A price comparator and compatibility checker for PC components in Morocco. Users
 
 **Team:** Salmane ELHJOUJI (backend) · Ghali KHARMOUDY (frontend)
 **School:** EMSI Orangers, Casablanca · **Deadline:** May 11, 2026
-**Status:** Complete — 548 tests passing
+**Status:** Complete — 550 tests passing
 
 ---
 
@@ -28,7 +28,7 @@ A price comparator and compatibility checker for PC components in Morocco. Users
 | Frontend | React 19 + Vite |
 | Admin panel | React 19 + Vite (separate app) |
 | Auth | JWT + bcrypt + refresh tokens |
-| Testing | bun test + fast-check (324 tests) |
+| Testing | bun test + fast-check (550 tests) |
 
 ---
 
@@ -53,7 +53,7 @@ PcBuilder/
 
 ```powershell
 # 1. Start PostgreSQL (once per WSL2 session)
-wsl -d Ubuntu -- bash -c "echo '2525' | sudo -S service postgresql start"
+wsl -d Ubuntu -- bash -c "sudo service postgresql start"
 
 # 2. Start backend + frontend + admin panel
 .\dev.ps1
@@ -71,14 +71,14 @@ For first-time setup (migrations, seed data, dependencies), see [notes/reference
 
 | File | What it covers |
 |---|---|
-| [notes/features/compatibility-engine.md](notes/features/compatibility-engine.md) | The 6 compatibility rules explained |
+| [notes/features/compatibility-engine.md](notes/features/compatibility-engine.md) | The 8 compatibility rules explained |
 | [notes/features/price-comparison.md](notes/features/price-comparison.md) | Price offers, variant model, price history |
 | [notes/features/scraping-system.md](notes/features/scraping-system.md) | Scrapers, DNA matcher, aggregator, scheduler |
 | [notes/features/authentication.md](notes/features/authentication.md) | JWT, refresh tokens, rate limiting |
 | [notes/features/component-catalog.md](notes/features/component-catalog.md) | Categories, schemas, slugs, search |
 | [notes/features/admin-panel.md](notes/features/admin-panel.md) | Dashboard, CRUD, bulk import, unmatched listings |
 | [notes/reference/api.md](notes/reference/api.md) | Full API route reference |
-| [notes/reference/database.md](notes/reference/database.md) | All 14 database tables |
+| [notes/reference/database.md](notes/reference/database.md) | All 13 database tables |
 | [notes/reference/dev-setup.md](notes/reference/dev-setup.md) | How to run everything locally |
 | [notes/reference/stack.md](notes/reference/stack.md) | Technology choices and why |
 
@@ -90,13 +90,13 @@ For first-time setup (migrations, seed data, dependencies), see [notes/reference
 wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/apps/backend && ~/.bun/bin/bun test 2>&1"
 ```
 
-Expected: 548 pass, 0 fail across 39 files.
+Expected: 550 pass, 0 fail across 39 files.
 
 ---
 
 ## Environment variables
 
-Copy `backend/.env.example` to `backend/.env` and fill in your values.
+Copy `apps/backend/.env.example` to `apps/backend/.env` and fill in your values.
 
 | Variable | Description |
 |---|---|

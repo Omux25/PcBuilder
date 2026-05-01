@@ -17,17 +17,10 @@
 import { findBestMatch, type CatalogComponent } from '../src/utils/componentMatcher.js';
 import { logger } from './utils/logger.js';
 import { getSql, setSql, resetSql } from '../src/db/index.js';
+import { SCRAPER_CONFIG } from '@shared/scraper-config';
 
 // Re-export DI helpers so tests can inject a mock SQL function.
 export { setSql, resetSql };
-
-// ── Config ────────────────────────────────────────────────────────────────────
-
-// Categories where a partial DNA match (0.8) is acceptable.
-// Case and cooling have simpler DNA — model name tokens — so 0.8 is safe.
-// All other categories require a perfect 1.0 match to avoid false positives.
-const PARTIAL_MATCH_CATEGORIES = new Set(['case', 'cooling']);
-const PARTIAL_THRESHOLD = 0.8;
 
 // ── Auto-mapper ───────────────────────────────────────────────────────────────
 
@@ -72,14 +65,14 @@ export async function autoMap(onProgress?: (done: number, total: number) => void
 
   for (const listing of pending) {
     // Try perfect DNA match first
-    let match = findBestMatch(listing.scraped_name, components, 1.0);
+    let match = findBestMatch(listing.scraped_name, components, SCRAPER_CONFIG.PERFECT_THRESHOLD);
 
     // For case/cooling, allow partial match
     if (!match) {
-      const partial = findBestMatch(listing.scraped_name, components, PARTIAL_THRESHOLD);
+      const partial = findBestMatch(listing.scraped_name, components, SCRAPER_CONFIG.PARTIAL_THRESHOLD);
       if (partial) {
         const cat = components.find(c => c.id === partial.componentId)?.category ?? '';
-        if (PARTIAL_MATCH_CATEGORIES.has(cat)) match = partial;
+        if (SCRAPER_CONFIG.PARTIAL_MATCH_CATEGORIES.includes(cat)) match = partial;
       }
     }
 

@@ -4,72 +4,21 @@
  * On refresh failure, redirects to /admin/login.
  */
 
-const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
-
 // ── Types ────────────────────────────────────────────────────────────────────
 
-export interface DashboardData {
-  stats: {
-    total_components: number;
-    active_retailers: number;
-    total_retailers: number;
-    total_price_records: number;
-    unmatched_listings_count: number;
-    last_scrape: {
-      time: string | null;
-      status: string | null;
-    };
-  };
-  price_updates_chart: Array<{ date: string; count: number }>;
-  recent_activity: Array<{
-    id: number;
-    action: string;
-    entity_type: string | null;
-    entity_id: number | null;
-    created_at: string;
-  }>;
-}
+import {
+  LogEntry, UnmatchedListing, Component,
+  AdminRetailer, DashboardData, PresetBuild
+} from '@shared/types';
 
-export interface AdminComponent {
-  id: number;
-  name: string;
-  category: string;
-  is_active: boolean;
-  [key: string]: unknown;
-}
+export type AdminComponent = Component;
+export type { LogEntry, UnmatchedListing, AdminRetailer, DashboardData, PresetBuild as AdminPreset };
 
-export interface AdminRetailer {
-  id: number;
-  name: string;
-  base_url: string;
-  country: string;
-  scraping_interval_hours: number;
-  last_scrape_at: string | null;
-  last_scrape_status: string | null;
-  price_records_count: number | null;
-  is_active: boolean;
-  [key: string]: unknown;
-}
+import { createRequest } from '@shared/api-client';
 
-export interface AdminPreset {
-  id: number;
-  name: string;
-  [key: string]: unknown;
-}
+const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
+const baseRequest = createRequest(BASE);
 
-export interface LogEntry {
-  id: number;
-  level: 'INFO' | 'WARNING' | 'ERROR';
-  site: string | null;
-  message: string;
-  created_at: string;
-}
-
-export interface UnmatchedListing {
-  id: number;
-  retailer_id: number;
-  [key: string]: unknown;
-}
 
 let accessToken: string | null = null;
 
@@ -81,37 +30,24 @@ export function getAccessToken(): string | null {
   return accessToken;
 }
 
-async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(init.headers as Record<string, string> ?? {}),
-  };
-
-  if (accessToken) {
-    headers['Authorization'] = `Bearer ${accessToken}`;
-  }
-
-  const res = await fetch(`${BASE}${path}`, { ...init, headers, credentials: 'include' });
-
-  // Attempt token refresh on 401
-  if (res.status === 401 && retry) {
-    const refreshed = await tryRefresh();
-    if (refreshed) {
-      return request<T>(path, init, false);
+async function request<T>(path: string, options: any = {}, retry = true): Promise<T> {
+  try {
+    return await baseRequest<T>(path, {
+      ...options,
+      token: accessToken,
+      credentials: 'include',
+    });
+  } catch (err: any) {
+    if (err.status === 401 && retry) {
+      const refreshed = await tryRefresh();
+      if (refreshed) {
+        return request<T>(path, options, false);
+      }
+      window.location.href = '/admin/login';
+      throw new Error('Session expired');
     }
-    // Refresh failed — redirect to login
-    window.location.href = '/admin/login';
-    throw new Error('Session expired');
+    throw err;
   }
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    const message = data?.error?.message ?? `HTTP ${res.status}`;
-    throw new Error(message);
-  }
-
-  return data as T;
 }
 
 async function tryRefresh(): Promise<boolean> {
@@ -128,6 +64,7 @@ async function tryRefresh(): Promise<boolean> {
     return false;
   }
 }
+
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
