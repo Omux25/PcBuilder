@@ -9,12 +9,13 @@
 
 import { Hono } from 'hono';
 import { authMiddleware } from '../../middleware/auth.js';
-import { getRetailers, getRetailerById } from '../../services/retailerService.js';
+import { getRetailerById } from '../../services/retailerService.js';
 import { runScrapingSession } from '../../../scraper/session.js';
 import { AppError } from '../../utils/errors.js';
 import { parseId } from './types.js';
+import type { AdminEnv } from './types.js';
 
-const adminScrapersRouter = new Hono();
+const adminScrapersRouter = new Hono<AdminEnv>();
 
 adminScrapersRouter.use('/*', authMiddleware);
 

@@ -137,4 +137,70 @@ describe('POST /api/compatibility/validate', () => {
     expect(body).toHaveProperty('total_tdp');
     expect(body).toHaveProperty('recommended_psu_wattage');
   });
+
+  // ── Zod input validation ────────────────────────────────────────────────────
+
+  test('returns 400 when a component slot is a string instead of an object', async () => {
+    const res = await app.request('/api/compatibility/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cpu: 'not-an-object' }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  test('returns 400 when a numeric field is a string', async () => {
+    const res = await app.request('/api/compatibility/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cpu: { socket: 'AM5', tdp: 'not-a-number' } }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(Array.isArray(body.error.fields)).toBe(true);
+  });
+
+  test('returns 400 when supported_ram_types is not an array', async () => {
+    const res = await app.request('/api/compatibility/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        motherboard: { socket: 'AM5', supported_ram_types: 'DDR5', max_ram_frequency: 6000 },
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  test('accepts null tdp (nullable field)', async () => {
+    const res = await app.request('/api/compatibility/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cpu: { socket: 'AM5', tdp: null } }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.total_tdp).toBe(0);
+  });
+
+  test('unknown top-level keys return 400', async () => {
+    const res = await app.request('/api/compatibility/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ unknown_slot: { socket: 'AM5' } }),
+    });
+
+    // Zod strips unknown keys by default — unknown_slot is ignored, empty build returns 200
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.compatible).toBe(true);
+  });
 });

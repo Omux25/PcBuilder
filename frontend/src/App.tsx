@@ -10,6 +10,7 @@ import type { ComponentCategory } from './types';
 import { CATEGORY_ORDER, CATEGORY_LABELS } from './types';
 import { encodeBuildToUrl } from './utils/buildUrl';
 import { getInitialTheme, applyTheme, toggleTheme } from './utils/theme';
+import { getComponentById } from './api';
 import styles from './App.module.css';
 
 const ComponentDetail  = lazy(() => import('./pages/ComponentDetail').then(m => ({ default: m.ComponentDetail })));
@@ -42,7 +43,6 @@ export default function App() {
   }, [searchOpen]);
 
   async function handleLoadPreset(componentIds: Record<string, number>) {
-    const { getComponentById } = await import('./api');
     const entries = await Promise.allSettled(
       Object.entries(componentIds).map(async ([category, id]) => {
         const component = await getComponentById(id);

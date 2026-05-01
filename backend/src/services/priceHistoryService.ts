@@ -60,6 +60,10 @@ async function getPriceHistory(
  * Records a price change in price_history — only if the price differs from
  * the most recent recorded price for this (component, retailer) pair.
  *
+ * Note: the aggregator does its own inline price history insert with a
+ * pre-fetched price map for efficiency. This function is available for
+ * use cases that need single-record deduplication (e.g. scripts, tests).
+ *
  * @param componentId - The component's primary key
  * @param retailerId  - The retailer's primary key
  * @param price       - The new scraped price

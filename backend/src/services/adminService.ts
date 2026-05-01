@@ -109,6 +109,8 @@ async function getDashboardStats(): Promise<DashboardStats> {
  * Used for the dashboard bar chart.
  */
 async function getPriceUpdatesChart(days: number = 30): Promise<PriceUpdateChartEntry[]> {
+  // Note: (${days} || ' days')::INTERVAL is safe — ${days} is a Bun.sql parameter,
+  // not string interpolation. The || concatenation happens inside PostgreSQL.
   const rows = (await getSql()`
     SELECT
       DATE(recorded_at) AS date,

@@ -4,7 +4,7 @@ Complete reference for all HTTP endpoints. Base URL: `http://localhost:3000` in 
 
 All error responses follow this shape:
 ```json
-{ "error": { "code": "ERROR_CODE", "message": "Message en français", "fields": [] } }
+{ "error": { "code": "ERROR_CODE", "message": "Human-readable message", "fields": [] } }
 ```
 `fields` is only present on HTTP 400 validation errors.
 
@@ -393,7 +393,10 @@ Deactivate a retailer (sets `is_active = false`). Does not delete data.
 
 Trigger an immediate scrape for one retailer.
 
-**Response 200:** `{ "message": "Scrape started for retailer 10" }`
+**Response 200:**
+```json
+{ "status": "started", "retailer_id": 10 }
+```
 
 **Errors:**
 - `409` — scrape already running for this retailer
@@ -401,6 +404,14 @@ Trigger an immediate scrape for one retailer.
 ### `POST /api/admin/scrapers/run-all`
 
 Trigger all active retailers sequentially.
+
+**Response 200:**
+```json
+{ "message": "Full scraping session started", "status": "started" }
+```
+
+**Errors:**
+- `409` — a full scraping session is already running
 
 ---
 
@@ -426,13 +437,14 @@ Mark a listing as dismissed.
 
 Query scraper logs.
 
-**Query parameters:** `level` (INFO/WARNING/ERROR), `site`, `limit` (default 100)
+**Query parameters:** `level` (INFO/WARNING/ERROR), `site`, `limit` (default 100, max 500)
 
 **Response 200:**
 ```json
 {
   "logs": [
     { "id": 1, "level": "INFO", "site": "ultrapc.ma", "message": "Session complete: 312 updated, 0 errors", "created_at": "..." }
-  ]
+  ],
+  "count": 1
 }
 ```

@@ -13,7 +13,7 @@ import { getComponents, getComponentById, getComponentsByIds, getComponentBySlug
 import { getPriceHistory } from '../services/priceHistoryService.js';
 import { validateCompatibility } from '../services/compatibilityService.js';
 import { getSql } from '../db/index.js';
-import { AppError } from '../utils/errors.js';
+import { AppError, parseId } from '../utils/errors.js';
 
 const componentsRouter = new Hono();
 
@@ -167,10 +167,8 @@ componentsRouter.get('/slug/:slug', async (c) => {
 
 // GET /api/components/:id/price-history
 componentsRouter.get('/:id/price-history', async (c) => {
-  const raw = c.req.param('id');
-  const id  = Number(raw);
-
-  if (!Number.isInteger(id) || id <= 0) {
+  const id = parseId(c.req.param('id'));
+  if (id === null) {
     return c.json(
       { error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } },
       400,
@@ -193,10 +191,8 @@ componentsRouter.get('/:id/price-history', async (c) => {
 
 // GET /api/components/:id/prices
 componentsRouter.get('/:id/prices', async (c) => {
-  const raw = c.req.param('id');
-  const id  = Number(raw);
-
-  if (!Number.isInteger(id) || id <= 0) {
+  const id = parseId(c.req.param('id'));
+  if (id === null) {
     return c.json(
       { error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } },
       400,
@@ -224,10 +220,8 @@ componentsRouter.get('/:id/prices', async (c) => {
 });
 
 componentsRouter.get('/:id', async (c) => {
-  const raw = c.req.param('id');
-  const id  = Number(raw);
-
-  if (!Number.isInteger(id) || id <= 0) {
+  const id = parseId(c.req.param('id'));
+  if (id === null) {
     return c.json(
       { error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } },
       400,

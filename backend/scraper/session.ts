@@ -15,10 +15,6 @@ import { NextLevelScraper } from './scrapers/nextlevelScraper.js';
 import { SetupGameScraper } from './scrapers/setupgameScraper.js';
 import type { ScrapedPrice } from './scrapers/baseScraper.js';
 
-interface ScraperInstance {
-  [key: string]: () => Promise<ScrapedPrice[]>;
-}
-
 /**
  * Registry of available scrapers mapped to their retailer IDs (from database).
  * This allows targeted scraping of specific retailers.
@@ -28,10 +24,10 @@ interface ScraperInstance {
  *   NextLevel → id 11
  *   SetupGame → id 13
  */
-const SCRAPER_REGISTRY = [
-  { id: 10, name: 'UltraPC',      instance: () => new UltraPcScraper(),   method: 'scrapeAllCategories' },
-  { id: 11, name: 'NextLevel PC', instance: () => new NextLevelScraper(), method: 'scrapeAllCategories' },
-  { id: 13, name: 'SetupGame',    instance: () => new SetupGameScraper(), method: 'scrapeAllCategories' },
+const SCRAPER_REGISTRY: { id: number; name: string; run: () => Promise<ScrapedPrice[]> }[] = [
+  { id: 10, name: 'UltraPC',      run: () => new UltraPcScraper().scrapeAllCategories()   },
+  { id: 11, name: 'NextLevel PC', run: () => new NextLevelScraper().scrapeAllCategories() },
+  { id: 13, name: 'SetupGame',    run: () => new SetupGameScraper().scrapeAllCategories() },
 ];
 
 /**
@@ -60,10 +56,9 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
 
   await Promise.all(scrapersToRun.map(config => 
     queue.add(async () => {
-      const scraper = config.instance() as unknown as ScraperInstance;
       try {
         await logger.info(`Starting ${config.name} scraper...`);
-        const prices = await scraper[config.method]();
+        const prices = await config.run();
         allPrices.push(...prices);
         await logger.info(`${config.name}: scraped ${prices.length} price(s)`);
       } catch (err) {

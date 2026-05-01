@@ -1,6 +1,6 @@
 # Database Reference
 
-All 13 application tables in the PostgreSQL database, plus the internal `_migrations` tracking table. Migration files are in `backend/src/db/migrations/` (001–018).
+All 13 application tables in the PostgreSQL database, plus the internal `_migrations` tracking table. Migration files are in `backend/src/db/migrations/` (001–019).
 
 ---
 
@@ -14,7 +14,7 @@ The migration runner (`backend/src/db/migrate.ts`) also creates a `_migrations` 
 # Run all migrations (WSL2)
 psql -U pc_builder_user -d pc_builder -f backend/src/db/migrations/001_create_components.sql
 psql -U pc_builder_user -d pc_builder -f backend/src/db/migrations/002_create_retailers.sql
-# ... continue through 018
+# ... continue through 019
 ```
 
 ---
@@ -38,7 +38,9 @@ The central table. Stores all 8 component categories in a single polymorphic tab
 | `created_at` | TIMESTAMPTZ | Auto-set on insert |
 | `updated_at` | TIMESTAMPTZ | Auto-updated on change |
 
-Compatibility fields (NULL when not applicable): `socket`, `supported_ram_types`, `max_ram_frequency`, `ram_type`, `frequency_mhz`, `length_mm`, `max_gpu_length_mm`, `wattage`, `tdp`, `benchmark_score`.
+Compatibility fields (NULL when not applicable): `socket`, `supported_ram_types`, `max_ram_frequency`, `ram_type`, `frequency_mhz`, `length_mm`, `max_gpu_length_mm`, `supported_motherboards`, `max_cooler_height_mm`, `form_factor`, `height_mm`, `wattage`, `tdp`, `benchmark_score`.
+
+> `supported_motherboards`, `max_cooler_height_mm`, `form_factor`, and `height_mm` were added in migration 019 to support Rules 5 (form_factor_mismatch) and 6 (cooler_too_tall).
 
 Indexes: `category`, `slug`, `brand`, `is_active`
 

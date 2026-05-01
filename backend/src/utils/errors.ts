@@ -8,7 +8,7 @@ import type { ContentfulStatusCode as StatusCode } from 'hono/utils/http-status'
  * an HTTP status code, an error code string, and a message.
  *
  * Example:
- *   throw new AppError('COMPONENT_NOT_FOUND', 'Composant introuvable', 404);
+ *   throw new AppError('COMPONENT_NOT_FOUND', 'Component with id 42 not found', 404);
  */
 
 export class AppError extends Error {
@@ -31,4 +31,17 @@ export class AppError extends Error {
       },
     };
   }
+}
+
+/**
+ * Parses and validates a route parameter as a positive integer.
+ * Returns the parsed number, or null if invalid.
+ *
+ * Usage:
+ *   const id = parseId(c.req.param('id'));
+ *   if (id === null) return c.json({ error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } }, 400);
+ */
+export function parseId(raw: string): number | null {
+  const id = Number(raw);
+  return Number.isInteger(id) && id > 0 ? id : null;
 }

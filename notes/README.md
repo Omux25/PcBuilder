@@ -68,7 +68,8 @@ Per-task explainers added after each completed implementation task.
 | File | What it covers |
 |---|---|
 | [task-explainers/README.md](task-explainers/README.md) | Index of all explainers |
-| [task-explainers/task-cleanup-codebase-audit.md](task-explainers/task-cleanup-codebase-audit.md) | Codebase cleanup — 13 bugs fixed |
+| [task-explainers/task-cleanup-codebase-audit.md](task-explainers/task-cleanup-codebase-audit.md) | Codebase cleanup — 13 bugs fixed (Round 1) |
+| [task-explainers/task-cleanup-codebase-audit-round2.md](task-explainers/task-cleanup-codebase-audit-round2.md) | Codebase cleanup — 9 bugs fixed (Round 2) |
 
 ---
 

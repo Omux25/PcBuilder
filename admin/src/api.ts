@@ -66,9 +66,10 @@ export interface AdminPreset {
 
 export interface LogEntry {
   id: number;
-  admin_id: number;
-  action: string;
-  [key: string]: unknown;
+  level: 'INFO' | 'WARNING' | 'ERROR';
+  site: string | null;
+  message: string;
+  created_at: string;
 }
 
 export interface UnmatchedListing {
