@@ -162,6 +162,26 @@ describe('extractDna — Motherboard', () => {
     expect(tokens).toContain('z790');
     expect(tokens).toContain('lga1700');
   });
+
+  it('extracts model suffix tokens to distinguish variants', () => {
+    const tokensD = extractDna('GIGABYTE Z790 D', 'motherboard');
+    const tokensS = extractDna('GIGABYTE Z790 S', 'motherboard');
+    // Both have z790 but different model tokens
+    expect(tokensD).toContain('z790');
+    expect(tokensS).toContain('z790');
+    // They must differ — otherwise the matcher can't tell them apart
+    expect(JSON.stringify(tokensD)).not.toBe(JSON.stringify(tokensS));
+  });
+
+  it('includes model name tokens like TOMAHAWK', () => {
+    const tokens = extractDna('MSI MAG Z790 TOMAHAWK WIFI', 'motherboard');
+    expect(tokens).toContain('tomahawk');
+  });
+
+  it('includes STRIX model token', () => {
+    const tokens = extractDna('ASUS ROG STRIX B650E-F GAMING WIFI AM5', 'motherboard');
+    expect(tokens).toContain('strix');
+  });
 });
 
 // ── scoreDnaMatch — the critical false-positive prevention tests ──────────────
@@ -363,8 +383,8 @@ describe('Edge Cases — CPU KF/KS/F suffix traps', () => {
 
 describe('Edge Cases — Motherboard chipset traps (B650 vs B650E vs B650M)', () => {
   const mbCatalog = [
-    { id: 20, name: 'B650 GAMING PLUS WIFI',  brand: 'MSI',    category: 'motherboard' },
-    { id: 21, name: 'B650E PG Riptide WiFi',  brand: 'ASRock', category: 'motherboard' },
+    { id: 20, name: 'B650 GAMING PLUS WIFI',  brand: 'MSI',     category: 'motherboard' },
+    { id: 21, name: 'B650E PG Riptide WiFi',  brand: 'ASRock',  category: 'motherboard' },
     { id: 22, name: 'B650M DS3H',             brand: 'Gigabyte', category: 'motherboard' },
     { id: 23, name: 'Z790 AORUS MASTER',      brand: 'Gigabyte', category: 'motherboard' },
   ];
@@ -379,6 +399,42 @@ describe('Edge Cases — Motherboard chipset traps (B650 vs B650E vs B650M)', ()
 
   it('Z790 matches Z790 (not B650)', () => {
     expect(findBestMatch('Gigabyte Z790 AORUS MASTER LGA1700', mbCatalog)?.componentId).toBe(23);
+  });
+});
+
+describe('Edge Cases — Motherboard model suffix traps (Z790 D vs Z790 S)', () => {
+  const mbCatalog = [
+    { id: 30, name: 'Z790 D',         brand: 'GIGABYTE', category: 'motherboard' },
+    { id: 31, name: 'Z790 S',         brand: 'GIGABYTE', category: 'motherboard' },
+    { id: 32, name: 'Z790 AORUS PRO', brand: 'GIGABYTE', category: 'motherboard' },
+    { id: 33, name: 'Z790 UD',        brand: 'GIGABYTE', category: 'motherboard' },
+    { id: 34, name: 'MAG Z790 TOMAHAWK WIFI', brand: 'MSI', category: 'motherboard' },
+    { id: 35, name: 'MAG Z790 TOMAHAWK MAX WIFI', brand: 'MSI', category: 'motherboard' },
+  ];
+
+  it('Z790 D matches Z790 D (not Z790 S)', () => {
+    const result = findBestMatch('GIGABYTE Z790 D LGA1700 DDR5', mbCatalog);
+    expect(result?.componentId).toBe(30);
+  });
+
+  it('Z790 S matches Z790 S (not Z790 D)', () => {
+    const result = findBestMatch('GIGABYTE Z790 S LGA1700 DDR5', mbCatalog);
+    expect(result?.componentId).toBe(31);
+  });
+
+  it('Z790 AORUS PRO matches AORUS PRO (not D or S)', () => {
+    const result = findBestMatch('GIGABYTE Z790 AORUS PRO LGA1700', mbCatalog);
+    expect(result?.componentId).toBe(32);
+  });
+
+  it('TOMAHAWK matches TOMAHAWK (not TOMAHAWK MAX)', () => {
+    const result = findBestMatch('MSI MAG Z790 TOMAHAWK WIFI LGA1700', mbCatalog);
+    expect(result?.componentId).toBe(34);
+  });
+
+  it('TOMAHAWK MAX matches TOMAHAWK MAX (not plain TOMAHAWK)', () => {
+    const result = findBestMatch('MSI MAG Z790 TOMAHAWK MAX WIFI LGA1700', mbCatalog);
+    expect(result?.componentId).toBe(35);
   });
 });
 

@@ -253,8 +253,17 @@ function extractPsuDna(name: string): string[] {
 }
 
 /**
- * Motherboard DNA: chipset + socket
- * e.g. "b650", "am5", "z790", "lga1700"
+ * Motherboard DNA: chipset + socket + model name tokens
+ *
+ * Chipset alone is not enough — "GIGABYTE Z790 D" and "GIGABYTE Z790 S" both
+ * have chipset "z790". We must also include the model suffix tokens so the
+ * matcher can distinguish them.
+ *
+ * e.g. "GIGABYTE Z790 D"         → ["z790", "d"]
+ *      "GIGABYTE Z790 S"         → ["z790", "s"]
+ *      "MSI MAG Z790 TOMAHAWK"   → ["z790", "tomahawk"]
+ *      "ASUS ROG STRIX B650E-F"  → ["b650e", "strix", "b650e", "f"]  (strix + suffix)
+ *      "ASRock B650 Steel Legend" → ["b650", "steel", "legend"]
  */
 function extractMotherboardDna(name: string): string[] {
   const n = normalize(name);
@@ -271,6 +280,30 @@ function extractMotherboardDna(name: string): string[] {
   else if (n.includes('lga1851') || n.includes('lga 1851')) tokens.push('lga1851');
   else if (n.includes('lga1700') || n.includes('lga 1700')) tokens.push('lga1700');
   else if (n.includes('lga1200') || n.includes('lga 1200')) tokens.push('lga1200');
+
+  // Model name tokens — what distinguishes boards with the same chipset.
+  // Strip generic noise words and the chipset/socket tokens already captured.
+  // Keep short tokens (even single letters like "d", "s") because they are
+  // the actual model differentiators (Z790 D vs Z790 S, B650M DS3H, etc.)
+  const noise = new Set([
+    'wifi', 'ax', 'atx', 'matx', 'itx', 'ddr4', 'ddr5',
+    'am4', 'am5', 'lga1700', 'lga1851', 'lga1200',
+    'gaming', 'gen', 'pcie', 'usb', 'rgb', 'argb',
+    'asus', 'msi', 'gigabyte', 'asrock', 'biostar', 'evga',
+    'rog', 'tuf', 'prime', 'pro', 'mag', 'meg', 'mpg',
+  ]);
+
+  // Remove the chipset token from the name before extracting model tokens
+  // so we don't double-count it
+  const chipset = chipsetMatch ? chipsetMatch[1] : '';
+  const withoutChipset = n.replace(new RegExp(`\\b${chipset}\\b`, 'g'), '').trim();
+
+  const modelTokens = withoutChipset
+    .split(' ')
+    .filter((t) => t.length >= 1 && !noise.has(t) && !/^\d+$/.test(t));
+
+  // Take up to 3 model tokens — enough to distinguish variants without over-constraining
+  tokens.push(...modelTokens.slice(0, 3));
 
   return tokens.filter(Boolean);
 }
