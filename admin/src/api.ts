@@ -48,6 +48,12 @@ export interface AdminComponent {
 export interface AdminRetailer {
   id: number;
   name: string;
+  base_url: string;
+  country: string;
+  scraping_interval_hours: number;
+  last_scrape_at: string | null;
+  last_scrape_status: string | null;
+  price_records_count: number | null;
   is_active: boolean;
   [key: string]: unknown;
 }
@@ -156,7 +162,7 @@ export const getDashboard = () => request<DashboardData>('/admin/dashboard');
 
 export const getAdminComponents = (params: Record<string, string> = {}) => {
   const qs = new URLSearchParams(params).toString();
-  return request<PaginatedResponse<AdminComponent>>(`/admin/components${qs ? `?${qs}` : ''}`);
+  return request<{ components: AdminComponent[]; total: number }>(`/admin/components${qs ? `?${qs}` : ''}`);
 };
 
 export const createAdminComponent = (data: Record<string, unknown>) =>

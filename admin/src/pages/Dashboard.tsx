@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getDashboard } from '../api';
+import type { DashboardData } from '../api';
 import styles from './Dashboard.module.css';
 
 export function Dashboard() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +38,7 @@ export function Dashboard() {
         <StatCard label="Composants actifs" value={stats?.total_components ?? 0} />
         <StatCard label="Revendeurs actifs" value={`${stats?.active_retailers ?? 0} / ${stats?.total_retailers ?? 0}`} />
         <StatCard label="Enregistrements de prix" value={stats?.total_price_records ?? 0} />
-        <StatCard label="Listings non associes" value={stats?.unmatched_listings_count ?? 0} accent={stats?.unmatched_listings_count > 0} />
+        <StatCard label="Listings non associes" value={stats?.unmatched_listings_count ?? 0} accent={(stats?.unmatched_listings_count ?? 0) > 0} />
       </div>
 
       {/* Last scrape */}
@@ -76,7 +77,7 @@ export function Dashboard() {
           <p className={styles.empty}>Aucune activite recente.</p>
         ) : (
           <ul className={styles.activityList}>
-            {activity.map((item: any) => (
+            {activity.map((item) => (
               <li key={item.id} className={styles.activityItem}>
                 <span className={styles.activityAction}>{item.action}</span>
                 {item.entity_type && <span className={styles.activityEntity}>{item.entity_type} #{item.entity_id}</span>}
@@ -89,6 +90,7 @@ export function Dashboard() {
     </div>
   );
 }
+
 
 function StatCard({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
   return (

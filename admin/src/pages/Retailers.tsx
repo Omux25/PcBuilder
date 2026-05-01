@@ -6,7 +6,7 @@ import { RetailerModal } from '../components/RetailerModal';
 import styles from './Retailers.module.css';
 
 export function Retailers() {
-  const [retailers, setRetailers] = useState<any[]>([]);
+  const [retailers, setRetailers] = useState<AdminRetailer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -15,14 +15,14 @@ export function Retailers() {
   function load() {
     setLoading(true);
     getAdminRetailers()
-      .then((data: any) => setRetailers(data.retailers ?? []))
+      .then((data) => setRetailers(data.retailers ?? []))
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }
 
   useEffect(() => { load(); }, []);
 
-  async function handleToggle(retailer: any) {
+  async function handleToggle(retailer: AdminRetailer) {
     try {
       await updateAdminRetailer(retailer.id, { is_active: !retailer.is_active });
       load();
@@ -31,7 +31,7 @@ export function Retailers() {
     }
   }
 
-  function openModal(retailer: any = null) {
+  function openModal(retailer: AdminRetailer | null = null) {
     setEditingRetailer(retailer);
     setModalOpen(true);
   }
