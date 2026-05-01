@@ -366,7 +366,7 @@ Bulk import from CSV or JSON.
 
 **Response 200:**
 ```json
-{ "imported": 45, "skipped": 2, "failed": 1, "errors": ["Row 12: socket is required for cpu"] }
+{ "total_rows": 48, "imported": 45, "skipped": 2, "failed": 1, "errors": [{ "row": 12, "message": "socket is required for cpu" }] }
 ```
 
 ---
