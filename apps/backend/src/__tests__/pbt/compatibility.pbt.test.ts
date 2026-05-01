@@ -37,6 +37,12 @@ const ramTypeArb = fc.constantFrom('DDR4', 'DDR5', 'DDR3', 'LPDDR5');
 /** Non-empty array of RAM type strings */
 const ramTypesArb = fc.array(ramTypeArb, { minLength: 1, maxLength: 4 });
 
+/** Form factor string */
+const formFactorArb = fc.constantFrom('ATX', 'mATX', 'Mini-ITX', 'E-ATX');
+
+/** Supported form factors array */
+const supportedFormFactorsArb = fc.array(formFactorArb, { minLength: 1, maxLength: 4 });
+
 // ── Task 2.2 — CPU/Motherboard socket consistency ─────────────────────────────
 
 describe('PBT 2.2 — socket_mismatch rule', () => {
@@ -306,6 +312,48 @@ describe('PBT 2.7 — gpu_too_long rule', () => {
           case: { max_gpu_length_mm: caseMax },
         });
         return result.compatible === false;
+      },
+    ));
+  });
+});
+
+// ── Rule 5 — Motherboard / Case form factor ───────────────────────────────────
+
+describe('PBT Rule 5 — form_factor_mismatch', () => {
+  test('form_factor_mismatch fires iff motherboard.form_factor not in case.supported_motherboards', () => {
+    fc.assert(fc.property(
+      formFactorArb, supportedFormFactorsArb,
+      (mbFormat, supported) => {
+        const result = validateCompatibility({
+          motherboard: { form_factor: mbFormat },
+          case:        { supported_motherboards: supported, max_gpu_length_mm: 400 },
+        });
+
+        const hasError = result.errors.some(e => e.rule === 'form_factor_mismatch');
+        const shouldHaveError = !supported.includes(mbFormat);
+
+        return hasError === shouldHaveError;
+      },
+    ));
+  });
+});
+
+// ── Rule 6 — Cooler / Case height ─────────────────────────────────────────────
+
+describe('PBT Rule 6 — cooler_too_tall', () => {
+  test('cooler_too_tall fires iff cooling.height_mm > case.max_cooler_height_mm', () => {
+    fc.assert(fc.property(
+      lengthArb, lengthArb,
+      (coolerHeight, caseMax) => {
+        const result = validateCompatibility({
+          cooling: { height_mm: coolerHeight },
+          case:    { max_cooler_height_mm: caseMax, max_gpu_length_mm: 400 },
+        });
+
+        const hasError = result.errors.some(e => e.rule === 'cooler_too_tall');
+        const shouldHaveError = coolerHeight > caseMax;
+
+        return hasError === shouldHaveError;
       },
     ));
   });
