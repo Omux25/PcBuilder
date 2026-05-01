@@ -195,14 +195,21 @@ function extractStorageDna(name: string): string[] {
  * If wattage cannot be determined, returns empty DNA (no match).
  *
  * Guard: reject names that look like motherboard chipsets (B650, X870, etc.)
- * to prevent PSU wattage numbers from matching chipset numbers.
+ * but only when the name has NO wattage indicator at all. This prevents
+ * chipset numbers from being mistaken for wattage, while still allowing
+ * PSU model names like "A650BN" (Seasonic) that embed wattage in the model.
  */
 function extractPsuDna(name: string): string[] {
   const n = normalize(name);
   const tokens: string[] = [];
 
-  // Guard: if the name looks like a motherboard (chipset pattern), return empty
-  if (n.match(/\b[abxhz]\d{3,4}[ei]?\b/) && !n.match(/\b\d{3,4}\s*w\b/)) return [];
+  // Guard: if the name looks like a motherboard chipset AND has no wattage indicator, skip.
+  // A motherboard name like "B650 GAMING PLUS" has no W suffix and no PSU brand.
+  // A PSU like "Seasonic A650BN" has a known PSU brand, so the brand check below
+  // will succeed and we proceed normally.
+  const hasAnyWattageHint = n.match(/\b\d{3,4}\s*w\b/) ||
+    n.match(/\b(cv|rm|tx|cx|hx|sf|ax|vs|cp|lp|gx|gm|gd|focus|prime|straight|dark|a|p|g|v|mwe|strix|tuf|rog)(\d{3,4})[a-z]{0,3}\b/);
+  if (!hasAnyWattageHint && n.match(/\b[abxhz]\d{3,4}[ei]?\b/)) return [];
 
   // Brand — extract first word if it's a known PSU brand
   const PSU_BRANDS = new Set([
@@ -311,6 +318,9 @@ function extractMotherboardDna(name: string): string[] {
 /**
  * Case DNA: form factor + brand model
  * e.g. "atx", "matx", "itx" + model name tokens
+ *
+ * Color tokens (black, white, etc.) are intentionally kept — they are primary
+ * differentiators for many cases (e.g. Lian Li O11 Dynamic Black vs White).
  */
 function extractCaseDna(name: string): string[] {
   const n = normalize(name);
@@ -320,23 +330,31 @@ function extractCaseDna(name: string): string[] {
   else if (n.includes('micro atx') || n.includes('matx') || n.includes('m atx')) tokens.push('matx');
   else tokens.push('atx');
 
-  // Model name tokens (strip brand and form factor noise)
+  // Model name tokens — strip generic structural noise but keep color and model identifiers.
+  // Colors (black, white, pink, etc.) are kept because they distinguish product variants.
   const noise = new Set(['atx', 'matx', 'itx', 'tower', 'case', 'boitier', 'gaming',
-    'tempered', 'glass', 'tg', 'rgb', 'argb', 'black', 'white', 'mid', 'full', 'mini']);
+    'tempered', 'glass', 'tg', 'rgb', 'argb', 'mid', 'full', 'mini']);
   const modelTokens = n.split(' ').filter((t) => t.length > 2 && !noise.has(t) && !/^\d+$/.test(t));
-  tokens.push(...modelTokens.slice(0, 3)); // take up to 3 model tokens
+  tokens.push(...modelTokens.slice(0, 5)); // take up to 5 model tokens to capture brand + model + color
 
   return tokens.filter(Boolean);
 }
 
 /**
  * Cooling DNA: type (air/aio) + size + brand model
+ *
+ * Color tokens (black, white, etc.) are intentionally kept — they distinguish
+ * variants like Noctua NH-D15 vs NH-D15 chromax.black.
+ *
+ * For air coolers, we do NOT add a synthetic "air" token because scraped product
+ * names rarely contain the word "air" — it would cause all air cooler catalog
+ * entries to fail matching. Instead we rely on model name tokens only.
  */
 function extractCoolingDna(name: string): string[] {
   const n = normalize(name);
   const tokens: string[] = [];
 
-  // AIO size
+  // AIO: size is the primary identifier (240mm, 360mm, etc.)
   const aioMatch = n.match(/\b(120|140|240|280|360|420)\s*mm\b/);
   if (aioMatch) {
     tokens.push(`${aioMatch[1]}mm`);
@@ -344,11 +362,11 @@ function extractCoolingDna(name: string): string[] {
     return tokens;
   }
 
-  // Air cooler — use model name tokens
-  tokens.push('air');
-  const noise = new Set(['cooler', 'cpu', 'air', 'tower', 'fan', 'black', 'white', 'rgb', 'argb']);
+  // Air cooler — use model name tokens only (no synthetic "air" token).
+  // Colors (black, white) are kept as they distinguish variants.
+  const noise = new Set(['cooler', 'cpu', 'air', 'tower', 'fan', 'rgb', 'argb']);
   const modelTokens = n.split(' ').filter((t) => t.length > 2 && !noise.has(t) && !/^\d+$/.test(t));
-  tokens.push(...modelTokens.slice(0, 3));
+  tokens.push(...modelTokens.slice(0, 4));
 
   return tokens.filter(Boolean);
 }

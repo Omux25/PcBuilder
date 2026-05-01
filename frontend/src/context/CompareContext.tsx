@@ -16,7 +16,7 @@ interface CompareContextType {
 const CompareContext = createContext<CompareContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'pcbuilder_compare';
-const MAX_COMPARE = 2;
+export const MAX_COMPARE = 2;
 
 export function CompareProvider({ children }: { children: ReactNode }) {
   const [compareIds, setCompareIds] = useState<number[]>([]);
@@ -41,7 +41,7 @@ export function CompareProvider({ children }: { children: ReactNode }) {
   const addToCompare = (id: number) => {
     setCompareIds(prev => {
       if (prev.includes(id)) return prev;
-      if (prev.length >= MAX_COMPARE) return prev; // Limit to 3
+      if (prev.length >= MAX_COMPARE) return prev;
       return [...prev, id];
     });
   };

@@ -516,3 +516,51 @@ describe('Edge Cases — Garbage rejection', () => {
     expect(findBestMatch('PC Gamer Ryzen 5 7600X RTX 4090 32GB DDR5 1TB NVMe', catalog)).toBeNull();
   });
 });
+
+describe('Edge Cases — Case color variants (Black vs White)', () => {
+  const caseCatalog = [
+    { id: 50, name: 'O11 Dynamic EVO Black', brand: 'Lian Li', category: 'case' },
+    { id: 51, name: 'O11 Dynamic EVO White', brand: 'Lian Li', category: 'case' },
+    { id: 52, name: 'Meshify C Black',        brand: 'Fractal', category: 'case' },
+    { id: 53, name: 'Meshify C White',        brand: 'Fractal', category: 'case' },
+  ];
+
+  it('O11 Dynamic EVO Black matches Black (not White)', () => {
+    const result = findBestMatch('Lian Li O11 Dynamic EVO ATX Black', caseCatalog);
+    expect(result?.componentId).toBe(50);
+  });
+
+  it('O11 Dynamic EVO White matches White (not Black)', () => {
+    const result = findBestMatch('Lian Li O11 Dynamic EVO ATX White', caseCatalog);
+    expect(result?.componentId).toBe(51);
+  });
+
+  it('Meshify C Black matches Black (not White)', () => {
+    const result = findBestMatch('Fractal Design Meshify C ATX Black', caseCatalog);
+    expect(result?.componentId).toBe(52);
+  });
+
+  it('Meshify C White matches White (not Black)', () => {
+    const result = findBestMatch('Fractal Design Meshify C ATX White', caseCatalog);
+    expect(result?.componentId).toBe(53);
+  });
+});
+
+describe('Edge Cases — Cooling color variants (Black vs standard)', () => {
+  const coolingCatalog = [
+    { id: 60, name: 'NH-D15',              brand: 'Noctua', category: 'cooling' },
+    { id: 61, name: 'NH-D15 chromax.black', brand: 'Noctua', category: 'cooling' },
+    { id: 62, name: 'Hyper 212 Black',     brand: 'Cooler Master', category: 'cooling' },
+    { id: 63, name: 'Hyper 212',           brand: 'Cooler Master', category: 'cooling' },
+  ];
+
+  it('NH-D15 chromax.black matches black variant (not standard)', () => {
+    const result = findBestMatch('Noctua NH-D15 chromax.black', coolingCatalog);
+    expect(result?.componentId).toBe(61);
+  });
+
+  it('Hyper 212 Black matches Black variant (not standard)', () => {
+    const result = findBestMatch('Cooler Master Hyper 212 Black', coolingCatalog);
+    expect(result?.componentId).toBe(62);
+  });
+});
