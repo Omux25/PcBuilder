@@ -57,13 +57,13 @@ Slugs are unique. If a collision occurs (two components with the same brand+name
 
 Slugs are used in the frontend URL: `/components/amd-ryzen-7-7700x`. The `GET /api/components/slug/:slug` endpoint resolves a slug to a full component object.
 
-The slug generation logic is in `backend/src/utils/slugify.ts` and `backend/src/services/slugService.ts`.
+The slug generation logic is in `apps/backend/src/utils/slugify.ts` and `apps/backend/src/services/slugService.ts`.
 
 ---
 
 ## Zod validation schemas
 
-Every component category has a Zod schema in `backend/src/schemas/componentSchemas.ts`. When an admin creates or updates a component via the API, the request body is validated against the schema for the specified category before any database query runs.
+Every component category has a Zod schema in `apps/backend/src/schemas/componentSchemas.ts`. When an admin creates or updates a component via the API, the request body is validated against the schema for the specified category before any database query runs.
 
 Example — CPU schema:
 ```typescript
@@ -144,3 +144,46 @@ All entries include correct specs JSONB, slug, brand, and release_year.
 Admins can import components in bulk via the admin panel's BulkImport page. It accepts CSV or JSON files, previews the first 10 rows with validation status, handles duplicate slug conflicts, and shows a results summary (imported/skipped/failed counts).
 
 The import runs row-by-row with per-row error handling. If a row fails validation, it is counted as failed and the import continues with the next row. Successfully imported rows are committed immediately — there is no rollback on partial failure. The response always shows the exact counts: imported / skipped (slug collision) / failed.
+
+---
+
+## Preset builds
+
+Preset builds are curated PC configurations created by admins. They give users a starting point — a complete, compatible build they can adopt as-is or use as inspiration.
+
+### Data model
+
+A preset is stored in two tables:
+
+- `preset_builds` — the preset itself (name, description, use_case, total_price_estimate)
+- `preset_build_components` — one row per (preset, category) linking to a component
+
+Each preset has at most one component per category. The `use_case` field is one of: `gaming`, `workstation`, `office`, `budget`.
+
+### The `incomplete` flag
+
+When a preset is fetched, the service checks whether any of its linked components have `is_active = false`. If so, `incomplete: true` is set on the response. The preset is still returned — the frontend can warn the user that one or more parts are no longer available.
+
+### Public API
+
+- `GET /api/builds/presets` — list all active presets, optionally filtered by `use_case`
+- `GET /api/builds/presets/:id` — single preset by ID
+
+Both endpoints return the full component map keyed by category:
+
+```json
+{
+  "id": 1,
+  "name": "Budget Gaming Build",
+  "use_case": "gaming",
+  "incomplete": false,
+  "components": {
+    "cpu": { "id": 10, "slug": "amd-ryzen-5-7600x", "name": "Ryzen 5 7600X", ... },
+    "gpu": { "id": 42, "slug": "nvidia-rtx-4070", "name": "RTX 4070", ... }
+  }
+}
+```
+
+### Admin management
+
+Admins create and manage presets via `GET/POST/PUT/DELETE /api/admin/presets`. Creating or updating a preset replaces all component links in a transaction — no partial state is possible if the server crashes mid-update.

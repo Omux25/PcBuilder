@@ -6,7 +6,7 @@
 -- 1. Budget Gaming (~8500 MAD) — 1080p gaming on AM4
 -- ─────────────────────────────────────────────────────────────────────────────
 INSERT INTO preset_builds (name, description, use_case, total_price_estimate, is_active)
-SELECT 'Budget Gaming Build', '1080p gaming on a tight budget. Solid 60fps in most titles.', 'gaming', 8500.00, true
+SELECT 'Budget Gaming Build', '1080p gaming on a tight budget. Solid performance in most titles.', 'gaming', 8500.00, true
 WHERE NOT EXISTS (SELECT 1 FROM preset_builds WHERE name = 'Budget Gaming Build');
 
 INSERT INTO preset_build_components (preset_build_id, component_id, category)
@@ -14,14 +14,14 @@ SELECT p.id, c.id, c.category
 FROM preset_builds p, components c
 WHERE p.name = 'Budget Gaming Build'
   AND c.slug IN (
-    'amd-ryzen-5-5600',
-    'msi-b550-a-pro',
-    'amd-rx-6600',
-    'kingston-fury-beast-16gb-ddr4-3200',
-    'wd-blue-sn570-1tb',
-    'corsair-cv550',
-    'nzxt-h510',
-    'coolermaster-hyper-212-black'
+    'amd-ryzen-5-5600x',
+    'msi-b450-gaming-plus-max',
+    'nvidia-rtx-4060-ti-16gb',
+    'kingston-fury-beast-16gb-ddr4-3600',
+    'lexar-nm790-1tb',
+    'be-quiet-pure-power-12-750w',
+    'deepcool-ch510',
+    'deepcool-ak400'
   )
 ON CONFLICT (preset_build_id, category) DO NOTHING;
 
@@ -38,13 +38,13 @@ FROM preset_builds p, components c
 WHERE p.name = 'Mid-Range Gaming Build'
   AND c.slug IN (
     'amd-ryzen-5-7600',
-    'asus-prime-b650-plus',
+    'msi-mag-b650-tomahawk-wifi',
     'amd-rx-7700-xt',
-    'corsair-vengeance-ddr5-32gb-5600',
-    'samsung-980-pro-1tb',
-    'corsair-rm750x',
-    'corsair-4000d-airflow',
-    'arctic-liquid-freezer-ii-240'
+    'lexar-ares-32gb-ddr5-6000',
+    'samsung-990-pro-2tb',
+    'msi-mag-a850gl',
+    'nzxt-h6-flow',
+    'arctic-liquid-freezer-ii-360'
   )
 ON CONFLICT (preset_build_id, category) DO NOTHING;
 
@@ -60,20 +60,19 @@ SELECT p.id, c.id, c.category
 FROM preset_builds p, components c
 WHERE p.name = 'High-End Workstation'
   AND c.slug IN (
-    'amd-ryzen-9-7950x',
-    'msi-x670e-ace',
-    'nvidia-rtx-4070',
-    'gskill-trident-z5-64gb-ddr5-6000',
-    'wd-black-sn850x-1tb',
-    'corsair-rm1000x',
-    'lian-li-o11-dynamic',
-    'noctua-nh-d15'
+    'amd-ryzen-9-7950x3d',
+    'msi-pro-z890-a-wifi',
+    'nvidia-rtx-5080',
+    'gskill-trident-z5-96gb-ddr5-6000',
+    'samsung-990-pro-4tb',
+    'corsair-hx1000',
+    'lian-li-o11-dynamic-evo',
+    'corsair-h150i-elite-lcd'
   )
 ON CONFLICT (preset_build_id, category) DO NOTHING;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 4. Office PC (~4500 MAD) — everyday productivity
--- Note: intentionally has no GPU slot — office PCs use CPU integrated graphics.
 -- ─────────────────────────────────────────────────────────────────────────────
 INSERT INTO preset_builds (name, description, use_case, total_price_estimate, is_active)
 SELECT 'Office PC', 'Reliable everyday PC for browsing, office apps, and light work.', 'office', 4500.00, true
@@ -85,11 +84,11 @@ FROM preset_builds p, components c
 WHERE p.name = 'Office PC'
   AND c.slug IN (
     'intel-core-i3-12100f',
-    'gigabyte-b760-ds3h',
-    'kingston-fury-beast-16gb-ddr4-3200',
-    'crucial-p3-1tb-nvme',
-    'msi-mag-a650bn',
-    'fractal-meshify-c',
-    'coolermaster-hyper-212-black'
+    'msi-b760m-gaming-plus-wifi',
+    'kingston-fury-beast-16gb-ddr4-3600',
+    'lexar-nm790-1tb',
+    'be-quiet-pure-power-12-750w',
+    'deepcool-matrexx-55',
+    'arctic-freezer-36'
   )
 ON CONFLICT (preset_build_id, category) DO NOTHING;

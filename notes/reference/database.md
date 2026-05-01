@@ -1,6 +1,6 @@
 # Database Reference
 
-All 13 application tables in the PostgreSQL database, plus the internal `_migrations` tracking table. Migration files are in `backend/src/db/migrations/` (001–019).
+All 13 application tables in the PostgreSQL database, plus the internal `_migrations` tracking table. Migration files are in `apps/backend/src/db/migrations/` (001–019).
 
 ---
 
@@ -12,8 +12,8 @@ The migration runner (`backend/src/db/migrate.ts`) also creates a `_migrations` 
 
 ```bash
 # Run all migrations (WSL2)
-psql -U pc_builder_user -d pc_builder -f backend/src/db/migrations/001_create_components.sql
-psql -U pc_builder_user -d pc_builder -f backend/src/db/migrations/002_create_retailers.sql
+psql -U pc_builder_user -d pc_builder -f apps/backend/src/db/migrations/001_create_components.sql
+psql -U pc_builder_user -d pc_builder -f apps/backend/src/db/migrations/002_create_retailers.sql
 # ... continue through 019
 ```
 

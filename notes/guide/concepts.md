@@ -8,7 +8,7 @@ This guide explains the key concepts and domain terms used throughout the codeba
 
 ## Compatibility rules
 
-The compatibility engine (`backend/src/services/compatibilityService.ts`) validates a PC build against 8 rules. Rules only fire when both required components are present.
+The compatibility engine (`apps/backend/src/services/compatibilityService.ts`) validates a PC build against 8 rules. Rules only fire when both required components are present.
 
 | Rule | Type | Components | Condition |
 |---|---|---|---|
@@ -29,7 +29,7 @@ The `compatible` field is `true` only when `errors` is empty. Warnings don't aff
 
 ## DNA matching
 
-The DNA matcher (`backend/src/utils/componentMatcher.ts`) links scraped product names to catalog components.
+The DNA matcher (`apps/backend/src/utils/componentMatcher.ts`) links scraped product names to catalog components.
 
 Instead of fuzzy string matching, it extracts "DNA tokens" — the minimal identifiers that uniquely describe a component within its category:
 
@@ -67,7 +67,7 @@ Used in frontend URLs: `/components/amd-ryzen-7-7700x`.
 
 ## Scraper registry
 
-`backend/scraper/session.ts` maintains a `SCRAPER_REGISTRY` array mapping scraper run functions to their retailer database IDs:
+`apps/backend/scraper/session.ts` maintains a `SCRAPER_REGISTRY` array mapping scraper run functions to their retailer database IDs:
 
 ```typescript
 const SCRAPER_REGISTRY: { id: number; name: string; run: () => Promise<ScrapedPrice[]> }[] = [

@@ -26,7 +26,7 @@ The scraper runs independently of the API server. It does not block HTTP request
 
 ## The three scrapers
 
-All three scrapers are in `backend/scraper/scrapers/`. They extend `BaseScraper` which handles the HTTP fetch and HTML parsing boilerplate.
+All three scrapers are in `apps/backend/scraper/scrapers/`. They extend `BaseScraper` which handles the HTTP fetch and HTML parsing boilerplate.
 
 ### UltraPC (`ultrapcScraper.ts`)
 
@@ -145,7 +145,7 @@ Products with no mapping in `scraper_mappings` are inserted into `unmatched_list
 
 ## The DNA matcher
 
-The DNA matcher (`backend/src/utils/componentMatcher.ts`) is used by the auto-mapping scripts to automatically link scraped products to catalog components.
+The DNA matcher (`apps/backend/src/utils/componentMatcher.ts`) is used by the auto-mapping scripts to automatically link scraped products to catalog components.
 
 ### Why not simple string matching?
 
@@ -201,7 +201,7 @@ A match is only accepted when **all** DNA tokens are found in the product name (
 
 ## The scheduler
 
-`backend/scraper/scheduler.ts` uses `Bun.cron()` to run the scraping session on a schedule.
+`apps/backend/scraper/scheduler.ts` uses `Bun.cron()` to run the scraping session on a schedule.
 
 The schedule is read from the database — each retailer has a `scraping_interval_hours` column. This means different retailers can be scraped at different frequencies without redeploying the server.
 
@@ -211,7 +211,7 @@ Inactive retailers (`is_active = false`) are skipped entirely.
 
 ## Operational scripts
 
-Several scripts in `backend/scripts/tools/` support the scraping workflow:
+Several scripts in `apps/backend/scripts/tools/` support the scraping workflow:
 
 | Script | What it does |
 |---|---|
@@ -222,7 +222,7 @@ Several scripts in `backend/scripts/tools/` support the scraping workflow:
 | `check_mbs.ts` | Check motherboard data integrity |
 | `import_benchmarks.ts` | Import benchmark scores from JSON |
 
-The golden dataset (`backend/src/__tests__/fixtures/golden_dataset.json`) contains 50 manually verified (product name → component) pairs used to measure matcher accuracy.
+The golden dataset (`apps/backend/src/__tests__/fixtures/golden_dataset.json`) contains 50 manually verified (product name → component) pairs used to measure matcher accuracy.
 
 ---
 

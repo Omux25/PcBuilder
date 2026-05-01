@@ -133,7 +133,7 @@ wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/apps/admin &
 wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/apps/backend && ~/.bun/bin/bun test 2>&1"
 ```
 
-Expected: **548 pass, 0 fail** across 39 files.
+Expected: **550 pass, 0 fail** across 39 files.
 
 Test categories:
 - Unit tests — compatibility engine, middleware, services, routes, DNA matcher
@@ -175,7 +175,7 @@ Test files import from `bun:test` which is only available inside Bun (WSL2). VS 
 
 ```bash
 # From the project root (requires Java + plantuml.jar at project root)
-java -DPLANTUML_LIMIT_SIZE=8192 -jar plantuml.jar -tpng notes/diagrams/*.puml -o rendered
+java -jar plantuml.jar -tpng notes/diagrams/*.puml -o rendered
 ```
 
 The rendered PNGs go into `notes/diagrams/rendered/` (gitignored — regeneratable).
