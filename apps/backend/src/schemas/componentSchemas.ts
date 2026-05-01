@@ -5,6 +5,7 @@
  */
 
 import { z } from 'zod/v4';
+import type { ComponentCategory as SharedCategory } from '@shared/types';
 
 // ── Shared base ──────────────────────────────────────────────────────────────
 
@@ -74,7 +75,7 @@ export const componentSchemas = {
   cooling: coolingSchema,
 } as const;
 
-export type ComponentCategory = keyof typeof componentSchemas;
+export type ComponentCategory = SharedCategory;
 
 // ── Typed input for service layer ────────────────────────────────────────────
 

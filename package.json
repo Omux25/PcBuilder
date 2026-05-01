@@ -1,0 +1,17 @@
+{
+  "name": "pc-builder-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "PC Builder Morocco — Unified Project Workspace",
+  "scripts": {
+    "dev": "powershell.exe -NoProfile -Command \".\\dev.ps1\"",
+    "test:backend": "cd apps/backend && bun test",
+    "lint:admin": "cd apps/admin && bun run lint",
+    "lint:frontend": "cd apps/frontend && bun run lint",
+    "lint:all": "bun run lint:admin && bun run lint:frontend",
+    "clean": "powershell.exe -NoProfile -Command \"Get-ChildItem -Path . -Filter 'node_modules' -Recurse | Remove-Item -Force -Recurse; Get-ChildItem -Path . -Filter 'dist' -Recurse | Remove-Item -Force -Recurse\""
+  },
+  "workspaces": [
+    "apps/*"
+  ]
+}

@@ -5,8 +5,11 @@
     "moduleResolution": "bundler",
     "strict": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "@shared/*": ["../../shared/*"]
+    }
   },
-  "include": ["src/**/*", "scraper/**/*"],
+  "include": ["src/**/*", "scraper/**/*", "../../shared/**/*"],
   "exclude": ["node_modules", "src/**/__tests__/**", "src/__tests__/**"]
 }

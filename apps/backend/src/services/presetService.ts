@@ -6,31 +6,7 @@
 
 import { getSql } from '../db/index.js';
 import { AppError } from '../utils/errors.js';
-
-// ── Types ────────────────────────────────────────────────────────────────────
-
-export interface PresetComponent {
-  id: number;
-  slug: string;
-  name: string;
-  brand?: string;
-  category: string;
-  image_url?: string;
-  is_active: boolean;
-}
-
-export interface PresetBuild {
-  id: number;
-  name: string;
-  description?: string;
-  use_case: 'gaming' | 'workstation' | 'office' | 'budget';
-  total_price_estimate?: number;
-  is_active: boolean;
-  incomplete: boolean;
-  components: Record<string, PresetComponent>;
-  created_at: string;
-  updated_at: string;
-}
+import { PresetComponent, PresetBuild } from '@shared/types';
 
 // ── Service Functions ────────────────────────────────────────────────────────
 

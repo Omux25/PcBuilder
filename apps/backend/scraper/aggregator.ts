@@ -19,6 +19,7 @@ import type { ScrapedPrice } from './scrapers/baseScraper.js';
 import { UltraPcScraper } from './scrapers/ultrapcScraper.js';
 import { extractVariant } from '../src/utils/variantExtractor.js';
 import { getSql, setSql, resetSql } from '../src/db/index.js';
+import { SCRAPER_CONFIG } from '@shared/scraper-config';
 
 // Re-export DI helpers so tests can inject a mock SQL function.
 export { setSql, resetSql };
@@ -48,10 +49,10 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
   const isRealSql = (sql as unknown) === (bunSql as unknown);
 
   // UltraPC stock check — only in production (skip when SQL is mocked in tests)
-  const ultrapcPrices = prices.filter(p => p.retailer_id === 10);
+  const ultrapcPrices = prices.filter(p => p.retailer_id === SCRAPER_CONFIG.RETAILERS.ULTRAPC);
   if (isRealSql && ultrapcPrices.length > 0) {
     const mappedUrls = (await sql`
-      SELECT product_url FROM scraper_mappings WHERE retailer_id = 10
+      SELECT product_url FROM scraper_mappings WHERE retailer_id = ${SCRAPER_CONFIG.RETAILERS.ULTRAPC}
     `) as { product_url: string }[];
     const mappedSet = new Set(mappedUrls.map(r => r.product_url));
     const toCheck = ultrapcPrices.filter(p => mappedSet.has(p.product_url));

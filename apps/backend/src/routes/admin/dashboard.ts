@@ -8,20 +8,15 @@
 
 import { Hono } from 'hono';
 import { authMiddleware } from '../../middleware/auth.js';
-import { getDashboardStats, getPriceUpdatesChart, getRecentActivity } from '../../services/adminService.js';
+import { getDashboardData } from '../../services/adminService.js';
 
 const adminDashboardRouter = new Hono();
 
 adminDashboardRouter.use('/*', authMiddleware);
 
 adminDashboardRouter.get('/', async (c) => {
-  const [stats, priceChart, recentActivity] = await Promise.all([
-    getDashboardStats(),
-    getPriceUpdatesChart(30),
-    getRecentActivity(10),
-  ]);
-
-  return c.json({ stats, price_updates_chart: priceChart, recent_activity: recentActivity });
+  const data = await getDashboardData();
+  return c.json(data);
 });
 
 export { adminDashboardRouter };

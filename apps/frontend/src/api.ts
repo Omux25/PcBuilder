@@ -3,28 +3,14 @@
  * All requests go to /api (proxied to http://localhost:3000 by Vite in dev).
  */
 
+import { createRequest } from '@shared/api-client';
 import type {
   Component, ComponentCategory, PriceOffer, PriceHistoryEntry,
   CompatibilityResult, BuildConfig, PresetBuild,
 } from './types';
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...init,
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    const message = data?.error?.message ?? `HTTP ${res.status}`;
-    throw new Error(message);
-  }
-
-  return data as T;
-}
+const request = createRequest(BASE);
 
 // ── Components ────────────────────────────────────────────────────────────────
 
