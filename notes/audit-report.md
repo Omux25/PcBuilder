@@ -126,3 +126,11 @@ All critical and high-priority issues from both audit rounds are resolved. The b
 - `backend/src/services/__tests__/presetService.test.ts` — new test file: 9 tests covering `getPresets`, `getPresetById`, `deletePreset`
 - `backend/src/utils/__tests__/rateLimiter.test.ts` — fixed flaky timing test (1100ms → 1500ms buffer for 1s window expiry)
 - **483 tests passing across 34 files**
+
+**Round 6 fixes (May 2026 — this session):**
+- `backend/src/utils/componentMatcher.ts` — motherboard DNA now extracts model suffix tokens (Z790 D vs Z790 S now distinguishable); case/cooling DNA keeps color tokens (black/white) as differentiators; cooling removes synthetic "air" token that caused all air cooler matches to fail; PSU guard improved to not reject model-embedded wattage PSUs like "Seasonic A650BN"
+- `frontend/src/context/CompareContext.tsx` — exported `MAX_COMPARE` as single source of truth; removed wrong `// Limit to 3` comment
+- `frontend/src/pages/Compare.tsx` — imports `MAX_COMPARE` from context (no more duplicate); initial state uses `Array(MAX_COMPARE).fill(null)`; all `colSpan` calculations corrected
+- `frontend/src/pages/ComponentDetail.tsx` — compare button now uses `CompareContext` (adds to tray + shows active state) instead of a plain link that bypassed the tray
+- `frontend/src/pages/CategoryBrowse.tsx` — `enrichWithPrices` replaced raw `fetch()` GET (wrong HTTP method, ignored `VITE_API_BASE_URL`, silently failed) with proper `smartSearch()` POST via `api.ts` — prices on browse page now actually load
+- **548 tests passing across 39 files**
