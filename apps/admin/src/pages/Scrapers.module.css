@@ -1,7 +1,22 @@
-.page { padding: 1.5rem; max-width: 1100px; }
-.error, .empty { padding: 1rem; color: var(--text-muted); }
-.error { color: var(--danger-soft); }
-.date { font-size: 0.82rem; color: var(--text-muted); }
+.page {
+  padding: 1.5rem;
+  max-width: 1100px;
+}
+
+.error,
+.empty {
+  padding: 1rem;
+  color: var(--text-muted);
+}
+
+.error {
+  color: var(--danger-soft);
+}
+
+.date {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
 
 .header {
   display: flex;
@@ -22,14 +37,36 @@
   border-radius: var(--radius);
 }
 
-.runAllBtn:hover { opacity: 0.85; }
+.runAllBtn:hover {
+  opacity: 0.85;
+}
 
-.table { margin-bottom: 2rem; }
+.table {
+  margin-bottom: 2rem;
+}
 
-.badge { font-size: 0.72rem; font-weight: 600; padding: 0.1rem 0.4rem; border-radius: 4px; text-transform: uppercase; }
-.success { background: rgba(166,227,161,0.15); color: var(--success-soft); }
-.failed  { background: rgba(243,139,168,0.15); color: var(--danger-soft); }
-.partial { background: rgba(249,226,175,0.15); color: var(--warning-soft); }
+.badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.success {
+  background: rgba(166, 227, 161, 0.15);
+  color: var(--success-soft);
+}
+
+.failed {
+  background: rgba(243, 139, 168, 0.15);
+  color: var(--danger-soft);
+}
+
+.partial {
+  background: rgba(249, 226, 175, 0.15);
+  color: var(--warning-soft);
+}
 
 .runBtn {
   display: flex;
@@ -42,7 +79,40 @@
   border-radius: var(--radius);
 }
 
-.logSection { margin-top: 2rem; }
+/* ── Running banner ──────────────────────────────────────────────────────── */
+
+.runningBanner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(137, 180, 250, 0.08);
+  border: 1px solid rgba(137, 180, 250, 0.25);
+  border-radius: var(--radius);
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  color: var(--accent-blue);
+  margin-bottom: 1.25rem;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(137, 180, 250, 0.3);
+  border-top-color: var(--accent-blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.logSection {
+  margin-top: 2rem;
+}
 
 .logHeader {
   display: flex;
@@ -52,6 +122,9 @@
 }
 
 .refreshBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
   background: var(--surface-3);
   color: var(--text);
   font-size: 0.82rem;
@@ -80,15 +153,48 @@
   border-radius: 4px;
 }
 
-.info    { background: rgba(137,180,250,0.05); }
-.warning { background: rgba(249,226,175,0.05); }
-.error   { background: rgba(243,139,168,0.05); }
+.info {
+  background: rgba(137, 180, 250, 0.05);
+}
 
-.logLevel { font-weight: 700; font-size: 0.72rem; min-width: 55px; }
-.info .logLevel    { color: var(--accent-blue); }
-.warning .logLevel { color: var(--warning-soft); }
-.error .logLevel   { color: var(--danger-soft); }
+.warning {
+  background: rgba(249, 226, 175, 0.05);
+}
 
-.logSite { color: var(--text-dim); font-size: 0.75rem; }
-.logMsg  { color: var(--text-2); flex: 1; }
-.logTime { color: var(--text-dim); font-size: 0.72rem; white-space: nowrap; }
+.error {
+  background: rgba(243, 139, 168, 0.05);
+}
+
+.logLevel {
+  font-weight: 700;
+  font-size: 0.72rem;
+  min-width: 55px;
+}
+
+.info .logLevel {
+  color: var(--accent-blue);
+}
+
+.warning .logLevel {
+  color: var(--warning-soft);
+}
+
+.error .logLevel {
+  color: var(--danger-soft);
+}
+
+.logSite {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+}
+
+.logMsg {
+  color: var(--text-2);
+  flex: 1;
+}
+
+.logTime {
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}

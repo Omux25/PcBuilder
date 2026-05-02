@@ -32,7 +32,7 @@ afterAll(async () => {
   if (!dbAvailable) return;
   await sql`DELETE FROM scraper_logs WHERE message LIKE '[integration-test]%'`;
   await sql`DELETE FROM prices WHERE product_url LIKE 'https://integration-test.ma/%'`;
-  await sql`DELETE FROM price_history WHERE component_id = 1 AND retailer_id = 1`;
+  await sql`DELETE FROM price_history WHERE component_id = 1 AND retailer_id = 10`;
   await sql`DELETE FROM scraper_mappings WHERE product_url LIKE 'https://integration-test.ma/%'`;
   await sql`DELETE FROM unmatched_listings WHERE product_url LIKE 'https://integration-test.ma/%'`;
 });
@@ -70,11 +70,10 @@ describe('Logger — DB integration', () => {
 
 describe('Aggregator — DB integration', () => {
   const TEST_PRICE: ScrapedPrice = {
-    component_id: 0, // ignored by aggregator — resolved from scraper_mappings
-    retailer_id:  1,
-    price:        1299.99,
-    in_stock:     true,
-    product_url:  TEST_URL,
+    retailer_id: 10, // UltraPC — always present in the DB
+    price: 1299.99,
+    in_stock: true,
+    product_url: TEST_URL,
     product_name: 'Integration Test Product',
   };
 
@@ -84,14 +83,14 @@ describe('Aggregator — DB integration', () => {
     // Create a scraper mapping so the aggregator can match this product
     await sql`
       INSERT INTO scraper_mappings (component_id, retailer_id, product_url)
-      VALUES (1, 1, ${TEST_URL})
+      VALUES (1, 10, ${TEST_URL})
       ON CONFLICT (retailer_id, product_url) DO NOTHING
     `;
 
     const result = await aggregate([TEST_PRICE]);
 
     if (result.errors > 0) {
-      console.warn('[integration] Skipping — seed data missing (component_id=1, retailer_id=1)');
+      console.warn('[integration] Skipping — seed data missing (component_id=1, retailer_id=10)');
       return;
     }
 
@@ -100,7 +99,7 @@ describe('Aggregator — DB integration', () => {
     expect(result.errors).toBe(0);
 
     const rows = await sql`
-      SELECT * FROM prices WHERE component_id = 1 AND retailer_id = 1 AND product_url = ${TEST_URL}
+      SELECT * FROM prices WHERE component_id = 1 AND retailer_id = 10 AND product_url = ${TEST_URL}
     `;
     expect(rows.length).toBe(1);
     expect(Number(rows[0].price)).toBe(1299.99);
@@ -119,7 +118,7 @@ describe('Aggregator — DB integration', () => {
     expect(r2.errors).toBe(0);
 
     const rows = await sql`
-      SELECT price FROM prices WHERE component_id = 1 AND retailer_id = 1 AND product_url = ${TEST_URL}
+      SELECT price FROM prices WHERE component_id = 1 AND retailer_id = 10 AND product_url = ${TEST_URL}
     `;
     expect(Number(rows[0].price)).toBe(1199.00);
   });
@@ -128,11 +127,10 @@ describe('Aggregator — DB integration', () => {
     if (!dbAvailable) return;
 
     const unmappedPrice: ScrapedPrice = {
-      component_id: 0,
-      retailer_id:  1,
-      price:        500,
-      in_stock:     true,
-      product_url:  'https://integration-test.ma/product/unmapped',
+      retailer_id: 10,
+      price: 500,
+      in_stock: true,
+      product_url: 'https://integration-test.ma/product/unmapped',
       product_name: 'Unmapped Product',
     };
 
@@ -150,11 +148,10 @@ describe('Aggregator — DB integration', () => {
     if (!dbAvailable) return;
 
     const badPrice: ScrapedPrice = {
-      component_id: 999999,
-      retailer_id:  1,
-      price:        500,
-      in_stock:     false,
-      product_url:  TEST_URL_BAD,
+      retailer_id: 10,
+      price: 500,
+      in_stock: false,
+      product_url: TEST_URL_BAD,
       product_name: 'Bad Product',
     };
 
@@ -162,7 +159,7 @@ describe('Aggregator — DB integration', () => {
     try {
       await sql`
         INSERT INTO scraper_mappings (component_id, retailer_id, product_url)
-        VALUES (999999, 1, ${TEST_URL_BAD})
+        VALUES (999999, 10, ${TEST_URL_BAD})
         ON CONFLICT (retailer_id, product_url) DO NOTHING
       `;
     } catch {
@@ -182,7 +179,7 @@ describe('Aggregator — DB integration', () => {
 
     const prices: ScrapedPrice[] = [
       { ...TEST_PRICE, price: 1100 },
-      { component_id: 0, retailer_id: 1, price: 500, in_stock: false, product_url: 'https://integration-test.ma/product/multi-unmapped', product_name: 'Unmapped' },
+      { retailer_id: 10, price: 500, in_stock: false, product_url: 'https://integration-test.ma/product/multi-unmapped', product_name: 'Unmapped' },
     ];
 
     const result = await aggregate(prices);
