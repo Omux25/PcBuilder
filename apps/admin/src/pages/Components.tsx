@@ -24,7 +24,7 @@ export function Components() {
   function load() {
     setLoading(true);
     const params: Record<string, string> = { page: String(page), limit: String(LIMIT) };
-    if (search)   params.search   = search;
+    if (search) params.search = search;
     if (category) params.category = category;
 
     getAdminComponents(params)
@@ -46,7 +46,14 @@ export function Components() {
 
   async function handleToggleActive(component: AdminComponent) {
     try {
-      await updateAdminComponent(component.id, { ...component, is_active: !component.is_active });
+      // Only send the minimal fields needed — sending the full component object
+      // causes validation errors because it includes DB-only fields (timestamps, etc.)
+      await updateAdminComponent(component.id, {
+        name: component.name,
+        brand: component.brand,
+        category: component.category,
+        is_active: !component.is_active,
+      });
       load();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Error');

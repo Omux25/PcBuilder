@@ -133,7 +133,7 @@ wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/apps/admin &
 wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/apps/backend && ~/.bun/bin/bun test 2>&1"
 ```
 
-Expected: **578 pass, 0 fail** across 41 files.
+Expected: **599 backend tests pass, 0 fail** across 43 files. Run frontend tests separately: `cd apps/frontend && bun test` (28 tests). Total: 627.
 
 Test categories:
 - Unit tests — compatibility engine, middleware, services, routes, DNA matcher

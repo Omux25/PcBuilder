@@ -1,4 +1,4 @@
-import { ComponentCategory } from './types.js';
+import type { ComponentCategory } from './types.js';
 
 /**
  * Decodes common HTML entities in scraped product names.
@@ -50,8 +50,8 @@ export function inferCategory(name: string): ComponentCategory | null {
 
   // RAM — must NOT look like a motherboard
   if (n.match(/\b(ddr[45]|dimm)\b/) &&
-      !n.match(/\b(carte\s*m[eè]re|motherboard)\b/) &&
-      !n.match(/\b[abxhz]\d{3,4}[eimd]?\b/)) return 'ram';
+    !n.match(/\b(carte\s*m[eè]re|motherboard)\b/) &&
+    !n.match(/\b[abxhz]\d{3,4}[eimd]?\b/)) return 'ram';
 
   // Storage
   if (n.match(/\b(nvme|m\.?2|ssd|hdd|disque\s*(dur|ssd)|firecuda|barracuda|ironwolf)\b/)) return 'storage';
@@ -60,16 +60,16 @@ export function inferCategory(name: string): ComponentCategory | null {
   // PSU
   // Require explicit wattage AND a PSU-specific keyword to avoid false positives
   if (n.match(/\b\d{3,4}\s*w\b/) &&
-      n.match(/\b(alimentation|psu|gold|platinum|titanium|bronze|modular|80\s*plus|atx\s*3|semi.?mod|full.?mod)\b/) &&
-      !n.match(/\b[abxhz]\d{3,4}[eimd]?\b/)) return 'psu';
+    n.match(/\b(alimentation|psu|gold|platinum|titanium|bronze|modular|80\s*plus|atx\s*3|semi.?mod|full.?mod)\b/) &&
+    !n.match(/\b[abxhz]\d{3,4}[eimd]?\b/)) return 'psu';
 
   // Cooling
   // Guard: "Air" in a case name (Corsair AIR series, Montech Air) must not match cooling
   if (n.match(/\b(aio|liquid\s*cooler|watercooling|refroidissement\s*liquide)\b/)) return 'cooling';
   if (n.match(/\b(cooler|ventirad|refroidissement)\b/) &&
-      !n.match(/\b(case|boitier|tower|air\s*\d{3,4})\b/)) return 'cooling';
+    !n.match(/\b(case|boitier|tower|air\s*\d{3,4})\b/)) return 'cooling';
   if (n.match(/\b(noctua|deepcool|arctic|thermalright|scythe|id.?cooling|be\s*quiet)\b/) &&
-      n.match(/\b(nh|ak|lc|le|se|sl|bk|dk|sk|ld|lf|lp|lx|pure|shadow|dark|silent|freezer|liquid)\b/)) return 'cooling';
+    n.match(/\b(nh|ak|lc|le|se|sl|bk|dk|sk|ld|lf|lp|lx|pure|shadow|dark|silent|freezer|liquid)\b/)) return 'cooling';
 
   // Case
   if (n.match(/\b(boitier|boîtier|case|tower|mid.?tower|full.?tower|mini.?tower)\b/)) return 'case';
@@ -145,8 +145,8 @@ export function extractCpuSpecs(name: string): { socket: string; tdp: number } |
     if (modelNum >= 14000) socket = 'LGA1700';       // 14th gen
     else if (modelNum >= 12000) socket = 'LGA1700';  // 12th/13th gen
     else if (modelNum >= 10000) socket = 'LGA1200';  // 10th/11th gen
-    else if (modelNum >= 8000)  socket = 'LGA1151';  // 8th/9th gen
-    else if (modelNum >= 6000)  socket = 'LGA1151';  // 6th/7th gen
+    else if (modelNum >= 8000) socket = 'LGA1151';  // 8th/9th gen
+    else if (modelNum >= 6000) socket = 'LGA1151';  // 6th/7th gen
     else socket = 'LGA1700'; // fallback for unknown
   }
   // Intel Pentium / Celeron
@@ -181,101 +181,101 @@ export function extractGpuSpecs(name: string): { length_mm: number; tdp: number;
   // TDP lookup by model — ordered most specific first
   let tdp = 150;
   // RTX 50 series
-  if      (n.match(/\brtx\s*5090\b/))          tdp = 575;
-  else if (n.match(/\brtx\s*5080\b/))          tdp = 360;
-  else if (n.match(/\brtx\s*5070\s*ti\b/))     tdp = 300;
-  else if (n.match(/\brtx\s*5070\b/))          tdp = 250;
-  else if (n.match(/\brtx\s*5060\s*ti\b/))     tdp = 180;
-  else if (n.match(/\brtx\s*5060\b/))          tdp = 150;
-  else if (n.match(/\brtx\s*5050\b/))          tdp = 120;
+  if (n.match(/\brtx\s*5090\b/)) tdp = 575;
+  else if (n.match(/\brtx\s*5080\b/)) tdp = 360;
+  else if (n.match(/\brtx\s*5070\s*ti\b/)) tdp = 300;
+  else if (n.match(/\brtx\s*5070\b/)) tdp = 250;
+  else if (n.match(/\brtx\s*5060\s*ti\b/)) tdp = 180;
+  else if (n.match(/\brtx\s*5060\b/)) tdp = 150;
+  else if (n.match(/\brtx\s*5050\b/)) tdp = 120;
   // RTX 40 series
-  else if (n.match(/\brtx\s*4090\b/))          tdp = 450;
-  else if (n.match(/\brtx\s*4080\s*super\b/))  tdp = 320;
-  else if (n.match(/\brtx\s*4080\b/))          tdp = 320;
+  else if (n.match(/\brtx\s*4090\b/)) tdp = 450;
+  else if (n.match(/\brtx\s*4080\s*super\b/)) tdp = 320;
+  else if (n.match(/\brtx\s*4080\b/)) tdp = 320;
   else if (n.match(/\brtx\s*4070\s*ti\s*super\b/)) tdp = 285;
-  else if (n.match(/\brtx\s*4070\s*ti\b/))     tdp = 285;
-  else if (n.match(/\brtx\s*4070\s*super\b/))  tdp = 220;
-  else if (n.match(/\brtx\s*4070\b/))          tdp = 200;
-  else if (n.match(/\brtx\s*4060\s*ti\b/))     tdp = 165;
-  else if (n.match(/\brtx\s*4060\b/))          tdp = 115;
+  else if (n.match(/\brtx\s*4070\s*ti\b/)) tdp = 285;
+  else if (n.match(/\brtx\s*4070\s*super\b/)) tdp = 220;
+  else if (n.match(/\brtx\s*4070\b/)) tdp = 200;
+  else if (n.match(/\brtx\s*4060\s*ti\b/)) tdp = 165;
+  else if (n.match(/\brtx\s*4060\b/)) tdp = 115;
   // RTX 30 series
-  else if (n.match(/\brtx\s*3090\s*ti\b/))     tdp = 450;
-  else if (n.match(/\brtx\s*3090\b/))          tdp = 350;
-  else if (n.match(/\brtx\s*3080\s*ti\b/))     tdp = 350;
-  else if (n.match(/\brtx\s*3080\b/))          tdp = 320;
-  else if (n.match(/\brtx\s*3070\s*ti\b/))     tdp = 290;
-  else if (n.match(/\brtx\s*3070\b/))          tdp = 220;
-  else if (n.match(/\brtx\s*3060\s*ti\b/))     tdp = 200;
-  else if (n.match(/\brtx\s*3060\b/))          tdp = 170;
-  else if (n.match(/\brtx\s*3050\b/))          tdp = 130;
+  else if (n.match(/\brtx\s*3090\s*ti\b/)) tdp = 450;
+  else if (n.match(/\brtx\s*3090\b/)) tdp = 350;
+  else if (n.match(/\brtx\s*3080\s*ti\b/)) tdp = 350;
+  else if (n.match(/\brtx\s*3080\b/)) tdp = 320;
+  else if (n.match(/\brtx\s*3070\s*ti\b/)) tdp = 290;
+  else if (n.match(/\brtx\s*3070\b/)) tdp = 220;
+  else if (n.match(/\brtx\s*3060\s*ti\b/)) tdp = 200;
+  else if (n.match(/\brtx\s*3060\b/)) tdp = 170;
+  else if (n.match(/\brtx\s*3050\b/)) tdp = 130;
   // RTX 20 series
-  else if (n.match(/\brtx\s*2080\s*ti\b/))     tdp = 250;
-  else if (n.match(/\brtx\s*2080\s*super\b/))  tdp = 250;
-  else if (n.match(/\brtx\s*2080\b/))          tdp = 215;
-  else if (n.match(/\brtx\s*2070\s*super\b/))  tdp = 215;
-  else if (n.match(/\brtx\s*2070\b/))          tdp = 175;
-  else if (n.match(/\brtx\s*2060\s*super\b/))  tdp = 175;
-  else if (n.match(/\brtx\s*2060\b/))          tdp = 160;
+  else if (n.match(/\brtx\s*2080\s*ti\b/)) tdp = 250;
+  else if (n.match(/\brtx\s*2080\s*super\b/)) tdp = 250;
+  else if (n.match(/\brtx\s*2080\b/)) tdp = 215;
+  else if (n.match(/\brtx\s*2070\s*super\b/)) tdp = 215;
+  else if (n.match(/\brtx\s*2070\b/)) tdp = 175;
+  else if (n.match(/\brtx\s*2060\s*super\b/)) tdp = 175;
+  else if (n.match(/\brtx\s*2060\b/)) tdp = 160;
   // GTX 16 series
-  else if (n.match(/\bgtx\s*1660\s*ti\b/))     tdp = 120;
-  else if (n.match(/\bgtx\s*1660\s*super\b/))  tdp = 125;
-  else if (n.match(/\bgtx\s*1660\b/))          tdp = 120;
-  else if (n.match(/\bgtx\s*1650\s*super\b/))  tdp = 100;
-  else if (n.match(/\bgtx\s*1650\b/))          tdp = 75;
+  else if (n.match(/\bgtx\s*1660\s*ti\b/)) tdp = 120;
+  else if (n.match(/\bgtx\s*1660\s*super\b/)) tdp = 125;
+  else if (n.match(/\bgtx\s*1660\b/)) tdp = 120;
+  else if (n.match(/\bgtx\s*1650\s*super\b/)) tdp = 100;
+  else if (n.match(/\bgtx\s*1650\b/)) tdp = 75;
   // GTX 10 series
-  else if (n.match(/\bgtx\s*1080\s*ti\b/))     tdp = 250;
-  else if (n.match(/\bgtx\s*1080\b/))          tdp = 180;
-  else if (n.match(/\bgtx\s*1070\s*ti\b/))     tdp = 180;
-  else if (n.match(/\bgtx\s*1070\b/))          tdp = 150;
-  else if (n.match(/\bgtx\s*1060\b/))          tdp = 120;
-  else if (n.match(/\bgtx\s*1050\s*ti\b/))     tdp = 75;
-  else if (n.match(/\bgtx\s*1050\b/))          tdp = 75;
-  else if (n.match(/\bgt\s*1030\b/))           tdp = 30;
-  else if (n.match(/\bgt\s*730\b/))            tdp = 25;
+  else if (n.match(/\bgtx\s*1080\s*ti\b/)) tdp = 250;
+  else if (n.match(/\bgtx\s*1080\b/)) tdp = 180;
+  else if (n.match(/\bgtx\s*1070\s*ti\b/)) tdp = 180;
+  else if (n.match(/\bgtx\s*1070\b/)) tdp = 150;
+  else if (n.match(/\bgtx\s*1060\b/)) tdp = 120;
+  else if (n.match(/\bgtx\s*1050\s*ti\b/)) tdp = 75;
+  else if (n.match(/\bgtx\s*1050\b/)) tdp = 75;
+  else if (n.match(/\bgt\s*1030\b/)) tdp = 30;
+  else if (n.match(/\bgt\s*730\b/)) tdp = 25;
   // AMD RX 9000 series
-  else if (n.match(/\brx\s*9070\s*xt\b/))      tdp = 304;
-  else if (n.match(/\brx\s*9070\b/))           tdp = 220;
-  else if (n.match(/\brx\s*9060\s*xt\b/))      tdp = 150;
+  else if (n.match(/\brx\s*9070\s*xt\b/)) tdp = 304;
+  else if (n.match(/\brx\s*9070\b/)) tdp = 220;
+  else if (n.match(/\brx\s*9060\s*xt\b/)) tdp = 150;
   // AMD RX 7000 series
-  else if (n.match(/\brx\s*7900\s*xtx\b/))     tdp = 355;
-  else if (n.match(/\brx\s*7900\s*xt\b/))      tdp = 315;
-  else if (n.match(/\brx\s*7900\s*gre\b/))     tdp = 260;
-  else if (n.match(/\brx\s*7800\s*xt\b/))      tdp = 263;
-  else if (n.match(/\brx\s*7700\s*xt\b/))      tdp = 245;
-  else if (n.match(/\brx\s*7600\s*xt\b/))      tdp = 190;
-  else if (n.match(/\brx\s*7600\b/))           tdp = 165;
+  else if (n.match(/\brx\s*7900\s*xtx\b/)) tdp = 355;
+  else if (n.match(/\brx\s*7900\s*xt\b/)) tdp = 315;
+  else if (n.match(/\brx\s*7900\s*gre\b/)) tdp = 260;
+  else if (n.match(/\brx\s*7800\s*xt\b/)) tdp = 263;
+  else if (n.match(/\brx\s*7700\s*xt\b/)) tdp = 245;
+  else if (n.match(/\brx\s*7600\s*xt\b/)) tdp = 190;
+  else if (n.match(/\brx\s*7600\b/)) tdp = 165;
   // AMD RX 6000 series
-  else if (n.match(/\brx\s*6950\s*xt\b/))      tdp = 335;
-  else if (n.match(/\brx\s*6900\s*xt\b/))      tdp = 300;
-  else if (n.match(/\brx\s*6800\s*xt\b/))      tdp = 300;
-  else if (n.match(/\brx\s*6800\b/))           tdp = 250;
-  else if (n.match(/\brx\s*6750\s*xt\b/))      tdp = 250;
-  else if (n.match(/\brx\s*6700\s*xt\b/))      tdp = 230;
-  else if (n.match(/\brx\s*6700\b/))           tdp = 175;
-  else if (n.match(/\brx\s*6650\s*xt\b/))      tdp = 180;
-  else if (n.match(/\brx\s*6600\s*xt\b/))      tdp = 160;
-  else if (n.match(/\brx\s*6600\b/))           tdp = 132;
-  else if (n.match(/\brx\s*6500\s*xt\b/))      tdp = 107;
-  else if (n.match(/\brx\s*6400\b/))           tdp = 53;
+  else if (n.match(/\brx\s*6950\s*xt\b/)) tdp = 335;
+  else if (n.match(/\brx\s*6900\s*xt\b/)) tdp = 300;
+  else if (n.match(/\brx\s*6800\s*xt\b/)) tdp = 300;
+  else if (n.match(/\brx\s*6800\b/)) tdp = 250;
+  else if (n.match(/\brx\s*6750\s*xt\b/)) tdp = 250;
+  else if (n.match(/\brx\s*6700\s*xt\b/)) tdp = 230;
+  else if (n.match(/\brx\s*6700\b/)) tdp = 175;
+  else if (n.match(/\brx\s*6650\s*xt\b/)) tdp = 180;
+  else if (n.match(/\brx\s*6600\s*xt\b/)) tdp = 160;
+  else if (n.match(/\brx\s*6600\b/)) tdp = 132;
+  else if (n.match(/\brx\s*6500\s*xt\b/)) tdp = 107;
+  else if (n.match(/\brx\s*6400\b/)) tdp = 53;
   // AMD RX 5000 series
-  else if (n.match(/\brx\s*5700\s*xt\b/))      tdp = 225;
-  else if (n.match(/\brx\s*5700\b/))           tdp = 180;
-  else if (n.match(/\brx\s*5600\s*xt\b/))      tdp = 150;
-  else if (n.match(/\brx\s*5500\s*xt\b/))      tdp = 130;
+  else if (n.match(/\brx\s*5700\s*xt\b/)) tdp = 225;
+  else if (n.match(/\brx\s*5700\b/)) tdp = 180;
+  else if (n.match(/\brx\s*5600\s*xt\b/)) tdp = 150;
+  else if (n.match(/\brx\s*5500\s*xt\b/)) tdp = 130;
   // Intel Arc
-  else if (n.match(/\barc\s*b580\b/))          tdp = 190;
-  else if (n.match(/\barc\s*b570\b/))          tdp = 150;
-  else if (n.match(/\barc\s*a770\b/))          tdp = 225;
-  else if (n.match(/\barc\s*a750\b/))          tdp = 225;
-  else if (n.match(/\barc\s*a580\b/))          tdp = 185;
+  else if (n.match(/\barc\s*b580\b/)) tdp = 190;
+  else if (n.match(/\barc\s*b570\b/)) tdp = 150;
+  else if (n.match(/\barc\s*a770\b/)) tdp = 225;
+  else if (n.match(/\barc\s*a750\b/)) tdp = 225;
+  else if (n.match(/\barc\s*a580\b/)) tdp = 185;
 
   // Estimate length from TDP tier
   let length_mm = 240;
-  if      (tdp >= 400) length_mm = 360;
+  if (tdp >= 400) length_mm = 360;
   else if (tdp >= 300) length_mm = 336;
   else if (tdp >= 200) length_mm = 285;
   else if (tdp >= 130) length_mm = 240;
-  else                 length_mm = 200;
+  else length_mm = 200;
 
   return { length_mm, tdp, vram_gb };
 }
@@ -412,7 +412,7 @@ export function extractCoolingSpecs(name: string): { tdp: number; cooling_type: 
     return { tdp, cooling_type: 'AIO', size_mm };
   }
   if (n.match(/\b(cooler|ventirad|refroidissement|aircooler)\b/) ||
-      n.match(/\b(noctua|deepcool|arctic|thermalright|scythe|be\s*quiet)\b/)) {
+    n.match(/\b(noctua|deepcool|arctic|thermalright|scythe|be\s*quiet)\b/)) {
     let tdp = 150;
     if (n.match(/\b(nh-d15|nh-d14|dark rock pro|assassin|fuma)\b/)) tdp = 250;
     else if (n.match(/\b(nh-u12|nh-u14|ak620|ak400|shadow rock)\b/)) tdp = 200;

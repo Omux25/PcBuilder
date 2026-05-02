@@ -4,7 +4,7 @@
 
 ---
 
-## Current state (May 1, 2026)
+## Current state (May 2, 2026)
 
 | Area | Status |
 |---|---|
@@ -141,15 +141,6 @@ All critical and high-priority issues from the improvement report resolved:
 - Deleted empty `packages/` directory (leftover from unused monorepo setup)
 - Deleted raw AI chat log files from `.kiro/specs/gemini/`
 
----
-
-## What's left (optional)
-
-- Presets page in the frontend (deferred — needs more scraper data first)
-- Redis-backed rate limiting for production (current in-memory limiter resets on server restart — acceptable for single-process deployment)
-
----
-
 ### Phase 16 — Codebase Audit Round 9 (May 2026)
 
 - Fixed smart-search price query scope: was fetching prices for all components in a category, now scoped to only the IDs returned by the search using `= ANY(ARRAY[...]::int[])`
@@ -171,14 +162,14 @@ All critical and high-priority issues from the improvement report resolved:
 - Removed vestigial `component_id` field from `ScrapedPrice` interface — it was always set to `0` by all scrapers and immediately overwritten by the aggregator from `scraper_mappings`. The type now only contains fields that are actually used.
 - Created `apps/frontend/src/ui-strings.ts` — centralized all user-facing French strings (nav labels, hero text, build actions, configurator labels, picker filters, footer) into a single typed `UI` constant. Updated `App.tsx`, `Configurator.tsx`, and `ComponentPicker.tsx` to use it.
 - Added frontend test suite (`bun test`) — 28 tests across 4 files covering `buildUrl` (encode/decode/localStorage), `buildUtils` (price calculation), `theme` (module structure), and `ui-strings` (constant completeness). Added `test` script to `apps/frontend/package.json` and `@shared/*` path resolution to `tsconfig.json`.
-- Total test count: 606 (578 backend + 28 frontend), all passing.
+- Total test count: 608 (580 backend + 28 frontend), all passing.
 
 ### Phase 18 — Full UI String Centralization (May 2026)
 
 - Completed the UI string centralization started in Phase 17: all remaining French strings in pages and components now use `UI` constants from `ui-strings.ts`
 - Files updated: `CategoryBrowse.tsx`, `ComponentDetail.tsx`, `ComponentsIndex.tsx`, `Compare.tsx`, `GlobalSearch.tsx`, `MarketTrends.tsx`, `Presets.tsx`, `PriceComparison.tsx`, `InlinePrices.tsx`, `PriceHistoryChart.tsx`, `CompareTray.tsx`, `ErrorBoundary.tsx`
 - `ui-strings.ts` now covers every user-facing French string in the entire frontend — nav, hero, build actions, configurator, picker, browse, detail, compare, search, trends, presets, price panels, error boundary
-- 606 tests passing (578 backend + 28 frontend), 0 TypeScript diagnostics
+- 608 tests passing (580 backend + 28 frontend), 0 TypeScript diagnostics
 
 ### Phase 19 — Codebase Audit Round 10 (May 2026)
 
@@ -194,3 +185,53 @@ All critical and high-priority issues from the improvement report resolved:
 - Fixed `notes/reference/api.md`: `?ids=` param now documents the 50-ID cap and 400 error
 - Fixed `notes/guide/database.md`: added `benchmark_score` to cpu/gpu optional columns; `13 tables` → `12 tables`
 - Fixed `notes/guide/concepts.md`: clarified that 6 rules are declarative in `RULES` array, `psu_underpowered` is a separate calculated check
+
+### Phase 21 — Codebase Audit Round 12 (May 2026)
+
+- Fixed Dockerfile: changed `WORKDIR` to `/app/apps/backend` and added `COPY shared/ /app/shared/` — `@shared/*` path alias (`../../shared/*` in tsconfig) now resolves correctly inside the container; previously Docker builds would start but fail at runtime with "Cannot find module '@shared/*'"
+- Fixed `Configurator.tsx`: replaced 4 hardcoded French strings (`"Composant"`, `"Sélection"`, `"Meilleur prix"`, `"Retirer"`) with `UI.configurator.*` constants
+- Fixed `App.tsx`: replaced hardcoded theme toggle `aria-label` strings with `UI.app.themeLight` / `UI.app.themeDark`
+- Added `thComponent`, `thSelection`, `thBestPrice`, `removeTitle` to `UI.configurator` in `ui-strings.ts`
+- Added `themeLight`, `themeDark` to `UI.app` in `ui-strings.ts`
+- Added startup fail-fast in `server.ts`: server now exits with a clear error if `JWT_SECRET` is missing or shorter than 32 characters, instead of silently serving a broken API
+- Fixed `notes/features/scraping-system.md`: `ScrapedPrice` code block corrected — field is `product_name?` (optional), not `name`
+- Fixed `notes/glossary.md`: `ScrapedPrice` entry corrected — field is `product_name` not `name`
+- Fixed `notes/roadmap.md`: removed stale "Presets page deferred" note — `Presets.tsx` has existed since Phase 8
+- Strengthened `docker-compose.yml` CORS warning comment
+- Added explanatory comment to `smart-search` route documenting the 300-component cap and its rationale
+- Deleted unused `hero.png` from both `apps/frontend/src/assets/` and `apps/admin/src/assets/` — identical files, neither imported anywhere in either app
+- Added 19 unit tests for `catalogBuilder.ts` (`scraper/__tests__/catalogBuilder.test.ts`) — covers all 8 categories, DNA deduplication, skipping accessories/bundles/laptop RAM, progress callback, and slug uniqueness
+- Populated `.vscode/settings.json` — was empty; now sets TypeScript SDK path, format-on-save, trim trailing whitespace, and final newline rules
+- Total tests: 599 backend + 28 frontend = 627
+
+---
+
+### Phase 20 — Codebase Audit Round 11 (May 2026)
+
+- Moved `compatibilityService.test.ts` from `src/__tests__/` to `src/services/__tests__/` — consistent with project convention (tests live next to the code they test)
+- Added `routes/__tests__/health.test.ts` — closes the only gap in route test coverage
+- Fixed `README.md`: stale test count (550 → 608), stale table count (13 → 12), stale rule count (8 → 7)
+- Fixed `notes/reference/dev-setup.md`: stale test count (578 → 608)
+- Fixed `notes/roadmap.md`: moved "What's left" section to end of document — phases now read in strict chronological order
+
+---
+
+## What's left (optional)
+
+- Redis-backed rate limiting for production (current in-memory limiter resets on server restart — acceptable for single-process deployment)
+
+---
+
+## Phase 22 — Vite 8 downgrade + search_text leak fix (May 2026)
+
+### Vite 8 → 6 downgrade
+
+- Downgraded `vite` from `8.0.10` → `6.3.5` and `@vitejs/plugin-react` from `6.0.1` → `4.3.4` in both `apps/frontend` and `apps/admin` — Vite 8 switched to Rolldown as its bundler which is incompatible with Bun 1.3.13; both dev servers failed to start with `ResolveMessage {}` (an Oxc/Rolldown error type Bun can't print)
+
+### search_text leak fix
+
+- Fixed `search_text` internal column leaking into all public API responses — root cause: migration 017 added a `search_text` TEXT column to the `components` table for trigram indexing, but all `SELECT *` / `SELECT c.*` queries returned it to clients
+- Affected endpoints: `GET /api/components` (no-filter path), `GET /api/components/:id`, `GET /api/components/slug/:slug`, `GET /api/components?ids=...`, and admin `RETURNING *` on create/update/deactivate
+- Fix: strip `search_text` at the application layer in all 6 affected code paths in `componentService.ts` using destructuring (`{ search_text: _st, ...c }`)
+- Also renamed the CTE alias in the search path from `search_text` to `_search_text` to eliminate a PostgreSQL column ambiguity error (the DB column and the computed alias had the same name)
+- 599 backend + 28 frontend = 627 tests, all passing

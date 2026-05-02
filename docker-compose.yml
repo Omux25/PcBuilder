@@ -36,7 +36,8 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       SERVE_STATIC: "true"
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
-      # ⚠ ALLOWED_ORIGINS defaults to '*' (allow all). Set this in production:
+      # ⚠ WARNING: ALLOWED_ORIGINS defaults to '*' (allow all origins).
+      # You MUST set this in production or any public deployment:
       # ALLOWED_ORIGINS=https://yourdomain.com
     # Volumes removed: Frontend/Admin now built inside the container via multi-stage Dockerfile
     depends_on:

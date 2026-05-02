@@ -161,7 +161,7 @@ export default function App() {
           <button
             className={styles.themeToggle}
             onClick={handleToggleTheme}
-            aria-label={theme === 'dark' ? 'Passer au mode clair' : 'Passer au mode sombre'}
+            aria-label={theme === 'dark' ? UI.app.themeLight : UI.app.themeDark}
           >
             {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
           </button>

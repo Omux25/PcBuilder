@@ -32,18 +32,21 @@ export interface ScrapedPrice {
   in_stock: boolean;
   /** Direct URL to the product page on the retailer site */
   product_url: string;
-  /** Optional: scraped product name — used for unmatched_listings */
+  /** Optional: scraped product name — used for unmatched_listings and variant extraction */
   product_name?: string;
+  /** Optional: short description from the retailer — used as fallback for variant extraction
+   *  when the product name doesn't contain enough detail (e.g. VRAM size) */
+  product_description?: string;
 }
 
 // ── Dependency injection ──────────────────────────────────────────────────────
 // `_fetch` and `_load` can be replaced in tests to avoid real HTTP calls.
 
 type FetchFn = (url: string, init?: RequestInit) => Promise<{ text: () => Promise<string>; ok: boolean; status: number }>;
-type LoadFn  = (html: string) => CheerioAPI;
+type LoadFn = (html: string) => CheerioAPI;
 
 let _fetch: FetchFn = fetch as unknown as FetchFn;
-let _load:  LoadFn  = cheerio.load;
+let _load: LoadFn = cheerio.load;
 let _retryDelayMs: number | null = null; // null = use default exponential backoff
 let _silent = false; // suppress console.warn in tests
 
@@ -73,7 +76,7 @@ export function setSilent(silent: boolean): void {
 /** Reset all injected dependencies to their real implementations. */
 export function resetFetchAndLoad(): void {
   _fetch = fetch as unknown as FetchFn;
-  _load  = cheerio.load;
+  _load = cheerio.load;
   _retryDelayMs = null;
   _silent = false;
 }
@@ -117,7 +120,7 @@ export abstract class BaseScraper {
         }
 
         const html = await response.text();
-        const $    = _load(html);
+        const $ = _load(html);
         return this.extractPrices($);
       } catch (err) {
         const isHttpError = err instanceof Error && err.message.startsWith('HTTP ');

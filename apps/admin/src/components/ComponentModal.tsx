@@ -6,6 +6,21 @@ import styles from './Form.module.css';
 
 const CATEGORIES = ['cpu', 'motherboard', 'gpu', 'ram', 'storage', 'psu', 'case', 'cooling'];
 
+// Category-specific required fields
+const CATEGORY_FIELDS: Record<string, { key: string; label: string; type: 'text' | 'number'; placeholder: string }[]> = {
+  cpu: [{ key: 'socket', label: 'Socket', type: 'text', placeholder: 'Ex: AM5, LGA1700' }],
+  motherboard: [
+    { key: 'socket', label: 'Socket', type: 'text', placeholder: 'Ex: AM5' },
+    { key: 'max_ram_frequency', label: 'Fréq. RAM max (MHz)', type: 'number', placeholder: 'Ex: 6000' },
+  ],
+  gpu: [{ key: 'length_mm', label: 'Longueur (mm)', type: 'number', placeholder: 'Ex: 320' }],
+  ram: [{ key: 'frequency_mhz', label: 'Fréquence (MHz)', type: 'number', placeholder: 'Ex: 6000' }],
+  psu: [{ key: 'wattage', label: 'Puissance (W)', type: 'number', placeholder: 'Ex: 850' }],
+  case: [{ key: 'max_gpu_length_mm', label: 'GPU max (mm)', type: 'number', placeholder: 'Ex: 380' }],
+  storage: [],
+  cooling: [],
+};
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -13,23 +28,47 @@ interface Props {
   component: AdminComponent | null;
 }
 
-export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
-  const [formData, setFormData] = useState({
-    name: '',
-    brand: '',
-    category: 'cpu',
-    description: '',
-    release_year: new Date().getFullYear(),
-    specs: '{}',
-    is_active: true,
-  });
+type FormData = {
+  name: string;
+  brand: string;
+  category: string;
+  description: string;
+  release_year: number;
+  specs: string;
+  is_active: boolean;
+  socket: string;
+  max_ram_frequency: string;
+  length_mm: string;
+  frequency_mhz: string;
+  wattage: string;
+  max_gpu_length_mm: string;
+};
 
+const emptyForm = (): FormData => ({
+  name: '',
+  brand: '',
+  category: 'cpu',
+  description: '',
+  release_year: new Date().getFullYear(),
+  specs: '{}',
+  is_active: true,
+  socket: '',
+  max_ram_frequency: '',
+  length_mm: '',
+  frequency_mhz: '',
+  wattage: '',
+  max_gpu_length_mm: '',
+});
+
+export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
+  const [formData, setFormData] = useState<FormData>(emptyForm());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (component) {
+      const c = component as Record<string, unknown>;
       setFormData({
         name: component.name,
         brand: String(component.brand ?? ''),
@@ -38,27 +77,28 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
         release_year: Number(component.release_year ?? new Date().getFullYear()),
         specs: JSON.stringify(component.specs ?? {}, null, 2),
         is_active: component.is_active,
+        socket: String(c.socket ?? ''),
+        max_ram_frequency: String(c.max_ram_frequency ?? ''),
+        length_mm: String(c.length_mm ?? ''),
+        frequency_mhz: String(c.frequency_mhz ?? ''),
+        wattage: String(c.wattage ?? ''),
+        max_gpu_length_mm: String(c.max_gpu_length_mm ?? ''),
       });
     } else {
-      setFormData({
-        name: '',
-        brand: '',
-        category: 'cpu',
-        description: '',
-        release_year: new Date().getFullYear(),
-        specs: '{\n  \n}',
-        is_active: true,
-      });
+      setFormData(emptyForm());
     }
     setError(null);
     setValidationErrors({});
   }, [component, isOpen]);
 
+  function set(key: keyof FormData, value: unknown) {
+    setFormData(prev => ({ ...prev, [key]: value }));
+  }
+
   function validate() {
     const errors: Record<string, string> = {};
     if (!formData.name.trim()) errors.name = 'Le nom est requis.';
     if (!CATEGORIES.includes(formData.category)) errors.category = 'Catégorie invalide.';
-    
     try {
       if (formData.specs.trim()) {
         const parsed = JSON.parse(formData.specs);
@@ -69,7 +109,6 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
     } catch {
       errors.specs = 'JSON invalide.';
     }
-
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   }
@@ -77,14 +116,26 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
-
     setLoading(true);
     setError(null);
 
-    const payload = {
-      ...formData,
+    const payload: Record<string, unknown> = {
+      name: formData.name,
+      brand: formData.brand || undefined,
+      category: formData.category,
+      description: formData.description || undefined,
+      release_year: formData.release_year || undefined,
       specs: formData.specs.trim() ? JSON.parse(formData.specs) : {},
+      is_active: formData.is_active,
     };
+
+    // Category-specific fields
+    if (formData.socket) payload.socket = formData.socket;
+    if (formData.max_ram_frequency) payload.max_ram_frequency = Number(formData.max_ram_frequency);
+    if (formData.length_mm) payload.length_mm = Number(formData.length_mm);
+    if (formData.frequency_mhz) payload.frequency_mhz = Number(formData.frequency_mhz);
+    if (formData.wattage) payload.wattage = Number(formData.wattage);
+    if (formData.max_gpu_length_mm) payload.max_gpu_length_mm = Number(formData.max_gpu_length_mm);
 
     try {
       if (component) {
@@ -101,6 +152,8 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
     }
   }
 
+  const catFields = CATEGORY_FIELDS[formData.category] ?? [];
+
   return (
     <Modal
       title={component ? 'Modifier le composant' : 'Nouveau composant'}
@@ -110,18 +163,20 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
       <form className={styles.form} onSubmit={handleSubmit}>
         {error && <div className={styles.errorText}>{error}</div>}
 
+        {/* Name */}
         <div className={styles.formGroup}>
           <label>Nom du composant</label>
           <input
             className={styles.input}
             type="text"
             value={formData.name}
-            onChange={e => setFormData({ ...formData, name: e.target.value })}
+            onChange={e => set('name', e.target.value)}
             placeholder="Ex: Ryzen 5 7600"
           />
           {validationErrors.name && <span className={styles.errorText}>{validationErrors.name}</span>}
         </div>
 
+        {/* Brand + Category */}
         <div style={{ display: 'flex', gap: '1rem' }}>
           <div className={styles.formGroup} style={{ flex: 1 }}>
             <label>Marque</label>
@@ -129,46 +184,66 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
               className={styles.input}
               type="text"
               value={formData.brand}
-              onChange={e => setFormData({ ...formData, brand: e.target.value })}
+              onChange={e => set('brand', e.target.value)}
               placeholder="Ex: AMD"
             />
           </div>
-
           <div className={styles.formGroup} style={{ flex: 1 }}>
             <label>Catégorie</label>
             <select
               className={styles.select}
               value={formData.category}
-              onChange={e => setFormData({ ...formData, category: e.target.value })}
+              onChange={e => set('category', e.target.value)}
             >
               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
         </div>
 
+        {/* Category-specific required fields */}
+        {catFields.length > 0 && (
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            {catFields.map(field => (
+              <div key={field.key} className={styles.formGroup} style={{ flex: 1, minWidth: '140px' }}>
+                <label>{field.label}</label>
+                <input
+                  className={styles.input}
+                  type={field.type}
+                  value={formData[field.key as keyof FormData] as string}
+                  onChange={e => set(field.key as keyof FormData, e.target.value)}
+                  placeholder={field.placeholder}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Description */}
         <div className={styles.formGroup}>
           <label>Description</label>
           <textarea
             className={styles.textarea}
             value={formData.description}
-            onChange={e => setFormData({ ...formData, description: e.target.value })}
+            onChange={e => set('description', e.target.value)}
             placeholder="Description courte..."
             style={{ minHeight: '60px' }}
           />
         </div>
 
+        {/* Specs JSON */}
         <div className={styles.formGroup}>
           <label>Spécifications (JSON)</label>
           <textarea
             className={styles.textarea}
             value={formData.specs}
-            onChange={e => setFormData({ ...formData, specs: e.target.value })}
-            placeholder='{\n  "socket": "AM5",\n  "cores": 6\n}'
+            onChange={e => set('specs', e.target.value)}
+            placeholder='{ "cores": 6, "tdp": 65 }'
             style={{ fontFamily: 'monospace' }}
           />
           {validationErrors.specs && <span className={styles.errorText}>{validationErrors.specs}</span>}
         </div>
 
+        {/* Year + Active */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div className={styles.formGroup}>
             <label>Année de sortie</label>
@@ -176,16 +251,15 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
               className={styles.input}
               type="number"
               value={formData.release_year}
-              onChange={e => setFormData({ ...formData, release_year: parseInt(e.target.value) || new Date().getFullYear() })}
+              onChange={e => set('release_year', parseInt(e.target.value) || new Date().getFullYear())}
               style={{ width: '120px' }}
             />
           </div>
-
           <label className={styles.checkboxGroup} style={{ marginTop: '1rem' }}>
             <input
               type="checkbox"
               checked={formData.is_active}
-              onChange={e => setFormData({ ...formData, is_active: e.target.checked })}
+              onChange={e => set('is_active', e.target.checked)}
             />
             Actif
           </label>

@@ -82,9 +82,9 @@ export function Configurator() {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th className={styles.thCat}>Composant</th>
-              <th className={styles.thSel}>Sélection</th>
-              <th className={styles.thPrice}>Meilleur prix</th>
+              <th className={styles.thCat}>{UI.configurator.thComponent}</th>
+              <th className={styles.thSel}>{UI.configurator.thSelection}</th>
+              <th className={styles.thPrice}>{UI.configurator.thBestPrice}</th>
               <th className={styles.thAct}></th>
             </tr>
           </thead>
@@ -129,7 +129,7 @@ export function Configurator() {
                         <button
                           className={styles.removeBtn}
                           onClick={(e) => { e.stopPropagation(); handleSelect(cat, null); }}
-                          title="Retirer"
+                          title={UI.configurator.removeTitle}
                         >
                           ×
                         </button>

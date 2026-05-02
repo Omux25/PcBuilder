@@ -1,7 +1,7 @@
 /**
  * Scraping session — the core scraping logic, separated from the cron scheduler.
  * Manages the execution of multiple scrapers with concurrency control.
- * 
+ *
  * Requirements: 6.6, 9.1, 9.2
  */
 
@@ -13,6 +13,7 @@ import { buildFromUnmatched } from './catalogBuilder.js';
 import { UltraPcScraper } from './scrapers/ultrapcScraper.js';
 import { NextLevelScraper } from './scrapers/nextlevelScraper.js';
 import { SetupGameScraper } from './scrapers/setupgameScraper.js';
+import { getSql } from '../src/db/index.js';
 import type { ScrapedPrice } from './scrapers/baseScraper.js';
 
 /**
@@ -25,14 +26,14 @@ import type { ScrapedPrice } from './scrapers/baseScraper.js';
  *   SetupGame → id 13
  */
 const SCRAPER_REGISTRY: { id: number; name: string; run: () => Promise<ScrapedPrice[]> }[] = [
-  { id: 10, name: 'UltraPC',      run: () => new UltraPcScraper().scrapeAllCategories()   },
+  { id: 10, name: 'UltraPC', run: () => new UltraPcScraper().scrapeAllCategories() },
   { id: 11, name: 'NextLevel PC', run: () => new NextLevelScraper().scrapeAllCategories() },
-  { id: 13, name: 'SetupGame',    run: () => new SetupGameScraper().scrapeAllCategories() },
+  { id: 13, name: 'SetupGame', run: () => new SetupGameScraper().scrapeAllCategories() },
 ];
 
 /**
  * Runs a full or partial scraping session.
- * 
+ *
  * @param targetRetailerId - If provided, only run the scraper for this specific retailer.
  */
 export async function runScrapingSession(targetRetailerId?: number): Promise<void> {
@@ -40,12 +41,12 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
   await logger.info(`Scraping session started: ${sessionType}`);
 
   const allPrices: ScrapedPrice[] = [];
-  
+
   // Initialize concurrency queue (limit to 2 to avoid overwhelming resources/getting blocked)
   const queue = new PQueue({ concurrency: 2 });
 
   // Filter scrapers based on targetRetailerId
-  const scrapersToRun = targetRetailerId 
+  const scrapersToRun = targetRetailerId
     ? SCRAPER_REGISTRY.filter(s => s.id === targetRetailerId)
     : SCRAPER_REGISTRY;
 
@@ -54,29 +55,47 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
     return;
   }
 
-  await Promise.all(scrapersToRun.map(config => 
+  // Track per-retailer success/failure for status updates
+  const scraperResults = new Map<number, 'SUCCESS' | 'FAILED'>();
+
+  await Promise.all(scrapersToRun.map(config =>
     queue.add(async () => {
       try {
         await logger.info(`Starting ${config.name} scraper...`);
         const prices = await config.run();
         allPrices.push(...prices);
         await logger.info(`${config.name}: scraped ${prices.length} price(s)`);
+        scraperResults.set(config.id, 'SUCCESS');
       } catch (err) {
         await logger.error(
           `${config.name} scraping failed: ${err instanceof Error ? err.message : String(err)}`,
           config.name
         );
+        scraperResults.set(config.id, 'FAILED');
       }
     })
   ));
 
+  // Update last_scrape_at and last_scrape_status for each retailer
+  const sql = getSql();
+  for (const [retailerId, status] of scraperResults) {
+    try {
+      await sql`
+        UPDATE retailers
+        SET last_scrape_at = NOW(), last_scrape_status = ${status}
+        WHERE id = ${retailerId}
+      `;
+    } catch { /* non-critical */ }
+  }
+
   if (allPrices.length === 0) {
+    // If all scrapers failed, mark them as FAILED; if some succeeded with 0 prices, keep SUCCESS
     await logger.info('Session complete: 0 updated, 0 unmatched, 0 error(s)');
     return;
   }
 
   // ── Data Processing Phase ──────────────────────────────────────────────────
-  
+
   const { updated, unmatched, errors } = await aggregate(allPrices);
 
   // Auto-map any new unmatched listings using the DNA matcher.

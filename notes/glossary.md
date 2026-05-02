@@ -96,7 +96,7 @@ Key terms used throughout the PC Builder Maroc codebase and documentation.
 
 **scraper_mappings** — The table linking retailer product URLs to catalog components. When the aggregator finds a URL in this table, it knows which component to update. When it doesn't, the product goes to `unmatched_listings`.
 
-**ScrapedPrice** — The interface returned by all scrapers. Contains `retailer_id`, `price`, `in_stock`, `product_url`, and `name` (the raw scraped product title used for DNA matching).
+**ScrapedPrice** — The interface returned by all scrapers. Contains `retailer_id`, `price`, `in_stock`, `product_url`, and `product_name` (the optional raw scraped product title used for DNA matching and unmatched listings).
 
 **slug** — A URL-safe identifier derived from brand + name. Example: `amd-ryzen-7-7700x`. Unique across all components. Used in frontend URLs.
 

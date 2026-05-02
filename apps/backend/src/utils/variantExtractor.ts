@@ -19,15 +19,15 @@ const GPU_AIB_PARTNERS = [
 ];
 
 const GPU_MODEL_TIERS: Record<string, string[]> = {
-  Sapphire:   ['Nitro+', 'Pulse', 'Pure'],
-  ASUS:       ['ROG Strix', 'TUF Gaming', 'Dual', 'Prime', 'ProArt'],
-  MSI:        ['Gaming X Trio', 'Gaming X', 'Gaming', 'Ventus 3X', 'Ventus 2X', 'Ventus', 'Mech', 'Shadow'],
-  Gigabyte:   ['Aorus Master', 'Aorus Elite', 'Aorus', 'Gaming OC', 'Eagle OC', 'Eagle', 'Windforce OC', 'Windforce'],
-  Palit:      ['GameRock', 'GamingPro', 'Dual', 'StormX'],
-  Zotac:      ['AMP Extreme', 'AMP Holo', 'AMP', 'Twin Edge OC', 'Twin Edge'],
+  Sapphire: ['Nitro+', 'Pulse', 'Pure'],
+  ASUS: ['ROG Strix', 'TUF Gaming', 'Dual', 'Prime', 'ProArt'],
+  MSI: ['Gaming X Trio', 'Gaming X', 'Gaming', 'Ventus 3X', 'Ventus 2X', 'Ventus', 'Mech', 'Shadow'],
+  Gigabyte: ['Aorus Master', 'Aorus Elite', 'Aorus', 'Gaming OC', 'Eagle OC', 'Eagle', 'Windforce OC', 'Windforce'],
+  Palit: ['GameRock', 'GamingPro', 'Dual', 'StormX'],
+  Zotac: ['AMP Extreme', 'AMP Holo', 'AMP', 'Twin Edge OC', 'Twin Edge'],
   PowerColor: ['Red Devil', 'Red Dragon', 'Fighter'],
-  XFX:        ['Speedster MERC', 'Speedster SWFT', 'Speedster Swift', 'Qick'],
-  PNY:        ['XLR8 Gaming Verto', 'XLR8', 'Verto'],
+  XFX: ['Speedster MERC', 'Speedster SWFT', 'Speedster Swift', 'Qick'],
+  PNY: ['XLR8 Gaming Verto', 'XLR8', 'Verto'],
 };
 
 export interface GpuVariantDetails {
@@ -38,7 +38,7 @@ export interface GpuVariantDetails {
   vram_gb?: number;
 }
 
-export function extractGpuVariant(productName: string): { label: string; details: GpuVariantDetails } {
+export function extractGpuVariant(productName: string, description?: string): { label: string; details: GpuVariantDetails } {
   const details: GpuVariantDetails = {};
   const n = productName;
 
@@ -60,8 +60,12 @@ export function extractGpuVariant(productName: string): { label: string; details
     }
   }
 
-  // Detect VRAM
-  const vramMatch = n.match(/\b(\d+)\s*[Gg][Bb]\b/);
+  // Detect VRAM — handles: 24GB, 24G, 24Go, 24 GB, 24 Go, 24GDDR6
+  // Bare "G" suffix only matched when followed by word boundary or GDDR to avoid
+  // false positives on words like "Gaming".
+  // Falls back to description when name doesn't contain VRAM.
+  const vramRegex = /\b(\d+)\s*(?:gb|go|g(?:ddr|\b))/i;
+  const vramMatch = n.match(vramRegex) ?? (description ? description.match(vramRegex) : null);
   if (vramMatch) details.vram_gb = parseInt(vramMatch[1]);
 
   // Build label
@@ -311,19 +315,20 @@ export interface VariantInfo {
 /**
  * Extracts variant label and details from a scraped product name,
  * dispatching to the appropriate category-specific extractor.
+ * Falls back to description when the name lacks detail (e.g. VRAM size).
  */
-export function extractVariant(productName: string, category: string): VariantInfo {
+export function extractVariant(productName: string, category: string, description?: string): VariantInfo {
   if (!productName) return { label: '', details: {} };
 
   switch (category) {
-    case 'gpu':         return extractGpuVariant(productName);
-    case 'cpu':         return extractCpuVariant(productName);
-    case 'ram':         return extractRamVariant(productName);
-    case 'storage':     return extractStorageVariant(productName);
-    case 'psu':         return extractPsuVariant(productName);
-    case 'cooling':     return extractCoolingVariant(productName);
-    case 'case':        return extractCaseVariant(productName);
+    case 'gpu': return extractGpuVariant(productName, description);
+    case 'cpu': return extractCpuVariant(productName);
+    case 'ram': return extractRamVariant(productName);
+    case 'storage': return extractStorageVariant(productName);
+    case 'psu': return extractPsuVariant(productName);
+    case 'cooling': return extractCoolingVariant(productName);
+    case 'case': return extractCaseVariant(productName);
     case 'motherboard': return extractMotherboardVariant(productName);
-    default:            return { label: '', details: {} };
+    default: return { label: '', details: {} };
   }
 }

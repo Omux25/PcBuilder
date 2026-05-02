@@ -1,6 +1,8 @@
 /**
  * InlinePrices — compact price list shown inline inside the Configurator table.
- * Replaces the old sidebar PriceComparison for the main builder page.
+ *
+ * In-stock offers are always shown.
+ * Out-of-stock offers are collapsed by default — a small toggle reveals them.
  */
 
 import { useEffect, useState } from 'react';
@@ -22,9 +24,11 @@ function getInitials(name: string) {
 export function InlinePrices({ componentId }: Props) {
   const [offers, setOffers] = useState<PriceOffer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showOos, setShowOos] = useState(false);
 
   useEffect(() => {
     setLoading(true);
+    setShowOos(false);
     getPrices(componentId)
       .then(setOffers)
       .catch(() => setOffers([]))
@@ -34,43 +38,72 @@ export function InlinePrices({ componentId }: Props) {
   if (loading) return <div className={styles.loading}>{UI.inlinePrices.loading}</div>;
   if (offers.length === 0) return <div className={styles.empty}>{UI.inlinePrices.empty}</div>;
 
-  const bestPrice = offers.find(o => o.in_stock)?.price;
+  const inStock = offers.filter(o => o.in_stock);
+  const oos = offers.filter(o => !o.in_stock);
+  const visible = showOos ? offers : inStock;
+  const bestPrice = inStock[0]?.price;
 
   return (
     <div className={styles.container}>
       <div className={styles.listHeader}>
-        <span className={styles.count}>{UI.inlinePrices.offerCount(offers.length)}</span>
+        <span className={styles.count}>
+          {UI.inlinePrices.offerCount(inStock.length > 0 ? inStock.length : offers.length)}
+        </span>
       </div>
-      <div className={styles.list}>
-        {offers.map(offer => {
-          const isBest = offer.in_stock && offer.price === bestPrice;
-          return (
-            <div
-              key={offer.product_url}
-              className={`${styles.row} ${isBest ? styles.best : ''} ${!offer.in_stock ? styles.oos : ''}`}
-            >
-              <div className={styles.retailer}>
-                <div className={styles.avatar}>{getInitials(offer.retailer_name)}</div>
-                <span className={styles.retailerName}>{offer.retailer_name}</span>
-              </div>
-              {offer.variant_label && <span className={styles.variant}>{offer.variant_label}</span>}
-              <span className={styles.price}>{offer.price.toLocaleString('fr-MA')} MAD</span>
-              <span className={offer.in_stock ? styles.inStock : styles.outOfStock}>
-                {offer.in_stock ? UI.inlinePrices.inStock : UI.inlinePrices.outOfStock}
-              </span>
-              <a
-                href={offer.product_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.buyBtn}
-                onClick={e => e.stopPropagation()}
+
+      {/* All out of stock */}
+      {inStock.length === 0 && oos.length > 0 && (
+        <div className={styles.allOos}>
+          <span className={styles.allOosText}>Aucune offre en stock</span>
+          <button className={styles.oosToggle} onClick={() => setShowOos(v => !v)}>
+            {showOos ? UI.priceComparison.hideOos : UI.priceComparison.showOos(oos.length)}
+          </button>
+        </div>
+      )}
+
+      {visible.length > 0 && (
+        <div className={styles.list}>
+          {visible.map(offer => {
+            const isBest = offer.in_stock && offer.price === bestPrice;
+            return (
+              <div
+                key={offer.product_url}
+                className={[
+                  styles.row,
+                  isBest ? styles.best : '',
+                  !offer.in_stock ? styles.oos : '',
+                ].filter(Boolean).join(' ')}
               >
-                {UI.inlinePrices.buy}
-              </a>
-            </div>
-          );
-        })}
-      </div>
+                <div className={styles.retailer}>
+                  <div className={styles.avatar}>{getInitials(offer.retailer_name)}</div>
+                  <span className={styles.retailerName}>{offer.retailer_name}</span>
+                </div>
+                {offer.variant_label && <span className={styles.variant}>{offer.variant_label}</span>}
+                <span className={styles.price}>{offer.price.toLocaleString('fr-MA')} MAD</span>
+                <span className={offer.in_stock ? styles.inStock : styles.outOfStock}>
+                  {offer.in_stock ? UI.inlinePrices.inStock : UI.inlinePrices.outOfStock}
+                </span>
+                <a
+                  href={offer.product_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.buyBtn}
+                  onClick={e => e.stopPropagation()}
+                >
+                  {UI.inlinePrices.buy}
+                </a>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Toggle when there are both in-stock and OOS */}
+      {inStock.length > 0 && oos.length > 0 && (
+        <button className={styles.oosToggle} onClick={() => setShowOos(v => !v)}>
+          {showOos ? UI.priceComparison.hideOos : UI.priceComparison.showOos(oos.length)}
+        </button>
+      )}
     </div>
   );
 }

@@ -16,7 +16,11 @@ RUN bun run build
 
 # ── STAGE 3: Backend Runtime ──────────────────────────────────────────────────
 FROM oven/bun:1.3-alpine AS base
-WORKDIR /app
+
+# Mirror the monorepo layout so tsconfig path aliases resolve correctly.
+# tsconfig.json maps "@shared/*" → "../../shared/*" relative to apps/backend/.
+# With WORKDIR=/app/apps/backend, "../../shared" resolves to /app/shared — present below.
+WORKDIR /app/apps/backend
 
 # Install backend dependencies
 COPY apps/backend/package.json apps/backend/bun.lock ./
@@ -27,8 +31,14 @@ COPY apps/backend/src/ ./src/
 COPY apps/backend/scraper/ ./scraper/
 COPY apps/backend/tsconfig.json ./
 
+# Copy shared utilities — resolves to ../../shared from WORKDIR = /app/shared
+COPY shared/ /app/shared/
+
 # Copy built frontend assets from previous stages
-# These are used when SERVE_STATIC=true
+# These are used when SERVE_STATIC=true.
+# Paths are relative to WORKDIR (/app/apps/backend) to match app.ts serveStatic paths:
+#   './admin/dist'   → /app/apps/backend/admin/dist
+#   './frontend/dist' → /app/apps/backend/frontend/dist
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 COPY --from=admin-builder /app/admin/dist ./admin/dist
 
