@@ -115,6 +115,9 @@ export const createAdminRetailer = (data: Record<string, unknown>) =>
 export const updateAdminRetailer = (id: number, data: Record<string, unknown>) =>
   request<AdminRetailer>(`/admin/retailers/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 
+export const hardDeleteRetailer = (id: number) =>
+  request<{ message: string }>(`/admin/retailers/${id}/hard`, { method: 'DELETE' });
+
 // ── Scrapers ──────────────────────────────────────────────────────────────────
 
 export const runAllScrapers = () =>

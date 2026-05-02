@@ -14,6 +14,7 @@ import { authMiddleware } from '../../middleware/auth.js';
 import { getRetailers, getRetailerById, createRetailer, updateRetailer } from '../../services/retailerService.js';
 import { logActivity } from '../../services/adminService.js';
 import { AppError } from '../../utils/errors.js';
+import { getSql } from '../../db/index.js';
 import type { AdminEnv } from './types.js';
 import { parseId } from './types.js';
 
@@ -127,6 +128,41 @@ adminRetailersRouter.delete('/:id', async (c) => {
     }
     throw err;
   }
+});
+
+// DELETE /api/admin/retailers/:id/hard — hard delete (removes all data)
+// Permanently deletes the retailer and all associated prices, mappings, and logs.
+// Only allowed on inactive retailers to prevent accidental deletion.
+adminRetailersRouter.delete('/:id/hard', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (id === null) {
+    return c.json({ error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } }, 400);
+  }
+
+  const admin = c.get('admin') as { id: number } | undefined;
+  const sql = getSql();
+
+  // Only allow hard delete on inactive retailers
+  const rows = await sql`SELECT id, name, is_active FROM retailers WHERE id = ${id} LIMIT 1` as { id: number; name: string; is_active: boolean }[];
+  if (rows.length === 0) {
+    return c.json({ error: { code: 'RETAILER_NOT_FOUND', message: `Retailer ${id} not found` } }, 404);
+  }
+  if (rows[0].is_active) {
+    return c.json({ error: { code: 'RETAILER_ACTIVE', message: 'Deactivate the retailer before deleting it' } }, 409);
+  }
+
+  // Cascade delete in order: prices → scraper_mappings → scraper_logs → retailer
+  await sql`DELETE FROM prices WHERE retailer_id = ${id}`;
+  await sql`DELETE FROM scraper_mappings WHERE retailer_id = ${id}`;
+  await sql`DELETE FROM unmatched_listings WHERE retailer_id = ${id}`;
+  await sql`DELETE FROM scraper_logs WHERE site = ${rows[0].name}`;
+  await sql`DELETE FROM retailers WHERE id = ${id}`;
+
+  if (admin?.id) {
+    await logActivity(admin.id, 'retailer_deleted', 'retailer', id, { name: rows[0].name });
+  }
+
+  return c.json({ message: `Retailer ${id} permanently deleted.` });
 });
 
 export { adminRetailersRouter };
