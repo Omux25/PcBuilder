@@ -1,6 +1,22 @@
 # Database Reference
 
-All 13 application tables in the PostgreSQL database, plus the internal `_migrations` tracking table. Migration files are in `apps/backend/src/db/migrations/` (001–019).
+There are **12 application tables** in the PostgreSQL database, plus the internal `_migrations` tracking table. Migration files are in `apps/backend/src/db/migrations/` (001–019).
+
+The 12 tables are:
+1. `components` — all PC components (polymorphic)
+2. `retailers` — Moroccan e-commerce sites
+3. `prices` — current price offers per (component, retailer, product URL)
+4. `scraper_logs` — structured log entries from the scraping system
+5. `admins` — admin user accounts
+6. `scraper_mappings` — links retailer product URLs to catalog components
+7. `price_history` — append-only price change log
+8. `preset_builds` — curated PC build configurations
+9. `preset_build_components` — components within each preset build
+10. `unmatched_listings` — scraped products that couldn't be matched
+11. `admin_activity_log` — audit trail of all admin actions
+12. `refresh_tokens` — hashed refresh tokens for admin auth
+
+> **Note for future agents:** The count is 12, not 13. `preset_builds` (Table 8) and `preset_build_components` (Table 9) are two separate tables — both are already included in the 12. Do not change this number without running `grep -r "CREATE TABLE" apps/backend/src/db/migrations/` to verify.
 
 ---
 

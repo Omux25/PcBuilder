@@ -8,7 +8,7 @@ This guide explains the key concepts and domain terms used throughout the codeba
 
 ## Compatibility rules
 
-The compatibility engine (`apps/backend/src/services/compatibilityService.ts`) validates a PC build against 8 rules. Rules only fire when both required components are present.
+The compatibility engine (`apps/backend/src/services/compatibilityService.ts`) validates a PC build against 7 rules. Rules only fire when both required components are present.
 
 | Rule | Type | Components | Condition |
 |---|---|---|---|
@@ -18,8 +18,11 @@ The compatibility engine (`apps/backend/src/services/compatibilityService.ts`) v
 | `gpu_too_long` | Error | GPU + Case | `gpu.length_mm > case.max_gpu_length_mm` |
 | `form_factor_mismatch` | Error | Motherboard + Case | `motherboard.form_factor` not in `case.supported_motherboards` |
 | `cooler_too_tall` | Error | Cooling + Case | `cooling.height_mm > case.max_cooler_height_mm` |
-| TDP calculation | Always | All components | `total_tdp = sum of all component TDPs` |
 | `psu_underpowered` | Warning | PSU | `psu.wattage < ceil(total_tdp × 1.5)` |
+
+The first 6 rules are declarative entries in the `RULES` array. `psu_underpowered` is a calculated check that runs after the TDP sum — it's treated as a rule from the user's perspective but implemented separately.
+
+TDP is always calculated (not a rule): `total_tdp = sum of all component TDPs`, `recommended_psu_wattage = ceil(total_tdp × 1.5)`.
 
 **Errors** = build physically cannot work. **Warnings** = build works but not optimally.
 

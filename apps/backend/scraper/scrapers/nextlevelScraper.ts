@@ -130,7 +130,6 @@ export class NextLevelScraper extends BaseScraper {
       const in_stock = badgeText === 'EN STOCK';
 
       prices.push({
-        component_id: 0,
         retailer_id: RETAILER_ID,
         price,
         in_stock,

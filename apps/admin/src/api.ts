@@ -14,11 +14,10 @@ import {
 export type AdminComponent = Component;
 export type { LogEntry, UnmatchedListing, AdminRetailer, DashboardData, PresetBuild as AdminPreset };
 
-import { createRequest } from '@shared/api-client';
+import { createRequest, type RequestOptions } from '@shared/api-client';
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
 const baseRequest = createRequest(BASE);
-
 
 let accessToken: string | null = null;
 
@@ -30,7 +29,7 @@ export function getAccessToken(): string | null {
   return accessToken;
 }
 
-async function request<T>(path: string, options: any = {}, retry = true): Promise<T> {
+async function request<T>(path: string, options: RequestOptions = {}, retry = true): Promise<T> {
   try {
     return await baseRequest<T>(path, {
       ...options,

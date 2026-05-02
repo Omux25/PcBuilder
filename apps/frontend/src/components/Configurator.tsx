@@ -18,6 +18,7 @@ import { CATEGORY_LABELS, CATEGORY_ORDER, RULE_LABELS } from '../types';
 import { validateBuild } from '../api';
 import { useBuild } from '../context/BuildContext';
 import { calculateBuildTotalPrice } from '../utils/buildUtils';
+import { UI } from '../ui-strings';
 import styles from './Configurator.module.css';
 
 export function Configurator() {
@@ -60,10 +61,10 @@ export function Configurator() {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <h2 className={styles.title}>Configurateur</h2>
+          <h2 className={styles.title}>{UI.configurator.title}</h2>
           {compat && (
             <span className={`${styles.badge} ${compat.compatible ? styles.badgeOk : styles.badgeFail}`}>
-              {compat.compatible ? '✓ Compatible' : '✗ Problèmes'}
+              {compat.compatible ? UI.configurator.compatible : UI.configurator.incompatible}
             </span>
           )}
         </div>
@@ -72,7 +73,7 @@ export function Configurator() {
           onClick={() => { setBuild({}); setExpandedCat(null); }}
           disabled={!hasComponents}
         >
-          Réinitialiser
+          {UI.configurator.reset}
         </button>
       </div>
 
@@ -149,7 +150,7 @@ export function Configurator() {
           {hasComponents && (
             <tfoot>
               <tr className={styles.totalRow}>
-                <td colSpan={2} className={styles.totalLabel}>Total estimé</td>
+                <td colSpan={2} className={styles.totalLabel}>{UI.configurator.totalLabel}</td>
                 <td className={styles.totalVal}>
                   {totalPrice > 0 ? `${totalPrice.toLocaleString('fr-MA')} MAD` : '—'}
                 </td>
@@ -182,10 +183,10 @@ export function Configurator() {
 
       {compat && compat.compatible && compat.errors.length === 0 && compat.warnings.length === 0 && (
         <div className={styles.compatOk}>
-          <span>✓ Tous les composants sont compatibles</span>
+          <span>{UI.configurator.allCompatible}</span>
           {compat.total_tdp > 0 && (
             <span className={styles.tdpInfo}>
-              TDP : {compat.total_tdp}W · PSU recommandé : {compat.recommended_psu_wattage}W
+              {UI.configurator.tdpInfo(compat.total_tdp, compat.recommended_psu_wattage)}
             </span>
           )}
         </div>

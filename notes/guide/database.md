@@ -8,7 +8,7 @@ This guide explains the database design decisions and how to work with the schem
 
 ## Schema overview
 
-19 migrations, 13 tables. All migrations are in `apps/backend/src/db/migrations/` numbered 001–019.
+19 migrations, 12 tables. All migrations are in `apps/backend/src/db/migrations/` numbered 001–019.
 
 Run all migrations:
 ```powershell
@@ -23,9 +23,9 @@ The `components` table is polymorphic — all 8 categories share one table. Cate
 
 | Category | Required columns | Optional columns |
 |---|---|---|
-| `cpu` | `socket` | `tdp` |
+| `cpu` | `socket` | `tdp`, `benchmark_score` |
 | `motherboard` | `socket`, `supported_ram_types`, `max_ram_frequency` | `tdp`, `form_factor` |
-| `gpu` | `length_mm` | `tdp` |
+| `gpu` | `length_mm` | `tdp`, `benchmark_score` |
 | `ram` | `ram_type`, `frequency_mhz` | `tdp` |
 | `storage` | — | `tdp` |
 | `psu` | `wattage` | — |

@@ -9,42 +9,33 @@ import { GitCompare, X, Trash2 } from 'lucide-react';
 import { useCompare } from '../context/CompareContext';
 import { getComponentById } from '../api';
 import type { Component } from '../types';
+import { UI } from '../ui-strings';
 import styles from './CompareTray.module.css';
 
 export function CompareTray() {
   const { compareIds, removeFromCompare, clearCompare } = useCompare();
-  const [items, setItems] = useState<Component[]>([]);
+  const [items, setItems]   = useState<Component[]>([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (compareIds.length === 0) {
-      setItems([]);
-      return;
-    }
-
+    if (compareIds.length === 0) { setItems([]); return; }
     setLoading(true);
-    Promise.all(
-      compareIds.map(id => getComponentById(id).catch(() => null))
-    ).then(results => {
-      setItems(results.filter((c): c is Component => c !== null));
-    }).finally(() => setLoading(false));
+    Promise.all(compareIds.map(id => getComponentById(id).catch(() => null)))
+      .then(results => setItems(results.filter((c): c is Component => c !== null)))
+      .finally(() => setLoading(false));
   }, [compareIds]);
 
   if (compareIds.length === 0) return null;
-
-  function handleGoToCompare() {
-    navigate(`/compare?ids=${compareIds.join(',')}`);
-  }
 
   return (
     <div className={styles.tray}>
       <div className={styles.header}>
         <div className={styles.title}>
           <GitCompare size={16} />
-          <span>Comparaison ({compareIds.length})</span>
+          <span>{UI.compareTray.title(compareIds.length)}</span>
         </div>
-        <button className={styles.clearBtn} onClick={clearCompare} title="Tout effacer">
+        <button className={styles.clearBtn} onClick={clearCompare} title={UI.compareTray.clearTitle}>
           <Trash2 size={14} />
         </button>
       </div>
@@ -55,11 +46,7 @@ export function CompareTray() {
             <div className={styles.itemInfo}>
               <span className={styles.itemName} title={item.name}>{item.name}</span>
             </div>
-            <button
-              className={styles.removeItem}
-              onClick={() => removeFromCompare(item.id)}
-              title="Retirer"
-            >
+            <button className={styles.removeItem} onClick={() => removeFromCompare(item.id)} title={UI.compareTray.removeTitle}>
               <X size={12} />
             </button>
           </div>
@@ -72,10 +59,10 @@ export function CompareTray() {
       <div className={styles.footer}>
         <button
           className={styles.compareBtn}
-          onClick={handleGoToCompare}
+          onClick={() => navigate(`/compare?ids=${compareIds.join(',')}`)}
           disabled={compareIds.length < 2}
         >
-          Comparer maintenant
+          {UI.compareTray.compareNow}
         </button>
       </div>
     </div>

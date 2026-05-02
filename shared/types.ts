@@ -127,6 +127,7 @@ export interface AdminRetailer {
 export interface DashboardData {
   stats: {
     total_components: number;
+    components_by_category: Record<string, number>;
     active_retailers: number;
     total_retailers: number;
     total_price_records: number;

@@ -22,6 +22,7 @@ import type { Component, ComponentCategory } from '../types';
 import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
 import { useBuild } from '../context/BuildContext';
 import { useCompare } from '../context/CompareContext';
+import { UI } from '../ui-strings';
 import styles from './CategoryBrowse.module.css';
 
 const LIMIT = 24;
@@ -168,8 +169,8 @@ export function CategoryBrowse() {
   if (!isValidCategory) {
     return (
       <div className={styles.error}>
-        <p>Catégorie inconnue : {category}</p>
-        <Link to="/" className={styles.back}>← Retour</Link>
+        <p>{UI.browse.unknownCategory(category ?? '')}</p>
+        <Link to="/" className={styles.back}>{UI.browse.back}</Link>
       </div>
     );
   }
@@ -178,9 +179,9 @@ export function CategoryBrowse() {
     <div className={styles.page}>
       {/* ── Breadcrumb ──────────────────────────────────────────────────── */}
       <nav className={styles.breadcrumb}>
-        <Link to="/" className={styles.breadcrumbLink}>Accueil</Link>
+        <Link to="/" className={styles.breadcrumbLink}>{UI.browse.home}</Link>
         <span className={styles.breadcrumbSep}>›</span>
-        <Link to="/components" className={styles.breadcrumbLink}>Composants</Link>
+        <Link to="/components" className={styles.breadcrumbLink}>{UI.browse.components}</Link>
         <span className={styles.breadcrumbSep}>›</span>
         <span className={styles.breadcrumbCurrent}>{CATEGORY_LABELS[cat]}</span>
       </nav>
@@ -223,7 +224,7 @@ export function CategoryBrowse() {
           <input
             type="search"
             className={styles.searchInput}
-            placeholder={`Rechercher ${CATEGORY_LABELS[cat].toLowerCase()}…`}
+            placeholder={UI.browse.searchPlaceholder(CATEGORY_LABELS[cat].toLowerCase())}
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -240,7 +241,7 @@ export function CategoryBrowse() {
           onClick={() => setShowFilters(v => !v)}
         >
           <SlidersHorizontal size={15} />
-          Filtres
+          {UI.browse.filters}
           {activeFilters > 0 && <span className={styles.filterCount}>{activeFilters}</span>}
         </button>
 
@@ -251,7 +252,7 @@ export function CategoryBrowse() {
             checked={inStockOnly}
             onChange={e => setInStockOnly(e.target.checked)}
           />
-          <span>En stock</span>
+          <span>{UI.browse.inStockOnly}</span>
         </label>
 
         {/* Sort */}
@@ -276,13 +277,9 @@ export function CategoryBrowse() {
             {/* Brand */}
             {brands.length > 0 && (
               <div className={styles.filterGroup}>
-                <label className={styles.filterLabel}>Marque</label>
-                <select
-                  className={styles.filterSelect}
-                  value={brand}
-                  onChange={e => setBrand(e.target.value)}
-                >
-                  <option value="">Toutes les marques</option>
+                <label className={styles.filterLabel}>{UI.browse.filterBrand}</label>
+                <select className={styles.filterSelect} value={brand} onChange={e => setBrand(e.target.value)}>
+                  <option value="">{UI.browse.filterAllBrands}</option>
                   {brands.map(b => <option key={b} value={b}>{b}</option>)}
                 </select>
               </div>
@@ -291,13 +288,9 @@ export function CategoryBrowse() {
             {/* Socket (CPU / Motherboard) */}
             {SOCKET_CATEGORIES.has(cat) && sockets.length > 0 && (
               <div className={styles.filterGroup}>
-                <label className={styles.filterLabel}>Socket</label>
-                <select
-                  className={styles.filterSelect}
-                  value={socket}
-                  onChange={e => setSocket(e.target.value)}
-                >
-                  <option value="">Tous les sockets</option>
+                <label className={styles.filterLabel}>{UI.browse.filterSocket}</label>
+                <select className={styles.filterSelect} value={socket} onChange={e => setSocket(e.target.value)}>
+                  <option value="">{UI.browse.filterAllSockets}</option>
                   {sockets.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
@@ -306,13 +299,9 @@ export function CategoryBrowse() {
             {/* RAM type (RAM / Motherboard) */}
             {RAM_TYPE_CATEGORIES.has(cat) && (
               <div className={styles.filterGroup}>
-                <label className={styles.filterLabel}>Type de RAM</label>
-                <select
-                  className={styles.filterSelect}
-                  value={ramType}
-                  onChange={e => setRamType(e.target.value)}
-                >
-                  <option value="">DDR4 + DDR5</option>
+                <label className={styles.filterLabel}>{UI.browse.filterRamType}</label>
+                <select className={styles.filterSelect} value={ramType} onChange={e => setRamType(e.target.value)}>
+                  <option value="">{UI.browse.filterAllRam}</option>
                   <option value="DDR4">DDR4</option>
                   <option value="DDR5">DDR5</option>
                 </select>
@@ -321,32 +310,18 @@ export function CategoryBrowse() {
 
             {/* Price range */}
             <div className={styles.filterGroup}>
-              <label className={styles.filterLabel}>Prix (MAD)</label>
+              <label className={styles.filterLabel}>{UI.browse.filterPrice}</label>
               <div className={styles.priceRange}>
-                <input
-                  type="number"
-                  className={styles.priceInput}
-                  placeholder="Min"
-                  value={minPrice}
-                  min={0}
-                  onChange={e => setMinPrice(e.target.value)}
-                />
+                <input type="number" className={styles.priceInput} placeholder={UI.browse.filterPriceMin} value={minPrice} min={0} onChange={e => setMinPrice(e.target.value)} />
                 <span className={styles.priceSep}>–</span>
-                <input
-                  type="number"
-                  className={styles.priceInput}
-                  placeholder="Max"
-                  value={maxPrice}
-                  min={0}
-                  onChange={e => setMaxPrice(e.target.value)}
-                />
+                <input type="number" className={styles.priceInput} placeholder={UI.browse.filterPriceMax} value={maxPrice} min={0} onChange={e => setMaxPrice(e.target.value)} />
               </div>
             </div>
           </div>
 
           {activeFilters > 0 && (
             <button className={styles.clearFiltersBtn} onClick={clearFilters}>
-              <X size={13} /> Effacer les filtres
+              <X size={13} /> {UI.browse.clearFilters}
             </button>
           )}
         </div>
@@ -368,10 +343,10 @@ export function CategoryBrowse() {
         </div>
       ) : components.length === 0 ? (
         <div className={styles.empty}>
-          <p>Aucun composant trouvé.</p>
+          <p>{UI.browse.noResults}</p>
           {(search || activeFilters > 0) && (
             <button className={styles.clearFiltersBtn} onClick={() => { setSearch(''); clearFilters(); }}>
-              Effacer la recherche et les filtres
+              {UI.browse.clearAll}
             </button>
           )}
         </div>
@@ -422,7 +397,7 @@ export function CategoryBrowse() {
             <ChevronRight size={16} />
           </button>
           <span className={styles.pageInfo}>
-            {(page - 1) * LIMIT + 1}–{Math.min(page * LIMIT, total)} sur {total}
+            {UI.browse.paginationOf((page - 1) * LIMIT + 1, Math.min(page * LIMIT, total), total)}
           </span>
         </div>
       )}
@@ -454,7 +429,7 @@ function ComponentCard({
         {component.brand && (
           <span className={styles.cardBrand}>{component.brand}</span>
         )}
-        {inBuild && <span className={styles.inBuildBadge}>Dans la config</span>}
+        {inBuild && <span className={styles.inBuildBadge}>{UI.browse.inBuildBadge}</span>}
       </div>
 
       {/* Name */}
@@ -481,11 +456,11 @@ function ComponentCard({
                 {component.lowest_price!.toLocaleString('fr-MA')} MAD
               </span>
               <span className={component.in_stock ? styles.inStock : styles.outStock}>
-                {component.in_stock ? 'En stock' : 'Rupture'}
+                {component.in_stock ? UI.browse.inStock : UI.browse.outOfStock}
               </span>
             </>
           ) : (
-            <span className={styles.noPrice}>Prix non disponible</span>
+            <span className={styles.noPrice}>{UI.browse.noPrice}</span>
           )}
         </div>
         <div className={styles.cardActions}>
@@ -510,9 +485,9 @@ function ComponentCard({
           <button
             className={`${styles.addBtn} ${inBuild ? styles.addBtnActive : ''}`}
             onClick={onAddToBuild}
-            title={inBuild ? 'Déjà dans la configuration' : 'Ajouter à la configuration'}
+            title={inBuild ? UI.browse.addedToConfig : UI.browse.addToConfig}
           >
-            {inBuild ? '✓ Ajouté' : '+ Config'}
+            {inBuild ? UI.browse.addedToConfig : UI.browse.addToConfig}
           </button>
         </div>
       </div>

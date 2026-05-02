@@ -17,7 +17,7 @@ If you're new to the project, read in this order:
 1. [What the platform does and how it's built](features/compatibility-engine.md) — start with the core feature
 2. [How to run everything locally](reference/dev-setup.md) — get the stack running
 3. [API reference](reference/api.md) — all endpoints in one place
-4. [Database schema](reference/database.md) — all 13 tables explained
+4. [Database schema](reference/database.md) — all 12 tables explained
 
 ---
 
@@ -39,7 +39,7 @@ How each major feature works — the what, why, and how.
 
 | File | What it covers |
 |---|---|
-| [features/compatibility-engine.md](features/compatibility-engine.md) | The 8 compatibility rules, how errors vs warnings work, TDP calculation |
+| [features/compatibility-engine.md](features/compatibility-engine.md) | The 7 compatibility rules, how errors vs warnings work, TDP calculation |
 | [features/price-comparison.md](features/price-comparison.md) | Price offers, variant model, price history, how the scraper feeds the UI |
 | [features/scraping-system.md](features/scraping-system.md) | How scrapers work, the DNA matcher, aggregator, scheduler |
 | [features/authentication.md](features/authentication.md) | JWT access tokens, refresh tokens, rate limiting, bcrypt |
@@ -55,7 +55,7 @@ Precise technical reference — look things up here.
 | File | What it covers |
 |---|---|
 | [reference/api.md](reference/api.md) | Every API route — method, URL, params, response shape |
-| [reference/database.md](reference/database.md) | All 13 tables, columns, constraints, indexes |
+| [reference/database.md](reference/database.md) | All 12 tables, columns, constraints, indexes |
 | [reference/dev-setup.md](reference/dev-setup.md) | Prerequisites, migrations, running the stack, running tests |
 | [reference/stack.md](reference/stack.md) | Every technology choice and why it was made |
 

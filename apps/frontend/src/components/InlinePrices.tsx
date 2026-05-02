@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import { getPrices } from '../api';
 import type { PriceOffer } from '../types';
+import { UI } from '../ui-strings';
 import styles from './InlinePrices.module.css';
 
 interface Props {
@@ -30,25 +31,18 @@ export function InlinePrices({ componentId }: Props) {
       .finally(() => setLoading(false));
   }, [componentId]);
 
-  if (loading) {
-    return <div className={styles.loading}>Chargement des prix…</div>;
-  }
-
-  if (offers.length === 0) {
-    return <div className={styles.empty}>Aucun prix disponible.</div>;
-  }
+  if (loading) return <div className={styles.loading}>{UI.inlinePrices.loading}</div>;
+  if (offers.length === 0) return <div className={styles.empty}>{UI.inlinePrices.empty}</div>;
 
   const bestPrice = offers.find(o => o.in_stock)?.price;
 
   return (
     <div className={styles.container}>
       <div className={styles.listHeader}>
-        <span className={styles.count}>
-          {offers.length} offre{offers.length > 1 ? 's' : ''}
-        </span>
+        <span className={styles.count}>{UI.inlinePrices.offerCount(offers.length)}</span>
       </div>
       <div className={styles.list}>
-        {offers.map((offer) => {
+        {offers.map(offer => {
           const isBest = offer.in_stock && offer.price === bestPrice;
           return (
             <div
@@ -59,23 +53,19 @@ export function InlinePrices({ componentId }: Props) {
                 <div className={styles.avatar}>{getInitials(offer.retailer_name)}</div>
                 <span className={styles.retailerName}>{offer.retailer_name}</span>
               </div>
-              {offer.variant_label && (
-                <span className={styles.variant}>{offer.variant_label}</span>
-              )}
-              <span className={styles.price}>
-                {offer.price.toLocaleString('fr-MA')} MAD
-              </span>
+              {offer.variant_label && <span className={styles.variant}>{offer.variant_label}</span>}
+              <span className={styles.price}>{offer.price.toLocaleString('fr-MA')} MAD</span>
               <span className={offer.in_stock ? styles.inStock : styles.outOfStock}>
-                {offer.in_stock ? 'En stock' : 'Épuisé'}
+                {offer.in_stock ? UI.inlinePrices.inStock : UI.inlinePrices.outOfStock}
               </span>
               <a
                 href={offer.product_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.buyBtn}
-                onClick={(e) => e.stopPropagation()}
+                onClick={e => e.stopPropagation()}
               >
-                Acheter →
+                {UI.inlinePrices.buy}
               </a>
             </div>
           );

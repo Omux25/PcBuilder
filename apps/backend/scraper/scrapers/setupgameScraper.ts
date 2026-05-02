@@ -128,7 +128,6 @@ export class SetupGameScraper {
         const in_stock = product.is_in_stock;
 
         prices.push({
-          component_id: 0,
           retailer_id: RETAILER_ID,
           price,
           in_stock,

@@ -9,7 +9,7 @@
 | Area | Status |
 |---|---|
 | Backend API (all routes) | ✅ Done |
-| Compatibility engine (8 rules) | ✅ Done |
+| Compatibility engine (7 rules) | ✅ Done |
 | Scraping system (3 real retailers) | ✅ Done |
 | DNA-based component matcher | ✅ Done |
 | Variant model (prices per product URL) | ✅ Done |
@@ -128,7 +128,7 @@ All critical and high-priority issues from the improvement report resolved:
 - `marketTrends.ts` NaN guard: non-numeric `?days=` or `?limit=` params now fall back to defaults instead of passing `NaN` to SQL
 - Bulk import now coerces `supported_motherboards` from pipe-separated CSV strings (same as `supported_ram_types`)
 - Pinned `zod`, `undici`, `papaparse` to exact versions in `package.json`
-- `notes/reference/database.md` intro corrected: "12 tables" → "13 tables"
+- `notes/reference/database.md` intro verified: 12 application tables (confirmed by counting all `CREATE TABLE` statements across migrations 001–019)
 - `notes/reference/api.md` bulk import response shape corrected: added `total_rows`, `errors` is now array of objects
 
 ### Phase 15 — Codebase Audit Round 8 (May 2026)
@@ -147,3 +147,50 @@ All critical and high-priority issues from the improvement report resolved:
 
 - Presets page in the frontend (deferred — needs more scraper data first)
 - Redis-backed rate limiting for production (current in-memory limiter resets on server restart — acceptable for single-process deployment)
+
+---
+
+### Phase 16 — Codebase Audit Round 9 (May 2026)
+
+- Fixed smart-search price query scope: was fetching prices for all components in a category, now scoped to only the IDs returned by the search using `= ANY(ARRAY[...]::int[])`
+- Added pagination to `GET /api/admin/unmatched-listings`: replaced hardcoded `LIMIT 200` with `page`/`limit` params (default 50, max 200), `COUNT(*) OVER()` for total, and `X-Total-Count` response header
+- Added `components_by_category` to the shared `DashboardData` type — was computed by the backend but missing from the type definition
+- Removed `any` type from `shared/api-client.ts` — replaced with `unknown` and proper type narrowing
+- Capped `?ids=` batch lookup at 50 IDs to prevent unbounded DB queries
+- Wrapped refresh token rotation in a transaction (`sql.begin()`) — prevents session loss if server crashes between DELETE and INSERT
+- Removed dead `specs` fallback in `extractComponentFields` — all fields are at the top level per the Zod schemas; the `specs` JSONB is for display only
+- Migrated `scheduler.ts` to use `getSql()` from the DI layer instead of importing `bunSql` directly — consistent with all other files
+- Added detailed comment to `aggregator.ts` explaining why the dual `bunSql`/`getSql()` pattern exists (Bun.sql array parameter limitation)
+- Added clarifying comment to `DELETE /api/admin/retailers/:id` explaining it is a soft-delete
+- Updated `notes/reference/api.md`: unmatched listings pagination params, dashboard response includes `components_by_category`
+
+---
+
+### Phase 17 — Optional Polish (May 2026)
+
+- Removed vestigial `component_id` field from `ScrapedPrice` interface — it was always set to `0` by all scrapers and immediately overwritten by the aggregator from `scraper_mappings`. The type now only contains fields that are actually used.
+- Created `apps/frontend/src/ui-strings.ts` — centralized all user-facing French strings (nav labels, hero text, build actions, configurator labels, picker filters, footer) into a single typed `UI` constant. Updated `App.tsx`, `Configurator.tsx`, and `ComponentPicker.tsx` to use it.
+- Added frontend test suite (`bun test`) — 28 tests across 4 files covering `buildUrl` (encode/decode/localStorage), `buildUtils` (price calculation), `theme` (module structure), and `ui-strings` (constant completeness). Added `test` script to `apps/frontend/package.json` and `@shared/*` path resolution to `tsconfig.json`.
+- Total test count: 606 (578 backend + 28 frontend), all passing.
+
+### Phase 18 — Full UI String Centralization (May 2026)
+
+- Completed the UI string centralization started in Phase 17: all remaining French strings in pages and components now use `UI` constants from `ui-strings.ts`
+- Files updated: `CategoryBrowse.tsx`, `ComponentDetail.tsx`, `ComponentsIndex.tsx`, `Compare.tsx`, `GlobalSearch.tsx`, `MarketTrends.tsx`, `Presets.tsx`, `PriceComparison.tsx`, `InlinePrices.tsx`, `PriceHistoryChart.tsx`, `CompareTray.tsx`, `ErrorBoundary.tsx`
+- `ui-strings.ts` now covers every user-facing French string in the entire frontend — nav, hero, build actions, configurator, picker, browse, detail, compare, search, trends, presets, price panels, error boundary
+- 606 tests passing (578 backend + 28 frontend), 0 TypeScript diagnostics
+
+### Phase 19 — Codebase Audit Round 10 (May 2026)
+
+- Removed dead `CompatibilityError` and `CompatibilityWarning` interfaces from `frontend/src/types.ts` — both were unused duplicates of `CompatibilityIssue` already exported from `shared/types.ts`
+- Fixed all stale "13 tables" references across docs — the correct count is 12 (verified by `CREATE TABLE` count across all migrations); root cause was a wrong Phase 14 roadmap entry that said `"12 tables" → "13 tables"`
+- Updated `notes/reference/database.md` intro with explicit numbered list of all 12 tables and a guard note for future agents
+- Updated `notes/reference/dev-setup.md` test count: `550 pass, 39 files` → `578 pass, 41 files`
+- Fixed `notes/glossary.md`: `ScrapedPrice` entry corrected (`product_name` → `name`, removed stale `component_id` mention); `Migration` entry: `001–018` → `001–019`
+- Fixed `notes/guide/architecture.md`: `parseId()` import path clarified (imported from `admin/types.ts`, defined in `errors.ts`)
+- Fixed `notes/README.md`: compatibility engine link `8 rules` → `7 rules`
+- Fixed `notes/features/scraping-system.md`: `ScrapedPrice` code block removed stale `component_id` field
+- Fixed `notes/features/admin-panel.md`: bulk import section removed non-existent "resolve slug conflicts" UI step
+- Fixed `notes/reference/api.md`: `?ids=` param now documents the 50-ID cap and 400 error
+- Fixed `notes/guide/database.md`: added `benchmark_score` to cpu/gpu optional columns; `13 tables` → `12 tables`
+- Fixed `notes/guide/concepts.md`: clarified that 6 rules are declarative in `RULES` array, `psu_underpowered` is a separate calculated check

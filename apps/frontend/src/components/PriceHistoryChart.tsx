@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import type { PriceHistoryEntry } from '../types';
 import { Skeleton } from './Skeleton';
+import { UI } from '../ui-strings';
 import styles from './PriceHistoryChart.module.css';
 
 interface Props {
@@ -16,7 +17,6 @@ interface Props {
   loading?: boolean;
 }
 
-// Distinct colors for up to 6 retailers — using CSS variables resolved at runtime
 function getCssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
@@ -28,28 +28,20 @@ const RETAILER_COLORS = [
 
 export function PriceHistoryChart({ history, loading }: Props) {
   if (loading) {
-    return (
-      <div className={styles.chart}>
-        <Skeleton height={220} />
-      </div>
-    );
+    return <div className={styles.chart}><Skeleton height={220} /></div>;
   }
 
   if (history.length < 2) {
-    return (
-      <div className={styles.empty}>
-        L'historique des prix n'est pas encore disponible pour ce composant.
-      </div>
-    );
+    return <div className={styles.empty}>{UI.priceHistory.noData}</div>;
   }
 
-  // Group by date, pivot retailer prices into columns
-  const retailerNames = [...new Set(history.map((h) => h.retailer_name))];
+  const retailerNames = [...new Set(history.map(h => h.retailer_name))];
 
-  // Build a map: date → { retailer_name: price }
   const dateMap = new Map<string, Record<string, number>>();
   for (const entry of history) {
-    const date = new Date(entry.recorded_at).toLocaleDateString('fr-MA', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const date = new Date(entry.recorded_at).toLocaleDateString('fr-MA', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+    });
     if (!dateMap.has(date)) dateMap.set(date, {});
     dateMap.get(date)![entry.retailer_name] = entry.price;
   }
@@ -69,23 +61,19 @@ export function PriceHistoryChart({ history, loading }: Props) {
       <ResponsiveContainer width="100%" height={220}>
         <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-          <XAxis
-            dataKey="date"
-            tick={{ fill: tickColor, fontSize: 11 }}
-            tickLine={false}
-          />
+          <XAxis dataKey="date" tick={{ fill: tickColor, fontSize: 11 }} tickLine={false} />
           <YAxis
             tick={{ fill: tickColor, fontSize: 11 }}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(v) => `${v} MAD`}
+            tickFormatter={v => `${v} MAD`}
             width={75}
           />
           <Tooltip
             contentStyle={{ background: tooltipBg, border: `1px solid ${tooltipBdr}`, borderRadius: 6 }}
             labelStyle={{ color: getCssVar('--text-2'), fontSize: 12 }}
             itemStyle={{ fontSize: 12 }}
-            formatter={(value) => value != null ? [`${Number(value).toLocaleString()} MAD`] : ['-']}
+            formatter={value => value != null ? [`${Number(value).toLocaleString()} MAD`] : ['-']}
           />
           <Legend wrapperStyle={{ fontSize: 12, color: legendColor }} />
           {retailerNames.map((name, i) => (

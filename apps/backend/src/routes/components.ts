@@ -32,7 +32,9 @@ componentsRouter.get('/', async (c) => {
   if (idsParam) {
     const ids = idsParam.split(',').map(Number).filter(n => Number.isInteger(n) && n > 0);
     if (ids.length > 0) {
-      const components = await getComponentsByIds(ids);
+      // Cap at 50 to prevent unbounded DB queries
+      const capped = ids.slice(0, 50);
+      const components = await getComponentsByIds(capped);
       return c.json({ components, total: components.length });
     }
   }
@@ -86,6 +88,11 @@ componentsRouter.post('/smart-search', async (c) => {
 
   if (components.length === 0) return c.json({ components: [], total: 0 });
 
+  // Scope the price query to only the component IDs returned by the search —
+  // not all components in the category. This avoids fetching prices for hundreds
+  // of components when the search returns a small subset.
+  // We pass the IDs as a PostgreSQL array literal so Bun.sql can parameterize it safely.
+  const componentIds = components.map(comp => comp.id);
   const priceRows = await getSql()`
     SELECT
       p.component_id,
@@ -93,9 +100,7 @@ componentsRouter.post('/smart-search', async (c) => {
       MIN(p.price)                                   AS lowest_any_price,
       BOOL_OR(p.in_stock)                            AS any_in_stock
     FROM prices p
-    JOIN components c ON c.id = p.component_id
-    WHERE c.category = ${category}
-      AND c.is_active = true
+    WHERE p.component_id = ANY(${componentIds}::int[])
     GROUP BY p.component_id
   ` as { component_id: number; lowest_in_stock_price: number | null; lowest_any_price: number; any_in_stock: boolean }[];
 

@@ -13,6 +13,7 @@ import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { useCompare } from '../context/CompareContext';
 import type { Component, PriceOffer, PriceHistoryEntry, ComponentCategory } from '../types';
 import { CATEGORY_LABELS } from '../types';
+import { UI } from '../ui-strings';
 import styles from './ComponentDetail.module.css';
 
 interface Props {
@@ -84,8 +85,8 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
   if (error || !component) {
     return (
       <div className={styles.error}>
-        <p>{error ?? 'Composant introuvable'}</p>
-        <Link to="/" className={styles.back}>← Retour au configurateur</Link>
+        <p>{error ?? UI.detail.notFound}</p>
+        <Link to="/" className={styles.back}>{UI.detail.backToConfigurator}</Link>
       </div>
     );
   }
@@ -99,7 +100,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
   return (
     <div className={styles.page}>
       <Link to={`/browse/${component.category}`} className={styles.back}>
-        <ArrowLeft size={14} /> {CATEGORY_LABELS[component.category as ComponentCategory] ?? 'Retour'}
+        <ArrowLeft size={14} /> {CATEGORY_LABELS[component.category as ComponentCategory] ?? UI.detail.back}
       </Link>
 
       {/* ── Hero ──────────────────────────────────────────────────────── */}
@@ -140,12 +141,12 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
           <div className={styles.heroPriceRow}>
             {lowestPrice !== null && (
               <div className={styles.heroPrice}>
-                <span className={styles.heroPriceLabel}>À partir de</span>
+                <span className={styles.heroPriceLabel}>{UI.detail.fromPrice}</span>
                 <span className={styles.heroPriceVal}>
                   {lowestPrice.toLocaleString('fr-MA')} MAD
                 </span>
                 {inStockPrices.length > 0 && (
-                  <span className={styles.inStockBadge}>En stock</span>
+                  <span className={styles.inStockBadge}>{UI.detail.inStock}</span>
                 )}
               </div>
             )}
@@ -155,11 +156,11 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
                 className={`${styles.addToBuildBtn} ${addedToBuild ? styles.addToBuildBtnDone : ''}`}
                 onClick={handleAddToBuild}
               >
-                {addedToBuild ? '✓ Ajouté' : <><ShoppingCart size={15} /> Ajouter à la config</>}
+                {addedToBuild ? UI.detail.added : <><ShoppingCart size={15} /> {UI.detail.addToConfig}</>}
               </button>
               <button
                 className={`${styles.compareBtn} ${component && isInCompare(component.id) ? styles.compareBtnActive : ''}`}
-                title={component && isInCompare(component.id) ? 'Retirer de la comparaison' : 'Ajouter à la comparaison'}
+                title={component && isInCompare(component.id) ? UI.detail.inCompare : UI.detail.compare}
                 onClick={() => {
                   if (!component) return;
                   if (isInCompare(component.id)) {
@@ -171,7 +172,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
                 }}
               >
                 <GitCompare size={15} />
-                {component && isInCompare(component.id) ? 'Dans la comparaison' : 'Comparer'}
+                {component && isInCompare(component.id) ? UI.detail.inCompare : UI.detail.compare}
               </button>
             </div>
           </div>
@@ -183,7 +184,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
         {/* Specs */}
         {specs && Object.keys(specs).length > 0 && (
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>Spécifications</h2>
+            <h2 className={styles.cardTitle}>{UI.detail.specs}</h2>
             <table className={styles.specsTable}>
               <tbody>
                 {Object.entries(specs).map(([key, value]) => (
@@ -197,51 +198,37 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
           </section>
         )}
 
-        {/* Prices */}
         <section className={styles.card}>
-          <h2 className={styles.cardTitle}>Prix actuels</h2>
+          <h2 className={styles.cardTitle}>{UI.detail.prices}</h2>
           {prices.length === 0 ? (
-            <p className={styles.empty}>
-              Ce composant n'est disponible chez aucun revendeur référencé.
-            </p>
+            <p className={styles.empty}>{UI.detail.noRetailer}</p>
           ) : (
             <table className={styles.pricesTable}>
               <thead>
                 <tr>
-                  <th>Revendeur</th>
-                  <th>Variante</th>
-                  <th>Prix</th>
-                  <th>Stock</th>
-                  <th>Mis à jour</th>
+                  <th>{UI.detail.retailer}</th>
+                  <th>{UI.detail.variant}</th>
+                  <th>{UI.detail.price}</th>
+                  <th>{UI.detail.stock}</th>
+                  <th>{UI.detail.updated}</th>
                 </tr>
               </thead>
               <tbody>
                 {prices.map((offer, i) => (
                   <tr key={`${offer.retailer_id}-${i}`}>
                     <td>
-                      <a
-                        href={offer.product_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={styles.retailerLink}
-                      >
+                      <a href={offer.product_url} target="_blank" rel="noopener noreferrer" className={styles.retailerLink}>
                         {offer.retailer_name} ↗
                       </a>
                     </td>
-                    <td className={styles.variantCell}>
-                      {offer.variant_label ?? '—'}
-                    </td>
-                    <td className={styles.price}>
-                      {Number(offer.price).toLocaleString('fr-MA')} MAD
-                    </td>
+                    <td className={styles.variantCell}>{offer.variant_label ?? '—'}</td>
+                    <td className={styles.price}>{Number(offer.price).toLocaleString('fr-MA')} MAD</td>
                     <td>
                       <span className={offer.in_stock ? styles.inStock : styles.outStock}>
-                        {offer.in_stock ? 'En stock' : 'Rupture'}
+                        {offer.in_stock ? UI.detail.inStockBadge : UI.detail.outOfStock}
                       </span>
                     </td>
-                    <td className={styles.updated}>
-                      {new Date(offer.last_updated).toLocaleDateString('fr-MA')}
-                    </td>
+                    <td className={styles.updated}>{new Date(offer.last_updated).toLocaleDateString('fr-MA')}</td>
                   </tr>
                 ))}
               </tbody>
@@ -249,9 +236,8 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
           )}
         </section>
 
-        {/* Price history */}
         <section className={`${styles.card} ${styles.fullWidth}`}>
-          <h2 className={styles.cardTitle}>Historique des prix (30 jours)</h2>
+          <h2 className={styles.cardTitle}>{UI.detail.priceHistory}</h2>
           <PriceHistoryChart history={history} />
         </section>
       </div>
@@ -287,7 +273,7 @@ const SPEC_KEY_LABELS: Record<string, string> = {
   modular:             'Modulaire',
   form_factor:         'Format',
   max_gpu_length_mm:   'Longueur GPU max (mm)',
-  max_cpu_cooler_height_mm: 'Hauteur ventirad max (mm)',
+  max_cooler_height_mm: 'Hauteur ventirad max (mm)',
   drive_bays:          'Baies de stockage',
   supported_ram_types: 'Types RAM supportés',
   max_ram_gb:          'RAM max (Go)',

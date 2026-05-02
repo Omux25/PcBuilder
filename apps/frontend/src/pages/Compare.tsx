@@ -14,6 +14,7 @@ import { CategoryIcon } from '../components/CategoryIcon';
 import type { Component, PriceOffer, ComponentCategory } from '../types';
 import { CATEGORY_LABELS } from '../types';
 import { MAX_COMPARE } from '../context/CompareContext';
+import { UI } from '../ui-strings';
 import styles from './Compare.module.css';
 
 // Helper for external links
@@ -148,11 +149,9 @@ export function Compare() {
     <div className={styles.page}>
       {/* Header */}
       <div className={styles.pageHeader}>
-        <Link to="/" className={styles.back}>← Retour</Link>
-        <h1 className={styles.title}>Comparaison de composants</h1>
-        <p className={styles.subtitle}>
-          Comparez jusqu'à {MAX_COMPARE} composants côte à côte.
-        </p>
+        <Link to="/" className={styles.back}>{UI.compare.back}</Link>
+        <h1 className={styles.title}>{UI.compare.title}</h1>
+        <p className={styles.subtitle}>{UI.compare.subtitle(MAX_COMPARE)}</p>
       </div>
 
       {loading && <div className={styles.loadingBar} />}
@@ -162,7 +161,7 @@ export function Compare() {
         <div className={styles.summaryCard}>
           <div className={styles.summaryHeader}>
             <Zap size={18} className={styles.summaryIcon} />
-            <h2 className={styles.summaryTitle}>Duel de Performance</h2>
+            <h2 className={styles.summaryTitle}>{UI.compare.duelTitle}</h2>
           </div>
           <div className={styles.duelContent}>
             {(() => {
@@ -170,7 +169,7 @@ export function Compare() {
               const sA = a!.component.benchmark_score || 0;
               const sB = b!.component.benchmark_score || 0;
               
-              if (!sA || !sB) return <p className={styles.noDataMsg}>Données de performance insuffisantes pour un duel.</p>;
+              if (!sA || !sB) return <p className={styles.noDataMsg}>{UI.compare.noData}</p>;
               
               const winner = sA > sB ? a : b;
               const loser  = sA > sB ? b : a;
@@ -180,9 +179,9 @@ export function Compare() {
                 <div className={styles.duelVerdict}>
                   <div className={styles.verdictText}>
                     <span className={styles.winnerName}>{winner!.component.name}</span>
-                    {" est "}
+                    {' est '}
                     <span className={styles.highlightPct}>{diff}%</span>
-                    {" plus performant que "}
+                    {' plus performant que '}
                     <span className={styles.loserName}>{loser!.component.name}</span>
                   </div>
                   <div className={styles.duelBar}>
@@ -205,24 +204,17 @@ export function Compare() {
           {/* Component headers */}
           <thead>
             <tr>
-              <th className={styles.labelCol}>Spécification</th>
+              <th className={styles.labelCol}>{UI.compare.specLabel}</th>
               {items.map((item, i) => (
                 <th key={i} className={styles.componentCol}>
                   {item ? (
                     <div className={styles.componentHeader}>
                       {item.component.image_url && (
-                        <img
-                          src={item.component.image_url}
-                          alt={item.component.name}
-                          className={styles.componentImg}
-                        />
+                        <img src={item.component.image_url} alt={item.component.name} className={styles.componentImg} />
                       )}
                       <div className={styles.componentHeaderInfo}>
                         <span className={styles.componentBrand}>{item.component.brand}</span>
-                        <Link
-                          to={`/product/${item.component.slug}`}
-                          className={styles.componentName}
-                        >
+                        <Link to={`/product/${item.component.slug}`} className={styles.componentName}>
                           {item.component.name}
                         </Link>
                         <div className={styles.componentMeta}>
@@ -240,38 +232,23 @@ export function Compare() {
                             {item.lowestPrice.toLocaleString('fr-MA')} MAD
                           </div>
                         )}
-
-                        {/* External Review Links */}
                         <div className={styles.externalLinks}>
                           {getExternalLinks(item.component.name, item.component.category).map(link => (
-                            <a
-                              key={link.label}
-                              href={link.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={styles.externalLink}
-                              title={`Voir sur ${link.label}`}
-                            >
+                            <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer" className={styles.externalLink} title={`Voir sur ${link.label}`}>
                               {link.label} <ExternalLink size={10} />
                             </a>
                           ))}
                         </div>
                       </div>
-                      <button
-                        className={styles.removeBtn}
-                        onClick={() => removeComponent(i)}
-                        title="Retirer de la comparaison"
-                      >
+                      <button className={styles.removeBtn} onClick={() => removeComponent(i)} title={UI.compare.removeTitle}>
                         <X size={14} />
                       </button>
                     </div>
                   ) : (
                     <div className={styles.emptySlot}>
                       <Plus size={20} className={styles.emptySlotIcon} />
-                      <span>Ajouter un composant</span>
-                      <Link to="/components" className={styles.browseLink}>
-                        Parcourir →
-                      </Link>
+                      <span>{UI.compare.addComponent}</span>
+                      <Link to="/components" className={styles.browseLink}>{UI.compare.browse}</Link>
                     </div>
                   )}
                 </th>
@@ -280,10 +257,8 @@ export function Compare() {
                 <th className={styles.componentCol}>
                   <div className={styles.emptySlot}>
                     <Plus size={20} className={styles.emptySlotIcon} />
-                    <span>Ajouter</span>
-                    <Link to="/components" className={styles.browseLink}>
-                      Parcourir →
-                    </Link>
+                    <span>{UI.compare.add}</span>
+                    <Link to="/components" className={styles.browseLink}>{UI.compare.browse}</Link>
                   </div>
                 </th>
               )}
@@ -291,43 +266,31 @@ export function Compare() {
           </thead>
 
           <tbody>
-            {/* Price row */}
             <tr className={styles.sectionHeader}>
-              <td colSpan={1 + items.length + (canAddMore ? 1 : 0)}>Prix</td>
+              <td colSpan={1 + items.length + (canAddMore ? 1 : 0)}>{UI.compare.sectionPrice}</td>
             </tr>
             <tr>
-              <td className={styles.specLabel}>Meilleur prix</td>
+              <td className={styles.specLabel}>{UI.compare.bestPrice}</td>
               {items.map((item, i) => (
                 <td key={i} className={styles.specValue}>
-                  {item ? (
-                    item.lowestPrice !== null ? (
-                      <span className={styles.priceHighlight}>
-                        {item.lowestPrice.toLocaleString('fr-MA')} MAD
-                      </span>
-                    ) : '—'
-                  ) : '—'}
+                  {item ? (item.lowestPrice !== null ? (
+                    <span className={styles.priceHighlight}>{item.lowestPrice.toLocaleString('fr-MA')} MAD</span>
+                  ) : '—') : '—'}
                 </td>
               ))}
               {canAddMore && <td />}
             </tr>
             <tr>
-              <td className={styles.specLabel}>Offres disponibles</td>
+              <td className={styles.specLabel}>{UI.compare.offers}</td>
               {items.map((item, i) => (
                 <td key={i} className={styles.specValue}>
                   {item ? (
                     <div className={styles.offersCell}>
                       {item.prices.slice(0, 3).map(offer => (
-                        <a
-                          key={offer.product_url}
-                          href={offer.product_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`${styles.offerChip} ${!offer.in_stock ? styles.offerChipOos : ''}`}
-                        >
+                        <a key={offer.product_url} href={offer.product_url} target="_blank" rel="noopener noreferrer"
+                          className={`${styles.offerChip} ${!offer.in_stock ? styles.offerChipOos : ''}`}>
                           {offer.retailer_name}
-                          <span className={styles.offerPrice}>
-                            {Number(offer.price).toLocaleString('fr-MA')} MAD
-                          </span>
+                          <span className={styles.offerPrice}>{Number(offer.price).toLocaleString('fr-MA')} MAD</span>
                           <ExternalLink size={10} />
                         </a>
                       ))}
@@ -338,12 +301,11 @@ export function Compare() {
               {canAddMore && <td />}
             </tr>
 
-            {/* Spec rows */}
             <tr className={styles.sectionHeader}>
-              <td colSpan={1 + items.length + (canAddMore ? 1 : 0)}>Analyse de Performance</td>
+              <td colSpan={1 + items.length + (canAddMore ? 1 : 0)}>{UI.compare.sectionPerf}</td>
             </tr>
             <tr>
-              <td className={styles.specLabel}>Rapport Performance/Prix</td>
+              <td className={styles.specLabel}>{UI.compare.perfPerPrice}</td>
               {items.map((item, i) => {
                 if (!item || item.lowestPrice === null || !item.component.benchmark_score) {
                   return <td key={i} className={styles.specValue}>—</td>;
@@ -351,8 +313,8 @@ export function Compare() {
                 const value = (item.component.benchmark_score / item.lowestPrice).toFixed(2);
                 return (
                   <td key={i} className={styles.specValue}>
-                    <span className={styles.valueScore}>{value} pts / MAD</span>
-                    <div className={styles.valueSub}>Plus c'est haut, mieux c'est</div>
+                    <span className={styles.valueScore}>{value} {UI.compare.perfPerPriceUnit}</span>
+                    <div className={styles.valueSub}>{UI.compare.perfPerPriceHint}</div>
                   </td>
                 );
               })}
@@ -360,7 +322,7 @@ export function Compare() {
             </tr>
 
             <tr className={styles.sectionHeader}>
-              <td colSpan={1 + items.length + (canAddMore ? 1 : 0)}>Spécifications</td>
+              <td colSpan={1 + items.length + (canAddMore ? 1 : 0)}>{UI.compare.sectionSpecs}</td>
             </tr>
             {activeRows.map(row => {
               const bestVal = getBestValue(row);
@@ -401,19 +363,12 @@ export function Compare() {
         </table>
       </div>
 
-      {/* Empty state */}
       {filledCount === 0 && !loading && (
         <div className={styles.emptyState}>
-          <div className={styles.emptyIconWrap}>
-            <BarChart3 size={48} strokeWidth={1.5} />
-          </div>
-          <h2 className={styles.emptyTitle}>Prêt pour un duel ?</h2>
-          <p className={styles.emptyText}>
-            Ajoutez des composants depuis le catalogue pour comparer leurs caractéristiques et performances.
-          </p>
-          <Link to="/components" className={styles.browseBtn}>
-            Parcourir le catalogue
-          </Link>
+          <div className={styles.emptyIconWrap}><BarChart3 size={48} strokeWidth={1.5} /></div>
+          <h2 className={styles.emptyTitle}>{UI.compare.emptyTitle}</h2>
+          <p className={styles.emptyText}>{UI.compare.emptyText}</p>
+          <Link to="/components" className={styles.browseBtn}>{UI.compare.browseCatalog}</Link>
         </div>
       )}
     </div>
