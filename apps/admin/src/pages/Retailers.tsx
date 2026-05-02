@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
-import { getAdminRetailers, updateAdminRetailer } from '../api';
+import { getAdminRetailers, updateAdminRetailer, hardDeleteRetailer } from '../api';
 import type { AdminRetailer } from '../api';
 import { RetailerModal } from '../components/RetailerModal';
 import styles from './Retailers.module.css';
@@ -42,7 +42,7 @@ export function Retailers() {
 
   async function handleDeactivate(retailer: AdminRetailer) {
     try {
-      await updateAdminRetailer(retailer.id, { is_active: false });
+      await hardDeleteRetailer(retailer.id);
       setConfirmDeactivate(null);
       load();
     } catch (err: unknown) {
@@ -134,9 +134,7 @@ export function Retailers() {
           <div className={styles.dialog}>
             <h3>Supprimer {confirmDeactivate.name} ?</h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
-              Ce revendeur est déjà inactif. La suppression est irréversible et effacera toutes ses données de prix.
-              <br /><br />
-              Note : la suppression n'est pas encore implémentée côté API — seule la désactivation est disponible.
+              Suppression définitive et irréversible. Toutes les données de prix, mappings et logs associés à ce revendeur seront effacés.
             </p>
             <div className={styles.dialogActions}>
               <button className={styles.cancelBtn} onClick={() => setConfirmDeactivate(null)}>Annuler</button>
@@ -144,7 +142,7 @@ export function Retailers() {
                 className={styles.confirmDeleteBtn}
                 onClick={() => handleDeactivate(confirmDeactivate)}
               >
-                Désactiver définitivement
+                Supprimer définitivement
               </button>
             </div>
           </div>
