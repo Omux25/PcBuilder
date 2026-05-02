@@ -11,13 +11,13 @@ Write-Host ""
 Write-Host "Stopping existing processes on ports 3000, 5173, 5174..." -ForegroundColor Yellow
 
 foreach ($port in @(3000, 5173, 5174)) {
-    $pids = (netstat -ano | Select-String ":$port\s" | ForEach-Object {
+    $procIds = (netstat -ano | Select-String ":$port\s" | ForEach-Object {
         ($_ -split '\s+')[-1]
     } | Sort-Object -Unique | Where-Object { $_ -match '^\d+$' -and $_ -ne '0' })
 
-    foreach ($pid in $pids) {
+    foreach ($procId in $procIds) {
         try {
-            Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+            Stop-Process -Id ([int]$procId) -Force -ErrorAction SilentlyContinue
         } catch {}
     }
 }
