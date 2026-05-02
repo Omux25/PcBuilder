@@ -16,6 +16,7 @@ import { useCompare } from '../context/CompareContext';
 import type { Component, ComponentCategory, BuildConfig } from '../types';
 import { CATEGORY_LABELS } from '../types';
 import { CategoryIcon } from './CategoryIcon';
+import { UI } from '../ui-strings';
 import styles from './ComponentPicker.module.css';
 
 interface Props {
@@ -248,7 +249,7 @@ export function ComponentPicker({ category, selected, build, onSelect }: Props) 
                 ref={searchRef}
                 type="text"
                 className={styles.searchInput}
-                placeholder="Rechercher…"
+                placeholder={UI.picker.searchPlaceholder}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 aria-label="Rechercher un composant"
@@ -291,13 +292,13 @@ export function ComponentPicker({ category, selected, build, onSelect }: Props) 
               {/* Brand */}
               {availableBrands.length > 0 && (
                 <div className={styles.filterGroup}>
-                  <label className={styles.filterLabel}>Marque</label>
+                  <label className={styles.filterLabel}>{UI.picker.filterBrand}</label>
                   <select
                     className={styles.filterSelect}
                     value={brand}
                     onChange={e => setBrand(e.target.value)}
                   >
-                    <option value="">Toutes</option>
+                    <option value="">{UI.picker.filterAllBrands}</option>
                     {availableBrands.map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
                 </div>
@@ -306,13 +307,13 @@ export function ComponentPicker({ category, selected, build, onSelect }: Props) 
               {/* Socket */}
               {SOCKET_CATEGORIES.has(category) && availableSockets.length > 0 && (
                 <div className={styles.filterGroup}>
-                  <label className={styles.filterLabel}>Socket</label>
+                  <label className={styles.filterLabel}>{UI.picker.filterSocket}</label>
                   <select
                     className={styles.filterSelect}
                     value={socket}
                     onChange={e => setSocket(e.target.value)}
                   >
-                    <option value="">Tous</option>
+                    <option value="">{UI.picker.filterAllSockets}</option>
                     {availableSockets.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
@@ -321,13 +322,13 @@ export function ComponentPicker({ category, selected, build, onSelect }: Props) 
               {/* RAM type */}
               {RAM_TYPE_CATEGORIES.has(category) && (
                 <div className={styles.filterGroup}>
-                  <label className={styles.filterLabel}>Type RAM</label>
+                  <label className={styles.filterLabel}>{UI.picker.filterRamType}</label>
                   <select
                     className={styles.filterSelect}
                     value={ramType}
                     onChange={e => setRamType(e.target.value)}
                   >
-                    <option value="">DDR4+5</option>
+                    <option value="">{UI.picker.filterAllRam}</option>
                     <option value="DDR4">DDR4</option>
                     <option value="DDR5">DDR5</option>
                   </select>
@@ -336,12 +337,12 @@ export function ComponentPicker({ category, selected, build, onSelect }: Props) 
 
               {/* Price range */}
               <div className={styles.filterGroup}>
-                <label className={styles.filterLabel}>Prix (MAD)</label>
+                <label className={styles.filterLabel}>{UI.picker.filterPrice}</label>
                 <div className={styles.priceRange}>
                   <input
                     type="number"
                     className={styles.priceInput}
-                    placeholder="Min"
+                    placeholder={UI.picker.filterPriceMin}
                     value={minPrice}
                     min={0}
                     onChange={e => setMinPrice(e.target.value)}
@@ -350,7 +351,7 @@ export function ComponentPicker({ category, selected, build, onSelect }: Props) 
                   <input
                     type="number"
                     className={styles.priceInput}
-                    placeholder="Max"
+                    placeholder={UI.picker.filterPriceMax}
                     value={maxPrice}
                     min={0}
                     onChange={e => setMaxPrice(e.target.value)}
@@ -360,7 +361,7 @@ export function ComponentPicker({ category, selected, build, onSelect }: Props) 
 
               {activeFilters > 0 && (
                 <button className={styles.clearFiltersBtn} onClick={clearFilters}>
-                  <X size={11} /> Effacer
+                  <X size={11} /> {UI.picker.filterClear}
                 </button>
               )}
             </div>
@@ -377,7 +378,7 @@ export function ComponentPicker({ category, selected, build, onSelect }: Props) 
             )}
             {error && <li className={styles.errorItem}>Erreur: {error}</li>}
             {!loading && !error && components.length === 0 && (
-              <li className={styles.hint}>Aucun résultat</li>
+              <li className={styles.hint}>{UI.picker.noResults}</li>
             )}
             {components.map(c => (
               <ComponentRow
@@ -473,7 +474,7 @@ function ComponentRow({
 
           {hasPrice && (
             <span className={component.in_stock ? styles.inStock : styles.outStock}>
-              {component.in_stock ? 'Stock' : 'Rupture'}
+              {component.in_stock ? UI.picker.inStock : UI.picker.outOfStock}
             </span>
           )}
 

@@ -33,7 +33,7 @@ A user selects components one by one in the configurator. After each selection, 
 
 ---
 
-## The 8 rules
+## The 7 rules
 
 Rules only fire when **both** required components are present in the build. A partial build (e.g. only CPU selected) will not trigger socket_mismatch because there's no motherboard to compare against.
 
@@ -85,7 +85,33 @@ RTX 4090 (336mm)  +  Case max 400mm  → compatible
 RTX 4090 (336mm)  +  Case max 300mm  → gpu_too_long error
 ```
 
-### Rule 5 — TDP calculation (always runs)
+### Rule 5 — Form factor mismatch (error)
+
+**Applies to:** Motherboard + Case
+
+The motherboard's form factor must be supported by the case. An ATX motherboard will not physically fit in a case that only supports mATX or Mini-ITX.
+
+```
+ATX Motherboard  +  ATX Mid Tower  → compatible
+ATX Motherboard  +  Mini-ITX Case  → form_factor_mismatch error
+```
+
+The case's `supported_motherboards` field lists the accepted form factors (e.g. `["ATX", "mATX", "Mini-ITX"]`).
+
+### Rule 6 — Cooler too tall (error)
+
+**Applies to:** Cooling + Case
+
+Air coolers have a height in mm. If the cooler is taller than the case's `max_cooler_height_mm`, it will not fit with the side panel on.
+
+```
+Noctua NH-D15 (165mm)  +  Case max 170mm  → compatible
+Noctua NH-D15 (165mm)  +  Case max 155mm  → cooler_too_tall error
+```
+
+AIO liquid coolers are not affected by this rule — they mount to the case radiator slots, not inside the case.
+
+### TDP calculation (always runs)
 
 **Applies to:** All components
 
@@ -111,9 +137,9 @@ Typical TDP values:
 | Storage (NVMe) | 3W – 10W |
 | Case fans | 2W – 5W each |
 
-### Rule 6 — PSU underpowered (warning)
+### Rule 7 — PSU underpowered (warning)
 
-**Applies to:** PSU (uses recommended_psu_wattage from Rule 5)
+**Applies to:** PSU (uses recommended_psu_wattage from TDP calculation)
 
 If the selected PSU's wattage is below the recommended minimum, the build may be unstable under load. This is a warning because the system might still boot — but it risks random shutdowns or hardware damage.
 
@@ -121,32 +147,6 @@ If the selected PSU's wattage is below the recommended minimum, the build may be
 Recommended: 456W  +  PSU 550W  → no warning
 Recommended: 456W  +  PSU 450W  → psu_underpowered warning
 ```
-
-### Rule 7 — Form factor mismatch (error)
-
-**Applies to:** Motherboard + Case
-
-The motherboard's form factor must be supported by the case. An ATX motherboard will not physically fit in a case that only supports mATX or Mini-ITX.
-
-```
-ATX Motherboard  +  ATX Mid Tower  → compatible
-ATX Motherboard  +  Mini-ITX Case  → form_factor_mismatch error
-```
-
-The case's `supported_motherboards` field lists the accepted form factors (e.g. `["ATX", "mATX", "Mini-ITX"]`).
-
-### Rule 8 — Cooler too tall (error)
-
-**Applies to:** Cooling + Case
-
-Air coolers have a height in mm. If the cooler is taller than the case's `max_cooler_height_mm`, it will not fit with the side panel on.
-
-```
-Noctua NH-D15 (165mm)  +  Case max 170mm  → compatible
-Noctua NH-D15 (165mm)  +  Case max 155mm  → cooler_too_tall error
-```
-
-AIO liquid coolers are not affected by this rule — they mount to the case radiator slots, not inside the case.
 
 ---
 
@@ -163,7 +163,7 @@ The `compatible` field in the response is `true` only when the `errors` array is
 
 ## How the frontend uses it
 
-The `BuildSummary` component calls `POST /api/compatibility/validate` with a 300ms debounce every time the build changes. It uses an `AbortController` to cancel in-flight requests if a new one starts before the previous one completes.
+The `Configurator` component calls `POST /api/compatibility/validate` with a 300ms debounce every time the build changes. If a new validation is triggered before the previous one completes, the previous timer is cancelled.
 
 Rule codes like `socket_mismatch` are mapped to human-readable French labels via `RULE_LABELS` in `shared/types.ts` before being shown to the user.
 

@@ -267,21 +267,20 @@ function escapeLikeToken(token: string): string {
  */
 function extractComponentFields(data: ComponentInput) {
   const d = data as Record<string, unknown>;
-  const s = (data.specs as Record<string, unknown>) || {};
   return {
-    socket:                (d.socket                ?? s.socket)                as string   | undefined,
-    supported_ram_types:   (d.supported_ram_types   ?? s.supported_ram_types)   as string[] | undefined,
-    max_ram_frequency:     (d.max_ram_frequency     ?? s.max_ram_frequency)     as number   | undefined,
-    ram_type:              (d.ram_type              ?? s.ram_type)              as string   | undefined,
-    frequency_mhz:         (d.frequency_mhz         ?? s.frequency_mhz)         as number   | undefined,
-    length_mm:             (d.length_mm             ?? s.length_mm)             as number   | undefined,
-    max_gpu_length_mm:     (d.max_gpu_length_mm     ?? s.max_gpu_length_mm)     as number   | undefined,
-    supported_motherboards:(d.supported_motherboards ?? s.supported_motherboards) as string[] | undefined,
-    max_cooler_height_mm:  (d.max_cooler_height_mm  ?? s.max_cooler_height_mm)  as number   | undefined,
-    form_factor:           (d.form_factor           ?? s.form_factor)           as string   | undefined,
-    height_mm:             (d.height_mm             ?? s.height_mm)             as number   | undefined,
-    wattage:               (d.wattage               ?? s.wattage)               as number   | undefined,
-    tdp:                   (d.tdp                   ?? s.tdp)                   as number   | undefined,
+    socket:                d.socket                as string   | undefined,
+    supported_ram_types:   d.supported_ram_types   as string[] | undefined,
+    max_ram_frequency:     d.max_ram_frequency     as number   | undefined,
+    ram_type:              d.ram_type              as string   | undefined,
+    frequency_mhz:         d.frequency_mhz         as number   | undefined,
+    length_mm:             d.length_mm             as number   | undefined,
+    max_gpu_length_mm:     d.max_gpu_length_mm     as number   | undefined,
+    supported_motherboards:d.supported_motherboards as string[] | undefined,
+    max_cooler_height_mm:  d.max_cooler_height_mm  as number   | undefined,
+    form_factor:           d.form_factor           as string   | undefined,
+    height_mm:             d.height_mm             as number   | undefined,
+    wattage:               d.wattage               as number   | undefined,
+    tdp:                   d.tdp                   as number   | undefined,
   };
 }
 

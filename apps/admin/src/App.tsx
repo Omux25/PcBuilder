@@ -24,7 +24,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#cdd6f4' }}>Chargement...</div>}>
+    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#cdd6f4' }}>Loading...</div>}>
       <Routes>
         <Route path="/admin/login" element={<Login />} />
 

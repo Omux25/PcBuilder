@@ -11,7 +11,7 @@
 
 import { Hono } from 'hono';
 import { authMiddleware } from '../../middleware/auth.js';
-import { getPresets, getPresetById, createPreset, updatePreset, deletePreset } from '../../services/presetService.js';
+import { getPresets, createPreset, updatePreset, deletePreset } from '../../services/presetService.js';
 import { logActivity } from '../../services/adminService.js';
 import { AppError } from '../../utils/errors.js';
 import type { AdminEnv } from './types.js';

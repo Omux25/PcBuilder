@@ -14,9 +14,9 @@ POST /api/auth/login  { username, password }
   → query admins table by username
   → bcrypt.compare(password, stored_hash)
   → sign 15-minute JWT access token
-  → generate 7-day refresh token (UUID)
+  → generate 7-day refresh token (random 32-byte hex)
   → store refresh token hash in refresh_tokens table
-  → return { token: "..." } in body
+  → return { access_token: "...", expires_in: 900 } in body
   → set HttpOnly cookie: refresh_token=<raw_token>
 ```
 
@@ -39,7 +39,7 @@ POST /api/auth/refresh
   → reads refresh_token from HttpOnly cookie
   → looks up token hash in refresh_tokens table
   → checks expiry
-  → returns new { token: "..." }
+  → returns new { access_token: "...", expires_in: 900 }
 ```
 
 If the refresh token is expired or invalid, the user is redirected to the login page.

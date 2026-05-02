@@ -9,14 +9,8 @@ import { getPresets } from '../api';
 import type { PresetBuild } from '../types';
 import { CATEGORY_LABELS } from '../types';
 import { SkeletonCard } from '../components/Skeleton';
+import { UI } from '../ui-strings';
 import styles from './Presets.module.css';
-
-const USE_CASE_LABELS: Record<string, string> = {
-  gaming:      'Gaming',
-  workstation: 'Workstation',
-  office:      'Bureau',
-  budget:      'Budget',
-};
 
 interface Props {
   onLoadPreset: (components: Record<string, number>) => void;
@@ -25,7 +19,7 @@ interface Props {
 export function Presets({ onLoadPreset }: Props) {
   const [presets, setPresets] = useState<PresetBuild[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]     = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -48,15 +42,12 @@ export function Presets({ onLoadPreset }: Props) {
     return (
       <div className={styles.page}>
         <div className={styles.pageHeader}>
-          <Link to="/" className={styles.back}>← Retour au configurateur</Link>
-          <h1 className={styles.title}>Configurations prêtes à l'emploi</h1>
+          <Link to="/" className={styles.back}>{UI.presets.back}</Link>
+          <h1 className={styles.title}>{UI.presets.title}</h1>
         </div>
         <div className={styles.group}>
           <div className={styles.cards}>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
+            <SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard />
           </div>
         </div>
       </div>
@@ -65,7 +56,6 @@ export function Presets({ onLoadPreset }: Props) {
 
   if (error) return <div className={styles.error}>{error}</div>;
 
-  // Group by use case
   const grouped = presets.reduce<Record<string, PresetBuild[]>>((acc, p) => {
     if (!acc[p.use_case]) acc[p.use_case] = [];
     acc[p.use_case].push(p);
@@ -75,50 +65,39 @@ export function Presets({ onLoadPreset }: Props) {
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
-        <Link to="/" className={styles.back}>← Retour au configurateur</Link>
-        <h1 className={styles.title}>Configurations prêtes à l'emploi</h1>
-        <p className={styles.subtitle}>
-          Choisissez une configuration adaptée à votre usage et chargez-la en un clic.
-        </p>
+        <Link to="/" className={styles.back}>{UI.presets.back}</Link>
+        <h1 className={styles.title}>{UI.presets.title}</h1>
+        <p className={styles.subtitle}>{UI.presets.subtitle}</p>
       </div>
 
       {Object.entries(grouped).map(([useCase, list]) => (
         <section key={useCase} className={styles.group}>
-          <h2 className={styles.groupTitle}>{USE_CASE_LABELS[useCase] ?? useCase}</h2>
+          <h2 className={styles.groupTitle}>{UI.presets.useCases[useCase] ?? useCase}</h2>
           <div className={styles.cards}>
-            {list.map((preset) => (
-              <PresetCard key={preset.id} preset={preset} onLoad={handleLoad} />
-            ))}
+            {list.map(preset => <PresetCard key={preset.id} preset={preset} onLoad={handleLoad} />)}
           </div>
         </section>
       ))}
 
-      {presets.length === 0 && (
-        <p className={styles.empty}>Aucune configuration disponible pour le moment.</p>
-      )}
+      {presets.length === 0 && <p className={styles.empty}>{UI.presets.empty}</p>}
     </div>
   );
 }
 
-// ── Preset card ───────────────────────────────────────────────────────────────
-
 function PresetCard({ preset, onLoad }: { preset: PresetBuild; onLoad: (p: PresetBuild) => void }) {
   const componentCount = Object.keys(preset.components).length;
-
   return (
     <div className={`${styles.card} ${preset.incomplete ? styles.incomplete : ''}`}>
       <div className={styles.cardHeader}>
         <h3 className={styles.cardName}>{preset.name}</h3>
         {preset.incomplete && (
-          <span className={styles.incompleteBadge} title="Certains composants ne sont plus disponibles">
-            Incomplet
+          <span className={styles.incompleteBadge} title={UI.presets.incompleteTitle}>
+            {UI.presets.incomplete}
           </span>
         )}
       </div>
 
-      {preset.description && (
-        <p className={styles.cardDesc}>{preset.description}</p>
-      )}
+      {preset.description && <p className={styles.cardDesc}>{preset.description}</p>}
 
       <div className={styles.componentList}>
         {Object.entries(preset.components).map(([category, component]) => (
@@ -135,16 +114,10 @@ function PresetCard({ preset, onLoad }: { preset: PresetBuild; onLoad: (p: Prese
 
       <div className={styles.cardFooter}>
         {preset.total_price_estimate && (
-          <span className={styles.price}>
-            ~{preset.total_price_estimate.toLocaleString('fr-MA')} MAD
-          </span>
+          <span className={styles.price}>~{preset.total_price_estimate.toLocaleString('fr-MA')} MAD</span>
         )}
-        <button
-          className={styles.loadBtn}
-          onClick={() => onLoad(preset)}
-          disabled={componentCount === 0}
-        >
-          Charger cette configuration
+        <button className={styles.loadBtn} onClick={() => onLoad(preset)} disabled={componentCount === 0}>
+          {UI.presets.load}
         </button>
       </div>
     </div>

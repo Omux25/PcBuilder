@@ -102,6 +102,9 @@ adminRetailersRouter.put('/:id', async (c) => {
 });
 
 // DELETE /api/admin/retailers/:id — soft delete (set is_active = false)
+// Note: this is a soft-delete, not a hard delete. The retailer record and all
+// its price data are preserved. Use this to stop scraping a retailer without
+// losing historical data. To re-enable, use PUT with { is_active: true }.
 adminRetailersRouter.delete('/:id', async (c) => {
   const id = parseId(c.req.param('id'));
   if (id === null) {

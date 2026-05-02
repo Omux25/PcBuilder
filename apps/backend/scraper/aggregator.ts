@@ -44,8 +44,13 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
   const sql = getSql();
 
   // isRealSql: true when running in production (real Bun.sql), false when mocked in tests.
-  // Used to gate batch array queries (bunSql(array)) that only work with the real client,
-  // and to skip the UltraPC stock check in tests.
+  //
+  // Why we need this: Bun.sql supports array parameters via bunSql(array) — e.g.
+  //   bunSql`WHERE id IN ${bunSql([1, 2, 3])}`
+  // This syntax only works with the real Bun.sql client, not with a mock function.
+  // When sql is mocked in tests, we fall back to per-item queries instead.
+  //
+  // We also use this flag to skip the UltraPC stock check in tests (it makes real HTTP calls).
   const isRealSql = (sql as unknown) === (bunSql as unknown);
 
   // UltraPC stock check — only in production (skip when SQL is mocked in tests)
@@ -86,7 +91,6 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
   // In production: uses the pre-fetched mappingMap (batch query above).
   // In tests (mocked SQL): mappingMap is empty, so falls back to per-item sql query.
   const resolvedPrices: (ScrapedPrice & { component_id: number; category: string })[] = [];
-
   for (const p of prices) {
     try {
       let mapping = mappingMap.get(`${p.retailer_id}|${p.product_url}`);
@@ -196,7 +200,7 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
 
     for (const retailerId of retailerIds) {
       // Skip UltraPC — it shows all products including out-of-stock, handled by checkStock
-      if (retailerId === 10) continue;
+      if (retailerId === SCRAPER_CONFIG.RETAILERS.ULTRAPC) continue;
 
       try {
         // Get all mapped URLs for this retailer that are currently marked in_stock

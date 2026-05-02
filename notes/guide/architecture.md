@@ -132,7 +132,7 @@ The global error handler in `app.ts` catches these and returns the standard erro
 
 **Search query:** `GET /api/components` uses a CTE to compute `search_text` once and reference it in both `WHERE` and `ORDER BY`. Individual search tokens are LIKE-escaped before being passed to the query — user input containing `%` or `_` is treated as literals, not SQL wildcards.
 
-**ID validation:** All admin routes use `parseId()` from `apps/backend/src/utils/errors.ts` to validate and parse numeric URL parameters. Returns `null` on invalid input — the route handler returns 400.
+**ID validation:** All admin routes use `parseId()` from `apps/backend/src/routes/admin/types.ts` (which re-exports it from `apps/backend/src/utils/errors.ts`) to validate and parse numeric URL parameters. Returns `null` on invalid input — the route handler returns 400.
 
 **Rate limiting:** `POST /api/auth/login` uses an in-memory fixed-window store (10 attempts/IP/minute). Resets on server restart — acceptable for single-process deployment.
 

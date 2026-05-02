@@ -40,7 +40,7 @@ Paginated list of active components.
 | `ram_type` | string | — | Filter by RAM type (`DDR4`, `DDR5`) |
 | `brand` | string | — | Filter by brand (e.g. `AMD`, `Intel`) |
 | `search` | string | — | Full-text search across name, brand, slug |
-| `ids` | string | — | Comma-separated list of component IDs for batch lookup (e.g. `1,2,3`). When provided, bypasses pagination and returns only those components. Used by the frontend to restore builds from URL. |
+| `ids` | string | — | Comma-separated list of component IDs for batch lookup (e.g. `1,2,3`). When provided, bypasses pagination and returns only those components. Used by the frontend to restore builds from URL. Max 50 IDs — returns `400` if exceeded. |
 | `page` | integer | 1 | Page number |
 | `limit` | integer | 20 | Items per page (max 100) |
 
@@ -399,7 +399,7 @@ Dashboard stats, price chart, and recent activity.
 {
   "stats": {
     "total_components": 305,
-    "components_by_category": { "cpu": 45, "gpu": 60 },
+    "components_by_category": { "cpu": 45, "gpu": 60, "ram": 40, "motherboard": 35, "storage": 50, "psu": 30, "case": 25, "cooling": 20 },
     "total_retailers": 3,
     "active_retailers": 3,
     "total_price_records": 1240,
@@ -514,7 +514,15 @@ Trigger all active retailers sequentially.
 
 List unmatched product listings.
 
-**Query parameters:** `status` (pending/linked/dismissed), `retailer_id`
+**Query parameters:** `status` (pending/linked/dismissed), `retailer_id`, `page` (default 1), `limit` (default 50, max 200)
+
+**Response headers:**
+- `X-Total-Count: 47` — total matching listings (for pagination)
+
+**Response 200:**
+```json
+{ "listings": [...], "total": 47 }
+```
 
 ### `POST /api/admin/unmatched-listings/:id/link`
 

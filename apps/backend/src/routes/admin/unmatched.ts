@@ -24,20 +24,28 @@ adminUnmatchedRouter.get('/', async (c) => {
   const sql = getSql();
   const status     = c.req.query('status');
   const retailerId = c.req.query('retailer_id') ? Number(c.req.query('retailer_id')) : undefined;
+  const page       = Math.max(1, Number(c.req.query('page') ?? 1) || 1);
+  const limit      = Math.min(200, Math.max(1, Number(c.req.query('limit') ?? 50) || 50));
+  const offset     = (page - 1) * limit;
 
   const rows = await sql`
     SELECT
       ul.*,
-      r.name AS retailer_name
+      r.name AS retailer_name,
+      COUNT(*) OVER() AS total_count
     FROM unmatched_listings ul
     JOIN retailers r ON r.id = ul.retailer_id
     WHERE (${status ?? null}::text IS NULL OR ul.status = ${status ?? null})
       AND (${retailerId ?? null}::int IS NULL OR ul.retailer_id = ${retailerId ?? null})
     ORDER BY ul.scraped_at DESC
-    LIMIT 200
-  `;
+    LIMIT ${limit} OFFSET ${offset}
+  ` as (Record<string, unknown> & { total_count: string })[];
 
-  return c.json({ listings: rows });
+  const total = rows.length > 0 ? parseInt(rows[0].total_count as string, 10) : 0;
+  const listings = rows.map(({ total_count: _tc, ...row }) => row);
+
+  c.header('X-Total-Count', String(total));
+  return c.json({ listings, total });
 });
 
 // POST /api/admin/unmatched-listings/:id/link

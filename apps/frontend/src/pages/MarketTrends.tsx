@@ -12,19 +12,20 @@ import { Skeleton } from '../components/Skeleton';
 import type { ComponentCategory } from '../types';
 import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
 import { useBuild } from '../context/BuildContext';
+import { UI } from '../ui-strings';
 import styles from './MarketTrends.module.css';
 
 const DAY_OPTIONS = [3, 7, 14, 30];
 
 export function MarketTrends() {
   const { addToBuild } = useBuild();
-  const [trends, setTrends]     = useState<MarketTrend[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState<string | null>(null);
-  const [days, setDays]         = useState(7);
-  const [category, setCategory] = useState('');
+  const [trends, setTrends]       = useState<MarketTrend[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState<string | null>(null);
+  const [days, setDays]           = useState(7);
+  const [category, setCategory]   = useState('');
   const [trendType, setTrendType] = useState<'drops' | 'hikes'>('drops');
-  const [added, setAdded]       = useState<number | null>(null);
+  const [added, setAdded]         = useState<number | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -53,40 +54,35 @@ export function MarketTrends() {
 
   return (
     <div className={styles.page}>
-      {/* Header */}
       <div className={styles.pageHeader}>
         <div className={styles.titleRow}>
           <BarChart3 size={24} className={styles.titleIcon} />
           <div>
-            <h1 className={styles.title}>Tendances du Marché</h1>
-            <p className={styles.subtitle}>
-              Analyse des variations de prix réelles pour les produits en stock.
-            </p>
+            <h1 className={styles.title}>{UI.trends.title}</h1>
+            <p className={styles.subtitle}>{UI.trends.subtitle}</p>
           </div>
         </div>
 
-        {/* Trend Type Tabs */}
         <div className={styles.trendTabs}>
           <button
             className={`${styles.trendTab} ${trendType === 'drops' ? styles.trendTabActiveDrops : ''}`}
             onClick={() => setTrendType('drops')}
           >
             <TrendingDown size={16} />
-            Bons Plans (Baisses)
+            {UI.trends.drops}
           </button>
           <button
             className={`${styles.trendTab} ${trendType === 'hikes' ? styles.trendTabActiveHikes : ''}`}
             onClick={() => setTrendType('hikes')}
           >
             <TrendingUp size={16} />
-            Inflations (Hausses)
+            {UI.trends.hikes}
           </button>
         </div>
 
-        {/* Filters */}
         <div className={styles.filters}>
           <div className={styles.filterGroup}>
-            <label className={styles.filterLabel}>Période</label>
+            <label className={styles.filterLabel}>{UI.trends.period}</label>
             <div className={styles.dayPills}>
               {DAY_OPTIONS.map(d => (
                 <button
@@ -94,20 +90,16 @@ export function MarketTrends() {
                   className={`${styles.dayPill} ${days === d ? styles.dayPillActive : ''}`}
                   onClick={() => setDays(d)}
                 >
-                  {d}j
+                  {UI.trends.dayUnit(d)}
                 </button>
               ))}
             </div>
           </div>
 
           <div className={styles.filterGroup}>
-            <label className={styles.filterLabel}>Catégorie</label>
-            <select
-              className={styles.catSelect}
-              value={category}
-              onChange={e => setCategory(e.target.value)}
-            >
-              <option value="">Toutes</option>
+            <label className={styles.filterLabel}>{UI.trends.category}</label>
+            <select className={styles.catSelect} value={category} onChange={e => setCategory(e.target.value)}>
+              <option value="">{UI.trends.allCategories}</option>
               {CATEGORY_ORDER.map(cat => (
                 <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
               ))}
@@ -120,7 +112,7 @@ export function MarketTrends() {
         <div className={styles.error}>
           <p>{error}</p>
           <button className={styles.retryBtn} onClick={() => window.location.reload()}>
-            Réessayer
+            {UI.trends.retry}
           </button>
         </div>
       ) : loading ? (
@@ -136,13 +128,11 @@ export function MarketTrends() {
       ) : trends.length === 0 ? (
         <div className={styles.empty}>
           <BarChart3 size={40} className={styles.emptyIcon} />
-          <p>Aucune variation significative détectée sur les {days} derniers jours.</p>
+          <p>{UI.trends.noResults(days)}</p>
         </div>
       ) : (
         <>
-          <p className={styles.resultCount}>
-            {trends.length} variation{trends.length > 1 ? 's' : ''} détectée{trends.length > 1 ? 's' : ''} sur {days} jours
-          </p>
+          <p className={styles.resultCount}>{UI.trends.resultCount(trends.length, days)}</p>
           <div className={styles.grid}>
             {trends.map(trend => (
               <TrendCard
@@ -159,22 +149,10 @@ export function MarketTrends() {
   );
 }
 
-// ── Trend card ─────────────────────────────────────────────────────────────────
-
-function TrendCard({
-  trend,
-  isAdded,
-  onAdd,
-}: {
-  trend: MarketTrend;
-  isAdded: boolean;
-  onAdd: () => void;
-}) {
+function TrendCard({ trend, isAdded, onAdd }: { trend: MarketTrend; isAdded: boolean; onAdd: () => void }) {
   const isDrop = trend.type === 'drops';
-  
   return (
     <div className={styles.card}>
-      {/* Image */}
       <div className={styles.cardImageWrap}>
         {trend.image_url ? (
           <img src={trend.image_url} alt={trend.name} className={styles.cardImage} />
@@ -183,14 +161,12 @@ function TrendCard({
             <CategoryIcon category={trend.category as ComponentCategory} size={28} />
           </div>
         )}
-        {/* Trend badge */}
         <div className={isDrop ? styles.dropBadge : styles.hikeBadge}>
           {isDrop ? <TrendingDown size={11} /> : <TrendingUp size={11} />}
           {isDrop ? '−' : '+'}{trend.change_pct}%
         </div>
       </div>
 
-      {/* Info */}
       <div className={styles.cardBody}>
         <div className={styles.cardTop}>
           {trend.brand && <span className={styles.brand}>{trend.brand}</span>}
@@ -200,15 +176,10 @@ function TrendCard({
           </span>
         </div>
 
-        <Link to={`/product/${trend.slug}`} className={styles.cardName}>
-          {trend.name}
-        </Link>
+        <Link to={`/product/${trend.slug}`} className={styles.cardName}>{trend.name}</Link>
 
-        {/* Price comparison */}
         <div className={styles.priceRow}>
-          <span className={styles.priceBefore}>
-            {trend.price_before.toLocaleString('fr-MA')} MAD
-          </span>
+          <span className={styles.priceBefore}>{trend.price_before.toLocaleString('fr-MA')} MAD</span>
           <span className={styles.priceArrow}>→</span>
           <span className={isDrop ? styles.priceAfter : styles.priceAfterUp}>
             {trend.price_after.toLocaleString('fr-MA')} MAD
@@ -217,20 +188,14 @@ function TrendCard({
 
         <div className={styles.savingsRow}>
           <span className={styles.savings}>
-            {isDrop ? 'Économie' : 'Hausse'} : {trend.diff_amount.toLocaleString('fr-MA')} MAD
+            {isDrop ? UI.trends.savings : UI.trends.hike} : {trend.diff_amount.toLocaleString('fr-MA')} MAD
           </span>
         </div>
       </div>
 
-      {/* Actions */}
       <div className={styles.cardFooter}>
-        <Link to={`/product/${trend.slug}`} className={styles.detailLink}>
-          Voir les détails
-        </Link>
-        <button
-          className={`${styles.addBtn} ${isAdded ? styles.addBtnDone : ''}`}
-          onClick={onAdd}
-        >
+        <Link to={`/product/${trend.slug}`} className={styles.detailLink}>{UI.trends.viewDetails}</Link>
+        <button className={`${styles.addBtn} ${isAdded ? styles.addBtnDone : ''}`} onClick={onAdd}>
           {isAdded ? '✓' : <ShoppingCart size={14} />}
         </button>
       </div>

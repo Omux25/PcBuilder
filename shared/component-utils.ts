@@ -93,7 +93,7 @@ export function extractBrand(name: string): string {
     'PNY', 'Gainward', 'Colorful', 'Galax', 'KFA2',
     'Acer', 'HP', 'Toshiba', 'Patriot', 'Klevv', 'Geil', 'Mushkin',
     'FSP', 'Super Flower', 'XPG', 'Cougar', 'Chieftec', 'LC Power',
-    '1stPlayer', 'Kolink', 'Sharkoon', 'BitFenix', 'Cougar',
+    '1stPlayer', 'Kolink', 'Sharkoon', 'BitFenix',
   ];
 
   for (const brand of BRANDS) {
@@ -338,10 +338,11 @@ export function extractMotherboardSpecs(name: string): {
   const chipset = chipsetMatch[1].toUpperCase();
 
   // Determine socket and RAM type from chipset
-  const AM5_CHIPSETS = ['X870E', 'X870', 'B850', 'B840', 'B860', 'X670E', 'X670', 'B650E', 'B650', 'A620'];
+  const AM5_CHIPSETS = ['X870E', 'X870', 'X670E', 'X670', 'B650E', 'B650', 'A620'];
   const AM4_CHIPSETS = ['X570', 'B550', 'X470', 'B450', 'A520', 'A320', 'B350', 'X370',
     // mATX variants
     'B550M', 'B450M', 'A520M', 'A320M', 'X570M'];
+  // LGA1851: Intel Arrow Lake (Core Ultra 200 series) — B860/B850/B840 are Intel, not AMD
   const LGA1851_CHIPSETS = ['Z890', 'B860', 'B850', 'B840', 'H870'];
   const LGA1700_CHIPSETS = ['Z790', 'Z690', 'B760', 'B660', 'H770', 'H670', 'H610',
     // mATX variants

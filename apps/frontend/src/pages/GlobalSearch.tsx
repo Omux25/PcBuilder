@@ -12,6 +12,7 @@ import { getComponents } from '../api';
 import { CategoryIcon } from '../components/CategoryIcon';
 import type { Component, ComponentCategory } from '../types';
 import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
+import { UI } from '../ui-strings';
 import styles from './GlobalSearch.module.css';
 
 const MAX_PER_CATEGORY = 5;
@@ -26,27 +27,19 @@ export function GlobalSearch() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('q') ?? '';
 
-  const [input, setInput]     = useState(query);
-  const [results, setResults] = useState<CategoryResults[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [input, setInput]       = useState(query);
+  const [results, setResults]   = useState<CategoryResults[]>([]);
+  const [loading, setLoading]   = useState(false);
   const [searched, setSearched] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef    = useRef<HTMLInputElement>(null);
 
-  // Focus input on mount
   useEffect(() => { inputRef.current?.focus(); }, []);
 
-  // Run search when query changes
   useEffect(() => {
-    if (!query.trim()) {
-      setResults([]);
-      setSearched(false);
-      return;
-    }
-
+    if (!query.trim()) { setResults([]); setSearched(false); return; }
     setLoading(true);
     setSearched(false);
-
     Promise.all(
       CATEGORY_ORDER.map(cat =>
         getComponents({ category: cat, search: query, limit: MAX_PER_CATEGORY })
@@ -54,22 +47,17 @@ export function GlobalSearch() {
           .catch(() => ({ category: cat, components: [], total: 0 }))
       )
     ).then(all => {
-      // Only show categories that have results
       setResults(all.filter(r => r.total > 0));
       setSearched(true);
     }).finally(() => setLoading(false));
   }, [query]);
 
-  // Debounce input → URL update
   function handleInput(val: string) {
     setInput(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      if (val.trim()) {
-        setSearchParams({ q: val.trim() }, { replace: true });
-      } else {
-        setSearchParams({}, { replace: true });
-      }
+      if (val.trim()) setSearchParams({ q: val.trim() }, { replace: true });
+      else setSearchParams({}, { replace: true });
     }, 350);
   }
 
@@ -82,7 +70,6 @@ export function GlobalSearch() {
 
   return (
     <div className={styles.page}>
-      {/* Search bar */}
       <div className={styles.searchSection}>
         <form className={styles.searchForm} onSubmit={handleSubmit}>
           <div className={styles.searchWrap}>
@@ -91,17 +78,14 @@ export function GlobalSearch() {
               ref={inputRef}
               type="search"
               className={styles.searchInput}
-              placeholder="Rechercher un composant… (ex: RTX 4090, Ryzen 7, DDR5)"
+              placeholder={UI.search.placeholder}
               value={input}
               onChange={e => handleInput(e.target.value)}
               autoComplete="off"
             />
             {input && (
-              <button
-                type="button"
-                className={styles.clearBtn}
-                onClick={() => { setInput(''); setSearchParams({}); inputRef.current?.focus(); }}
-              >
+              <button type="button" className={styles.clearBtn}
+                onClick={() => { setInput(''); setSearchParams({}); inputRef.current?.focus(); }}>
                 <X size={16} />
               </button>
             )}
@@ -110,16 +94,15 @@ export function GlobalSearch() {
 
         {query && searched && (
           <p className={styles.resultCount}>
-            {loading ? 'Recherche…' : (
+            {loading ? UI.search.searching : (
               totalResults > 0
-                ? `${totalResults} résultat${totalResults > 1 ? 's' : ''} pour « ${query} »`
-                : `Aucun résultat pour « ${query} »`
+                ? UI.search.results(totalResults, query)
+                : UI.search.noResults(query)
             )}
           </p>
         )}
       </div>
 
-      {/* Loading skeleton */}
       {loading && (
         <div className={styles.skeletonWrap}>
           {[1, 2, 3].map(i => (
@@ -131,34 +114,23 @@ export function GlobalSearch() {
         </div>
       )}
 
-      {/* Results grouped by category */}
       {!loading && results.length > 0 && (
         <div className={styles.results}>
           {results.map(({ category, components, total }) => (
             <section key={category} className={styles.group}>
               <div className={styles.groupHeader}>
-                <span className={styles.groupIcon}>
-                  <CategoryIcon category={category} size={16} />
-                </span>
+                <span className={styles.groupIcon}><CategoryIcon category={category} size={16} /></span>
                 <h2 className={styles.groupTitle}>{CATEGORY_LABELS[category]}</h2>
-                <span className={styles.groupCount}>{total} résultat{total > 1 ? 's' : ''}</span>
+                <span className={styles.groupCount}>{UI.search.groupCount(total)}</span>
                 {total > MAX_PER_CATEGORY && (
-                  <Link
-                    to={`/browse/${category}?q=${encodeURIComponent(query)}`}
-                    className={styles.seeAll}
-                  >
-                    Voir tout →
+                  <Link to={`/browse/${category}?q=${encodeURIComponent(query)}`} className={styles.seeAll}>
+                    {UI.search.seeAll}
                   </Link>
                 )}
               </div>
-
               <div className={styles.componentList}>
                 {components.map(c => (
-                  <Link
-                    key={c.id}
-                    to={`/product/${c.slug}`}
-                    className={styles.componentRow}
-                  >
+                  <Link key={c.id} to={`/product/${c.slug}`} className={styles.componentRow}>
                     {c.image_url ? (
                       <img src={c.image_url} alt={c.name} className={styles.componentImg} />
                     ) : (
@@ -169,9 +141,7 @@ export function GlobalSearch() {
                     <div className={styles.componentInfo}>
                       {c.brand && <span className={styles.componentBrand}>{c.brand}</span>}
                       <span className={styles.componentName}>{c.name}</span>
-                      {getKeySpec(c) && (
-                        <span className={styles.componentSpec}>{getKeySpec(c)}</span>
-                      )}
+                      {getKeySpec(c) && <span className={styles.componentSpec}>{getKeySpec(c)}</span>}
                     </div>
                     <span className={styles.componentArrow}>→</span>
                   </Link>
@@ -182,16 +152,13 @@ export function GlobalSearch() {
         </div>
       )}
 
-      {/* Empty state */}
       {!loading && searched && results.length === 0 && (
         <div className={styles.empty}>
           <Search size={40} className={styles.emptyIcon} />
-          <p className={styles.emptyTitle}>Aucun résultat pour « {query} »</p>
-          <p className={styles.emptyHint}>
-            Essayez un terme plus court ou vérifiez l'orthographe.
-          </p>
+          <p className={styles.emptyTitle}>{UI.search.emptyTitle(query)}</p>
+          <p className={styles.emptyHint}>{UI.search.emptyHint}</p>
           <div className={styles.suggestions}>
-            <p className={styles.suggestLabel}>Suggestions :</p>
+            <p className={styles.suggestLabel}>{UI.search.suggestions}</p>
             {CATEGORY_ORDER.map(cat => (
               <Link key={cat} to={`/browse/${cat}`} className={styles.suggestLink}>
                 <CategoryIcon category={cat} size={13} />
@@ -202,10 +169,9 @@ export function GlobalSearch() {
         </div>
       )}
 
-      {/* Initial state — no query yet */}
       {!query && !loading && (
         <div className={styles.initial}>
-          <p className={styles.initialHint}>Parcourez par catégorie :</p>
+          <p className={styles.initialHint}>{UI.search.browseBy}</p>
           <div className={styles.catGrid}>
             {CATEGORY_ORDER.map(cat => (
               <Link key={cat} to={`/browse/${cat}`} className={styles.catCard}>
@@ -220,20 +186,17 @@ export function GlobalSearch() {
   );
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 function getKeySpec(c: Component): string | null {
   const specs = c.specs as Record<string, unknown> | undefined;
   const get = (k: string) => specs?.[k] ?? (c as Record<string, unknown>)[k];
-
   switch (c.category) {
-    case 'cpu':        return c.socket ? `Socket ${c.socket}` : null;
+    case 'cpu':         return c.socket ? `Socket ${c.socket}` : null;
     case 'motherboard': return c.socket ? `Socket ${c.socket}` : null;
-    case 'gpu':        return get('vram_gb') ? `${get('vram_gb')} Go VRAM` : null;
-    case 'ram':        return c.ram_type && c.frequency_mhz ? `${c.ram_type} ${c.frequency_mhz} MHz` : null;
-    case 'storage':    return get('capacity_gb') ? `${get('capacity_gb')} Go` : null;
-    case 'psu':        return c.wattage ? `${c.wattage}W` : null;
-    case 'case':       return c.max_gpu_length_mm ? `GPU max ${c.max_gpu_length_mm}mm` : null;
-    default:           return null;
+    case 'gpu':         return get('vram_gb') ? `${get('vram_gb')} Go VRAM` : null;
+    case 'ram':         return c.ram_type && c.frequency_mhz ? `${c.ram_type} ${c.frequency_mhz} MHz` : null;
+    case 'storage':     return get('capacity_gb') ? `${get('capacity_gb')} Go` : null;
+    case 'psu':         return c.wattage ? `${c.wattage}W` : null;
+    case 'case':        return c.max_gpu_length_mm ? `GPU max ${c.max_gpu_length_mm}mm` : null;
+    default:            return null;
   }
 }

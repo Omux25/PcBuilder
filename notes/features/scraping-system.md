@@ -69,7 +69,7 @@ interface ScrapedPrice {
   price:        number;   // price in MAD
   in_stock:     boolean;
   product_url:  string;   // direct link to the product page
-  name:         string;   // scraped product title (used for matching)
+  name:         string;   // scraped product title (used for DNA matching)
 }
 ```
 

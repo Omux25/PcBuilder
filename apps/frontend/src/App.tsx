@@ -11,6 +11,7 @@ import { CATEGORY_ORDER, CATEGORY_LABELS } from './types';
 import { encodeBuildToUrl } from './utils/buildUrl';
 import { getInitialTheme, applyTheme, toggleTheme } from './utils/theme';
 import { getComponentById } from './api';
+import { UI } from './ui-strings';
 import styles from './App.module.css';
 
 const ComponentDetail  = lazy(() => import('./pages/ComponentDetail').then(m => ({ default: m.ComponentDetail })));
@@ -69,7 +70,7 @@ export default function App() {
   }
 
   function handleExportText() {
-    const lines = ['PC Builder Maroc — Configuration', ''];
+    const lines = [UI.build.exportHeader, ''];
     for (const cat of CATEGORY_ORDER) {
       const comp = build[cat];
       if (comp) {
@@ -80,10 +81,10 @@ export default function App() {
     }
     if (totalPrice > 0) {
       lines.push('');
-      lines.push(`Total estimé: ${totalPrice.toLocaleString('fr-MA')} MAD`);
+      lines.push(`${UI.build.exportTotal}: ${totalPrice.toLocaleString('fr-MA')} MAD`);
     }
     lines.push('');
-    lines.push(`Lien: ${window.location.origin}/?${encodeBuildToUrl(build)}`);
+    lines.push(`${UI.build.exportLink}: ${window.location.origin}/?${encodeBuildToUrl(build)}`);
     navigator.clipboard.writeText(lines.join('\n'));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -115,25 +116,25 @@ export default function App() {
         <div className={styles.headerLeft}>
           <Link to="/" className={styles.logoLink}>
             <span className={styles.logoIcon}><Cpu size={16} strokeWidth={2.5} /></span>
-            <h1 className={styles.logo}>PC Builder <span className={styles.sub}>Maroc</span></h1>
+            <h1 className={styles.logo}>{UI.app.name} <span className={styles.sub}>{UI.app.subtitle}</span></h1>
           </Link>
           <nav className={styles.nav}>
             <Link to="/" className={`${styles.navLink} ${isHome ? styles.navLinkActive : ''}`}>
-              Configurateur
+              {UI.nav.configurator}
             </Link>
             <Link to="/components" className={`${styles.navLink} ${isComponents ? styles.navLinkActive : ''}`}>
               <LayoutGrid size={13} className={styles.navIcon} />
-              Composants
+              {UI.nav.components}
             </Link>
             <Link to="/presets" className={`${styles.navLink} ${isPresets ? styles.navLinkActive : ''}`}>
-              Configurations
+              {UI.nav.presets}
             </Link>
             <Link to="/compare" className={`${styles.navLink} ${location.pathname === '/compare' ? styles.navLinkActive : ''}`}>
               <GitCompare size={13} className={styles.navIcon} />
-              Comparer
+              {UI.nav.compare}
             </Link>
             <Link to="/market-trends" className={`${styles.navLink} ${location.pathname === '/market-trends' ? styles.navLinkActive : ''}`}>
-              Tendances
+              {UI.nav.trends}
             </Link>
           </nav>
         </div>
@@ -145,7 +146,7 @@ export default function App() {
                 ref={searchRef}
                 type="search"
                 className={styles.headerSearchInput}
-                placeholder="Rechercher…"
+                placeholder={`${UI.nav.search}…`}
                 value={searchInput}
                 onChange={e => setSearchInput(e.target.value)}
                 onBlur={() => { if (!searchInput) setSearchOpen(false); }}
@@ -153,7 +154,7 @@ export default function App() {
               />
             </form>
           ) : (
-            <button className={styles.iconBtn} onClick={() => setSearchOpen(true)} aria-label="Rechercher" title="Rechercher">
+            <button className={styles.iconBtn} onClick={() => setSearchOpen(true)} aria-label={UI.nav.search} title={UI.nav.search}>
               <Search size={16} />
             </button>
           )}
@@ -174,13 +175,10 @@ export default function App() {
             <section className={styles.hero}>
               <div className={styles.heroContent}>
                 <h2 className={styles.heroTitle}>
-                  Configurez votre PC,{' '}
-                  <span className={styles.heroAccent}>comparez les prix</span>
+                  {UI.hero.title}{' '}
+                  <span className={styles.heroAccent}>{UI.hero.titleAccent}</span>
                 </h2>
-                <p className={styles.heroSub}>
-                  Vérification de compatibilité instantanée et comparaison des prix
-                  chez les revendeurs marocains. Aucune vente — redirection vers les boutiques.
-                </p>
+                <p className={styles.heroSub}>{UI.hero.subtitle}</p>
                 <div className={styles.heroCtas}>
                   {CATEGORY_ORDER.slice(0, 5).map(cat => (
                     <Link key={cat} to={`/browse/${cat}`} className={styles.heroCatLink}>
@@ -198,10 +196,10 @@ export default function App() {
                     className={`${styles.actionBtn} ${copied ? styles.actionBtnSuccess : ''}`}
                     onClick={handleShare}
                   >
-                    {copied ? <><Check size={14} /> Copié !</> : <><Link2 size={14} /> Partager</>}
+                    {copied ? <><Check size={14} /> {UI.build.copied}</> : <><Link2 size={14} /> {UI.build.share}</>}
                   </button>
                   <button className={styles.actionBtn} onClick={handleExportText}>
-                    <FileText size={14} /> Exporter
+                    <FileText size={14} /> {UI.build.export}
                   </button>
                 </div>
               )}
@@ -268,11 +266,11 @@ export default function App() {
       </Routes>
 
       <footer className={styles.footer}>
-        <span className={styles.footerText}>PC Builder Maroc — comparateur de prix, pas un vendeur.</span>
+        <span className={styles.footerText}>{UI.footer.tagline}</span>
         <div className={styles.footerLinks}>
-          <Link to="/search" className={styles.footerLink}>Recherche</Link>
-          <Link to="/compare" className={styles.footerLink}>Comparer</Link>
-          <Link to="/market-trends" className={styles.footerLink}>Tendances</Link>
+          <Link to="/search" className={styles.footerLink}>{UI.footer.search}</Link>
+          <Link to="/compare" className={styles.footerLink}>{UI.footer.compare}</Link>
+          <Link to="/market-trends" className={styles.footerLink}>{UI.footer.trends}</Link>
           <a href="https://www.ultrapc.ma" target="_blank" rel="noopener noreferrer" className={styles.footerLink}>UltraPC</a>
           <a href="https://nextlevelpc.ma" target="_blank" rel="noopener noreferrer" className={styles.footerLink}>NextLevel</a>
           <a href="https://setupgame.ma" target="_blank" rel="noopener noreferrer" className={styles.footerLink}>SetupGame</a>

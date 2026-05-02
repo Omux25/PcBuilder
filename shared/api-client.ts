@@ -40,7 +40,7 @@ export function createRequest(defaultBaseUrl: string) {
     });
 
     // Parse JSON safely
-    let data: any;
+    let data: unknown;
     const contentType = res.headers.get('Content-Type');
     if (contentType?.includes('application/json')) {
       data = await res.json();
@@ -49,10 +49,12 @@ export function createRequest(defaultBaseUrl: string) {
     }
 
     if (!res.ok) {
+      const errData = data as Record<string, unknown> | null;
+      const errObj = errData?.error as Record<string, unknown> | undefined;
       const error: ApiError = {
-        message: data?.error?.message ?? data?.message ?? `HTTP ${res.status}`,
+        message: (errObj?.message ?? errData?.message ?? `HTTP ${res.status}`) as string,
         status: res.status,
-        code: data?.error?.code,
+        code: errObj?.code as string | undefined,
       };
       throw error;
     }

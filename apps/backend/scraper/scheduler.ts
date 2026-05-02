@@ -5,15 +5,16 @@
  * Requirements: 4.2, 4.4
  */
 
-import { sql as bunSql } from 'bun';
 import { logger } from './utils/logger.js';
 import { runScrapingSession } from './session.js';
+import { getSql } from '../src/db/index.js';
 
 async function runDueRetailers(): Promise<void> {
   let retailers: { id: number; name: string; scraping_interval_hours: number }[];
 
   try {
-    retailers = await bunSql`
+    const sql = getSql();
+    retailers = await sql`
       SELECT id, name, scraping_interval_hours
       FROM retailers
       WHERE is_active = true

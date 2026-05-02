@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react';
+import { UI } from '../ui-strings';
 
 interface Props {
   children: ReactNode;
@@ -31,41 +32,30 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '60vh',
-          gap: '1rem',
-          padding: '2rem',
-          textAlign: 'center',
-          color: 'var(--text-muted)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          justifyContent: 'center', minHeight: '60vh', gap: '1rem',
+          padding: '2rem', textAlign: 'center', color: 'var(--text-muted)',
         }}>
           <h1 style={{ fontSize: '1.4rem', color: 'var(--text)' }}>
-            Une erreur inattendue s'est produite
+            {UI.errorBoundary.title}
           </h1>
           <p style={{ maxWidth: '400px', lineHeight: 1.6 }}>
-            Quelque chose s'est mal passé. Essayez de recharger la page.
+            {UI.errorBoundary.message}
           </p>
           <button
             onClick={() => window.location.reload()}
             style={{
-              marginTop: '0.5rem',
-              padding: '0.6rem 1.5rem',
-              background: 'var(--accent)',
-              color: '#fff',
-              borderRadius: 'var(--radius)',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              fontWeight: 600,
+              marginTop: '0.5rem', padding: '0.6rem 1.5rem',
+              background: 'var(--accent)', color: '#fff',
+              borderRadius: 'var(--radius)', border: 'none',
+              cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
             }}
           >
-            Recharger la page
+            {UI.errorBoundary.reload}
           </button>
           {this.state.error && (
             <details style={{ marginTop: '1rem', fontSize: '0.8rem', color: 'var(--text-dim)', maxWidth: '500px' }}>
-              <summary style={{ cursor: 'pointer' }}>Détails techniques</summary>
+              <summary style={{ cursor: 'pointer' }}>{UI.errorBoundary.technicalDetails}</summary>
               <pre style={{ marginTop: '0.5rem', textAlign: 'left', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                 {this.state.error.message}
               </pre>

@@ -193,16 +193,20 @@ authRouter.post('/refresh', async (c) => {
   const matched = rows[0];
   const accessToken = makeAccessToken(matched.admin_id, matched.username);
 
-  // Rotate refresh token: delete old, issue new
+  // Rotate refresh token atomically: delete old and insert new in a single transaction.
+  // Without a transaction, a server crash between the DELETE and INSERT would leave
+  // the user with no valid refresh token, forcing them to log in again.
   const newRawRefresh  = generateRefreshToken();
   const newRefreshHash = hashRefreshToken(newRawRefresh);
   const newExpiresAt   = refreshTokenExpiry();
 
-  await sql`DELETE FROM refresh_tokens WHERE id = ${matched.id}`;
-  await sql`
-    INSERT INTO refresh_tokens (admin_id, token, expires_at)
-    VALUES (${matched.admin_id}, ${newRefreshHash}, ${newExpiresAt.toISOString()})
-  `;
+  await sql.begin(async (tx) => {
+    await tx`DELETE FROM refresh_tokens WHERE id = ${matched.id}`;
+    await tx`
+      INSERT INTO refresh_tokens (admin_id, token, expires_at)
+      VALUES (${matched.admin_id}, ${newRefreshHash}, ${newExpiresAt.toISOString()})
+    `;
+  });
 
   setRefreshCookie(c, newRawRefresh);
 

@@ -178,7 +178,6 @@ export class UltraPcScraper {
           if (!product_url) continue;
 
           prices.push({
-            component_id: 0, // resolved by aggregator via scraper_mappings
             retailer_id: RETAILER_ID,
             price,
             in_stock: true, // will be corrected by checkStockBatch after all pages are scraped

@@ -9,6 +9,7 @@ import { getComponents } from '../api';
 import { CategoryIcon } from '../components/CategoryIcon';
 import type { ComponentCategory } from '../types';
 import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
+import { UI } from '../ui-strings';
 import styles from './ComponentsIndex.module.css';
 
 interface CategoryStat {
@@ -31,10 +32,8 @@ export function ComponentsIndex() {
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h1 className={styles.title}>Catalogue de composants</h1>
-        <p className={styles.subtitle}>
-          Parcourez notre catalogue de composants PC avec comparaison de prix en temps réel.
-        </p>
+        <h1 className={styles.title}>{UI.componentsIndex.title}</h1>
+        <p className={styles.subtitle}>{UI.componentsIndex.subtitle}</p>
       </div>
 
       <div className={styles.grid}>
@@ -48,7 +47,7 @@ export function ComponentsIndex() {
               <div className={styles.cardInfo}>
                 <h2 className={styles.cardTitle}>{CATEGORY_LABELS[cat]}</h2>
                 <p className={styles.cardCount}>
-                  {loading ? '…' : `${stat?.count ?? 0} composant${(stat?.count ?? 0) !== 1 ? 's' : ''}`}
+                  {loading ? '…' : UI.componentsIndex.count(stat?.count ?? 0)}
                 </p>
               </div>
               <span className={styles.cardArrow}>→</span>

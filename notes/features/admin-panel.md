@@ -50,10 +50,9 @@ For adding many components at once.
 
 1. Upload a CSV or JSON file
 2. Preview the first 10 rows with validation status (green = valid, red = error with message)
-3. Resolve duplicate slug conflicts (keep existing / overwrite / skip)
-4. Click Import — see results: X imported, Y skipped, Z failed
+3. Click Import — see results: X imported, Y skipped, Z failed
 
-The import runs row-by-row. Each row is validated and inserted independently. If a row fails, it is counted as failed and the import continues. Successfully imported rows are not rolled back on later failures.
+The import runs row-by-row. Each row is validated and inserted independently. If a row fails, it is counted as failed and the import continues. Slug collisions are automatically counted as `skipped` — the existing component is kept and the duplicate row is not inserted. Successfully imported rows are not rolled back on later failures.
 
 ### Retailers
 
