@@ -17,6 +17,8 @@ export const UI = {
     name: 'PC Builder',
     subtitle: 'Maroc',
     tagline: 'comparateur de prix, pas un vendeur.',
+    themeLight: 'Passer au mode clair',
+    themeDark: 'Passer au mode sombre',
   },
 
   nav: {
@@ -55,6 +57,12 @@ export const UI = {
     totalLabel: 'Total estimé',
     allCompatible: '✓ Tous les composants sont compatibles',
     tdpInfo: (tdp: number, psu: number) => `TDP : ${tdp}W · PSU recommandé : ${psu}W`,
+    // Table headers
+    thComponent: 'Composant',
+    thSelection: 'Sélection',
+    thBestPrice: 'Meilleur prix',
+    // Row actions
+    removeTitle: 'Retirer',
   },
 
   // ── Component picker ──────────────────────────────────────────────────────
@@ -215,10 +223,10 @@ export const UI = {
     load: 'Charger cette configuration',
     empty: 'Aucune configuration disponible pour le moment.',
     useCases: {
-      gaming:      'Gaming',
+      gaming: 'Gaming',
       workstation: 'Workstation',
-      office:      'Bureau',
-      budget:      'Budget',
+      office: 'Bureau',
+      budget: 'Budget',
     } as Record<string, string>,
   },
 
@@ -237,6 +245,8 @@ export const UI = {
     buy: 'Voir →',
     someOutOfStock: 'Certaines variantes affichées sont actuellement épuisées.',
     error: (msg: string) => `Erreur : ${msg}`,
+    showOos: (n: number) => `Voir ${n} offre${n > 1 ? 's' : ''} épuisée${n > 1 ? 's' : ''}`,
+    hideOos: 'Masquer les épuisés',
   },
 
   // ── Inline prices component ───────────────────────────────────────────────

@@ -1,7 +1,9 @@
 /**
- * PriceComparison — shows all price offers for a selected component,
- * including variant labels (AIB partner, BOX/Tray, color, etc.).
- * Opens the retailer's product page in a new tab on click.
+ * PriceComparison — shows price offers for a selected component.
+ *
+ * In-stock offers are always shown.
+ * Out-of-stock offers are collapsed by default — a toggle reveals them.
+ * This keeps the table clean when most offers are sold out.
  */
 
 import { useEffect, useState, Fragment } from 'react';
@@ -26,12 +28,14 @@ function getInitials(name: string) {
 export function PriceComparison({ component }: Props) {
   const [offers, setOffers] = useState<PriceOffer[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [showOos, setShowOos] = useState(false);
 
   useEffect(() => {
     if (!component) { setOffers([]); return; }
     setLoading(true);
     setError(null);
+    setShowOos(false);
     getPrices(component.id)
       .then(setOffers)
       .catch((e: Error) => setError(e.message))
@@ -47,10 +51,17 @@ export function PriceComparison({ component }: Props) {
     );
   }
 
-  const cheapestUrl = offers[0]?.product_url;
+  // Split in-stock vs out-of-stock
+  const inStockOffers = offers.filter(o => o.in_stock);
+  const oosOffers = offers.filter(o => !o.in_stock);
+  const visibleOffers = showOos ? offers : inStockOffers;
 
+  // Cheapest in-stock offer gets highlighted
+  const cheapestUrl = inStockOffers[0]?.product_url ?? offers[0]?.product_url;
+
+  // Group by retailer for rowspan
   const groupedOffers: { name: string; offers: PriceOffer[] }[] = [];
-  for (const offer of offers) {
+  for (const offer of visibleOffers) {
     let group = groupedOffers.find(g => g.name === offer.retailer_name);
     if (!group) { group = { name: offer.retailer_name, offers: [] }; groupedOffers.push(group); }
     group.offers.push(offer);
@@ -79,7 +90,16 @@ export function PriceComparison({ component }: Props) {
         <p className={styles.empty}>{UI.priceComparison.noRetailer}</p>
       )}
 
-      {!loading && !error && offers.length > 0 && (
+      {!loading && !error && inStockOffers.length === 0 && oosOffers.length > 0 && (
+        <p className={styles.allOos}>
+          Aucune offre en stock actuellement.{' '}
+          <button className={styles.oosToggle} onClick={() => setShowOos(v => !v)}>
+            {showOos ? UI.priceComparison.hideOos : UI.priceComparison.showOos(oosOffers.length)}
+          </button>
+        </p>
+      )}
+
+      {!loading && !error && visibleOffers.length > 0 && (
         <table className={styles.table} aria-label={`Prix pour ${component.name}`}>
           <thead>
             <tr>
@@ -95,7 +115,13 @@ export function PriceComparison({ component }: Props) {
             {groupedOffers.map(group => (
               <Fragment key={group.name}>
                 {group.offers.map((offer, index) => (
-                  <tr key={offer.product_url} className={offer.product_url === cheapestUrl ? styles.cheapest : undefined}>
+                  <tr
+                    key={offer.product_url}
+                    className={[
+                      offer.product_url === cheapestUrl ? styles.cheapest : '',
+                      !offer.in_stock ? styles.oosRow : '',
+                    ].filter(Boolean).join(' ')}
+                  >
                     {index === 0 && (
                       <td rowSpan={group.offers.length} className={styles.retailerCell}>
                         <div className={styles.retailerCellContent}>
@@ -137,8 +163,13 @@ export function PriceComparison({ component }: Props) {
         </table>
       )}
 
-      {!loading && !error && offers.some(o => !o.in_stock) && offers.some(o => o.in_stock) && (
-        <p className={styles.hint}>{UI.priceComparison.someOutOfStock}</p>
+      {/* OOS toggle — only shown when there are both in-stock AND out-of-stock offers */}
+      {!loading && !error && inStockOffers.length > 0 && oosOffers.length > 0 && (
+        <button className={styles.oosToggle} onClick={() => setShowOos(v => !v)}>
+          {showOos
+            ? UI.priceComparison.hideOos
+            : UI.priceComparison.showOos(oosOffers.length)}
+        </button>
       )}
     </section>
   );

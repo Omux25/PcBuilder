@@ -13,7 +13,11 @@
   margin-bottom: 1.5rem;
   transition: color 0.15s;
 }
-.back:hover { color: var(--accent); text-decoration: none; }
+
+.back:hover {
+  color: var(--accent);
+  text-decoration: none;
+}
 
 /* ── Hero layout ────────────────────────────────────────────────────────── */
 
@@ -101,7 +105,9 @@
   margin: 0;
 }
 
-.brand { color: var(--accent); }
+.brand {
+  color: var(--accent);
+}
 
 .description {
   font-size: 0.88rem;
@@ -170,14 +176,17 @@
   cursor: pointer;
   transition: all 0.15s;
 }
+
 .addToBuildBtn:hover {
   background: var(--accent-h);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
+
 .addToBuildBtnDone {
   background: var(--success);
 }
+
 .addToBuildBtnDone:hover {
   background: var(--success-soft);
   box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
@@ -197,6 +206,7 @@
   text-decoration: none;
   transition: all 0.15s;
 }
+
 .compareBtn:hover {
   color: var(--accent-blue);
   border-color: var(--accent-blue);
@@ -221,7 +231,9 @@
   animation: slideUp 0.4s var(--ease-out);
 }
 
-.fullWidth { grid-column: 1 / -1; }
+.fullWidth {
+  grid-column: 1 / -1;
+}
 
 .cardTitle {
   font-size: 0.95rem;
@@ -239,8 +251,15 @@
   border-collapse: collapse;
   font-size: 0.85rem;
 }
-.specsTable tr { border-bottom: 1px solid var(--border); }
-.specsTable tr:last-child { border-bottom: none; }
+
+.specsTable tr {
+  border-bottom: 1px solid var(--border);
+}
+
+.specsTable tr:last-child {
+  border-bottom: none;
+}
+
 .specKey {
   padding: 0.5rem 0.75rem 0.5rem 0;
   color: var(--text-muted);
@@ -248,6 +267,7 @@
   width: 45%;
   white-space: nowrap;
 }
+
 .specValue {
   padding: 0.5rem 0;
   color: var(--text);
@@ -261,6 +281,7 @@
   border-collapse: collapse;
   font-size: 0.85rem;
 }
+
 .pricesTable th {
   text-align: left;
   padding: 0.5rem 0.75rem;
@@ -271,18 +292,25 @@
   letter-spacing: 0.05em;
   border-bottom: 1px solid var(--border);
 }
+
 .pricesTable td {
   padding: 0.55rem 0.75rem;
   border-bottom: 1px solid var(--border);
 }
-.pricesTable tr:last-child td { border-bottom: none; }
+
+.pricesTable tr:last-child td {
+  border-bottom: none;
+}
 
 .retailerLink {
   font-weight: 600;
   color: var(--accent);
   text-decoration: none;
 }
-.retailerLink:hover { text-decoration: underline; }
+
+.retailerLink:hover {
+  text-decoration: underline;
+}
 
 .variantCell {
   font-size: 0.78rem;
@@ -308,6 +336,7 @@
   padding: 0.1rem 0.4rem;
   border-radius: 4px;
 }
+
 .outStock {
   font-size: 0.72rem;
   font-weight: 600;
@@ -316,6 +345,7 @@
   padding: 0.1rem 0.4rem;
   border-radius: 4px;
 }
+
 .updated {
   font-size: 0.78rem;
   color: var(--text-dim);
@@ -326,6 +356,40 @@
   color: var(--text-dim);
   font-size: 0.85rem;
   font-style: italic;
+}
+
+/* ── OOS collapse ────────────────────────────────────────────────────────── */
+
+.oosRow td {
+  opacity: 0.45;
+}
+
+.allOosMsg {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-bottom: 0.75rem;
+}
+
+.oosToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.75rem;
+  padding: 0.3rem 0.75rem;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.oosToggleBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-glow);
 }
 
 .error {
@@ -342,17 +406,36 @@
     gap: 1.25rem;
     padding: 1rem;
   }
-  .productImg, .productImgPlaceholder {
+
+  .productImg,
+  .productImgPlaceholder {
     width: 120px;
     height: 120px;
     align-self: center;
   }
-  .name { font-size: 1.2rem; }
-  .heroPriceVal { font-size: 1.2rem; }
-  .grid { grid-template-columns: 1fr; }
+
+  .name {
+    font-size: 1.2rem;
+  }
+
+  .heroPriceVal {
+    font-size: 1.2rem;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 480px) {
-  .heroCtas { flex-direction: column; width: 100%; }
-  .addToBuildBtn, .compareBtn { width: 100%; justify-content: center; }
+  .heroCtas {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .addToBuildBtn,
+  .compareBtn {
+    width: 100%;
+    justify-content: center;
+  }
 }

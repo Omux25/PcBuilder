@@ -69,11 +69,11 @@ interface ScrapedPrice {
   price:        number;   // price in MAD
   in_stock:     boolean;
   product_url:  string;   // direct link to the product page
-  name:         string;   // scraped product title (used for DNA matching)
+  product_name?: string;  // optional scraped product title (used for DNA matching)
 }
 ```
 
-The `name` field is the raw scraped product title — it's used by the DNA matcher to find the corresponding catalog component.
+The `product_name` field is the raw scraped product title — it's used by the DNA matcher to find the corresponding catalog component.
 
 ---
 

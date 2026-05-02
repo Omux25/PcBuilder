@@ -19,7 +19,7 @@
 import { BaseScraper, type ScrapedPrice } from './baseScraper.js';
 import type { CheerioAPI } from 'cheerio';
 
-const SITE_NAME   = 'nextlevelpc.ma';
+const SITE_NAME = 'nextlevelpc.ma';
 const RETAILER_ID = 11;
 
 const CATEGORY_URLS: string[] = [
@@ -107,8 +107,8 @@ export class NextLevelScraper extends BaseScraper {
 
       // Product name — from itemprop or title element
       const name = $(card).find('[itemprop="name"]').first().text().trim() ||
-                   $(card).find('.product-title a').first().text().trim() ||
-                   $(card).find('h2 a, h3 a').first().text().trim();
+        $(card).find('.product-title a').first().text().trim() ||
+        $(card).find('h2 a, h3 a').first().text().trim();
 
       // Skip bundle products (contain "+")
       if (name.includes('+')) return;
@@ -129,12 +129,22 @@ export class NextLevelScraper extends BaseScraper {
       const badgeText = $(card).find('.badge-name-text').first().text().trim().toUpperCase();
       const in_stock = badgeText === 'EN STOCK';
 
+      // Product description — extract spec features from the hidden specs block
+      // (.product-features li contains lines like "Quantité mémoire : 8GB GDDR6")
+      // Used as fallback for variant extraction when VRAM isn't in the product name.
+      const featureLines = $(card).find('.product-features li')
+        .map((_j, li) => $(li).text().trim())
+        .get()
+        .filter(Boolean);
+      const product_description = featureLines.length > 0 ? featureLines.join(' | ') : undefined;
+
       prices.push({
         retailer_id: RETAILER_ID,
         price,
         in_stock,
         product_url: url,
         product_name: name,
+        product_description,
       });
     });
 

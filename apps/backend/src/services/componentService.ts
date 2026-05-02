@@ -81,15 +81,15 @@ async function getComponents(
         AND (${ram_type ?? null}::text IS NULL OR c.ram_type = ${ram_type ?? null})
         AND (${brand ?? null}::text IS NULL OR LOWER(c.brand) = LOWER(${brand ?? null}))
         AND (
-          ${in_stock ?? null}::boolean IS NULL OR 
+          ${in_stock ?? null}::boolean IS NULL OR
           EXISTS (SELECT 1 FROM prices p WHERE p.component_id = c.id AND p.in_stock = true) = ${in_stock ?? null}
         )
       ORDER BY c.name ASC
       LIMIT ${limit} OFFSET ${offset}
-    `) as (Component & { total_count: string })[];
+    `) as (Component & { total_count: string; search_text?: string })[];
 
     const total = rows.length > 0 ? parseInt(rows[0].total_count, 10) : 0;
-    return { components: rows.map(({ total_count: _tc, ...c }) => c as Component), total };
+    return { components: rows.map(({ total_count: _tc, search_text: _st, ...c }) => c as Component), total };
   }
 
   // ── Search: token-based matching ─────────────────────────────────────────
@@ -130,13 +130,13 @@ async function getComponents(
   //   LOWER(REGEXP_REPLACE(COALESCE(brand,'') || ' ' || name, '[^a-zA-Z0-9]+', ' ', 'g'))
   // Defined as a CTE so we compute it once and reference it in WHERE + ORDER BY.
 
-    const rows = (await sql`
+  const rows = (await sql`
       WITH base AS (
         SELECT c.*,
           LOWER(REGEXP_REPLACE(
             COALESCE(c.brand, '') || ' ' || c.name,
             '[^a-zA-Z0-9]+', ' ', 'g'
-          )) AS search_text
+          )) AS _search_text
         FROM components c
         WHERE (${include_inactive ? null : true}::boolean IS NULL OR c.is_active = true)
           AND (${is_active ?? null}::boolean IS NULL OR c.is_active = ${is_active ?? null})
@@ -155,23 +155,23 @@ async function getComponents(
       WHERE
         -- Each token must appear as a substring of the normalised text.
         -- Null tokens are skipped (always true).
-        (${te[0]}::text IS NULL OR search_text LIKE '%' || ${te[0]} || '%')
-        AND (${te[1]}::text IS NULL OR search_text LIKE '%' || ${te[1]} || '%')
-        AND (${te[2]}::text IS NULL OR search_text LIKE '%' || ${te[2]} || '%')
-        AND (${te[3]}::text IS NULL OR search_text LIKE '%' || ${te[3]} || '%')
-        AND (${te[4]}::text IS NULL OR search_text LIKE '%' || ${te[4]} || '%')
-        AND (${te[5]}::text IS NULL OR search_text LIKE '%' || ${te[5]} || '%')
-        AND (${te[6]}::text IS NULL OR search_text LIKE '%' || ${te[6]} || '%')
-        AND (${te[7]}::text IS NULL OR search_text LIKE '%' || ${te[7]} || '%')
+        (${te[0]}::text IS NULL OR _search_text LIKE '%' || ${te[0]} || '%')
+        AND (${te[1]}::text IS NULL OR _search_text LIKE '%' || ${te[1]} || '%')
+        AND (${te[2]}::text IS NULL OR _search_text LIKE '%' || ${te[2]} || '%')
+        AND (${te[3]}::text IS NULL OR _search_text LIKE '%' || ${te[3]} || '%')
+        AND (${te[4]}::text IS NULL OR _search_text LIKE '%' || ${te[4]} || '%')
+        AND (${te[5]}::text IS NULL OR _search_text LIKE '%' || ${te[5]} || '%')
+        AND (${te[6]}::text IS NULL OR _search_text LIKE '%' || ${te[6]} || '%')
+        AND (${te[7]}::text IS NULL OR _search_text LIKE '%' || ${te[7]} || '%')
       ORDER BY
         -- Exact full-query match ranks first
-        CASE WHEN search_text LIKE '%' || ${escapedQuery} || '%' THEN 0 ELSE 1 END,
+        CASE WHEN _search_text LIKE '%' || ${escapedQuery} || '%' THEN 0 ELSE 1 END,
         name ASC
       LIMIT ${limit} OFFSET ${offset}
-    `) as (Component & { total_count: string; search_text: string })[];
+    `) as (Component & { total_count: string; search_text?: string; _search_text: string })[];
 
   const total = rows.length > 0 ? parseInt(rows[0].total_count, 10) : 0;
-  const components = rows.map(({ total_count: _tc, search_text: _st, ...c }) => c as Component);
+  const components = rows.map(({ total_count: _tc, search_text: _st, _search_text: _cst, ...c }) => c as Component);
 
   return { components, total };
 }
@@ -186,26 +186,32 @@ async function getComponentById(id: number): Promise<Component> {
     SELECT * FROM components
     WHERE id = ${id} AND is_active = true
     LIMIT 1
-  `) as Component[];
+  `) as (Component & { search_text?: string })[];
 
   if (rows.length === 0) {
     throw new AppError('COMPONENT_NOT_FOUND', `Component with id ${id} not found`, 404);
   }
 
-  return rows[0];
+  const { search_text: _st, ...component } = rows[0];
+  return component as Component;
 }
 
 /**
  * Returns multiple active components by their numeric IDs.
  * Used for batch restoration of build configurations.
+ * Note: Bun.sql has a known issue with array parameters in IN clauses
+ * ("syntax error at or near $1"). Using sql.unsafe() with integer literals
+ * is safe here because ids come from our own query parsing, not raw user input.
  */
 async function getComponentsByIds(ids: number[]): Promise<Component[]> {
   if (ids.length === 0) return [];
   const sql = getSql();
-  return sql`
+  const idList = ids.join(',');
+  const rows = (await sql.unsafe(`
     SELECT * FROM components
-    WHERE id IN ${ids} AND is_active = true
-  ` as Promise<Component[]>;
+    WHERE id IN (${idList}) AND is_active = true
+  `)) as (Component & { search_text?: string })[];
+  return rows.map(({ search_text: _st, ...c }) => c as Component);
 }
 
 /**
@@ -218,13 +224,14 @@ async function getComponentBySlug(slug: string): Promise<Component> {
     SELECT * FROM components
     WHERE slug = ${slug} AND is_active = true
     LIMIT 1
-  `) as Component[];
+  `) as (Component & { search_text?: string })[];
 
   if (rows.length === 0) {
     throw new AppError('COMPONENT_NOT_FOUND', `Component "${slug}" not found`, 404);
   }
 
-  return rows[0];
+  const { search_text: _st, ...component } = rows[0];
+  return component as Component;
 }
 
 /**
@@ -268,19 +275,19 @@ function escapeLikeToken(token: string): string {
 function extractComponentFields(data: ComponentInput) {
   const d = data as Record<string, unknown>;
   return {
-    socket:                d.socket                as string   | undefined,
-    supported_ram_types:   d.supported_ram_types   as string[] | undefined,
-    max_ram_frequency:     d.max_ram_frequency     as number   | undefined,
-    ram_type:              d.ram_type              as string   | undefined,
-    frequency_mhz:         d.frequency_mhz         as number   | undefined,
-    length_mm:             d.length_mm             as number   | undefined,
-    max_gpu_length_mm:     d.max_gpu_length_mm     as number   | undefined,
-    supported_motherboards:d.supported_motherboards as string[] | undefined,
-    max_cooler_height_mm:  d.max_cooler_height_mm  as number   | undefined,
-    form_factor:           d.form_factor           as string   | undefined,
-    height_mm:             d.height_mm             as number   | undefined,
-    wattage:               d.wattage               as number   | undefined,
-    tdp:                   d.tdp                   as number   | undefined,
+    socket: d.socket as string | undefined,
+    supported_ram_types: d.supported_ram_types as string[] | undefined,
+    max_ram_frequency: d.max_ram_frequency as number | undefined,
+    ram_type: d.ram_type as string | undefined,
+    frequency_mhz: d.frequency_mhz as number | undefined,
+    length_mm: d.length_mm as number | undefined,
+    max_gpu_length_mm: d.max_gpu_length_mm as number | undefined,
+    supported_motherboards: d.supported_motherboards as string[] | undefined,
+    max_cooler_height_mm: d.max_cooler_height_mm as number | undefined,
+    form_factor: d.form_factor as string | undefined,
+    height_mm: d.height_mm as number | undefined,
+    wattage: d.wattage as number | undefined,
+    tdp: d.tdp as number | undefined,
   };
 }
 
@@ -335,9 +342,10 @@ async function createComponent(data: ComponentInput): Promise<Component> {
       true
     )
     RETURNING *
-  `) as Component[];
+  `) as (Component & { search_text?: string })[];
 
-  return rows[0];
+  const { search_text: _st, ...component } = rows[0];
+  return component as Component;
 }
 
 /**
@@ -385,13 +393,14 @@ async function updateComponent(id: number, data: ComponentInput): Promise<Compon
       updated_at            = NOW()
     WHERE id = ${id}
     RETURNING *
-  `) as Component[];
+  `) as (Component & { search_text?: string })[];
 
   if (rows.length === 0) {
     throw new AppError('COMPONENT_NOT_FOUND', `Component with id ${id} not found`, 404);
   }
 
-  return rows[0];
+  const { search_text: _st, ...component } = rows[0];
+  return component as Component;
 }
 
 /**
@@ -404,13 +413,14 @@ async function deactivateComponent(id: number): Promise<Component> {
     UPDATE components SET is_active = false, updated_at = NOW()
     WHERE id = ${id}
     RETURNING *
-  `) as Component[];
+  `) as (Component & { search_text?: string })[];
 
   if (rows.length === 0) {
     throw new AppError('COMPONENT_NOT_FOUND', `Component with id ${id} not found`, 404);
   }
 
-  return rows[0];
+  const { search_text: _st, ...component } = rows[0];
+  return component as Component;
 }
 
 /**

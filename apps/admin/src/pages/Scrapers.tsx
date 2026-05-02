@@ -7,7 +7,7 @@ import styles from './Scrapers.module.css';
 interface ScraperLog {
   id: number;
   level: string;
-  site?: string;
+  site?: string | null;
   message: string;
   created_at: string;
 }

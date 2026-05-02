@@ -6,13 +6,14 @@
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-import {
+import type {
   LogEntry, UnmatchedListing, Component,
   AdminRetailer, DashboardData, PresetBuild
 } from '@shared/types';
 
 export type AdminComponent = Component;
-export type { LogEntry, UnmatchedListing, AdminRetailer, DashboardData, PresetBuild as AdminPreset };
+export type { LogEntry, UnmatchedListing, AdminRetailer, DashboardData };
+export type AdminPreset = PresetBuild;
 
 import { createRequest, type RequestOptions } from '@shared/api-client';
 

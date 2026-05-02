@@ -35,9 +35,9 @@ export interface AggregateResult {
 // ── Aggregator ────────────────────────────────────────────────────────────────
 
 export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult> {
-  let updated   = 0;
+  let updated = 0;
   let unmatched = 0;
-  let errors    = 0;
+  let errors = 0;
 
   if (prices.length === 0) return { updated, unmatched, errors };
 
@@ -152,7 +152,7 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
   for (const p of resolvedPrices) {
     try {
       const { label: variantLabel, details: variantDetails } =
-        extractVariant(p.product_name ?? '', p.category);
+        extractVariant(p.product_name ?? '', p.category, p.product_description);
 
       await sql`
         INSERT INTO prices (

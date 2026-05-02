@@ -20,14 +20,14 @@ const componentsRouter = new Hono();
 // GET /api/components?category=cpu&socket=AM5&ram_type=DDR5&brand=AMD&search=ryzen&page=1&limit=20
 componentsRouter.get('/', async (c) => {
   const category = c.req.query('category');
-  const socket   = c.req.query('socket');
+  const socket = c.req.query('socket');
   const ram_type = c.req.query('ram_type');
-  const brand    = c.req.query('brand');
-  const search   = c.req.query('search');
+  const brand = c.req.query('brand');
+  const search = c.req.query('search');
   const idsParam = c.req.query('ids');
-  const inStock  = c.req.query('in_stock') === 'true' ? true : c.req.query('in_stock') === 'false' ? false : undefined;
-  const page     = c.req.query('page')  ? Number(c.req.query('page'))  : 1;
-  const limit    = c.req.query('limit') ? Number(c.req.query('limit')) : 20;
+  const inStock = c.req.query('in_stock') === 'true' ? true : c.req.query('in_stock') === 'false' ? false : undefined;
+  const page = c.req.query('page') ? Number(c.req.query('page')) : 1;
+  const limit = c.req.query('limit') ? Number(c.req.query('limit')) : 20;
 
   if (idsParam) {
     const ids = idsParam.split(',').map(Number).filter(n => Number.isInteger(n) && n > 0);
@@ -57,12 +57,12 @@ componentsRouter.get('/', async (c) => {
 // POST /api/components/smart-search
 componentsRouter.post('/smart-search', async (c) => {
   const category = c.req.query('category');
-  const search   = c.req.query('search');
-  const brand    = c.req.query('brand');
-  const socket   = c.req.query('socket');
+  const search = c.req.query('search');
+  const brand = c.req.query('brand');
+  const socket = c.req.query('socket');
   const ram_type = c.req.query('ram_type');
-  const page     = c.req.query('page')  ? Number(c.req.query('page'))  : 1;
-  const limit    = Math.min(100, c.req.query('limit') ? Number(c.req.query('limit')) : 20);
+  const page = c.req.query('page') ? Number(c.req.query('page')) : 1;
+  const limit = Math.min(100, c.req.query('limit') ? Number(c.req.query('limit')) : 20);
 
   if (!category) {
     return c.json({ error: { code: 'VALIDATION_ERROR', message: 'The category parameter is required' } }, 400);
@@ -78,11 +78,16 @@ componentsRouter.post('/smart-search', async (c) => {
 
   const { components } = await getComponents({
     category,
-    search:   search   || undefined,
-    brand:    brand    || undefined,
-    socket:   socket   || undefined,
+    search: search || undefined,
+    brand: brand || undefined,
+    socket: socket || undefined,
     ram_type: ram_type || undefined,
     page: 1,
+    // Fetch up to 300 candidates for in-memory compatibility scoring and sorting.
+    // This is intentional: compatibility scoring requires all candidates to be
+    // present so incompatible ones can be ranked last. The trade-off is that
+    // categories with >300 components will silently drop results beyond 300.
+    // In practice no category currently exceeds 300 components.
     limit: 300,
   });
 
@@ -91,18 +96,22 @@ componentsRouter.post('/smart-search', async (c) => {
   // Scope the price query to only the component IDs returned by the search —
   // not all components in the category. This avoids fetching prices for hundreds
   // of components when the search returns a small subset.
-  // We pass the IDs as a PostgreSQL array literal so Bun.sql can parameterize it safely.
+  // Note: Bun.sql has a known issue with array parameters for large arrays
+  // ("insufficient data left in message"). We use sql.unsafe() with integer
+  // literals instead — safe because componentIds come from our own DB query,
+  // not from user input.
   const componentIds = components.map(comp => comp.id);
-  const priceRows = await getSql()`
+  const idList = componentIds.join(',');
+  const priceRows = await getSql().unsafe(`
     SELECT
       p.component_id,
       MIN(p.price) FILTER (WHERE p.in_stock = true) AS lowest_in_stock_price,
       MIN(p.price)                                   AS lowest_any_price,
       BOOL_OR(p.in_stock)                            AS any_in_stock
     FROM prices p
-    WHERE p.component_id = ANY(${componentIds}::int[])
+    WHERE p.component_id IN (${idList})
     GROUP BY p.component_id
-  ` as { component_id: number; lowest_in_stock_price: number | null; lowest_any_price: number; any_in_stock: boolean }[];
+  `) as { component_id: number; lowest_in_stock_price: number | null; lowest_any_price: number; any_in_stock: boolean }[];
 
   const priceMap = new Map(priceRows.map((r) => [r.component_id, r]));
 
@@ -181,7 +190,7 @@ componentsRouter.get('/:id/price-history', async (c) => {
   }
 
   const retailerId = c.req.query('retailer_id') ? Number(c.req.query('retailer_id')) : undefined;
-  const days       = c.req.query('days')        ? Number(c.req.query('days'))        : 30;
+  const days = c.req.query('days') ? Number(c.req.query('days')) : 30;
 
   try {
     const history = await getPriceHistory(id, retailerId, days);

@@ -29,34 +29,34 @@ function getExternalLinks(name: string, category: string) {
 
 // All spec keys we know how to display, in display order
 const SPEC_ROWS: { key: string; label: string; unit?: string; highlight?: 'higher' | 'lower' }[] = [
-  { key: 'benchmark_score',     label: 'Score de performance', highlight: 'higher' },
-  { key: 'socket',              label: 'Socket' },
-  { key: 'cores',               label: 'Cœurs',              highlight: 'higher' },
-  { key: 'threads',             label: 'Threads',            highlight: 'higher' },
-  { key: 'base_clock_ghz',      label: 'Fréq. base',  unit: 'GHz', highlight: 'higher' },
-  { key: 'boost_clock_ghz',     label: 'Fréq. boost', unit: 'GHz', highlight: 'higher' },
-  { key: 'chipset',             label: 'Chipset' },
-  { key: 'vram_gb',             label: 'VRAM',        unit: 'Go',  highlight: 'higher' },
-  { key: 'pcie_version',        label: 'PCIe' },
-  { key: 'ram_type',            label: 'Type RAM' },
+  { key: 'benchmark_score', label: 'Score de performance', highlight: 'higher' },
+  { key: 'socket', label: 'Socket' },
+  { key: 'cores', label: 'Cœurs', highlight: 'higher' },
+  { key: 'threads', label: 'Threads', highlight: 'higher' },
+  { key: 'base_clock_ghz', label: 'Fréq. base', unit: 'GHz', highlight: 'higher' },
+  { key: 'boost_clock_ghz', label: 'Fréq. boost', unit: 'GHz', highlight: 'higher' },
+  { key: 'chipset', label: 'Chipset' },
+  { key: 'vram_gb', label: 'VRAM', unit: 'Go', highlight: 'higher' },
+  { key: 'pcie_version', label: 'PCIe' },
+  { key: 'ram_type', label: 'Type RAM' },
   { key: 'supported_ram_types', label: 'RAM supportée' },
-  { key: 'max_ram_frequency',   label: 'Fréq. RAM max', unit: 'MHz', highlight: 'higher' },
-  { key: 'ram_slots',           label: 'Slots RAM',    highlight: 'higher' },
-  { key: 'max_ram_gb',          label: 'RAM max',      unit: 'Go',  highlight: 'higher' },
-  { key: 'frequency_mhz',       label: 'Fréquence',    unit: 'MHz', highlight: 'higher' },
-  { key: 'cas_latency',         label: 'Latence CAS',  highlight: 'lower' },
-  { key: 'capacity_gb',         label: 'Capacité',     unit: 'Go',  highlight: 'higher' },
-  { key: 'type',                label: 'Type' },
-  { key: 'interface',           label: 'Interface' },
-  { key: 'read_speed_mbps',     label: 'Lecture',      unit: 'Mo/s', highlight: 'higher' },
-  { key: 'write_speed_mbps',    label: 'Écriture',     unit: 'Mo/s', highlight: 'higher' },
-  { key: 'wattage',             label: 'Puissance',    unit: 'W',   highlight: 'higher' },
-  { key: 'efficiency_rating',   label: 'Certification' },
-  { key: 'modular',             label: 'Modulaire' },
-  { key: 'form_factor',         label: 'Format' },
-  { key: 'length_mm',           label: 'Longueur GPU', unit: 'mm',  highlight: 'lower' },
-  { key: 'max_gpu_length_mm',   label: 'GPU max',      unit: 'mm',  highlight: 'higher' },
-  { key: 'tdp',                 label: 'TDP',          unit: 'W',   highlight: 'lower' },
+  { key: 'max_ram_frequency', label: 'Fréq. RAM max', unit: 'MHz', highlight: 'higher' },
+  { key: 'ram_slots', label: 'Slots RAM', highlight: 'higher' },
+  { key: 'max_ram_gb', label: 'RAM max', unit: 'Go', highlight: 'higher' },
+  { key: 'frequency_mhz', label: 'Fréquence', unit: 'MHz', highlight: 'higher' },
+  { key: 'cas_latency', label: 'Latence CAS', highlight: 'lower' },
+  { key: 'capacity_gb', label: 'Capacité', unit: 'Go', highlight: 'higher' },
+  { key: 'type', label: 'Type' },
+  { key: 'interface', label: 'Interface' },
+  { key: 'read_speed_mbps', label: 'Lecture', unit: 'Mo/s', highlight: 'higher' },
+  { key: 'write_speed_mbps', label: 'Écriture', unit: 'Mo/s', highlight: 'higher' },
+  { key: 'wattage', label: 'Puissance', unit: 'W', highlight: 'higher' },
+  { key: 'efficiency_rating', label: 'Certification' },
+  { key: 'modular', label: 'Modulaire' },
+  { key: 'form_factor', label: 'Format' },
+  { key: 'length_mm', label: 'Longueur GPU', unit: 'mm', highlight: 'lower' },
+  { key: 'max_gpu_length_mm', label: 'GPU max', unit: 'mm', highlight: 'higher' },
+  { key: 'tdp', label: 'TDP', unit: 'W', highlight: 'lower' },
 ];
 
 interface ComponentWithPrices {
@@ -143,7 +143,6 @@ export function Compare() {
   }
 
   const filledCount = items.filter(Boolean).length;
-  const canAddMore = filledCount < MAX_COMPARE && ids.length < MAX_COMPARE;
 
   return (
     <div className={styles.page}>
@@ -168,12 +167,12 @@ export function Compare() {
               const [a, b] = items.filter(Boolean);
               const sA = a!.component.benchmark_score || 0;
               const sB = b!.component.benchmark_score || 0;
-              
+
               if (!sA || !sB) return <p className={styles.noDataMsg}>{UI.compare.noData}</p>;
-              
+
               const winner = sA > sB ? a : b;
-              const loser  = sA > sB ? b : a;
-              const diff   = Math.abs(((sA - sB) / Math.min(sA, sB)) * 100).toFixed(0);
+              const loser = sA > sB ? b : a;
+              const diff = Math.abs(((sA - sB) / Math.min(sA, sB)) * 100).toFixed(0);
 
               return (
                 <div className={styles.duelVerdict}>
@@ -185,7 +184,7 @@ export function Compare() {
                     <span className={styles.loserName}>{loser!.component.name}</span>
                   </div>
                   <div className={styles.duelBar}>
-                    <div className={styles.duelBarFill} style={{ 
+                    <div className={styles.duelBarFill} style={{
                       width: `${(Math.min(sA, sB) / Math.max(sA, sB)) * 100}%`,
                       marginLeft: sA > sB ? '0' : 'auto',
                       marginRight: sA > sB ? 'auto' : '0',
@@ -253,21 +252,12 @@ export function Compare() {
                   )}
                 </th>
               ))}
-              {canAddMore && (
-                <th className={styles.componentCol}>
-                  <div className={styles.emptySlot}>
-                    <Plus size={20} className={styles.emptySlotIcon} />
-                    <span>{UI.compare.add}</span>
-                    <Link to="/components" className={styles.browseLink}>{UI.compare.browse}</Link>
-                  </div>
-                </th>
-              )}
             </tr>
           </thead>
 
           <tbody>
             <tr className={styles.sectionHeader}>
-              <td colSpan={1 + items.length + (canAddMore ? 1 : 0)}>{UI.compare.sectionPrice}</td>
+              <td colSpan={1 + items.length}>{UI.compare.sectionPrice}</td>
             </tr>
             <tr>
               <td className={styles.specLabel}>{UI.compare.bestPrice}</td>
@@ -278,7 +268,6 @@ export function Compare() {
                   ) : '—') : '—'}
                 </td>
               ))}
-              {canAddMore && <td />}
             </tr>
             <tr>
               <td className={styles.specLabel}>{UI.compare.offers}</td>
@@ -298,11 +287,10 @@ export function Compare() {
                   ) : '—'}
                 </td>
               ))}
-              {canAddMore && <td />}
             </tr>
 
             <tr className={styles.sectionHeader}>
-              <td colSpan={1 + items.length + (canAddMore ? 1 : 0)}>{UI.compare.sectionPerf}</td>
+              <td colSpan={1 + items.length}>{UI.compare.sectionPerf}</td>
             </tr>
             <tr>
               <td className={styles.specLabel}>{UI.compare.perfPerPrice}</td>
@@ -318,11 +306,10 @@ export function Compare() {
                   </td>
                 );
               })}
-              {canAddMore && <td />}
             </tr>
 
             <tr className={styles.sectionHeader}>
-              <td colSpan={1 + items.length + (canAddMore ? 1 : 0)}>{UI.compare.sectionSpecs}</td>
+              <td colSpan={1 + items.length}>{UI.compare.sectionSpecs}</td>
             </tr>
             {activeRows.map(row => {
               const bestVal = getBestValue(row);
@@ -333,7 +320,7 @@ export function Compare() {
                     const raw = item ? getSpecValue(item.component, row.key) : null;
                     const display = formatSpecVal(raw, row.unit);
                     const isBest = bestVal !== null && typeof raw === 'number' && raw === bestVal;
-                    
+
                     let bar = null;
                     if (row.key === 'benchmark_score' && bestVal !== null && typeof raw === 'number') {
                       const pct = Math.round((raw / bestVal) * 100);
@@ -355,7 +342,6 @@ export function Compare() {
                       </td>
                     );
                   })}
-                  {canAddMore && <td />}
                 </tr>
               );
             })}

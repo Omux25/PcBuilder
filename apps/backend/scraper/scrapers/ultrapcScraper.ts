@@ -36,7 +36,7 @@
 import { fetch } from 'undici';
 import type { ScrapedPrice } from './baseScraper.js';
 
-const SITE_NAME   = 'ultrapc.ma';
+const SITE_NAME = 'ultrapc.ma';
 const RETAILER_ID = 10; // ID in the retailers table
 
 const HEADERS = {
@@ -86,6 +86,7 @@ interface UltraPcProduct {
   price_amount: number;
   active: string;
   id_product?: number;
+  description_short?: string;
 }
 
 interface UltraPcResponse {
@@ -183,6 +184,7 @@ export class UltraPcScraper {
             in_stock: true, // will be corrected by checkStockBatch after all pages are scraped
             product_url,
             product_name: product.name,
+            product_description: product.description_short || undefined,
           });
         }
       }

@@ -25,7 +25,7 @@
 import { fetch } from 'undici';
 import type { ScrapedPrice } from './baseScraper.js';
 
-const SITE_NAME   = 'setupgame.ma';
+const SITE_NAME = 'setupgame.ma';
 const RETAILER_ID = 13; // ID in the retailers table
 
 const BASE_URL = 'https://setupgame.ma/wp-json/wc/store/v1/products';
@@ -37,6 +37,7 @@ interface StoreProduct {
   id: number;
   name: string;
   permalink: string;
+  short_description?: string;
   prices: {
     price: string;
     currency_minor_unit: number;
@@ -127,12 +128,19 @@ export class SetupGameScraper {
 
         const in_stock = product.is_in_stock;
 
+        // Strip HTML tags from short_description for use as variant fallback
+        const rawDesc = product.short_description ?? '';
+        const product_description = rawDesc
+          ? rawDesc.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || undefined
+          : undefined;
+
         prices.push({
           retailer_id: RETAILER_ID,
           price,
           in_stock,
           product_url,
           product_name,
+          product_description,
         });
       }
 
