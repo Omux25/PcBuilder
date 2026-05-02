@@ -7,23 +7,21 @@ Write-Host "PC Builder - Dev Stack Startup" -ForegroundColor Cyan
 Write-Host "==============================" -ForegroundColor Cyan
 Write-Host ""
 
-# ── Kill any existing processes on our ports ──────────────────────────────────
+# ── Kill existing processes (they run in WSL2/Linux, kill via lsof) ───────────
 Write-Host "Stopping existing processes on ports 3000, 5173, 5174..." -ForegroundColor Yellow
 
-foreach ($port in @(3000, 5173, 5174)) {
-    $procIds = (netstat -ano | Select-String ":$port\s" | ForEach-Object {
-        ($_ -split '\s+')[-1]
-    } | Sort-Object -Unique | Where-Object { $_ -match '^\d+$' -and $_ -ne '0' })
-
-    foreach ($procId in $procIds) {
-        try {
-            Stop-Process -Id ([int]$procId) -Force -ErrorAction SilentlyContinue
-        } catch {}
-    }
-}
-
-# Also kill any lingering bun/vite processes in WSL2
-wsl -d Ubuntu -- bash -c "pkill -f 'bun --hot src/server' 2>/dev/null; pkill -f 'vite' 2>/dev/null; sleep 1" 2>$null
+wsl -d Ubuntu -- bash -c "
+for port in 3000 5173 5174; do
+  pid=\$(lsof -ti tcp:\$port 2>/dev/null)
+  if [ -n \"\$pid\" ]; then
+    kill -9 \$pid 2>/dev/null
+    echo '  Killed port '\$port
+  fi
+done
+pkill -9 -f 'bun --hot src/server' 2>/dev/null
+pkill -9 -f 'vite' 2>/dev/null
+sleep 0.5
+"
 
 Write-Host "Done. Starting fresh..." -ForegroundColor Yellow
 Write-Host ""
