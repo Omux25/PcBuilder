@@ -12,11 +12,13 @@ import { CATEGORY_ORDER } from '../types';
 const STORAGE_KEY = 'pcbuilder_build';
 
 // All valid slot keys — single-slot categories + up to 4 RAM and 4 storage slots
+// Legacy bare 'ram' and 'storage' keys are included for backwards compatibility
+// with existing saved builds in localStorage and shared URLs.
 const SINGLE_SLOT_KEYS = CATEGORY_ORDER.filter(c => c !== 'ram' && c !== 'storage');
 const ALL_SLOT_KEYS: string[] = [
   ...SINGLE_SLOT_KEYS,
-  'ram_1', 'ram_2', 'ram_3', 'ram_4',
-  'storage_1', 'storage_2', 'storage_3', 'storage_4',
+  'ram', 'ram_1', 'ram_2', 'ram_3', 'ram_4',
+  'storage', 'storage_1', 'storage_2', 'storage_3', 'storage_4',
 ];
 
 /** Encode a build into compact URL search params (only IDs). */
