@@ -12,6 +12,9 @@ const CATEGORY_FIELDS: Record<string, { key: string; label: string; type: 'text'
   motherboard: [
     { key: 'socket', label: 'Socket', type: 'text', placeholder: 'Ex: AM5' },
     { key: 'max_ram_frequency', label: 'Fréq. RAM max (MHz)', type: 'number', placeholder: 'Ex: 6000' },
+    { key: 'ram_slots', label: 'Slots RAM', type: 'number', placeholder: 'Ex: 4' },
+    { key: 'm2_slots', label: 'Slots M.2', type: 'number', placeholder: 'Ex: 2' },
+    { key: 'sata_ports', label: 'Ports SATA', type: 'number', placeholder: 'Ex: 4' },
   ],
   gpu: [{ key: 'length_mm', label: 'Longueur (mm)', type: 'number', placeholder: 'Ex: 320' }],
   ram: [{ key: 'frequency_mhz', label: 'Fréquence (MHz)', type: 'number', placeholder: 'Ex: 6000' }],
@@ -42,6 +45,9 @@ type FormData = {
   frequency_mhz: string;
   wattage: string;
   max_gpu_length_mm: string;
+  ram_slots: string;
+  m2_slots: string;
+  sata_ports: string;
 };
 
 const emptyForm = (): FormData => ({
@@ -58,6 +64,9 @@ const emptyForm = (): FormData => ({
   frequency_mhz: '',
   wattage: '',
   max_gpu_length_mm: '',
+  ram_slots: '',
+  m2_slots: '',
+  sata_ports: '',
 });
 
 export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
@@ -83,6 +92,9 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
         frequency_mhz: String(c.frequency_mhz ?? ''),
         wattage: String(c.wattage ?? ''),
         max_gpu_length_mm: String(c.max_gpu_length_mm ?? ''),
+        ram_slots: String(c.ram_slots ?? ''),
+        m2_slots: String(c.m2_slots ?? ''),
+        sata_ports: String(c.sata_ports ?? ''),
       });
     } else {
       setFormData(emptyForm());
@@ -96,8 +108,6 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
   }
 
   function setCategory(cat: string) {
-    // Clear all category-specific fields when switching category to avoid
-    // sending stale values (e.g. a CPU socket value on a PSU payload).
     setFormData(prev => ({
       ...prev,
       category: cat,
@@ -107,6 +117,9 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
       frequency_mhz: '',
       wattage: '',
       max_gpu_length_mm: '',
+      ram_slots: '',
+      m2_slots: '',
+      sata_ports: '',
     }));
   }
 
@@ -153,6 +166,9 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
     if (formData.frequency_mhz) payload.frequency_mhz = Number(formData.frequency_mhz);
     if (formData.wattage) payload.wattage = Number(formData.wattage);
     if (formData.max_gpu_length_mm) payload.max_gpu_length_mm = Number(formData.max_gpu_length_mm);
+    if (formData.ram_slots) payload.ram_slots = Number(formData.ram_slots);
+    if (formData.m2_slots) payload.m2_slots = Number(formData.m2_slots);
+    if (formData.sata_ports) payload.sata_ports = Number(formData.sata_ports);
 
     try {
       if (component) {

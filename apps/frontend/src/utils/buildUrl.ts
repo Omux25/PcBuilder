@@ -1,6 +1,9 @@
 /**
  * Build URL persistence — encode/decode build config into URL search params.
  * Also handles localStorage fallback for page refreshes.
+ *
+ * Multi-slot keys (ram_1, ram_2, storage_1, etc.) are encoded/decoded
+ * the same way as single-slot keys — they're just URL params.
  */
 
 import type { BuildConfig } from '../types';
@@ -8,12 +11,20 @@ import { CATEGORY_ORDER } from '../types';
 
 const STORAGE_KEY = 'pcbuilder_build';
 
+// All valid slot keys — single-slot categories + up to 4 RAM and 4 storage slots
+const SINGLE_SLOT_KEYS = CATEGORY_ORDER.filter(c => c !== 'ram' && c !== 'storage');
+const ALL_SLOT_KEYS: string[] = [
+  ...SINGLE_SLOT_KEYS,
+  'ram_1', 'ram_2', 'ram_3', 'ram_4',
+  'storage_1', 'storage_2', 'storage_3', 'storage_4',
+];
+
 /** Encode a build into compact URL search params (only IDs). */
 export function encodeBuildToUrl(build: BuildConfig): string {
   const params = new URLSearchParams();
-  for (const cat of CATEGORY_ORDER) {
-    const comp = build[cat];
-    if (comp) params.set(cat, String(comp.id));
+  for (const key of ALL_SLOT_KEYS) {
+    const comp = build[key];
+    if (comp) params.set(key, String(comp.id));
   }
   return params.toString();
 }
@@ -22,10 +33,10 @@ export function encodeBuildToUrl(build: BuildConfig): string {
 export function decodeBuildFromUrl(search: string): Record<string, number> {
   const params = new URLSearchParams(search);
   const ids: Record<string, number> = {};
-  for (const cat of CATEGORY_ORDER) {
-    const val = params.get(cat);
+  for (const key of ALL_SLOT_KEYS) {
+    const val = params.get(key);
     if (val && !isNaN(Number(val))) {
-      ids[cat as string] = Number(val);
+      ids[key] = Number(val);
     }
   }
   return ids;
@@ -35,8 +46,8 @@ export function decodeBuildFromUrl(search: string): Record<string, number> {
 export function saveBuildToStorage(build: BuildConfig): void {
   try {
     const ids: Record<string, number> = {};
-    for (const [cat, comp] of Object.entries(build)) {
-      if (comp) ids[cat] = comp.id;
+    for (const [key, comp] of Object.entries(build)) {
+      if (comp) ids[key] = comp.id;
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
   } catch { /* quota exceeded or private browsing */ }

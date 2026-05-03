@@ -26,6 +26,10 @@ export const motherboardSchema = baseSchema.extend({
   supported_ram_types: z.array(z.string().min(1)).min(1),
   max_ram_frequency: z.number(),
   tdp: z.number().optional(),
+  // Slot counts — optional, used by multi-slot compatibility rules
+  ram_slots: z.number().int().min(1).optional(),
+  m2_slots: z.number().int().min(0).optional(),
+  sata_ports: z.number().int().min(0).optional(),
 });
 
 export const gpuSchema = baseSchema.extend({
@@ -85,11 +89,11 @@ export type ComponentCategory = SharedCategory;
  * so the service layer has compile-time safety instead of Record<string, unknown>.
  */
 export type ComponentInput =
-  | (z.infer<typeof cpuSchema>        & { category: 'cpu';         description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
+  | (z.infer<typeof cpuSchema> & { category: 'cpu'; description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
   | (z.infer<typeof motherboardSchema> & { category: 'motherboard'; description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
-  | (z.infer<typeof gpuSchema>         & { category: 'gpu';         description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
-  | (z.infer<typeof ramSchema>         & { category: 'ram';         description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
-  | (z.infer<typeof storageSchema>     & { category: 'storage';     description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
-  | (z.infer<typeof psuSchema>         & { category: 'psu';         description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
-  | (z.infer<typeof caseSchema>        & { category: 'case';        description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number; form_factor?: string })
-  | (z.infer<typeof coolingSchema>     & { category: 'cooling';     description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number });
+  | (z.infer<typeof gpuSchema> & { category: 'gpu'; description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
+  | (z.infer<typeof ramSchema> & { category: 'ram'; description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
+  | (z.infer<typeof storageSchema> & { category: 'storage'; description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
+  | (z.infer<typeof psuSchema> & { category: 'psu'; description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
+  | (z.infer<typeof caseSchema> & { category: 'case'; description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number; form_factor?: string })
+  | (z.infer<typeof coolingSchema> & { category: 'cooling'; description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number });

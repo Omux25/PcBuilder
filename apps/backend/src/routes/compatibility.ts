@@ -18,31 +18,42 @@ const compatibilityRouter = new Hono();
 // This prevents a client sending { cpu: "string" } from silently skipping rules.
 
 const componentSlotSchema = z.object({
-  socket:                z.string().optional(),
-  supported_ram_types:   z.array(z.string()).optional(),
-  max_ram_frequency:     z.number().optional(),
-  ram_type:              z.string().optional(),
-  frequency_mhz:         z.number().optional(),
-  length_mm:             z.number().optional(),
-  max_gpu_length_mm:     z.number().optional(),
-  supported_motherboards:z.array(z.string()).optional(),
-  max_cooler_height_mm:  z.number().optional(),
-  form_factor:           z.string().optional(),
-  height_mm:             z.number().optional(),
-  wattage:               z.number().optional(),
-  tdp:                   z.number().nullable().optional(),
-  specs:                 z.record(z.unknown()).optional(),
+  socket: z.string().optional(),
+  supported_ram_types: z.array(z.string()).optional(),
+  max_ram_frequency: z.number().optional(),
+  ram_type: z.string().optional(),
+  frequency_mhz: z.number().optional(),
+  length_mm: z.number().optional(),
+  max_gpu_length_mm: z.number().optional(),
+  supported_motherboards: z.array(z.string()).optional(),
+  max_cooler_height_mm: z.number().optional(),
+  form_factor: z.string().optional(),
+  height_mm: z.number().optional(),
+  wattage: z.number().optional(),
+  tdp: z.number().nullable().optional(),
+  // Motherboard slot counts — used by multi-slot rules
+  ram_slots: z.number().optional(),
+  m2_slots: z.number().optional(),
+  sata_ports: z.number().optional(),
+  specs: z.record(z.unknown()).optional(),
 }).passthrough();
 
+// Multi-slot keys: ram_1..ram_4, storage_1..storage_4
+const multiSlotEntries = Object.fromEntries([
+  ...['ram_1', 'ram_2', 'ram_3', 'ram_4'].map(k => [k, componentSlotSchema.optional()]),
+  ...['storage_1', 'storage_2', 'storage_3', 'storage_4'].map(k => [k, componentSlotSchema.optional()]),
+]);
+
 const buildSchema = z.object({
-  cpu:         componentSlotSchema.optional(),
+  cpu: componentSlotSchema.optional(),
   motherboard: componentSlotSchema.optional(),
-  gpu:         componentSlotSchema.optional(),
-  ram:         componentSlotSchema.optional(),
-  storage:     componentSlotSchema.optional(),
-  psu:         componentSlotSchema.optional(),
-  case:        componentSlotSchema.optional(),
-  cooling:     componentSlotSchema.optional(),
+  gpu: componentSlotSchema.optional(),
+  ram: componentSlotSchema.optional(),
+  storage: componentSlotSchema.optional(),
+  psu: componentSlotSchema.optional(),
+  case: componentSlotSchema.optional(),
+  cooling: componentSlotSchema.optional(),
+  ...multiSlotEntries,
 });
 
 // POST /api/compatibility/validate

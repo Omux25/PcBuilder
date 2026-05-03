@@ -32,6 +32,10 @@ export interface Component {
   wattage?: number;
   tdp?: number;
   benchmark_score?: number;
+  // Motherboard slot counts — used by ram_slots_exceeded and storage_slots_exceeded rules
+  ram_slots?: number;
+  m2_slots?: number;
+  sata_ports?: number;
   created_at: string;
   updated_at: string;
 }
@@ -167,6 +171,8 @@ export const RULE_LABELS: Record<string, string> = {
   psu_underpowered: 'Alimentation insuffisante',
   form_factor_mismatch: 'Format de carte mère incompatible',
   cooler_too_tall: 'Refroidissement trop haut pour le boîtier',
+  ram_slots_exceeded: 'Trop de barrettes RAM',
+  storage_slots_exceeded: 'Trop de disques de stockage',
 };
 
 export const RULE_TOOLTIPS: Record<string, string> = {
@@ -177,6 +183,8 @@ export const RULE_TOOLTIPS: Record<string, string> = {
   psu_underpowered: 'L\'alimentation choisie n\'offre pas assez de puissance pour faire tourner ces composants de manière stable.',
   form_factor_mismatch: 'La carte mère ne rentre pas dans ce boîtier. Vérifiez les formats supportés (ATX, mATX, ITX).',
   cooler_too_tall: 'Le ventirad CPU est trop haut pour ce boîtier. Vérifiez la hauteur maximale supportée.',
+  ram_slots_exceeded: 'La carte mère n\'a pas assez de slots DIMM pour le nombre de barrettes RAM sélectionnées.',
+  storage_slots_exceeded: 'La carte mère n\'a pas assez de ports M.2 et SATA pour le nombre de disques sélectionnés.',
 };
 
 export const CATEGORY_ORDER: ComponentCategory[] = [

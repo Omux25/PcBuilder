@@ -439,3 +439,137 @@ describe('TDP calculation — PSU excluded', () => {
     expect(result.recommended_psu_wattage).toBe(Math.ceil(200 * 1.5)); // 300
   });
 });
+
+// ---------------------------------------------------------------------------
+// Rule 8 — ram_slots_exceeded (multi-slot)
+// ---------------------------------------------------------------------------
+
+describe('ram_slots_exceeded', () => {
+  test('2 RAM sticks + motherboard with 4 slots → no error', () => {
+    const result = validateCompatibility({
+      motherboard: { socket: 'AM5', supported_ram_types: ['DDR5'], max_ram_frequency: 6000, ram_slots: 4 },
+      ram_1: makeRam('DDR5', 6000),
+      ram_2: makeRam('DDR5', 6000),
+    });
+    const errors = result.errors.filter(e => e.rule === 'ram_slots_exceeded');
+    expect(errors).toHaveLength(0);
+    expect(result.compatible).toBe(true);
+  });
+
+  test('3 RAM sticks + motherboard with 2 slots → ram_slots_exceeded error', () => {
+    const result = validateCompatibility({
+      motherboard: { socket: 'AM5', supported_ram_types: ['DDR5'], max_ram_frequency: 6000, ram_slots: 2 },
+      ram_1: makeRam('DDR5', 6000),
+      ram_2: makeRam('DDR5', 6000),
+      ram_3: makeRam('DDR5', 6000),
+    });
+    const errors = result.errors.filter(e => e.rule === 'ram_slots_exceeded');
+    expect(errors).toHaveLength(1);
+    expect(errors[0].components).toEqual(['ram', 'motherboard']);
+    expect(result.compatible).toBe(false);
+  });
+
+  test('no ram_slots on motherboard → rule skipped', () => {
+    const result = validateCompatibility({
+      motherboard: { socket: 'AM5', supported_ram_types: ['DDR5'], max_ram_frequency: 6000 },
+      ram_1: makeRam('DDR5', 6000),
+      ram_2: makeRam('DDR5', 6000),
+      ram_3: makeRam('DDR5', 6000),
+      ram_4: makeRam('DDR5', 6000),
+    });
+    const errors = result.errors.filter(e => e.rule === 'ram_slots_exceeded');
+    expect(errors).toHaveLength(0);
+  });
+
+  test('no motherboard in build → rule skipped', () => {
+    const result = validateCompatibility({
+      ram_1: makeRam('DDR5', 6000),
+      ram_2: makeRam('DDR5', 6000),
+    });
+    const errors = result.errors.filter(e => e.rule === 'ram_slots_exceeded');
+    expect(errors).toHaveLength(0);
+  });
+
+  test('ram_type_mismatch fires for each incompatible stick in multi-slot build', () => {
+    const result = validateCompatibility({
+      motherboard: { socket: 'AM5', supported_ram_types: ['DDR5'], max_ram_frequency: 6000, ram_slots: 4 },
+      ram_1: makeRam('DDR4', 3200), // incompatible
+      ram_2: makeRam('DDR5', 6000), // compatible
+    });
+    const errors = result.errors.filter(e => e.rule === 'ram_type_mismatch');
+    expect(errors).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rule 9 — storage_slots_exceeded (multi-slot)
+// ---------------------------------------------------------------------------
+
+describe('storage_slots_exceeded', () => {
+  test('2 drives + motherboard with 2 M.2 + 2 SATA → no error', () => {
+    const result = validateCompatibility({
+      motherboard: { socket: 'AM5', supported_ram_types: ['DDR5'], max_ram_frequency: 6000, m2_slots: 2, sata_ports: 2 },
+      storage_1: { tdp: 3 },
+      storage_2: { tdp: 3 },
+    });
+    const errors = result.errors.filter(e => e.rule === 'storage_slots_exceeded');
+    expect(errors).toHaveLength(0);
+  });
+
+  test('3 drives + motherboard with 1 M.2 + 1 SATA → storage_slots_exceeded error', () => {
+    const result = validateCompatibility({
+      motherboard: { socket: 'AM5', supported_ram_types: ['DDR5'], max_ram_frequency: 6000, m2_slots: 1, sata_ports: 1 },
+      storage_1: { tdp: 3 },
+      storage_2: { tdp: 3 },
+      storage_3: { tdp: 3 },
+    });
+    const errors = result.errors.filter(e => e.rule === 'storage_slots_exceeded');
+    expect(errors).toHaveLength(1);
+    expect(errors[0].components).toEqual(['storage', 'motherboard']);
+    expect(result.compatible).toBe(false);
+  });
+
+  test('no m2_slots or sata_ports on motherboard → rule skipped', () => {
+    const result = validateCompatibility({
+      motherboard: { socket: 'AM5', supported_ram_types: ['DDR5'], max_ram_frequency: 6000 },
+      storage_1: { tdp: 3 },
+      storage_2: { tdp: 3 },
+      storage_3: { tdp: 3 },
+    });
+    const errors = result.errors.filter(e => e.rule === 'storage_slots_exceeded');
+    expect(errors).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Multi-slot TDP calculation
+// ---------------------------------------------------------------------------
+
+describe('TDP calculation — multi-slot RAM and storage', () => {
+  test('TDP sums across all ram_N and storage_N slots', () => {
+    const result = validateCompatibility({
+      cpu: makeCpu('AM5', 65),
+      ram_1: makeRam('DDR5', 6000, 5),
+      ram_2: makeRam('DDR5', 6000, 5),
+      storage_1: { tdp: 3 },
+      storage_2: { tdp: 3 },
+    });
+    // 65 (cpu) + 5 + 5 (ram) + 3 + 3 (storage) = 81
+    expect(result.total_tdp).toBe(81);
+  });
+
+  test('legacy single ram key still contributes to TDP', () => {
+    const result = validateCompatibility({
+      ram: makeRam('DDR5', 6000, 10),
+    });
+    expect(result.total_tdp).toBe(10);
+  });
+
+  test('mix of legacy and indexed keys both contribute', () => {
+    const result = validateCompatibility({
+      storage: { tdp: 4 },
+      storage_1: { tdp: 3 },
+    });
+    expect(result.total_tdp).toBe(7);
+  });
+});
