@@ -22,38 +22,39 @@ import { join } from 'node:path';
 // ── Issue 5: Scraper registry IDs ────────────────────────────────────────────
 
 describe('Bug Condition: Scraper registry IDs match actual retailer IDs', () => {
-  test('UltraPC is registered with id 10 (actual DB retailer ID)', async () => {
+  test('UltraPC is registered with retailer_id 10 (actual DB retailer ID)', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../../scraper/session.ts'),
+      join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
       'utf-8'
     );
-    expect(src).toMatch(/\{\s*id:\s*10\s*,\s*name:\s*['"]UltraPC['"]/);
+    expect(src).toMatch(/retailer_id:\s*10/);
+    expect(src).toMatch(/name:\s*['"]UltraPC['"]/);
   });
 
-  test('NextLevel PC is registered with id 11 (actual DB retailer ID)', async () => {
+  test('NextLevel PC is registered with retailer_id 11 (actual DB retailer ID)', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../../scraper/session.ts'),
+      join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
       'utf-8'
     );
-    expect(src).toMatch(/\{\s*id:\s*11\s*,\s*name:\s*['"]NextLevel PC['"]/);
+    expect(src).toMatch(/retailer_id:\s*11/);
+    expect(src).toMatch(/name:\s*['"]NextLevel PC['"]/);
   });
 
-  test('SetupGame is registered with id 13 (actual DB retailer ID)', async () => {
+  test('SetupGame is registered with retailer_id 13 (actual DB retailer ID)', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../../scraper/session.ts'),
+      join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
       'utf-8'
     );
-    expect(src).toMatch(/\{\s*id:\s*13\s*,\s*name:\s*['"]SetupGame['"]/);
+    expect(src).toMatch(/retailer_id:\s*13/);
+    expect(src).toMatch(/name:\s*['"]SetupGame['"]/);
   });
 
-  test('SCRAPER_REGISTRY contains exactly 3 production scrapers', async () => {
+  test('RETAILER_SCRAPERS contains exactly 3 production scrapers', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../../scraper/session.ts'),
+      join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
       'utf-8'
     );
-    // Placeholder scrapers (site1, site2) were deleted in Round 2.
-    // The registry should only contain the 3 real production scrapers.
-    const matches = src.match(/\{\s*id:\s*\d+\s*,\s*name:/g) ?? [];
+    const matches = src.match(/retailer_id:\s*\d+/g) ?? [];
     expect(matches.length).toBe(3);
   });
 });

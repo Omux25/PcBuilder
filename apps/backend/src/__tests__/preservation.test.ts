@@ -58,26 +58,29 @@ describe('Preservation: Migration files 001–015 are untouched', () => {
 describe('Preservation: Production scraper IDs match actual retailer IDs', () => {
   test('UltraPC is registered with id 10', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../../scraper/session.ts'),
+      join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
       'utf-8'
     );
-    expect(src).toMatch(/\{\s*id:\s*10\s*,\s*name:\s*['"]UltraPC['"]/);
+    expect(src).toMatch(/retailer_id:\s*10/);
+    expect(src).toMatch(/name:\s*['"]UltraPC['"]/);
   });
 
   test('NextLevel PC is registered with id 11', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../../scraper/session.ts'),
+      join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
       'utf-8'
     );
-    expect(src).toMatch(/\{\s*id:\s*11\s*,\s*name:\s*['"]NextLevel PC['"]/);
+    expect(src).toMatch(/retailer_id:\s*11/);
+    expect(src).toMatch(/name:\s*['"]NextLevel PC['"]/);
   });
 
   test('SetupGame is registered with id 13', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../../scraper/session.ts'),
+      join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
       'utf-8'
     );
-    expect(src).toMatch(/\{\s*id:\s*13\s*,\s*name:\s*['"]SetupGame['"]/);
+    expect(src).toMatch(/retailer_id:\s*13/);
+    expect(src).toMatch(/name:\s*['"]SetupGame['"]/);
   });
 });
 

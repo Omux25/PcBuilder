@@ -10,26 +10,9 @@ import { logger } from './utils/logger.js';
 import { aggregate } from './aggregator.js';
 import { autoMap } from './autoMapper.js';
 import { buildFromUnmatched } from './catalogBuilder.js';
-import { UltraPcScraper } from './scrapers/ultrapcScraper.js';
-import { NextLevelScraper } from './scrapers/nextlevelScraper.js';
-import { SetupGameScraper } from './scrapers/setupgameScraper.js';
 import { getSql } from '../src/db/index.js';
+import { RETAILER_SCRAPERS } from './config/retailers.config.js';
 import type { ScrapedPrice } from './scrapers/baseScraper.js';
-
-/**
- * Registry of available scrapers mapped to their retailer IDs (from database).
- * This allows targeted scraping of specific retailers.
- *
- * Retailer IDs match the actual rows in the `retailers` table:
- *   UltraPC   → id 10
- *   NextLevel → id 11
- *   SetupGame → id 13
- */
-const SCRAPER_REGISTRY: { id: number; name: string; run: () => Promise<ScrapedPrice[]> }[] = [
-  { id: 10, name: 'UltraPC', run: () => new UltraPcScraper().scrapeAllCategories() },
-  { id: 11, name: 'NextLevel PC', run: () => new NextLevelScraper().scrapeAllCategories() },
-  { id: 13, name: 'SetupGame', run: () => new SetupGameScraper().scrapeAllCategories() },
-];
 
 /**
  * Runs a full or partial scraping session.
@@ -47,8 +30,8 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
 
   // Filter scrapers based on targetRetailerId
   const scrapersToRun = targetRetailerId
-    ? SCRAPER_REGISTRY.filter(s => s.id === targetRetailerId)
-    : SCRAPER_REGISTRY;
+    ? RETAILER_SCRAPERS.filter(s => s.retailer_id === targetRetailerId)
+    : RETAILER_SCRAPERS;
 
   if (scrapersToRun.length === 0 && targetRetailerId) {
     await logger.warn(`No scraper found for retailer ID ${targetRetailerId}`);
@@ -65,13 +48,13 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
         const prices = await config.run();
         allPrices.push(...prices);
         await logger.info(`${config.name}: scraped ${prices.length} price(s)`);
-        scraperResults.set(config.id, 'SUCCESS');
+        scraperResults.set(config.retailer_id, 'SUCCESS');
       } catch (err) {
         await logger.error(
           `${config.name} scraping failed: ${err instanceof Error ? err.message : String(err)}`,
           config.name
         );
-        scraperResults.set(config.id, 'FAILED');
+        scraperResults.set(config.retailer_id, 'FAILED');
       }
     })
   ));
@@ -89,7 +72,6 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
   }
 
   if (allPrices.length === 0) {
-    // If all scrapers failed, mark them as FAILED; if some succeeded with 0 prices, keep SUCCESS
     await logger.info('Session complete: 0 updated, 0 unmatched, 0 error(s)');
     return;
   }
@@ -98,15 +80,9 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
 
   const { updated, unmatched, errors } = await aggregate(allPrices);
 
-  // Auto-map any new unmatched listings using the DNA matcher.
   const { mapped: autoMapped } = await autoMap();
-
-  // For listings that still couldn't be matched, auto-create catalog entries
-  // from the scraped product name (CPU, GPU, RAM, storage, motherboard only).
   const { created: autoCatalog } = await buildFromUnmatched();
 
-  // If new catalog entries were created, run autoMap again to catch any
-  // listings that now match the newly added entries.
   let secondPassMapped = 0;
   if (autoCatalog > 0) {
     const second = await autoMap();
