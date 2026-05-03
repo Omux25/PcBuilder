@@ -34,6 +34,7 @@ afterAll(async () => {
   await sql`DELETE FROM prices WHERE product_url LIKE 'https://integration-test.ma/%'`;
   await sql`DELETE FROM price_history WHERE component_id = 1 AND retailer_id = 10`;
   await sql`DELETE FROM scraper_mappings WHERE product_url LIKE 'https://integration-test.ma/%'`;
+  await sql`DELETE FROM scraper_mappings WHERE component_id = 999999`;
   await sql`DELETE FROM unmatched_listings WHERE product_url LIKE 'https://integration-test.ma/%'`;
 });
 

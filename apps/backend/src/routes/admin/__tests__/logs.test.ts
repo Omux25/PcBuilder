@@ -126,3 +126,65 @@ describe('GET /api/admin/logs — response shape', () => {
     expect(Array.isArray(body.error.fields)).toBe(true);
   });
 });
+
+// ── DELETE /api/admin/logs ────────────────────────────────────────────────────
+
+describe('DELETE /api/admin/logs — auth', () => {
+  test('returns 401 without token', async () => {
+    const app = makeApp();
+    const res = await app.request('/api/admin/logs?all=true', { method: 'DELETE' });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('DELETE /api/admin/logs — validation', () => {
+  test('returns 400 when neither keep_days nor all is provided', async () => {
+    const app = makeApp();
+    const res = await app.request('/api/admin/logs', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${makeToken()}` },
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  test('returns 400 when keep_days is negative', async () => {
+    const app = makeApp();
+    const res = await app.request('/api/admin/logs?keep_days=-1', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${makeToken()}` },
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  test('returns 400 when keep_days is not a number', async () => {
+    const app = makeApp();
+    const res = await app.request('/api/admin/logs?keep_days=abc', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${makeToken()}` },
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test('does not return 400 for valid ?all=true', async () => {
+    const app = makeApp();
+    const res = await app.request('/api/admin/logs?all=true', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${makeToken()}` },
+    });
+    // May be 500 if no DB in test env — but must not be 400
+    expect(res.status).not.toBe(400);
+  });
+
+  test('does not return 400 for valid ?keep_days=7', async () => {
+    const app = makeApp();
+    const res = await app.request('/api/admin/logs?keep_days=7', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${makeToken()}` },
+    });
+    expect(res.status).not.toBe(400);
+  });
+});

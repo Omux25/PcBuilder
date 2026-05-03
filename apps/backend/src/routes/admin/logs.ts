@@ -1,12 +1,8 @@
 /**
  * Admin logs route — JWT-protected
  *
- * GET /api/admin/logs — query scraper logs with optional filters
- *
- * Query params:
- *   ?level=INFO|WARNING|ERROR  — filter by log level
- *   ?site=<string>             — filter by site name
- *   ?limit=<number>            — max rows to return (default 100, max 500)
+ * GET    /api/admin/logs         — query scraper logs with optional filters
+ * DELETE /api/admin/logs         — clear logs (?keep_days=7 or ?all=true)
  *
  * Requirements: 9.1, 9.2, 9.3
  */
@@ -34,13 +30,13 @@ adminLogsRouter.use('/*', authMiddleware);
 
 const VALID_LEVELS = ['INFO', 'WARNING', 'ERROR'] as const;
 const DEFAULT_LIMIT = 100;
-const MAX_LIMIT = 500;
+const MAX_LIMIT = 10000;
 
 // GET /api/admin/logs
 adminLogsRouter.get('/', async (c) => {
   const sql = getSql();
   const levelParam = c.req.query('level');
-  const siteParam  = c.req.query('site');
+  const siteParam = c.req.query('site');
   const limitParam = c.req.query('limit');
 
   // Validate level
@@ -77,7 +73,7 @@ adminLogsRouter.get('/', async (c) => {
   }
 
   const level = levelParam as typeof VALID_LEVELS[number] | undefined;
-  const site  = siteParam;
+  const site = siteParam;
 
   // Single query with nullable parameters — avoids 4-branch if/else.
   // Bun.sql treats null parameters as "skip this condition" when cast to the right type.
@@ -91,6 +87,40 @@ adminLogsRouter.get('/', async (c) => {
   ` as ScraperLog[];
 
   return c.json({ logs: rows, count: rows.length });
+});
+
+// DELETE /api/admin/logs?keep_days=7   — delete logs older than N days
+// DELETE /api/admin/logs?all=true      — delete all logs
+adminLogsRouter.delete('/', async (c) => {
+  const sql = getSql();
+  const keepDays = c.req.query('keep_days');
+  const all = c.req.query('all');
+
+  if (all === 'true') {
+    const result = await sql`DELETE FROM scraper_logs RETURNING id` as { id: number }[];
+    return c.json({ deleted: result.length });
+  }
+
+  if (keepDays !== undefined) {
+    const days = Number(keepDays);
+    if (!Number.isInteger(days) || days < 0) {
+      return c.json(
+        { error: { code: 'VALIDATION_ERROR', message: "'keep_days' must be a non-negative integer" } },
+        400,
+      );
+    }
+    const result = await sql`
+      DELETE FROM scraper_logs
+      WHERE created_at < NOW() - (${days} || ' days')::INTERVAL
+      RETURNING id
+    ` as { id: number }[];
+    return c.json({ deleted: result.length });
+  }
+
+  return c.json(
+    { error: { code: 'VALIDATION_ERROR', message: "Provide ?keep_days=N or ?all=true" } },
+    400,
+  );
 });
 
 export { adminLogsRouter };

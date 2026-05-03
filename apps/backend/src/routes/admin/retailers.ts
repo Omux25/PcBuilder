@@ -85,6 +85,7 @@ adminRetailersRouter.put('/:id', async (c) => {
       logo_url: body.logo_url as string | undefined,
       country: body.country as string | undefined,
       is_active: body.is_active as boolean | undefined,
+      scraping_enabled: body.scraping_enabled as boolean | undefined,
       scraping_interval_hours: body.scraping_interval_hours as number | undefined,
       notes: body.notes as string | undefined,
     });
