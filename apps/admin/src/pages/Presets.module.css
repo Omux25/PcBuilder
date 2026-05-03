@@ -1,9 +1,17 @@
-.page { padding: 1.5rem; max-width: 1100px; }
-.title { margin-bottom: 1.5rem; }
-.loading, .error, .empty { padding: 1rem; color: var(--text-muted); }
-.error { color: var(--danger-soft); }
+.page {
+  padding: 1.5rem;
+  max-width: 1100px;
+}
 
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.title {
+  margin-bottom: 1.5rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
 
 .card {
   background: var(--surface);
@@ -15,46 +23,97 @@
   gap: 0.75rem;
 }
 
-.incomplete { border-color: rgba(249,226,175,0.3); }
+.incomplete {
+  border-color: rgba(249, 226, 175, 0.3);
+}
 
-.cardHeader { display: flex; align-items: flex-start; justify-content: space-between; }
-.cardName { font-weight: 600; color: var(--text); margin-bottom: 0.25rem; }
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
 
-.useCaseBadge {
-  font-size: 0.72rem;
+.cardName {
   font-weight: 600;
-  color: var(--accent-blue);
-  background: rgba(137,180,250,0.1);
-  border: 1px solid rgba(137,180,250,0.2);
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+
+.cardActions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.editBtn {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  padding: 0.3rem;
   border-radius: 4px;
-  padding: 0.1rem 0.4rem;
-  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.editBtn:hover {
+  color: var(--accent-blue);
+  background: rgba(137, 180, 250, 0.1);
 }
 
 .deleteBtn {
   display: flex;
   align-items: center;
   background: none;
+  border: none;
   color: var(--text-dim);
   padding: 0.3rem;
   border-radius: 4px;
+  cursor: pointer;
 }
-.deleteBtn:hover { color: var(--danger-soft); background: rgba(243,139,168,0.1); }
 
-.desc { font-size: 0.85rem; color: var(--text-muted); }
-.incompleteNote { font-size: 0.8rem; color: var(--warning-soft); }
+.deleteBtn:hover {
+  color: var(--danger-soft);
+  background: rgba(243, 139, 168, 0.1);
+}
 
-.componentList { display: flex; flex-direction: column; gap: 0.2rem; }
-.componentRow { display: flex; gap: 0.5rem; font-size: 0.8rem; }
-.cat { color: var(--text-dim); width: 100px; flex-shrink: 0; font-size: 0.75rem; }
-.compName { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
 
-.price { font-weight: 700; color: var(--success-soft); font-size: 0.9rem; }
+.incompleteNote {
+  font-size: 0.8rem;
+  color: var(--warning-soft);
+}
 
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 200; }
-.dialog { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; max-width: 380px; width: 90%; }
-.dialog h3 { margin-bottom: 0.75rem; }
-.dialog p  { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem; }
-.dialogActions { display: flex; gap: 0.75rem; justify-content: flex-end; }
-.cancelBtn { background: var(--surface-3); color: var(--text); padding: 0.45rem 0.9rem; border-radius: var(--radius); }
-.confirmBtn { background: var(--danger); color: #fff; padding: 0.45rem 0.9rem; border-radius: var(--radius); font-weight: 600; }
+.componentList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.componentRow {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.cat {
+  color: var(--text-dim);
+  width: 100px;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+}
+
+.compName {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.price {
+  font-weight: 700;
+  color: var(--success-soft);
+  font-size: 0.9rem;
+}

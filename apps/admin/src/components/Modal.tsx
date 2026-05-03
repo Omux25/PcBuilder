@@ -11,13 +11,22 @@ interface Props {
 
 export function Modal({ title, isOpen, onClose, children }: Props) {
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'auto';
-    }
-    return () => { document.body.style.overflow = 'auto'; };
+    if (!isOpen) return;
+    // Save and restore the previous overflow value so we don't clobber
+    // any existing overflow setting when the modal closes.
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 

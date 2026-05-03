@@ -1,27 +1,33 @@
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 :root {
-  --bg:          #0f1117;
-  --surface:     #1a1d27;
-  --surface-2:   #1e1e2e;
-  --surface-3:   #313244;
-  --border:      #2a2d3a;
-  --border-2:    #45475a;
-  --accent:      #6366f1;
-  --accent-h:    #818cf8;
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface-2: #1e1e2e;
+  --surface-3: #313244;
+  --border: #2a2d3a;
+  --border-2: #45475a;
+  --accent: #6366f1;
+  --accent-h: #818cf8;
   --accent-blue: #89b4fa;
-  --danger:      #ef4444;
+  --danger: #ef4444;
   --danger-soft: #f38ba8;
-  --warning:     #f59e0b;
-  --warning-soft:#f9e2af;
-  --success:     #22c55e;
-  --success-soft:#a6e3a1;
-  --text:        #e2e8f0;
-  --text-2:      #cdd6f4;
-  --text-muted:  #94a3b8;
-  --text-dim:    #6c7086;
-  --radius:      8px;
-  --radius-lg:   12px;
+  --warning: #f59e0b;
+  --warning-soft: #f9e2af;
+  --success: #22c55e;
+  --success-soft: #a6e3a1;
+  --text: #e2e8f0;
+  --text-2: #cdd6f4;
+  --text-muted: #94a3b8;
+  --text-dim: #6c7086;
+  --radius: 8px;
+  --radius-lg: 12px;
 
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   font-size: 15px;
@@ -31,10 +37,20 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-body { min-height: 100dvh; }
+body {
+  min-height: 100dvh;
+}
 
-a { color: var(--accent-h); text-decoration: none; transition: color 0.15s; }
-a:hover { text-decoration: underline; color: var(--accent-blue); }
+a {
+  color: var(--accent-h);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+a:hover {
+  text-decoration: underline;
+  color: var(--accent-blue);
+}
 
 button {
   cursor: pointer;
@@ -43,10 +59,19 @@ button {
   font: inherit;
   transition: all .15s;
 }
-button:disabled { opacity: .45; cursor: not-allowed; }
-button:not(:disabled):hover { filter: brightness(1.1); }
 
-input, select, textarea {
+button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+button:not(:disabled):hover {
+  filter: brightness(1.1);
+}
+
+input,
+select,
+textarea {
   font: inherit;
   color: var(--text);
   background: var(--surface-2);
@@ -55,26 +80,185 @@ input, select, textarea {
   padding: .45rem .7rem;
   transition: border-color 0.15s;
 }
-input:focus, select:focus, textarea:focus {
+
+input:focus,
+select:focus,
+textarea:focus {
   outline: 2px solid var(--accent-blue);
   outline-offset: 2px;
 }
-input:hover, select:hover, textarea:hover {
+
+input:hover,
+select:hover,
+textarea:hover {
   border-color: var(--accent);
 }
 
-table { border-collapse: collapse; width: 100%; }
-th { text-align: left; color: var(--text-dim); font-weight: 500; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
-td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; color: var(--text); }
-tr { transition: background-color 0.1s; }
-tr:hover td { background: var(--surface); }
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
 
-h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
-h2 { font-size: 1.15rem; font-weight: 600; }
-h3 { font-size: 1rem; font-weight: 600; }
+th {
+  text-align: left;
+  color: var(--text-dim);
+  font-weight: 500;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+tr {
+  transition: background-color 0.1s;
+}
+
+tr:hover td {
+  background: var(--surface);
+}
+
+h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
 
 /* Scrollbar styling */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--border-2); }
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-2);
+}
+
+/* ── Shared page layout ──────────────────────────────────────────────────── */
+.admin-page {
+  padding: 1.5rem;
+  max-width: 1100px;
+}
+
+/* ── Shared feedback states ──────────────────────────────────────────────── */
+.admin-loading {
+  padding: 1rem;
+  color: var(--text-muted);
+}
+
+.admin-error {
+  padding: 1rem;
+  color: var(--danger-soft);
+}
+
+.admin-empty {
+  padding: 1rem;
+  color: var(--text-muted);
+}
+
+/* ── Shared status badges ────────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.badge-success {
+  background: rgba(166, 227, 161, 0.15);
+  color: var(--success-soft);
+}
+
+.badge-failed {
+  background: rgba(243, 139, 168, 0.15);
+  color: var(--danger-soft);
+}
+
+.badge-partial {
+  background: rgba(249, 226, 175, 0.15);
+  color: var(--warning-soft);
+}
+
+.badge-accent {
+  background: rgba(137, 180, 250, 0.10);
+  color: var(--accent-blue);
+  border: 1px solid rgba(137, 180, 250, 0.2);
+}
+
+/* ── Shared page header (title + action button row) ─────────────────────── */
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+/* ── Shared add/primary action button ───────────────────────────────────── */
+.btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--accent-blue);
+  color: var(--bg);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius);
+}
+
+.btn-primary:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+/* ── Shared pagination ───────────────────────────────────────────────────── */
+.admin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.admin-pagination button {
+  background: var(--surface-3);
+  color: var(--text);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+}
+
+/* ── Shared loading spinner (full-page session restore) ─────────────────── */
+.session-loading {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-2);
+}

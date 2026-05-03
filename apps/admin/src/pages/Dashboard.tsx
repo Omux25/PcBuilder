@@ -18,12 +18,14 @@ export function Dashboard() {
 
   useEffect(() => {
     load();
-    const interval = setInterval(load, 60_000);
+    const interval = setInterval(() => {
+      if (!document.hidden) load();
+    }, 60_000);
     return () => clearInterval(interval);
   }, [load]);
 
-  if (loading) return <div className={styles.loading}>Chargement...</div>;
-  if (error)   return <div className={styles.error}>{error}</div>;
+  if (loading) return <div className="admin-loading">Chargement...</div>;
+  if (error) return <div className="admin-error">{error}</div>;
 
   const stats = data?.stats;
   const chart = data?.price_updates_chart ?? [];
@@ -45,7 +47,7 @@ export function Dashboard() {
       {stats?.last_scrape?.time && (
         <div className={styles.scrapeInfo}>
           Dernier scraping : {new Date(stats.last_scrape.time).toLocaleString('fr-MA')}
-          {' '}<span className={`${styles.statusBadge} ${styles[stats.last_scrape.status?.toLowerCase() ?? '']}`}>
+          {' '}<span className={`badge badge-${stats.last_scrape.status?.toLowerCase() ?? ''}`}>
             {stats.last_scrape.status}
           </span>
         </div>
@@ -74,7 +76,7 @@ export function Dashboard() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Activite recente</h2>
         {activity.length === 0 ? (
-          <p className={styles.empty}>Aucune activite recente.</p>
+          <p className="admin-empty">Aucune activité récente.</p>
         ) : (
           <ul className={styles.activityList}>
             {activity.map((item) => (

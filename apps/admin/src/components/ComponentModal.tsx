@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { Modal } from './Modal';
 import { createAdminComponent, updateAdminComponent } from '../api';
 import type { AdminComponent } from '../api';
+import { CATEGORY_ORDER } from '@shared/types';
 import styles from './Form.module.css';
-
-const CATEGORIES = ['cpu', 'motherboard', 'gpu', 'ram', 'storage', 'psu', 'case', 'cooling'];
+import formLayout from './FormLayout.module.css';
 
 // Category-specific required fields
 const CATEGORY_FIELDS: Record<string, { key: string; label: string; type: 'text' | 'number'; placeholder: string }[]> = {
@@ -95,10 +95,27 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
     setFormData(prev => ({ ...prev, [key]: value }));
   }
 
+  function setCategory(cat: string) {
+    // Clear all category-specific fields when switching category to avoid
+    // sending stale values (e.g. a CPU socket value on a PSU payload).
+    setFormData(prev => ({
+      ...prev,
+      category: cat,
+      socket: '',
+      max_ram_frequency: '',
+      length_mm: '',
+      frequency_mhz: '',
+      wattage: '',
+      max_gpu_length_mm: '',
+    }));
+  }
+
   function validate() {
     const errors: Record<string, string> = {};
     if (!formData.name.trim()) errors.name = 'Le nom est requis.';
-    if (!CATEGORIES.includes(formData.category)) errors.category = 'Catégorie invalide.';
+    if (!(CATEGORY_ORDER as readonly string[]).includes(formData.category)) {
+      errors.category = 'Catégorie invalide.';
+    }
     try {
       if (formData.specs.trim()) {
         const parsed = JSON.parse(formData.specs);
@@ -177,8 +194,8 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
         </div>
 
         {/* Brand + Category */}
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <div className={styles.formGroup} style={{ flex: 1 }}>
+        <div className={formLayout.row}>
+          <div className={styles.formGroup}>
             <label>Marque</label>
             <input
               className={styles.input}
@@ -188,23 +205,23 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
               placeholder="Ex: AMD"
             />
           </div>
-          <div className={styles.formGroup} style={{ flex: 1 }}>
+          <div className={styles.formGroup}>
             <label>Catégorie</label>
             <select
               className={styles.select}
               value={formData.category}
-              onChange={e => set('category', e.target.value)}
+              onChange={e => setCategory(e.target.value)}
             >
-              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              {CATEGORY_ORDER.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
         </div>
 
         {/* Category-specific required fields */}
         {catFields.length > 0 && (
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <div className={formLayout.rowWrap}>
             {catFields.map(field => (
-              <div key={field.key} className={styles.formGroup} style={{ flex: 1, minWidth: '140px' }}>
+              <div key={field.key} className={`${styles.formGroup} ${formLayout.flexItem}`}>
                 <label>{field.label}</label>
                 <input
                   className={styles.input}
@@ -226,7 +243,6 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
             value={formData.description}
             onChange={e => set('description', e.target.value)}
             placeholder="Description courte..."
-            style={{ minHeight: '60px' }}
           />
         </div>
 
@@ -234,28 +250,26 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
         <div className={styles.formGroup}>
           <label>Spécifications (JSON)</label>
           <textarea
-            className={styles.textarea}
+            className={`${styles.textarea} ${formLayout.mono}`}
             value={formData.specs}
             onChange={e => set('specs', e.target.value)}
             placeholder='{ "cores": 6, "tdp": 65 }'
-            style={{ fontFamily: 'monospace' }}
           />
           {validationErrors.specs && <span className={styles.errorText}>{validationErrors.specs}</span>}
         </div>
 
         {/* Year + Active */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className={formLayout.rowSpaceBetween}>
           <div className={styles.formGroup}>
             <label>Année de sortie</label>
             <input
-              className={styles.input}
+              className={`${styles.input} ${formLayout.yearInput}`}
               type="number"
               value={formData.release_year}
-              onChange={e => set('release_year', parseInt(e.target.value) || new Date().getFullYear())}
-              style={{ width: '120px' }}
+              onChange={e => set('release_year', parseInt(e.target.value, 10) || new Date().getFullYear())}
             />
           </div>
-          <label className={styles.checkboxGroup} style={{ marginTop: '1rem' }}>
+          <label className={`${styles.checkboxGroup} ${formLayout.checkboxTop}`}>
             <input
               type="checkbox"
               checked={formData.is_active}

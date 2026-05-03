@@ -37,8 +37,9 @@ async function request<T>(path: string, options: RequestOptions = {}, retry = tr
       token: accessToken,
       credentials: 'include',
     });
-  } catch (err: any) {
-    if (err.status === 401 && retry) {
+  } catch (err: unknown) {
+    const apiErr = err as { status?: number };
+    if (apiErr.status === 401 && retry) {
       const refreshed = await tryRefresh();
       if (refreshed) {
         return request<T>(path, options, false);
@@ -48,6 +49,15 @@ async function request<T>(path: string, options: RequestOptions = {}, retry = tr
     }
     throw err;
   }
+}
+
+/**
+ * Attempt to restore the session from the httpOnly refresh-token cookie.
+ * Call this once on app mount before rendering protected routes.
+ * Returns true if a valid access token was obtained.
+ */
+export async function restoreSession(): Promise<boolean> {
+  return tryRefresh();
 }
 
 async function tryRefresh(): Promise<boolean> {
@@ -114,11 +124,13 @@ export const createAdminRetailer = (data: Record<string, unknown>) =>
 
 export const updateAdminRetailer = (id: number, data: Record<string, unknown>) =>
   request<AdminRetailer>(`/admin/retailers/${id}`, { method: 'PUT', body: JSON.stringify(data) });
-
 export const hardDeleteRetailer = (id: number) =>
   request<{ message: string }>(`/admin/retailers/${id}/hard`, { method: 'DELETE' });
 
 // ── Scrapers ──────────────────────────────────────────────────────────────────
+
+export const getScraperStatus = () =>
+  request<{ running: boolean; running_jobs: number[] }>('/admin/scrapers/status');
 
 export const runAllScrapers = () =>
   request<{ message: string; status: string }>('/admin/scrapers/run-all', { method: 'POST' });
@@ -136,6 +148,11 @@ export interface LogsResponse {
 export const getAdminLogs = (params: Record<string, string> = {}) => {
   const qs = new URLSearchParams(params).toString();
   return request<LogsResponse>(`/admin/logs${qs ? `?${qs}` : ''}`);
+};
+
+export const clearAdminLogs = (mode: 'keep7' | 'all') => {
+  const qs = mode === 'all' ? 'all=true' : 'keep_days=7';
+  return request<{ deleted: number }>(`/admin/logs?${qs}`, { method: 'DELETE' });
 };
 
 // ── Unmatched listings ────────────────────────────────────────────────────────
@@ -161,15 +178,68 @@ export const dismissUnmatched = (id: number) =>
 
 // ── Presets ───────────────────────────────────────────────────────────────────
 
+export interface PresetPayload {
+  name: string;
+  description?: string;
+  use_case: 'gaming' | 'workstation' | 'office' | 'budget';
+  total_price_estimate?: number;
+  /** Map of category → component_id */
+  components: Record<string, number>;
+}
+
 export const getAdminPresets = () => request<{ presets: AdminPreset[] }>('/admin/presets');
 
-export const createAdminPreset = (data: Record<string, unknown>) =>
+export const createAdminPreset = (data: PresetPayload) =>
   request<AdminPreset>('/admin/presets', { method: 'POST', body: JSON.stringify(data) });
+
+export const updateAdminPreset = (id: number, data: Partial<PresetPayload>) =>
+  request<AdminPreset>(`/admin/presets/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 
 export const deleteAdminPreset = (id: number) =>
   request<{ message: string }>(`/admin/presets/${id}`, { method: 'DELETE' });
 
-// ── Public components (for search in unmatched linking) ───────────────────────
+// ── Public components (for search in unmatched linking and preset building) ──
 
-export const searchComponents = (search: string) =>
-  request<{ components: AdminComponent[]; total: number }>(`/components?search=${encodeURIComponent(search)}&limit=10`);
+export const searchComponents = (search: string, category?: string) => {
+  const params = new URLSearchParams({ search: encodeURIComponent(search), limit: '10' });
+  if (category) params.set('category', category);
+  return request<{ components: AdminComponent[]; total: number }>(`/components?${params.toString()}`);
+};
+
+// ── Bulk import ───────────────────────────────────────────────────────────────
+
+export interface ImportResult {
+  total_rows: number;
+  imported: number;
+  skipped: number;
+  failed: number;
+  errors?: Array<{ row: number; message: string }>;
+}
+
+/**
+ * Upload a CSV or JSON file for bulk component import.
+ * Uses the auth-aware request wrapper so 401 auto-refresh applies.
+ */
+export async function bulkImportComponents(file: File): Promise<ImportResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+  // Pass the token manually — FormData requests can't go through the JSON wrapper
+  // but we still want the 401-refresh behaviour, so we call the raw baseRequest
+  // with the current token injected.
+  const token = accessToken;
+  const res = await fetch(`${BASE}/admin/components/import`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: 'include',
+    body: formData,
+  });
+  const data = await res.json();
+  if (res.status === 401) {
+    const refreshed = await tryRefresh();
+    if (refreshed) return bulkImportComponents(file);
+    window.location.href = '/admin/login';
+    throw new Error('Session expired');
+  }
+  if (!res.ok) throw new Error(data?.error?.message ?? `HTTP ${res.status}`);
+  return data as ImportResult;
+}

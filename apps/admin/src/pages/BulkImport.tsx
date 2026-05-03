@@ -1,31 +1,10 @@
 import { useState, useRef } from 'react';
 import { Upload } from 'lucide-react';
-import { getAccessToken } from '../api';
+import { bulkImportComponents } from '../api';
+import type { ImportResult } from '../api';
 import styles from './BulkImport.module.css';
 
-interface ImportResult {
-  total_rows: number;
-  imported: number;
-  skipped: number;
-  failed: number;
-  errors?: Array<{ row: number; message: string }>;
-}
-
-async function importComponents(file: File): Promise<ImportResult> {
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const token = getAccessToken();
-  const res = await fetch('/api/admin/components/import', {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    credentials: 'include',
-    body: formData,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.error?.message ?? `HTTP ${res.status}`);
-  return data;
-}
+const MAX_FILE_SIZE_MB = 10;
 
 export function BulkImport() {
   const [file, setFile] = useState<File | null>(null);
@@ -36,9 +15,38 @@ export function BulkImport() {
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0] ?? null;
-    setFile(f);
+    validateAndSetFile(f);
+  }
+
+  function validateAndSetFile(f: File | null) {
     setResult(null);
     setError(null);
+    if (!f) { setFile(null); return; }
+
+    const sizeMB = f.size / (1024 * 1024);
+    if (sizeMB > MAX_FILE_SIZE_MB) {
+      setError(`Fichier trop volumineux (${sizeMB.toFixed(1)} MB). Maximum : ${MAX_FILE_SIZE_MB} MB.`);
+      setFile(null);
+      return;
+    }
+    const ext = f.name.split('.').pop()?.toLowerCase();
+    if (ext !== 'csv' && ext !== 'json') {
+      setError('Format non supporté. Utilisez un fichier .csv ou .json.');
+      setFile(null);
+      return;
+    }
+    setFile(f);
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    const f = e.dataTransfer.files?.[0] ?? null;
+    validateAndSetFile(f);
+  }
+
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
   }
 
   async function handleImport() {
@@ -47,7 +55,7 @@ export function BulkImport() {
     setError(null);
     setResult(null);
     try {
-      const data = await importComponents(file);
+      const data = await bulkImportComponents(file);
       setResult(data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Import failed');
@@ -64,7 +72,16 @@ export function BulkImport() {
         Chaque ligne doit contenir au minimum : name, brand, category.
       </p>
 
-      <div className={styles.uploadArea} onClick={() => inputRef.current?.click()}>
+      <div
+        className={styles.uploadArea}
+        onClick={() => inputRef.current?.click()}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        role="button"
+        tabIndex={0}
+        aria-label="Zone de dépôt de fichier"
+        onKeyDown={(e) => e.key === 'Enter' && inputRef.current?.click()}
+      >
         <Upload size={32} color="var(--text-dim)" />
         <p>{file ? file.name : 'Cliquez ou deposez un fichier CSV / JSON'}</p>
         <input
@@ -78,7 +95,7 @@ export function BulkImport() {
 
       {file && (
         <button className={styles.importBtn} onClick={handleImport} disabled={loading}>
-          {loading ? 'Import en cours...' : 'Lancer l\'import'}
+          {loading ? 'Import en cours...' : "Lancer l'import"}
         </button>
       )}
 
@@ -110,4 +127,3 @@ export function BulkImport() {
     </div>
   );
 }
-

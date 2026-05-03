@@ -1,29 +1,30 @@
-import { useEffect, useState } from 'react';
-import { ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { ToggleLeft, ToggleRight, Trash2, Plus } from 'lucide-react';
 import { getAdminRetailers, updateAdminRetailer, hardDeleteRetailer } from '../api';
 import type { AdminRetailer } from '../api';
 import { RetailerModal } from '../components/RetailerModal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import styles from './Retailers.module.css';
 
 export function Retailers() {
   const [retailers, setRetailers] = useState<AdminRetailer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRetailer, setEditingRetailer] = useState<AdminRetailer | null>(null);
-  const [confirmDeactivate, setConfirmDeactivate] = useState<AdminRetailer | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<AdminRetailer | null>(null);
 
-  function load() {
+  const load = useCallback(() => {
     setLoading(true);
     getAdminRetailers()
       .then((data) => setRetailers(data.retailers ?? []))
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
-  // Optimistic toggle — update local state immediately, then sync with server
   async function handleToggle(retailer: AdminRetailer) {
     // Optimistic update — no flicker
     setRetailers(prev =>
@@ -36,17 +37,19 @@ export function Retailers() {
       setRetailers(prev =>
         prev.map(r => r.id === retailer.id ? { ...r, is_active: retailer.is_active } : r)
       );
-      alert(err instanceof Error ? err.message : 'Error');
+      setMutationError(err instanceof Error ? err.message : 'Erreur inattendue');
     }
   }
 
-  async function handleDeactivate(retailer: AdminRetailer) {
+  async function handleDelete(retailer: AdminRetailer) {
+    setMutationError(null);
     try {
       await hardDeleteRetailer(retailer.id);
-      setConfirmDeactivate(null);
+      setConfirmDelete(null);
       load();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Error');
+      setConfirmDelete(null);
+      setMutationError(err instanceof Error ? err.message : 'Erreur inattendue');
     }
   }
 
@@ -57,15 +60,17 @@ export function Retailers() {
 
   return (
     <div className={styles.page}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1 className={styles.title} style={{ margin: 0 }}>Revendeurs</h1>
-        <button onClick={() => openModal()} style={{ background: 'var(--accent-blue)', color: 'var(--bg)', border: 'none', padding: '0.45rem 0.9rem', borderRadius: 'var(--radius)', fontWeight: 600, cursor: 'pointer' }}>
-          + Ajouter
+      <div className="admin-header">
+        <h1>Revendeurs</h1>
+        <button onClick={() => openModal()} className="btn-primary">
+          <Plus size={16} /> Ajouter
         </button>
       </div>
 
-      {error && <p className={styles.error}>{error}</p>}
-      {loading ? <p className={styles.loading}>Chargement...</p> : (
+      {error && <p className="admin-error">{error}</p>}
+      {mutationError && <p className="admin-error">{mutationError}</p>}
+
+      {loading ? <p className="admin-loading">Chargement...</p> : (
         <table>
           <thead>
             <tr>
@@ -93,29 +98,39 @@ export function Retailers() {
                 </td>
                 <td>
                   {r.last_scrape_status ? (
-                    <span className={`${styles.badge} ${styles[r.last_scrape_status.toLowerCase()]}`}>
+                    <span className={`badge badge-${r.last_scrape_status.toLowerCase()}`}>
                       {r.last_scrape_status}
                     </span>
                   ) : '—'}
                 </td>
                 <td>{r.price_records_count ?? 0}</td>
                 <td>
-                  <button className={styles.toggleBtn} onClick={() => handleToggle(r)} title={r.is_active ? 'Désactiver' : 'Activer'}>
+                  <button
+                    className={styles.toggleBtn}
+                    onClick={() => handleToggle(r)}
+                    title={r.is_active ? 'Désactiver' : 'Activer'}
+                    aria-label={r.is_active ? `Désactiver ${r.name}` : `Activer ${r.name}`}
+                  >
                     {r.is_active
                       ? <ToggleRight size={20} color="var(--success-soft)" />
                       : <ToggleLeft size={20} color="var(--text-dim)" />}
                   </button>
                 </td>
                 <td>
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <button onClick={() => openModal(r)} style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', fontSize: '0.85rem' }}>
+                  <div className={styles.actions}>
+                    <button
+                      onClick={() => openModal(r)}
+                      className={styles.editBtn}
+                      aria-label={`Modifier ${r.name}`}
+                    >
                       Modifier
                     </button>
                     {!r.is_active && (
                       <button
-                        onClick={() => setConfirmDeactivate(r)}
-                        style={{ background: 'none', border: 'none', color: 'var(--danger-soft)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                        onClick={() => setConfirmDelete(r)}
+                        className={styles.deleteBtn}
                         title="Supprimer définitivement"
+                        aria-label={`Supprimer ${r.name}`}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -128,25 +143,15 @@ export function Retailers() {
         </table>
       )}
 
-      {/* Confirm deactivate/delete dialog */}
-      {confirmDeactivate && (
-        <div className={styles.overlay}>
-          <div className={styles.dialog}>
-            <h3>Supprimer {confirmDeactivate.name} ?</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
-              Suppression définitive et irréversible. Toutes les données de prix, mappings et logs associés à ce revendeur seront effacés.
-            </p>
-            <div className={styles.dialogActions}>
-              <button className={styles.cancelBtn} onClick={() => setConfirmDeactivate(null)}>Annuler</button>
-              <button
-                className={styles.confirmDeleteBtn}
-                onClick={() => handleDeactivate(confirmDeactivate)}
-              >
-                Supprimer définitivement
-              </button>
-            </div>
-          </div>
-        </div>
+      {confirmDelete && (
+        <ConfirmDialog
+          title={`Supprimer ${confirmDelete.name} ?`}
+          message="Suppression définitive et irréversible. Toutes les données de prix, mappings et logs associés à ce revendeur seront effacés."
+          confirmLabel="Supprimer définitivement"
+          danger
+          onConfirm={() => handleDelete(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
 
       <RetailerModal
