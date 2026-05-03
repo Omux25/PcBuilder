@@ -36,11 +36,11 @@ adminComponentsRouter.use('/*', authMiddleware);
 // ── GET /api/admin/components ────────────────────────────────────────────────
 
 adminComponentsRouter.get('/', async (c) => {
-  const category    = c.req.query('category');
-  const search      = c.req.query('search');
+  const category = c.req.query('category');
+  const search = c.req.query('search');
   const isActiveRaw = c.req.query('is_active');
-  const page        = c.req.query('page')  ? Number(c.req.query('page'))  : 1;
-  const limit       = c.req.query('limit') ? Number(c.req.query('limit')) : 20;
+  const page = c.req.query('page') ? Number(c.req.query('page')) : 1;
+  const limit = c.req.query('limit') ? Number(c.req.query('limit')) : 20;
 
   // Admin sees all components by default.
   // ?is_active=true  → active only
@@ -50,12 +50,12 @@ adminComponentsRouter.get('/', async (c) => {
   const is_active_filter = isActiveRaw === 'true' ? true : isActiveRaw === 'false' ? false : undefined;
 
   const { components, total } = await getComponents({
-    category:         category || undefined,
-    search:           search   || undefined,
+    category: category || undefined,
+    search: search || undefined,
     page,
     limit,
     include_inactive: include_inactive,
-    is_active:        is_active_filter,
+    is_active: is_active_filter,
   });
 
   c.header('X-Total-Count', String(total));
@@ -65,8 +65,8 @@ adminComponentsRouter.get('/', async (c) => {
 // ── POST /api/admin/components ───────────────────────────────────────────────
 
 adminComponentsRouter.post('/', validateComponent, async (c) => {
-  const data    = c.get('validatedBody') as ComponentInput;
-  const admin   = c.get('admin') as { id: number } | undefined;
+  const data = c.get('validatedBody') as ComponentInput;
+  const admin = c.get('admin') as { id: number } | undefined;
 
   const component = await createComponent(data);
 
@@ -85,7 +85,7 @@ adminComponentsRouter.put('/:id', validateComponent, async (c) => {
     return c.json({ error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } }, 400);
   }
 
-  const data  = c.get('validatedBody') as ComponentInput;
+  const data = c.get('validatedBody') as ComponentInput;
   const admin = c.get('admin') as { id: number } | undefined;
 
   try {
@@ -225,6 +225,7 @@ adminComponentsRouter.post('/import', async (c) => {
       const numericFields = [
         'tdp', 'wattage', 'length_mm', 'max_gpu_length_mm', 'max_ram_frequency',
         'frequency_mhz', 'release_year', 'max_cooler_height_mm', 'height_mm', 'benchmark_score',
+        'ram_slots', 'm2_slots', 'sata_ports',
       ];
       for (const field of numericFields) {
         if (row[field] && typeof row[field] === 'string') {

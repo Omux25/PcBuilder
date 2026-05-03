@@ -212,13 +212,17 @@ Search with compatibility filtering and price data. Used by the ComponentPicker 
 
 Validate a PC build. All components are optional — only rules where both required components are present will fire.
 
+Multi-slot support: RAM and storage can occupy multiple slots using indexed keys (`ram_1`, `ram_2`, `storage_1`, `storage_2`, etc.). Legacy bare `ram` and `storage` keys are also accepted.
+
 **Request body:**
 ```json
 {
   "cpu":         { "socket": "AM5", "tdp": 105 },
-  "motherboard": { "socket": "AM5", "supported_ram_types": ["DDR5"], "max_ram_frequency": 6000, "tdp": 15 },
+  "motherboard": { "socket": "AM5", "supported_ram_types": ["DDR5"], "max_ram_frequency": 6000, "ram_slots": 4, "m2_slots": 2, "sata_ports": 4, "tdp": 15 },
   "gpu":         { "length_mm": 336, "tdp": 320 },
-  "ram":         { "ram_type": "DDR5", "frequency_mhz": 6000, "tdp": 5 },
+  "ram_1":       { "ram_type": "DDR5", "frequency_mhz": 6000, "tdp": 5 },
+  "ram_2":       { "ram_type": "DDR5", "frequency_mhz": 6000, "tdp": 5 },
+  "storage_1":   { "tdp": 3 },
   "psu":         { "wattage": 850 },
   "case":        { "max_gpu_length_mm": 400 }
 }
@@ -228,12 +232,26 @@ Validate a PC build. All components are optional — only rules where both requi
 ```json
 {
   "compatible": true,
-  "total_tdp": 445,
-  "recommended_psu_wattage": 534,
+  "total_tdp": 453,
+  "recommended_psu_wattage": 680,
   "errors": [],
   "warnings": []
 }
 ```
+
+**Compatibility rules:**
+
+| Rule | Type | Fires when |
+|---|---|---|
+| `socket_mismatch` | error | `cpu.socket` ≠ `motherboard.socket` |
+| `ram_type_mismatch` | error | any RAM stick's `ram_type` not in `motherboard.supported_ram_types` |
+| `ram_frequency_exceeded` | warning | any RAM stick's `frequency_mhz` > `motherboard.max_ram_frequency` |
+| `gpu_too_long` | error | `gpu.length_mm` > `case.max_gpu_length_mm` |
+| `form_factor_mismatch` | error | `motherboard.form_factor` not in `case.supported_motherboards` |
+| `cooler_too_tall` | error | `cooling.height_mm` > `case.max_cooler_height_mm` |
+| `ram_slots_exceeded` | error | count of RAM sticks > `motherboard.ram_slots` (skipped if `ram_slots` is null) |
+| `storage_slots_exceeded` | error | count of storage drives > `motherboard.m2_slots + motherboard.sata_ports` (skipped if both are null) |
+| `psu_underpowered` | warning | `psu.wattage` < `ceil(total_tdp × 1.5)` |
 
 **Errors:**
 - `400` — body is not valid JSON or not an object
@@ -263,8 +281,11 @@ List all active preset builds.
       "is_active": true,
       "incomplete": false,
       "components": {
-        "cpu":  { "id": 10, "slug": "amd-ryzen-5-7600x", "name": "Ryzen 5 7600X", "brand": "AMD", "image_url": null, "is_active": true },
-        "gpu":  { "id": 42, "slug": "nvidia-rtx-4070", "name": "RTX 4070", "brand": "NVIDIA", "image_url": null, "is_active": true }
+        "cpu":       { "id": 10, "slug": "amd-ryzen-5-7600x", "name": "Ryzen 5 7600X", "brand": "AMD", "image_url": null, "is_active": true },
+        "gpu":       { "id": 42, "slug": "nvidia-rtx-4070", "name": "RTX 4070", "brand": "NVIDIA", "image_url": null, "is_active": true },
+        "ram_1":     { "id": 55, "slug": "corsair-vengeance-ddr5-32gb", "name": "Vengeance DDR5 32GB", "brand": "Corsair", "image_url": null, "is_active": true },
+        "ram_2":     { "id": 56, "slug": "corsair-vengeance-ddr5-32gb-2", "name": "Vengeance DDR5 32GB", "brand": "Corsair", "image_url": null, "is_active": true },
+        "storage_1": { "id": 70, "slug": "samsung-990-pro-1tb", "name": "990 Pro 1TB", "brand": "Samsung", "image_url": null, "is_active": true }
       },
       "created_at": "2026-04-01T00:00:00Z",
       "updated_at": "2026-04-01T00:00:00Z"
