@@ -23,7 +23,6 @@ interface Props {
     preset: AdminPreset | null;
 }
 
-/** Full component object stored per slot so we can display the name. */
 type ComponentSlots = Partial<Record<string, AdminComponent>>;
 
 interface FormData {
@@ -40,13 +39,37 @@ const emptyForm = (): FormData => ({
     components: {},
 });
 
+/**
+ * Build the ordered list of slot keys for the preset form.
+ * Single-slot categories use their plain name.
+ * RAM uses ram_1..ram_4, storage uses storage_1..storage_4.
+ * This mirrors the frontend configurator's slot model.
+ */
+const PRESET_SLOT_KEYS: string[] = CATEGORY_ORDER.flatMap(cat => {
+    if (cat === 'ram') return ['ram_1', 'ram_2', 'ram_3', 'ram_4'];
+    if (cat === 'storage') return ['storage_1', 'storage_2', 'storage_3', 'storage_4'];
+    return [cat];
+});
+
+/** Derive the base category from a slot key (e.g. 'ram_2' → 'ram'). */
+function slotToCategory(key: string): string {
+    return key.replace(/_\d+$/, '');
+}
+
+/** Human-readable label for a slot key. */
+function slotLabel(key: string): string {
+    const cat = slotToCategory(key);
+    const base = CATEGORY_LABELS[cat as keyof typeof CATEGORY_LABELS] ?? cat;
+    const match = key.match(/_(\d+)$/);
+    return match ? `${base} #${match[1]}` : base;
+}
+
 export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
     const [formData, setFormData] = useState<FormData>(emptyForm());
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-    // Per-category component search state
     const [activeSearch, setActiveSearch] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<AdminComponent[]>([]);
@@ -56,8 +79,8 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
         if (!isOpen) return;
         if (preset) {
             const slots: ComponentSlots = {};
-            for (const [cat, comp] of Object.entries(preset.components ?? {})) {
-                slots[cat] = comp as unknown as AdminComponent;
+            for (const [key, comp] of Object.entries(preset.components ?? {})) {
+                slots[key] = comp as unknown as AdminComponent;
             }
             setFormData({
                 name: preset.name,
@@ -79,10 +102,11 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
         setFormData(prev => ({ ...prev, [key]: value }));
     }
 
-    async function handleSearch(cat: string, query: string) {
+    async function handleSearch(slotKey: string, query: string) {
         if (!query.trim()) { setSearchResults([]); return; }
         setSearchLoading(true);
         try {
+            const cat = slotToCategory(slotKey);
             const data = await searchComponents(query, cat);
             setSearchResults(data.components ?? []);
         } catch {
@@ -92,8 +116,8 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
         }
     }
 
-    function openSearch(cat: string) {
-        setActiveSearch(cat);
+    function openSearch(slotKey: string) {
+        setActiveSearch(slotKey);
         setSearchQuery('');
         setSearchResults([]);
     }
@@ -104,14 +128,14 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
         setSearchResults([]);
     }
 
-    function selectComponent(cat: string, component: AdminComponent) {
-        set('components', { ...formData.components, [cat]: component });
+    function selectComponent(slotKey: string, component: AdminComponent) {
+        set('components', { ...formData.components, [slotKey]: component });
         closeSearch();
     }
 
-    function removeComponent(cat: string) {
+    function removeComponent(slotKey: string) {
         const next = { ...formData.components };
-        delete next[cat];
+        delete next[slotKey];
         set('components', next);
     }
 
@@ -132,8 +156,8 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
         setError(null);
 
         const componentsMap: Record<string, number> = {};
-        for (const [cat, comp] of Object.entries(formData.components)) {
-            if (comp) componentsMap[cat] = comp.id;
+        for (const [key, comp] of Object.entries(formData.components)) {
+            if (comp) componentsMap[key] = comp.id;
         }
 
         const payload: PresetPayload = {
@@ -180,7 +204,7 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
                     {validationErrors.name && <span className={styles.errorText}>{validationErrors.name}</span>}
                 </div>
 
-                {/* Use case — full width now that price estimate is gone */}
+                {/* Use case */}
                 <div className={styles.formGroup}>
                     <label>Cas d'usage</label>
                     <select
@@ -205,18 +229,18 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
                     />
                 </div>
 
-                {/* Component slots */}
+                {/* Component slots — mirrors the frontend configurator slot model */}
                 <div className={styles.formGroup}>
                     <label>Composants</label>
                     {validationErrors.components && (
                         <span className={styles.errorText}>{validationErrors.components}</span>
                     )}
                     <div className={presetStyles.slots}>
-                        {CATEGORY_ORDER.map(cat => {
-                            const selected = formData.components[cat];
+                        {PRESET_SLOT_KEYS.map(slotKey => {
+                            const selected = formData.components[slotKey];
                             return (
-                                <div key={cat} className={presetStyles.slot}>
-                                    <span className={presetStyles.slotLabel}>{CATEGORY_LABELS[cat]}</span>
+                                <div key={slotKey} className={presetStyles.slot}>
+                                    <span className={presetStyles.slotLabel}>{slotLabel(slotKey)}</span>
                                     {selected ? (
                                         <div className={presetStyles.slotFilled}>
                                             <span className={presetStyles.slotName}>
@@ -225,15 +249,15 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
                                             <button
                                                 type="button"
                                                 className={presetStyles.slotChange}
-                                                onClick={() => openSearch(cat)}
+                                                onClick={() => openSearch(slotKey)}
                                             >
                                                 Changer
                                             </button>
                                             <button
                                                 type="button"
                                                 className={presetStyles.slotRemove}
-                                                onClick={() => removeComponent(cat)}
-                                                aria-label={`Retirer ${CATEGORY_LABELS[cat]}`}
+                                                onClick={() => removeComponent(slotKey)}
+                                                aria-label={`Retirer ${slotLabel(slotKey)}`}
                                             >
                                                 ✕
                                             </button>
@@ -242,7 +266,7 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
                                         <button
                                             type="button"
                                             className={presetStyles.slotAdd}
-                                            onClick={() => openSearch(cat)}
+                                            onClick={() => openSearch(slotKey)}
                                         >
                                             + Ajouter
                                         </button>
@@ -263,12 +287,12 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
                 </div>
             </form>
 
-            {/* Inline component search panel — floats above the modal */}
+            {/* Inline component search panel */}
             {activeSearch && (
                 <div className={presetStyles.searchOverlay} onClick={closeSearch}>
                     <div className={presetStyles.searchPanel} onClick={e => e.stopPropagation()}>
                         <div className={presetStyles.searchHeader}>
-                            <span>{CATEGORY_LABELS[activeSearch as keyof typeof CATEGORY_LABELS]}</span>
+                            <span>{slotLabel(activeSearch)}</span>
                             <button className={presetStyles.searchClose} onClick={closeSearch}>✕</button>
                         </div>
                         <div className={presetStyles.searchRow}>

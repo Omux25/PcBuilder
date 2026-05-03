@@ -3,6 +3,7 @@ import { Pencil, Trash2, Plus } from 'lucide-react';
 import { getAdminPresets, deleteAdminPreset } from '../api';
 import type { AdminPreset } from '../api';
 import type { PresetComponent } from '@shared/types';
+import { CATEGORY_LABELS } from '@shared/types';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PresetModal } from '../components/PresetModal';
 import styles from './Presets.module.css';
@@ -10,6 +11,14 @@ import styles from './Presets.module.css';
 const USE_CASE_LABELS: Record<string, string> = {
   gaming: 'Gaming', workstation: 'Workstation', office: 'Bureau', budget: 'Budget',
 };
+
+/** Human-readable label for a slot key (e.g. 'ram_2' → 'RAM #2'). */
+function slotLabel(key: string): string {
+  const cat = key.replace(/_\d+$/, '');
+  const base = CATEGORY_LABELS[cat as keyof typeof CATEGORY_LABELS] ?? cat;
+  const match = key.match(/_(\d+)$/);
+  return match ? `${base} #${match[1]}` : base;
+}
 
 export function Presets() {
   const [presets, setPresets] = useState<AdminPreset[]>([]);
@@ -103,9 +112,9 @@ export function Presets() {
                 )}
 
                 <div className={styles.componentList}>
-                  {Object.entries((p.components as Record<string, PresetComponent>) ?? {}).map(([cat, comp]) => (
-                    <div key={cat} className={styles.componentRow}>
-                      <span className={styles.cat}>{cat}</span>
+                  {Object.entries((p.components as Record<string, PresetComponent>) ?? {}).map(([key, comp]) => (
+                    <div key={key} className={styles.componentRow}>
+                      <span className={styles.cat}>{slotLabel(key)}</span>
                       <span className={styles.compName}>{comp.brand ? `${comp.brand} ` : ''}{comp.name}</span>
                     </div>
                   ))}
