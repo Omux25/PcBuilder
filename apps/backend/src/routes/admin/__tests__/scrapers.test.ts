@@ -28,6 +28,30 @@ const MOCK_RETAILER = {
   price_records_count: 0,
 };
 
+// ── GET /api/admin/scrapers/status ────────────────────────────────────────────
+
+describe('GET /api/admin/scrapers/status', () => {
+  let app: Hono;
+  beforeEach(() => { app = makeApp(); resetScraperLocks(); });
+  afterEach(() => { resetScraperLocks(); });
+
+  test('returns 401 without token', async () => {
+    const res = await app.request('/api/admin/scrapers/status');
+    expect(res.status).toBe(401);
+  });
+
+  test('returns running=false when no session is active', async () => {
+    const res = await app.request('/api/admin/scrapers/status', {
+      headers: { 'Authorization': `Bearer ${makeToken()}` },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.running).toBe(false);
+    expect(Array.isArray(body.running_jobs)).toBe(true);
+    expect(body.running_jobs).toHaveLength(0);
+  });
+});
+
 // ── POST /api/admin/scrapers/run-all ─────────────────────────────────────────
 
 describe('POST /api/admin/scrapers/run-all', () => {

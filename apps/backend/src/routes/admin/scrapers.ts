@@ -1,6 +1,7 @@
 /**
  * Admin scraper routes — JWT-protected
  *
+ * GET  /api/admin/scrapers/status          — check if a session is running
  * POST /api/admin/scrapers/run-all         — trigger all active retailers
  * POST /api/admin/scrapers/:retailerId/run — trigger one retailer
  *
@@ -29,6 +30,19 @@ export function resetScraperLocks(): void {
   fullSessionRunning = false;
   runningJobs.clear();
 }
+
+/** Returns true if any scraping session is currently running. */
+export function isScraperRunning(): boolean {
+  return fullSessionRunning || runningJobs.size > 0;
+}
+
+// GET /api/admin/scrapers/status
+adminScrapersRouter.get('/status', (c) => {
+  return c.json({
+    running: fullSessionRunning || runningJobs.size > 0,
+    running_jobs: [...runningJobs],
+  });
+});
 
 // POST /api/admin/scrapers/run-all
 adminScrapersRouter.post('/run-all', async (c) => {

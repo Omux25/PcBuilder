@@ -21,8 +21,11 @@ import type { ScrapedPrice } from './scrapers/baseScraper.js';
  * @param targetRetailerId - If provided, only run the scraper for this specific retailer.
  */
 export async function runScrapingSession(targetRetailerId?: number): Promise<void> {
-  const sessionType = targetRetailerId ? `Targeted (Retailer ${targetRetailerId})` : 'Full';
-  await logger.info(`[SESSION] Scraping started: ${sessionType}`);
+  const targetName = targetRetailerId 
+    ? RETAILER_SCRAPERS.find(s => s.retailer_id === targetRetailerId)?.name ?? `Retailer ${targetRetailerId}`
+    : 'Full';
+  const sessionType = targetRetailerId ? `Targeted (${targetName})` : 'Full';
+  await logger.info(`[SESSION] Scraping session started: ${sessionType}`);
 
   const allPrices: ScrapedPrice[] = [];
   const queue = new PQueue({ concurrency: 2 });
@@ -44,7 +47,7 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
         await logger.info(`[${config.name}] Scraper started`, config.name);
         const prices = await config.run();
         allPrices.push(...prices);
-        await logger.info(`[${config.name}] Scraped ${prices.length} product(s)`, config.name);
+        await logger.info(`[${config.name}] Successfully scraped ${prices.length} product(s)`, config.name);
         scraperResults.set(config.retailer_id, 'SUCCESS');
       } catch (err) {
         await logger.error(
@@ -72,8 +75,13 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
     return;
   }
 
+  await logger.info(`[SESSION] Matching ${allPrices.length} listing(s) to catalog...`);
   const { updated, unmatched, errors } = await aggregate(allPrices);
+
+  await logger.info(`[SESSION] Auto-mapping unmatched listings...`);
   const { mapped: autoMapped } = await autoMap();
+
+  await logger.info(`[SESSION] Building catalog entries from unmatched items...`);
   const { created: autoCatalog } = await buildFromUnmatched();
 
   let secondPassMapped = 0;

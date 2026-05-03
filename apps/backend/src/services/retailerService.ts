@@ -17,6 +17,7 @@ export interface Retailer {
   logo_url?: string;
   country: string;
   is_active: boolean;
+  scraping_enabled: boolean;
   scraping_interval_hours: number;
   last_scrape_at?: string;
   last_scrape_status?: string;
@@ -114,6 +115,7 @@ async function updateRetailer(
     logo_url: string;
     country: string;
     is_active: boolean;
+    scraping_enabled: boolean;
     scraping_interval_hours: number;
     notes: string;
   }>
@@ -126,6 +128,7 @@ async function updateRetailer(
       logo_url                = COALESCE(${data.logo_url ?? null}, logo_url),
       country                 = COALESCE(${data.country ?? null}, country),
       is_active               = COALESCE(${data.is_active ?? null}, is_active),
+      scraping_enabled        = COALESCE(${data.scraping_enabled ?? null}, scraping_enabled),
       scraping_interval_hours = COALESCE(${data.scraping_interval_hours ?? null}, scraping_interval_hours),
       notes                   = COALESCE(${data.notes ?? null}, notes)
     WHERE id = ${id}

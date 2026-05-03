@@ -18,6 +18,7 @@ async function runDueRetailers(): Promise<void> {
       SELECT id, name, scraping_interval_hours
       FROM retailers
       WHERE is_active = true
+        AND scraping_enabled = true
         AND (
           last_scrape_at IS NULL
           OR last_scrape_at < NOW() - (scraping_interval_hours || ' hours')::INTERVAL

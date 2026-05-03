@@ -24,6 +24,7 @@ adminUnmatchedRouter.get('/', async (c) => {
   const sql = getSql();
   const status     = c.req.query('status');
   const retailerId = c.req.query('retailer_id') ? Number(c.req.query('retailer_id')) : undefined;
+  const search     = c.req.query('search');
   const page       = Math.max(1, Number(c.req.query('page') ?? 1) || 1);
   const limit      = Math.min(200, Math.max(1, Number(c.req.query('limit') ?? 50) || 50));
   const offset     = (page - 1) * limit;
@@ -37,6 +38,10 @@ adminUnmatchedRouter.get('/', async (c) => {
     JOIN retailers r ON r.id = ul.retailer_id
     WHERE (${status ?? null}::text IS NULL OR ul.status = ${status ?? null})
       AND (${retailerId ?? null}::int IS NULL OR ul.retailer_id = ${retailerId ?? null})
+      AND (${search ?? null}::text IS NULL OR (
+        SELECT bool_and(ul.scraped_name ILIKE '%' || word || '%')
+        FROM unnest(string_to_array(trim(regexp_replace(${search ?? ''}, '\\s+', ' ', 'g')), ' ')) AS word
+      ))
     ORDER BY ul.scraped_at DESC
     LIMIT ${limit} OFFSET ${offset}
   ` as (Record<string, unknown> & { total_count: string })[];

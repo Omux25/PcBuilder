@@ -484,6 +484,18 @@ Deactivate a retailer (sets `is_active = false`). Does not delete data.
 
 ---
 
+### `GET /api/admin/scrapers/status`
+
+Check whether a scraping session is currently running. Used by the admin panel to sync UI state on page load.
+
+**Response 200:**
+```json
+{ "running": false, "running_jobs": [] }
+```
+
+- `running` — `true` if any session (full or targeted) is active
+- `running_jobs` — array of retailer IDs currently being scraped individually
+
 ### `POST /api/admin/scrapers/:retailerId/run`
 
 Trigger an immediate scrape for one retailer.
@@ -540,7 +552,7 @@ Mark a listing as dismissed.
 
 Query scraper logs.
 
-**Query parameters:** `level` (INFO/WARNING/ERROR), `site`, `limit` (default 100, max 500)
+**Query parameters:** `level` (INFO/WARNING/ERROR), `site`, `limit` (default 100, max 10000)
 
 **Response 200:**
 ```json

@@ -117,11 +117,12 @@ export interface AdminRetailer {
   base_url: string;
   logo_url: string | null;
   country: string;
+  is_active: boolean;
+  scraping_enabled: boolean;
   scraping_interval_hours: number;
   last_scrape_at: string | null;
   last_scrape_status: 'SUCCESS' | 'PARTIAL' | 'FAILED' | null;
   price_records_count: number | null;
-  is_active: boolean;
 }
 
 export interface DashboardData {
@@ -148,34 +149,34 @@ export interface DashboardData {
 }
 
 export const CATEGORY_LABELS: Record<ComponentCategory, string> = {
-  cpu:         'Processeur (CPU)',
+  cpu: 'Processeur (CPU)',
   motherboard: 'Carte mère',
-  gpu:         'Carte graphique (GPU)',
-  ram:         'Mémoire RAM',
-  storage:     'Stockage',
-  psu:         'Alimentation (PSU)',
-  case:        'Boîtier',
-  cooling:     'Refroidissement',
+  gpu: 'Carte graphique (GPU)',
+  ram: 'Mémoire RAM',
+  storage: 'Stockage',
+  psu: 'Alimentation (PSU)',
+  case: 'Boîtier',
+  cooling: 'Refroidissement',
 };
 
 export const RULE_LABELS: Record<string, string> = {
-  socket_mismatch:       'Incompatibilité de socket',
-  ram_type_mismatch:     'Type de RAM incompatible',
-  ram_frequency_exceeded:'Fréquence RAM dépassée',
-  gpu_too_long:          'GPU trop long pour le boîtier',
-  psu_underpowered:      'Alimentation insuffisante',
-  form_factor_mismatch:  'Format de carte mère incompatible',
-  cooler_too_tall:       'Refroidissement trop haut pour le boîtier',
+  socket_mismatch: 'Incompatibilité de socket',
+  ram_type_mismatch: 'Type de RAM incompatible',
+  ram_frequency_exceeded: 'Fréquence RAM dépassée',
+  gpu_too_long: 'GPU trop long pour le boîtier',
+  psu_underpowered: 'Alimentation insuffisante',
+  form_factor_mismatch: 'Format de carte mère incompatible',
+  cooler_too_tall: 'Refroidissement trop haut pour le boîtier',
 };
 
 export const RULE_TOOLTIPS: Record<string, string> = {
-  socket_mismatch:       'Le processeur et la carte mère doivent avoir le même socket (ex: AM5) pour fonctionner ensemble.',
-  ram_type_mismatch:     'La carte mère ne supporte pas ce type de RAM (DDR4 vs DDR5).',
-  ram_frequency_exceeded:'La RAM fonctionnera à une vitesse inférieure, limitée par la carte mère ou le processeur.',
-  gpu_too_long:          'La carte graphique est trop longue et ne rentrera pas physiquement dans ce boîtier.',
-  psu_underpowered:      'L\'alimentation choisie n\'offre pas assez de puissance pour faire tourner ces composants de manière stable.',
-  form_factor_mismatch:  'La carte mère ne rentre pas dans ce boîtier. Vérifiez les formats supportés (ATX, mATX, ITX).',
-  cooler_too_tall:       'Le ventirad CPU est trop haut pour ce boîtier. Vérifiez la hauteur maximale supportée.',
+  socket_mismatch: 'Le processeur et la carte mère doivent avoir le même socket (ex: AM5) pour fonctionner ensemble.',
+  ram_type_mismatch: 'La carte mère ne supporte pas ce type de RAM (DDR4 vs DDR5).',
+  ram_frequency_exceeded: 'La RAM fonctionnera à une vitesse inférieure, limitée par la carte mère ou le processeur.',
+  gpu_too_long: 'La carte graphique est trop longue et ne rentrera pas physiquement dans ce boîtier.',
+  psu_underpowered: 'L\'alimentation choisie n\'offre pas assez de puissance pour faire tourner ces composants de manière stable.',
+  form_factor_mismatch: 'La carte mère ne rentre pas dans ce boîtier. Vérifiez les formats supportés (ATX, mATX, ITX).',
+  cooler_too_tall: 'Le ventirad CPU est trop haut pour ce boîtier. Vérifiez la hauteur maximale supportée.',
 };
 
 export const CATEGORY_ORDER: ComponentCategory[] = [
