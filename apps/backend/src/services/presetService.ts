@@ -8,6 +8,28 @@ import { getSql } from '../db/index.js';
 import { AppError } from '../utils/errors.js';
 import { PresetComponent, PresetBuild } from '@shared/types';
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Sums the lowest in-stock price for each component in a preset.
+ * Falls back to the lowest any-stock price when a component has no in-stock offer.
+ * Returns null if no price data exists for any component in the preset.
+ */
+function calculateTotalPrice(
+  componentRows: (PresetComponent & { preset_build_id: number; category: string; lowest_price: string | null })[]
+): number | null {
+  if (componentRows.length === 0) return null;
+  let total = 0;
+  let hasAnyPrice = false;
+  for (const row of componentRows) {
+    if (row.lowest_price !== null) {
+      total += Number(row.lowest_price);
+      hasAnyPrice = true;
+    }
+  }
+  return hasAnyPrice ? total : null;
+}
+
 // ── Service Functions ────────────────────────────────────────────────────────
 
 /**
@@ -28,34 +50,47 @@ async function getPresets(useCase?: string, includeInactive = false): Promise<Pr
 
   if (presetRows.length === 0) return [];
 
-  // Fetch all components for these presets in one query
-  // Use a JOIN against preset_builds instead of passing an array parameter (Bun.sql limitation)
+  // Fetch all components for these presets in one query, including the lowest
+  // available price per component so we can calculate total_price_estimate live.
   const componentRows = (await sql`
     SELECT
       pbc.preset_build_id,
       pbc.category,
-      c.id, c.slug, c.name, c.brand, c.image_url, c.is_active
+      c.id, c.slug, c.name, c.brand, c.image_url, c.is_active,
+      -- Lowest in-stock price first, fall back to lowest any-stock price
+      COALESCE(
+        MIN(p.price) FILTER (WHERE p.in_stock = true),
+        MIN(p.price)
+      ) AS lowest_price
     FROM preset_build_components pbc
     JOIN components c ON c.id = pbc.component_id
     JOIN preset_builds pb ON pb.id = pbc.preset_build_id
+    LEFT JOIN prices p ON p.component_id = c.id
     WHERE (${includeInactive ? null : true}::boolean IS NULL OR pb.is_active = true)
       AND (${useCase ?? null}::text IS NULL OR pb.use_case = ${useCase ?? null})
-  `) as (PresetComponent & { preset_build_id: number; category: string })[];
+    GROUP BY pbc.preset_build_id, pbc.category, c.id, c.slug, c.name, c.brand, c.image_url, c.is_active
+  `) as (PresetComponent & { preset_build_id: number; category: string; lowest_price: string | null })[];
 
   // Group components by preset
   const componentsByPreset = new Map<number, Record<string, PresetComponent>>();
+  const priceRowsByPreset = new Map<number, typeof componentRows>();
   for (const row of componentRows) {
     if (!componentsByPreset.has(row.preset_build_id)) {
       componentsByPreset.set(row.preset_build_id, {});
+      priceRowsByPreset.set(row.preset_build_id, []);
     }
-    const { preset_build_id: _pid, ...component } = row;
+    const { preset_build_id: _pid, lowest_price: _lp, ...component } = row;
     componentsByPreset.get(row.preset_build_id)![row.category] = component;
+    priceRowsByPreset.get(row.preset_build_id)!.push(row);
   }
 
   return presetRows.map((preset) => {
     const components = componentsByPreset.get(preset.id) ?? {};
     const incomplete = Object.values(components).some((c) => !c.is_active);
-    return { ...preset, components, incomplete };
+    const calculatedPrice = calculateTotalPrice(priceRowsByPreset.get(preset.id) ?? []);
+    // Use live calculated price; fall back to stored estimate if no price data exists
+    const total_price_estimate = calculatedPrice ?? preset.total_price_estimate ?? null;
+    return { ...preset, total_price_estimate, components, incomplete };
   });
 }
 
@@ -76,23 +111,37 @@ async function getPresetById(id: number): Promise<PresetBuild> {
   const componentRows = (await sql`
     SELECT
       pbc.category,
-      c.id, c.slug, c.name, c.brand, c.image_url, c.is_active
+      c.id, c.slug, c.name, c.brand, c.image_url, c.is_active,
+      COALESCE(
+        MIN(p.price) FILTER (WHERE p.in_stock = true),
+        MIN(p.price)
+      ) AS lowest_price
     FROM preset_build_components pbc
     JOIN components c ON c.id = pbc.component_id
+    LEFT JOIN prices p ON p.component_id = c.id
     WHERE pbc.preset_build_id = ${id}
-  `) as (PresetComponent & { category: string })[];
+    GROUP BY pbc.category, c.id, c.slug, c.name, c.brand, c.image_url, c.is_active
+  `) as (PresetComponent & { category: string; lowest_price: string | null })[];
 
   const components: Record<string, PresetComponent> = {};
   for (const row of componentRows) {
-    components[row.category] = row;
+    const { lowest_price: _lp, ...component } = row;
+    components[row.category] = component;
   }
 
   const incomplete = Object.values(components).some((c) => !c.is_active);
-  return { ...presetRows[0], components, incomplete };
+
+  // Attach a fake preset_build_id so calculateTotalPrice can reuse the same helper
+  const priceRows = componentRows.map(r => ({ ...r, preset_build_id: id }));
+  const calculatedPrice = calculateTotalPrice(priceRows);
+  const total_price_estimate = calculatedPrice ?? presetRows[0].total_price_estimate ?? null;
+
+  return { ...presetRows[0], total_price_estimate, components, incomplete };
 }
 
 /**
  * Creates a new preset build with its component links in a transaction.
+ * total_price_estimate is calculated live from prices — not stored.
  *
  * @param data.components - Map of category → component_id
  */
@@ -100,7 +149,6 @@ async function createPreset(data: {
   name: string;
   description?: string;
   use_case: string;
-  total_price_estimate?: number;
   components: Record<string, number>;
 }): Promise<PresetBuild> {
   // Insert preset and component links in a transaction to prevent partial state
@@ -110,12 +158,11 @@ async function createPreset(data: {
 
   await sql.begin(async (tx) => {
     const presetRows = (await tx`
-      INSERT INTO preset_builds (name, description, use_case, total_price_estimate, is_active)
+      INSERT INTO preset_builds (name, description, use_case, is_active)
       VALUES (
         ${data.name},
         ${data.description ?? null},
         ${data.use_case},
-        ${data.total_price_estimate ?? null},
         true
       )
       RETURNING *
@@ -137,6 +184,7 @@ async function createPreset(data: {
 
 /**
  * Updates a preset build and replaces its component links.
+ * total_price_estimate is calculated live — not stored or accepted here.
  * Throws PRESET_NOT_FOUND if no preset matches.
  */
 async function updatePreset(
@@ -145,18 +193,16 @@ async function updatePreset(
     name?: string;
     description?: string;
     use_case?: string;
-    total_price_estimate?: number;
     components?: Record<string, number>;
   }
 ): Promise<PresetBuild> {
   const sql = getSql();
   const rows = (await sql`
     UPDATE preset_builds SET
-      name                 = COALESCE(${data.name ?? null}, name),
-      description          = COALESCE(${data.description ?? null}, description),
-      use_case             = COALESCE(${data.use_case ?? null}, use_case),
-      total_price_estimate = COALESCE(${data.total_price_estimate ?? null}, total_price_estimate),
-      updated_at           = NOW()
+      name        = COALESCE(${data.name ?? null}, name),
+      description = COALESCE(${data.description ?? null}, description),
+      use_case    = COALESCE(${data.use_case ?? null}, use_case),
+      updated_at  = NOW()
     WHERE id = ${id}
     RETURNING *
   `) as Omit<PresetBuild, 'components' | 'incomplete'>[];
