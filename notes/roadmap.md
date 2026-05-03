@@ -222,16 +222,41 @@ All critical and high-priority issues from the improvement report resolved:
 
 ---
 
-## Phase 22 — Vite 8 downgrade + search_text leak fix (May 2026)
+## Phase 23 — Full Codebase Audit & Admin Panel Overhaul (May 2026)
 
-### Vite 8 → 6 downgrade
+### Backend fixes
+- Fixed `getComponentsByIds` Bun.sql `IN ${ids}` array bug — replaced with `sql.unsafe()` integer literals
+- Fixed smart-search `ANY($1::int[])` Bun.sql array bug — same fix
+- Fixed scraper session never updating `last_scrape_at` / `last_scrape_status` on retailers table
+- Added `DELETE /api/admin/retailers/:id/hard` — permanent hard delete with cascade (prices, mappings, logs)
+- Fixed integration tests: replaced hardcoded `retailer_id=1` with `retailer_id=10` (UltraPC) after retailers 1–9 were deleted
 
-- Downgraded `vite` from `8.0.10` → `6.3.5` and `@vitejs/plugin-react` from `6.0.1` → `4.3.4` in both `apps/frontend` and `apps/admin` — Vite 8 switched to Rolldown as its bundler which is incompatible with Bun 1.3.13; both dev servers failed to start with `ResolveMessage {}` (an Oxc/Rolldown error type Bun can't print)
+### Admin panel fixes
+- Fixed blank white page — `import type` errors in `api.ts` and `shared/component-utils.ts` (`verbatimModuleSyntax`)
+- Fixed component status toggle sending invalid payload (caused "Error" alert)
+- Fixed retailers flicker on toggle — optimistic UI update (no full reload)
+- Fixed `ComponentModal` missing category-specific required fields (socket, wattage, length_mm, etc.)
+- Fixed `ScraperLog.site` type mismatch in `Scrapers.tsx`
+- Added retailer hard delete button (only shown for inactive retailers)
+- Scrapers page: live log polling every 3s while scraper is running, animated spinner, auto-scroll to top
+- Unmatched listings: full pagination, real total count, retailer filter, explanatory subtitle
 
-### search_text leak fix
+### Scraper architecture
+- Extracted `RETAILER_SCRAPERS` config to `scraper/config/retailers.config.ts` — single source of truth
+- `session.ts` reads from config; adding a new retailer = one config entry, no session.ts changes
+- Standardized all log messages: `[SESSION]`, `[RetailerName]`, `[AGGREGATOR]`, `[AUTO-MAPPER]`, `[CATALOG]`, `[SCHEDULER]` prefixes
+- Aggregator errors now routed to DB logger (visible in admin logs panel)
+- Added `product_description` to `ScrapedPrice` — scrapers populate it from listing card specs
+- `extractGpuVariant` uses description as fallback for VRAM when not in product name
+- VRAM regex extended: now matches `24G`, `24Go`, `24GDDR6` in addition to `24GB`
 
-- Fixed `search_text` internal column leaking into all public API responses — root cause: migration 017 added a `search_text` TEXT column to the `components` table for trigram indexing, but all `SELECT *` / `SELECT c.*` queries returned it to clients
-- Affected endpoints: `GET /api/components` (no-filter path), `GET /api/components/:id`, `GET /api/components/slug/:slug`, `GET /api/components?ids=...`, and admin `RETURNING *` on create/update/deactivate
-- Fix: strip `search_text` at the application layer in all 6 affected code paths in `componentService.ts` using destructuring (`{ search_text: _st, ...c }`)
-- Also renamed the CTE alias in the search path from `search_text` to `_search_text` to eliminate a PostgreSQL column ambiguity error (the DB column and the computed alias had the same name)
+### Frontend fixes
+- Compare page: fixed 3 slots showing instead of 2 (removed spurious `canAddMore` column)
+- Out-of-stock offers collapsed by default in `InlinePrices`, `PriceComparison`, `ComponentDetail`
+- Toggle shows "Voir N offres épuisées" / "Masquer les épuisées"
+
+### Infrastructure
+- Vite 8 → 6.3.5 downgrade (Rolldown incompatible with Bun 1.3.13)
+- Removed `workspaces` from root `package.json` (was corrupting backend node_modules on install)
+- `dev.ps1` restored to original (port-kill attempts caused CRLF/reserved-variable errors)
 - 599 backend + 28 frontend = 627 tests, all passing

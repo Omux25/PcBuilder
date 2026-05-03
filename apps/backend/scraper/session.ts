@@ -12,6 +12,7 @@ import { autoMap } from './autoMapper.js';
 import { buildFromUnmatched } from './catalogBuilder.js';
 import { getSql } from '../src/db/index.js';
 import { RETAILER_SCRAPERS } from './config/retailers.config.js';
+import { importBenchmarks } from './benchmarkImporter.js';
 import type { ScrapedPrice } from './scrapers/baseScraper.js';
 
 /**
@@ -90,4 +91,13 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
   ].join(', ');
 
   await logger.info(`[SESSION] Scraping complete: ${summary}`);
+
+  // Auto-update benchmark scores after each session — keeps scores current
+  // as new components are added to the catalog by the catalog builder.
+  try {
+    const { updated: bUpdated } = await importBenchmarks();
+    if (bUpdated > 0) {
+      await logger.info(`[BENCHMARKS] Updated ${bUpdated} component score(s)`);
+    }
+  } catch { /* non-critical — benchmark import failure must not crash the session */ }
 }
