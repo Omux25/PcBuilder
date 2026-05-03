@@ -54,7 +54,6 @@ adminPresetsRouter.post('/', async (c) => {
     name: body.name,
     description: body.description as string | undefined,
     use_case: body.use_case as string,
-    total_price_estimate: body.total_price_estimate as number | undefined,
     components: body.components as Record<string, number>,
   });
 
@@ -86,7 +85,6 @@ adminPresetsRouter.put('/:id', async (c) => {
       name: body.name as string | undefined,
       description: body.description as string | undefined,
       use_case: body.use_case as string | undefined,
-      total_price_estimate: body.total_price_estimate as number | undefined,
       components: body.components as Record<string, number> | undefined,
     });
 

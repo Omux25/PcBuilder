@@ -30,7 +30,6 @@ interface FormData {
     name: string;
     description: string;
     use_case: UseCase;
-    total_price_estimate: string;
     components: ComponentSlots;
 }
 
@@ -38,7 +37,6 @@ const emptyForm = (): FormData => ({
     name: '',
     description: '',
     use_case: 'gaming',
-    total_price_estimate: '',
     components: {},
 });
 
@@ -57,18 +55,14 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
     useEffect(() => {
         if (!isOpen) return;
         if (preset) {
-            // Populate from existing preset — convert PresetComponent → AdminComponent shape
             const slots: ComponentSlots = {};
             for (const [cat, comp] of Object.entries(preset.components ?? {})) {
-                // PresetComponent has id, slug, name, brand, image_url, is_active
-                // AdminComponent (Component) has all those + more — cast is safe for display
                 slots[cat] = comp as unknown as AdminComponent;
             }
             setFormData({
                 name: preset.name,
                 description: preset.description ?? '',
                 use_case: preset.use_case as UseCase,
-                total_price_estimate: preset.total_price_estimate ? String(preset.total_price_estimate) : '',
                 components: slots,
             });
         } else {
@@ -89,7 +83,6 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
         if (!query.trim()) { setSearchResults([]); return; }
         setSearchLoading(true);
         try {
-            // Pass category to the API so it filters server-side
             const data = await searchComponents(query, cat);
             setSearchResults(data.components ?? []);
         } catch {
@@ -128,9 +121,6 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
         if (Object.keys(formData.components).length === 0) {
             errors.components = 'Ajoutez au moins un composant.';
         }
-        if (formData.total_price_estimate && isNaN(Number(formData.total_price_estimate))) {
-            errors.total_price_estimate = 'Doit être un nombre.';
-        }
         setValidationErrors(errors);
         return Object.keys(errors).length === 0;
     }
@@ -141,7 +131,6 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
         setLoading(true);
         setError(null);
 
-        // Build the components map: category → component_id (what the API expects)
         const componentsMap: Record<string, number> = {};
         for (const [cat, comp] of Object.entries(formData.components)) {
             if (comp) componentsMap[cat] = comp.id;
@@ -151,9 +140,6 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
             name: formData.name.trim(),
             description: formData.description.trim() || undefined,
             use_case: formData.use_case,
-            total_price_estimate: formData.total_price_estimate
-                ? Number(formData.total_price_estimate)
-                : undefined,
             components: componentsMap,
         };
 
@@ -194,34 +180,18 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
                     {validationErrors.name && <span className={styles.errorText}>{validationErrors.name}</span>}
                 </div>
 
-                {/* Use case + Price estimate */}
-                <div className={presetStyles.row}>
-                    <div className={styles.formGroup}>
-                        <label>Cas d'usage</label>
-                        <select
-                            className={styles.select}
-                            value={formData.use_case}
-                            onChange={e => set('use_case', e.target.value as UseCase)}
-                        >
-                            {USE_CASES.map(u => (
-                                <option key={u.value} value={u.value}>{u.label}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className={styles.formGroup}>
-                        <label>Prix estimé (MAD)</label>
-                        <input
-                            className={styles.input}
-                            type="number"
-                            min="0"
-                            value={formData.total_price_estimate}
-                            onChange={e => set('total_price_estimate', e.target.value)}
-                            placeholder="Optionnel"
-                        />
-                        {validationErrors.total_price_estimate && (
-                            <span className={styles.errorText}>{validationErrors.total_price_estimate}</span>
-                        )}
-                    </div>
+                {/* Use case — full width now that price estimate is gone */}
+                <div className={styles.formGroup}>
+                    <label>Cas d'usage</label>
+                    <select
+                        className={styles.select}
+                        value={formData.use_case}
+                        onChange={e => set('use_case', e.target.value as UseCase)}
+                    >
+                        {USE_CASES.map(u => (
+                            <option key={u.value} value={u.value}>{u.label}</option>
+                        ))}
+                    </select>
                 </div>
 
                 {/* Description */}

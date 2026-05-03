@@ -182,7 +182,6 @@ export interface PresetPayload {
   name: string;
   description?: string;
   use_case: 'gaming' | 'workstation' | 'office' | 'budget';
-  total_price_estimate?: number;
   /** Map of category → component_id */
   components: Record<string, number>;
 }
