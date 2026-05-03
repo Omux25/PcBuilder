@@ -21,37 +21,33 @@ import type { ScrapedPrice } from './scrapers/baseScraper.js';
  */
 export async function runScrapingSession(targetRetailerId?: number): Promise<void> {
   const sessionType = targetRetailerId ? `Targeted (Retailer ${targetRetailerId})` : 'Full';
-  await logger.info(`Scraping session started: ${sessionType}`);
+  await logger.info(`[SESSION] Scraping started: ${sessionType}`);
 
   const allPrices: ScrapedPrice[] = [];
-
-  // Initialize concurrency queue (limit to 2 to avoid overwhelming resources/getting blocked)
   const queue = new PQueue({ concurrency: 2 });
 
-  // Filter scrapers based on targetRetailerId
   const scrapersToRun = targetRetailerId
     ? RETAILER_SCRAPERS.filter(s => s.retailer_id === targetRetailerId)
     : RETAILER_SCRAPERS;
 
   if (scrapersToRun.length === 0 && targetRetailerId) {
-    await logger.warn(`No scraper found for retailer ID ${targetRetailerId}`);
+    await logger.warn(`[SESSION] No scraper registered for retailer ID ${targetRetailerId}`);
     return;
   }
 
-  // Track per-retailer success/failure for status updates
   const scraperResults = new Map<number, 'SUCCESS' | 'FAILED'>();
 
   await Promise.all(scrapersToRun.map(config =>
     queue.add(async () => {
       try {
-        await logger.info(`Starting ${config.name} scraper...`);
+        await logger.info(`[${config.name}] Scraper started`, config.name);
         const prices = await config.run();
         allPrices.push(...prices);
-        await logger.info(`${config.name}: scraped ${prices.length} price(s)`);
+        await logger.info(`[${config.name}] Scraped ${prices.length} product(s)`, config.name);
         scraperResults.set(config.retailer_id, 'SUCCESS');
       } catch (err) {
         await logger.error(
-          `${config.name} scraping failed: ${err instanceof Error ? err.message : String(err)}`,
+          `[${config.name}] Scraper failed: ${err instanceof Error ? err.message : String(err)}`,
           config.name
         );
         scraperResults.set(config.retailer_id, 'FAILED');
@@ -59,7 +55,6 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
     })
   ));
 
-  // Update last_scrape_at and last_scrape_status for each retailer
   const sql = getSql();
   for (const [retailerId, status] of scraperResults) {
     try {
@@ -72,14 +67,11 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
   }
 
   if (allPrices.length === 0) {
-    await logger.info('Session complete: 0 updated, 0 unmatched, 0 error(s)');
+    await logger.info('[SESSION] Scraping complete: 0 updated, 0 unmatched, 0 errors');
     return;
   }
 
-  // ── Data Processing Phase ──────────────────────────────────────────────────
-
   const { updated, unmatched, errors } = await aggregate(allPrices);
-
   const { mapped: autoMapped } = await autoMap();
   const { created: autoCatalog } = await buildFromUnmatched();
 
@@ -89,9 +81,13 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
     secondPassMapped = second.mapped;
   }
 
-  await logger.info(
-    `Session complete: ${updated} updated, ${unmatched} unmatched, ${errors} error(s)` +
-    (autoMapped + secondPassMapped > 0 ? `, ${autoMapped + secondPassMapped} auto-mapped` : '') +
-    (autoCatalog > 0 ? `, ${autoCatalog} new catalog entries` : ''),
-  );
+  const summary = [
+    `${updated} updated`,
+    `${unmatched} unmatched`,
+    `${errors} error(s)`,
+    ...(autoMapped + secondPassMapped > 0 ? [`${autoMapped + secondPassMapped} auto-mapped`] : []),
+    ...(autoCatalog > 0 ? [`${autoCatalog} new catalog entries`] : []),
+  ].join(', ');
+
+  await logger.info(`[SESSION] Scraping complete: ${summary}`);
 }

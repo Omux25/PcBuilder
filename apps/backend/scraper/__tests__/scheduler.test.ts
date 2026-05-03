@@ -5,6 +5,7 @@ import { setSql as setLoggerSql, resetSql as resetLoggerSql } from '../utils/log
 import { setSql as setAggregatorSql, resetSql as resetAggregatorSql } from '../aggregator.js';
 import { setSql as setAutoMapperSql, resetSql as resetAutoMapperSql } from '../autoMapper.js';
 import { setSql as setCatalogBuilderSql, resetSql as resetCatalogBuilderSql } from '../catalogBuilder.js';
+import { setSql as setSessionSql, resetSql as resetSessionSql } from '../../src/db/index.js';
 import { setFetch, resetFetchAndLoad, setRetryDelay, setSilent } from '../scrapers/baseScraper.js';
 import { setUltraPcFetch, resetUltraPcFetch } from '../scrapers/ultrapcScraper.js';
 import { setSetupGameFetch, resetSetupGameFetch } from '../scrapers/setupgameScraper.js';
@@ -19,8 +20,8 @@ const upsertedPrices: Array<{ component_id: number; retailer_id: number }> = [];
 function makeLoggerSql() {
   return (_strings: TemplateStringsArray, ...values: unknown[]) => {
     logEntries.push({
-      level:   values[0] as string,
-      site:    values[1] as string | null,
+      level: values[0] as string,
+      site: values[1] as string | null,
       message: values[2] as string,
     });
     return Promise.resolve([]);
@@ -36,6 +37,10 @@ function makeAggregatorSql() {
     }
     // unmatched_listings insert → success
     if (query.includes('unmatched_listings')) {
+      return Promise.resolve([]);
+    }
+    // retailers status update → success
+    if (query.includes('UPDATE retailers')) {
       return Promise.resolve([]);
     }
     return Promise.resolve([]);
@@ -61,7 +66,7 @@ function makeAutoMapperSql() {
 function makeEmptyPageFetch() {
   return (_url: string) =>
     Promise.resolve({
-      ok:   true,
+      ok: true,
       status: 200,
       text: () => Promise.resolve('<html><body></body></html>'),
     });
@@ -87,6 +92,8 @@ beforeEach(() => {
   setAggregatorSql(makeAggregatorSql());
   setAutoMapperSql(makeAutoMapperSql());
   setCatalogBuilderSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
+  // Mock session's own SQL (for UPDATE retailers status)
+  setSessionSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
   setFetch(makeEmptyPageFetch());
   setUltraPcFetch(makeEmptyUltraPcFetch());
   setSetupGameFetch((_url: string) => Promise.resolve({
@@ -103,6 +110,7 @@ afterAll(() => {
   resetAggregatorSql();
   resetAutoMapperSql();
   resetCatalogBuilderSql();
+  resetSessionSql();
   resetFetchAndLoad();
   resetUltraPcFetch();
   resetSetupGameFetch();

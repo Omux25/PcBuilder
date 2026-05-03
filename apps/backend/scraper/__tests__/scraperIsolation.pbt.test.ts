@@ -15,6 +15,7 @@ import { setSql as setLoggerSql, resetSql as resetLoggerSql } from '../utils/log
 import { setSql as setAggregatorSql, resetSql as resetAggregatorSql } from '../aggregator.js';
 import { setSql as setAutoMapperSql, resetSql as resetAutoMapperSql } from '../autoMapper.js';
 import { setSql as setCatalogBuilderSql, resetSql as resetCatalogBuilderSql } from '../catalogBuilder.js';
+import { setSql as setSessionSql, resetSql as resetSessionSql } from '../../src/db/index.js';
 import { setFetch, resetFetchAndLoad, setRetryDelay, setSilent } from '../scrapers/baseScraper.js';
 import { setUltraPcFetch, resetUltraPcFetch } from '../scrapers/ultrapcScraper.js';
 import { setSetupGameFetch, resetSetupGameFetch } from '../scrapers/setupgameScraper.js';
@@ -50,6 +51,7 @@ beforeEach(() => {
   setAggregatorSql(makeAggregatorSql());
   setAutoMapperSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
   setCatalogBuilderSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
+  setSessionSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
   setRetryDelay(0);
   setSilent(true);
   setUltraPcFetch((_url: string) => Promise.resolve({
@@ -69,6 +71,7 @@ afterAll(() => {
   resetAggregatorSql();
   resetAutoMapperSql();
   resetCatalogBuilderSql();
+  resetSessionSql();
   resetFetchAndLoad();
   resetUltraPcFetch();
   resetSetupGameFetch();
@@ -137,7 +140,7 @@ describe('PBT 10.6 — scraper error isolation', () => {
 
         await runScrapingSession();
 
-        const startedIdx  = logEntries.findIndex(e => e.message.includes('started'));
+        const startedIdx = logEntries.findIndex(e => e.message.includes('started'));
         const completeIdx = logEntries.findIndex(e => e.message.includes('complete'));
 
         return startedIdx !== -1 && completeIdx !== -1 && startedIdx < completeIdx;

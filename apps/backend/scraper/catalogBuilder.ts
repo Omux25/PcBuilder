@@ -65,7 +65,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
   for (const listing of pending) {
     const scrapedName = decodeHtml(listing.scraped_name);
     const category = inferCategory(scrapedName);
-    
+
     if (!category) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
 
     const brand = extractBrand(scrapedName);
@@ -197,7 +197,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
   }
 
   if (created > 0) {
-    await logger.info(`Catalog builder: ${created} new component(s) created from scraped data, ${skipped} skipped`);
+    await logger.info(`[CATALOG] ${created} new component(s) created from scraped data, ${skipped} skipped`);
   }
   return { created, skipped };
 }
