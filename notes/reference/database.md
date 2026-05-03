@@ -1,6 +1,6 @@
 # Database Reference
 
-There are **12 application tables** in the PostgreSQL database, plus the internal `_migrations` tracking table. Migration files are in `apps/backend/src/db/migrations/` (001–019).
+There are **12 application tables** in the PostgreSQL database, plus the internal `_migrations` tracking table. Migration files are in `apps/backend/src/db/migrations/` (001–022).
 
 The 12 tables are:
 1. `components` — all PC components (polymorphic)
@@ -30,7 +30,7 @@ The migration runner (`backend/src/db/migrate.ts`) also creates a `_migrations` 
 # Run all migrations (WSL2)
 psql -U pc_builder_user -d pc_builder -f apps/backend/src/db/migrations/001_create_components.sql
 psql -U pc_builder_user -d pc_builder -f apps/backend/src/db/migrations/002_create_retailers.sql
-# ... continue through 019
+# ... continue through 022
 ```
 
 ---
@@ -54,9 +54,10 @@ The central table. Stores all 8 component categories in a single polymorphic tab
 | `created_at` | TIMESTAMPTZ | Auto-set on insert |
 | `updated_at` | TIMESTAMPTZ | Auto-updated on change |
 
-Compatibility fields (NULL when not applicable): `socket`, `supported_ram_types`, `max_ram_frequency`, `ram_type`, `frequency_mhz`, `length_mm`, `max_gpu_length_mm`, `supported_motherboards`, `max_cooler_height_mm`, `form_factor`, `height_mm`, `wattage`, `tdp`, `benchmark_score`.
+Compatibility fields (NULL when not applicable): `socket`, `supported_ram_types`, `max_ram_frequency`, `ram_type`, `frequency_mhz`, `length_mm`, `max_gpu_length_mm`, `supported_motherboards`, `max_cooler_height_mm`, `form_factor`, `height_mm`, `wattage`, `tdp`, `benchmark_score`, `ram_slots`, `m2_slots`, `sata_ports`.
 
 > `supported_motherboards`, `max_cooler_height_mm`, `form_factor`, and `height_mm` were added in migration 019 to support Rules 5 (form_factor_mismatch) and 6 (cooler_too_tall).
+> `ram_slots`, `m2_slots`, and `sata_ports` were added in migration 021 (motherboard-only, nullable) to support Rules 8 (ram_slots_exceeded) and 9 (storage_slots_exceeded) and to drive the multi-slot configurator UI.
 
 Indexes: `category`, `slug`, `brand`, `is_active`
 
