@@ -288,6 +288,9 @@ function extractComponentFields(data: ComponentInput) {
     height_mm: d.height_mm as number | undefined,
     wattage: d.wattage as number | undefined,
     tdp: d.tdp as number | undefined,
+    ram_slots: d.ram_slots as number | undefined,
+    m2_slots: d.m2_slots as number | undefined,
+    sata_ports: d.sata_ports as number | undefined,
   };
 }
 
@@ -304,7 +307,7 @@ async function createComponent(data: ComponentInput): Promise<Component> {
     socket, supported_ram_types, max_ram_frequency, ram_type,
     frequency_mhz, length_mm, max_gpu_length_mm,
     supported_motherboards, max_cooler_height_mm, form_factor, height_mm,
-    wattage, tdp,
+    wattage, tdp, ram_slots, m2_slots, sata_ports,
   } = extractComponentFields(data);
 
   const slug = await getUniqueSlug(brand ?? null, name);
@@ -315,7 +318,7 @@ async function createComponent(data: ComponentInput): Promise<Component> {
       socket, supported_ram_types, max_ram_frequency, ram_type,
       frequency_mhz, length_mm, max_gpu_length_mm,
       supported_motherboards, max_cooler_height_mm, form_factor, height_mm,
-      wattage, tdp,
+      wattage, tdp, ram_slots, m2_slots, sata_ports,
       is_active
     ) VALUES (
       ${slug},
@@ -339,6 +342,9 @@ async function createComponent(data: ComponentInput): Promise<Component> {
       ${height_mm ?? null},
       ${wattage ?? null},
       ${tdp ?? null},
+      ${ram_slots ?? null},
+      ${m2_slots ?? null},
+      ${sata_ports ?? null},
       true
     )
     RETURNING *
@@ -362,7 +368,7 @@ async function updateComponent(id: number, data: ComponentInput): Promise<Compon
     socket, supported_ram_types, max_ram_frequency, ram_type,
     frequency_mhz, length_mm, max_gpu_length_mm,
     supported_motherboards, max_cooler_height_mm, form_factor, height_mm,
-    wattage, tdp,
+    wattage, tdp, ram_slots, m2_slots, sata_ports,
   } = extractComponentFields(data);
 
   const slug = await getUniqueSlug(brand ?? null, name, id);
@@ -390,6 +396,9 @@ async function updateComponent(id: number, data: ComponentInput): Promise<Compon
       height_mm             = ${height_mm ?? null},
       wattage               = ${wattage ?? null},
       tdp                   = ${tdp ?? null},
+      ram_slots             = ${ram_slots ?? null},
+      m2_slots              = ${m2_slots ?? null},
+      sata_ports            = ${sata_ports ?? null},
       updated_at            = NOW()
     WHERE id = ${id}
     RETURNING *

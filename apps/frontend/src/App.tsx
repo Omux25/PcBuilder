@@ -6,33 +6,32 @@ import { Skeleton } from './components/Skeleton';
 import { CompareTray } from './components/CompareTray';
 import { useBuild } from './context/BuildContext';
 import { calculateBuildTotalPrice } from './utils/buildUtils';
-import type { ComponentCategory } from './types';
-import { CATEGORY_ORDER, CATEGORY_LABELS } from './types';
+import { CATEGORY_ORDER, CATEGORY_LABELS, slotKeyToCategory, isRamSlotKey, isStorageSlotKey } from './types';
 import { encodeBuildToUrl } from './utils/buildUrl';
 import { getInitialTheme, applyTheme, toggleTheme } from './utils/theme';
 import { getComponentById } from './api';
 import { UI } from './ui-strings';
 import styles from './App.module.css';
 
-const ComponentDetail  = lazy(() => import('./pages/ComponentDetail').then(m => ({ default: m.ComponentDetail })));
-const Presets          = lazy(() => import('./pages/Presets').then(m => ({ default: m.Presets })));
-const CategoryBrowse   = lazy(() => import('./pages/CategoryBrowse').then(m => ({ default: m.CategoryBrowse })));
-const ComponentsIndex  = lazy(() => import('./pages/ComponentsIndex').then(m => ({ default: m.ComponentsIndex })));
-const Compare          = lazy(() => import('./pages/Compare').then(m => ({ default: m.Compare })));
-const GlobalSearch     = lazy(() => import('./pages/GlobalSearch').then(m => ({ default: m.GlobalSearch })));
-const MarketTrends     = lazy(() => import('./pages/MarketTrends').then(m => ({ default: m.MarketTrends })));
+const ComponentDetail = lazy(() => import('./pages/ComponentDetail').then(m => ({ default: m.ComponentDetail })));
+const Presets = lazy(() => import('./pages/Presets').then(m => ({ default: m.Presets })));
+const CategoryBrowse = lazy(() => import('./pages/CategoryBrowse').then(m => ({ default: m.CategoryBrowse })));
+const ComponentsIndex = lazy(() => import('./pages/ComponentsIndex').then(m => ({ default: m.ComponentsIndex })));
+const Compare = lazy(() => import('./pages/Compare').then(m => ({ default: m.Compare })));
+const GlobalSearch = lazy(() => import('./pages/GlobalSearch').then(m => ({ default: m.GlobalSearch })));
+const MarketTrends = lazy(() => import('./pages/MarketTrends').then(m => ({ default: m.MarketTrends })));
 
 export default function App() {
   const { build, setBuild, addToBuild } = useBuild();
   const totalPrice = calculateBuildTotalPrice(build);
 
-  const [theme, setTheme]           = useState<'light' | 'dark'>(getInitialTheme());
-  const [copied, setCopied]         = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>(getInitialTheme());
+  const [copied, setCopied] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
-  const location  = useLocation();
-  const navigate  = useNavigate();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     applyTheme(theme);
@@ -44,24 +43,29 @@ export default function App() {
   }, [searchOpen]);
 
   async function handleLoadPreset(componentIds: Record<string, number>) {
+    const uniqueIds = [...new Set(Object.values(componentIds))];
     const entries = await Promise.allSettled(
-      Object.entries(componentIds).map(async ([category, id]) => {
+      uniqueIds.map(async (id) => {
         const component = await getComponentById(id);
-        return [category, component] as [ComponentCategory, typeof component];
+        return component;
       })
     );
-    const newBuild: typeof build = {};
+    const idToComponent = new Map<number, ReturnType<typeof getComponentById> extends Promise<infer T> ? T : never>();
     for (const result of entries) {
       if (result.status === 'fulfilled') {
-        const [category, component] = result.value;
-        newBuild[category as ComponentCategory] = component;
+        idToComponent.set(result.value.id, result.value);
       }
+    }
+    const newBuild: typeof build = {};
+    for (const [slotKey, id] of Object.entries(componentIds)) {
+      const comp = idToComponent.get(id);
+      if (comp) newBuild[slotKey] = comp;
     }
     setBuild(newBuild);
   }
 
   function handleShare() {
-    const qs  = encodeBuildToUrl(build);
+    const qs = encodeBuildToUrl(build);
     const url = `${window.location.origin}/?${qs}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
@@ -71,9 +75,29 @@ export default function App() {
 
   function handleExportText() {
     const lines = [UI.build.exportHeader, ''];
+    // Iterate all slot keys in display order (single-slot categories + indexed RAM/storage)
     for (const cat of CATEGORY_ORDER) {
-      const comp = build[cat];
-      if (comp) {
+      if (cat === 'ram') {
+        for (let i = 1; i <= 4; i++) {
+          const comp = build[`ram_${i}`];
+          if (!comp) continue;
+          const price = (comp as typeof comp & { lowest_price?: number | null }).lowest_price;
+          const priceStr = price ? ` — ${price.toLocaleString('fr-MA')} MAD` : '';
+          const label = i === 1 ? CATEGORY_LABELS.ram : `${CATEGORY_LABELS.ram} #${i}`;
+          lines.push(`${label}: ${comp.brand ? comp.brand + ' ' : ''}${comp.name}${priceStr}`);
+        }
+      } else if (cat === 'storage') {
+        for (let i = 1; i <= 4; i++) {
+          const comp = build[`storage_${i}`];
+          if (!comp) continue;
+          const price = (comp as typeof comp & { lowest_price?: number | null }).lowest_price;
+          const priceStr = price ? ` — ${price.toLocaleString('fr-MA')} MAD` : '';
+          const label = i === 1 ? CATEGORY_LABELS.storage : `${CATEGORY_LABELS.storage} #${i}`;
+          lines.push(`${label}: ${comp.brand ? comp.brand + ' ' : ''}${comp.name}${priceStr}`);
+        }
+      } else {
+        const comp = build[cat];
+        if (!comp) continue;
         const price = (comp as typeof comp & { lowest_price?: number | null }).lowest_price;
         const priceStr = price ? ` — ${price.toLocaleString('fr-MA')} MAD` : '';
         lines.push(`${CATEGORY_LABELS[cat]}: ${comp.brand ? comp.brand + ' ' : ''}${comp.name}${priceStr}`);
@@ -105,9 +129,9 @@ export default function App() {
   }
 
   const hasComponents = Object.keys(build).length > 0;
-  const isHome        = location.pathname === '/';
-  const isComponents  = location.pathname.startsWith('/components') || location.pathname.startsWith('/browse');
-  const isPresets     = location.pathname === '/presets';
+  const isHome = location.pathname === '/';
+  const isComponents = location.pathname.startsWith('/components') || location.pathname.startsWith('/browse');
+  const isPresets = location.pathname === '/presets';
 
   return (
     <div className={styles.app}>

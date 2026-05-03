@@ -21,6 +21,7 @@ import styles from './ComponentPicker.module.css';
 
 interface Props {
   category: ComponentCategory;
+  slotKey: string;
   selected: Component | null;
   build: BuildConfig;
   onSelect: (component: Component | null) => void;
@@ -32,58 +33,58 @@ const PAGE_SIZE = 20;
 type SortOption = 'smart' | 'price_asc' | 'price_desc' | 'name_asc';
 
 const SORT_LABELS: Record<SortOption, string> = {
-  smart:      'Recommandé',
-  price_asc:  'Prix ↑',
+  smart: 'Recommandé',
+  price_asc: 'Prix ↑',
   price_desc: 'Prix ↓',
-  name_asc:   'Nom A→Z',
+  name_asc: 'Nom A→Z',
 };
 
 const SOCKET_CATEGORIES = new Set<ComponentCategory>(['cpu', 'motherboard']);
 const RAM_TYPE_CATEGORIES = new Set<ComponentCategory>(['ram', 'motherboard']);
 
-export function ComponentPicker({ category, selected, build, onSelect }: Props) {
-  const [open, setOpen]           = useState(false);
-  const [search, setSearch]       = useState('');
-  const [brand, setBrand]         = useState('');
-  const [socket, setSocket]       = useState('');
-  const [ramType, setRamType]     = useState('');
-  const [minPrice, setMinPrice]   = useState('');
-  const [maxPrice, setMaxPrice]   = useState('');
-  const [sort, setSort]           = useState<SortOption>('smart');
+export function ComponentPicker({ category, slotKey, selected, build, onSelect }: Props) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [brand, setBrand] = useState('');
+  const [socket, setSocket] = useState('');
+  const [ramType, setRamType] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [sort, setSort] = useState<SortOption>('smart');
   const [showFilters, setShowFilters] = useState(false);
 
   const [allComponents, setAllComponents] = useState<SmartComponent[]>([]);
-  const [total, setTotal]         = useState(0);
-  const [page, setPage]           = useState(1);
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Available filter options (derived from first full fetch)
-  const [availableBrands, setAvailableBrands]   = useState<string[]>([]);
+  const [availableBrands, setAvailableBrands] = useState<string[]>([]);
   const [availableSockets, setAvailableSockets] = useState<string[]>([]);
 
-  const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const triggerRef   = useRef<HTMLButtonElement>(null);
-  const searchRef    = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  // ── Stable build context (without current category) ──────────────────────
-  // Use useMemo + JSON.stringify to avoid recreating on every render while
-  // still reacting to actual build changes.
+  // ── Stable build context (without current slot) ──────────────────────────
+  // Exclude the current slot key (not just the category) so the smart-search
+  // compatibility check doesn't count the slot being filled against itself.
   const buildContextKey = useMemo(
     () => JSON.stringify(
       Object.fromEntries(
         Object.entries(build)
-          .filter(([k]) => k !== category)
+          .filter(([k]) => k !== slotKey)
           .map(([k, v]) => [k, v?.id])
       )
     ),
-    [build, category]
+    [build, slotKey]
   );
 
   const buildContext: BuildConfig = useMemo(() => {
     const ctx = { ...build };
-    delete ctx[category];
+    delete ctx[slotKey];
     return ctx;
   }, [buildContextKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -100,13 +101,13 @@ export function ComponentPicker({ category, selected, build, onSelect }: Props) 
 
     smartSearch({
       category,
-      search:   searchTerm   || undefined,
-      brand:    brandFilter  || undefined,
-      socket:   socketFilter || undefined,
+      search: searchTerm || undefined,
+      brand: brandFilter || undefined,
+      socket: socketFilter || undefined,
       ram_type: ramTypeFilter || undefined,
-      build:    buildContext,
-      page:     pageNum,
-      limit:    PAGE_SIZE,
+      build: buildContext,
+      page: pageNum,
+      limit: PAGE_SIZE,
     })
       .then(({ components: list, total: t }) => {
         setAllComponents(list);

@@ -2,8 +2,9 @@
  * Configurator — the main PC builder table.
  *
  * Features:
- * - 8 component slots with searchable ComponentPicker
- * - Category icons for visual identification
+ * - Dynamic component slots: RAM and storage rows scale with the motherboard's
+ *   slot counts (ram_slots, m2_slots + sata_ports). Defaults to 2 RAM + 2 storage.
+ * - Searchable ComponentPicker per slot
  * - Click a selected row to expand inline price comparison
  * - Total price footer row
  * - Integrated compatibility validation
@@ -14,19 +15,43 @@ import { ComponentPicker } from './ComponentPicker';
 import { InlinePrices } from './InlinePrices';
 import { CategoryIcon } from './CategoryIcon';
 import type { Component, ComponentCategory, CompatibilityResult } from '../types';
-import { CATEGORY_LABELS, CATEGORY_ORDER, RULE_LABELS } from '../types';
+import { CATEGORY_LABELS, RULE_LABELS, slotKeyToCategory, isRamSlotKey, isStorageSlotKey } from '../types';
 import { validateBuild } from '../api';
 import { useBuild } from '../context/BuildContext';
-import { calculateBuildTotalPrice } from '../utils/buildUtils';
+import { calculateBuildTotalPrice, getConfiguratorSlots, pruneExcessSlots } from '../utils/buildUtils';
 import { UI } from '../ui-strings';
 import styles from './Configurator.module.css';
+
+/** Human-readable label for a slot key. */
+function slotLabel(key: string, slotKeys: string[]): string {
+  const cat = slotKeyToCategory(key);
+  const base = CATEGORY_LABELS[cat] ?? cat;
+
+  if (isRamSlotKey(key) && key !== 'ram') {
+    // Count how many RAM slots exist total
+    const ramSlots = slotKeys.filter(isRamSlotKey);
+    if (ramSlots.length > 1) {
+      const idx = parseInt(key.replace('ram_', ''), 10);
+      return `${base} #${idx}`;
+    }
+  }
+  if (isStorageSlotKey(key) && key !== 'storage') {
+    const storageSlots = slotKeys.filter(isStorageSlotKey);
+    if (storageSlots.length > 1) {
+      const idx = parseInt(key.replace('storage_', ''), 10);
+      return `${base} #${idx}`;
+    }
+  }
+  return base;
+}
 
 export function Configurator() {
   const { build, setBuild } = useBuild();
   const totalPrice = calculateBuildTotalPrice(build);
-  const [expandedCat, setExpandedCat] = useState<ComponentCategory | null>(null);
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [compat, setCompat] = useState<CompatibilityResult | null>(null);
 
+  const slotKeys = getConfiguratorSlots(build);
   const hasComponents = Object.keys(build).length > 0;
 
   useEffect(() => {
@@ -40,20 +65,24 @@ export function Configurator() {
     return () => clearTimeout(timer);
   }, [build, hasComponents]);
 
-  function handleSelect(category: ComponentCategory, component: Component | null) {
-    const next = { ...build };
+  function handleSelect(slotKey: string, component: Component | null) {
+    let next = { ...build };
     if (component) {
-      next[category] = component;
+      next[slotKey] = component;
+      // When a motherboard is selected, prune slots that exceed its counts
+      if (slotKey === 'motherboard') {
+        next = pruneExcessSlots(next);
+      }
     } else {
-      delete next[category];
-      if (expandedCat === category) setExpandedCat(null);
+      delete next[slotKey];
+      if (expandedKey === slotKey) setExpandedKey(null);
     }
     setBuild(next);
   }
 
-  function toggleExpand(cat: ComponentCategory) {
-    if (!build[cat]) return;
-    setExpandedCat(expandedCat === cat ? null : cat);
+  function toggleExpand(key: string) {
+    if (!build[key]) return;
+    setExpandedKey(expandedKey === key ? null : key);
   }
 
   return (
@@ -70,7 +99,7 @@ export function Configurator() {
         </div>
         <button
           className={styles.resetBtn}
-          onClick={() => { setBuild({}); setExpandedCat(null); }}
+          onClick={() => { setBuild({}); setExpandedKey(null); }}
           disabled={!hasComponents}
         >
           {UI.configurator.reset}
@@ -89,29 +118,32 @@ export function Configurator() {
             </tr>
           </thead>
           <tbody>
-            {CATEGORY_ORDER.map((cat) => {
-              const selected = build[cat];
+            {slotKeys.map((slotKey) => {
+              const category = slotKeyToCategory(slotKey) as ComponentCategory;
+              const selected = build[slotKey] ?? null;
               const price = selected ? (selected as Component & { lowest_price?: number | null }).lowest_price : null;
-              const isExpanded = expandedCat === cat && !!selected;
+              const isExpanded = expandedKey === slotKey && !!selected;
+              const label = slotLabel(slotKey, slotKeys);
 
               return (
-                <Fragment key={cat}>
+                <Fragment key={slotKey}>
                   <tr
                     className={`${styles.row} ${selected ? styles.rowFilled : ''} ${isExpanded ? styles.rowOpen : ''}`}
-                    onClick={() => toggleExpand(cat)}
+                    onClick={() => toggleExpand(slotKey)}
                   >
                     <td className={styles.catCell}>
                       <span className={styles.catLabel}>
-                        <CategoryIcon category={cat} size={16} className={styles.catIcon} />
-                        {CATEGORY_LABELS[cat]}
+                        <CategoryIcon category={category} size={16} className={styles.catIcon} />
+                        {label}
                       </span>
                     </td>
                     <td className={styles.selCell} onClick={(e) => e.stopPropagation()}>
                       <ComponentPicker
-                        category={cat}
-                        selected={selected ?? null}
+                        category={category}
+                        slotKey={slotKey}
+                        selected={selected}
                         build={build}
-                        onSelect={(c) => handleSelect(cat, c)}
+                        onSelect={(c) => handleSelect(slotKey, c)}
                       />
                     </td>
                     <td className={styles.priceCell}>
@@ -128,7 +160,7 @@ export function Configurator() {
                       {selected && (
                         <button
                           className={styles.removeBtn}
-                          onClick={(e) => { e.stopPropagation(); handleSelect(cat, null); }}
+                          onClick={(e) => { e.stopPropagation(); handleSelect(slotKey, null); }}
                           title={UI.configurator.removeTitle}
                         >
                           ×

@@ -4,12 +4,13 @@
  * Eliminates prop-drilling of `build`, `onChange`, and `onAddToBuild`
  * through the entire component tree.
  *
- * Usage:
- *   const { build, setBuild, addToBuild } = useBuild();
+ * Multi-slot support: RAM and storage use indexed keys (ram_1, ram_2, etc.).
+ * addToBuild() places a component into the first available slot for its category.
  */
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import type { BuildConfig, Component, ComponentCategory } from '../types';
+import { isRamSlotKey, isStorageSlotKey } from '../types';
 import { getComponentsByIds } from '../api';
 import {
   saveBuildToStorage,
@@ -17,29 +18,47 @@ import {
   clearBuildStorage,
   decodeBuildFromUrl,
 } from '../utils/buildUrl';
+import { pruneExcessSlots } from '../utils/buildUtils';
 
 interface BuildContextValue {
   build: BuildConfig;
   setBuild: (build: BuildConfig) => void;
   addToBuild: (component: Component) => void;
-  removeFromBuild: (category: ComponentCategory) => void;
+  removeFromBuild: (slotKey: string) => void;
   resetBuild: () => void;
   initializing: boolean;
 }
 
 const BuildContext = createContext<BuildContextValue | null>(null);
 
+/** Find the first available slot key for a given category in the current build. */
+function findNextSlot(build: BuildConfig, category: ComponentCategory): string {
+  if (category === 'ram') {
+    for (let i = 1; i <= 4; i++) {
+      if (!build[`ram_${i}`]) return `ram_${i}`;
+    }
+    return 'ram_1'; // fallback: overwrite slot 1
+  }
+  if (category === 'storage') {
+    for (let i = 1; i <= 4; i++) {
+      if (!build[`storage_${i}`]) return `storage_${i}`;
+    }
+    return 'storage_1'; // fallback: overwrite slot 1
+  }
+  return category;
+}
+
 export function BuildProvider({ children }: { children: ReactNode }) {
-  const [build, setBuildState]  = useState<BuildConfig>({});
+  const [build, setBuildState] = useState<BuildConfig>({});
   const [initializing, setInitializing] = useState(true);
 
   // Restore build from URL params or localStorage on mount
   useEffect(() => {
     async function restoreBuild() {
-      const urlIds     = decodeBuildFromUrl(window.location.search);
+      const urlIds = decodeBuildFromUrl(window.location.search);
       const storageIds = loadBuildFromStorage();
       const idMap = Object.keys(urlIds).length > 0 ? urlIds : storageIds;
-      const ids   = Object.values(idMap).filter(Boolean) as number[];
+      const ids = [...new Set(Object.values(idMap).filter(Boolean) as number[])];
 
       if (ids.length === 0) {
         setInitializing(false);
@@ -48,10 +67,13 @@ export function BuildProvider({ children }: { children: ReactNode }) {
 
       try {
         const components = await getComponentsByIds(ids);
+        // Map component IDs back to their slot keys
+        const idToComponent = new Map(components.map(c => [c.id, c]));
         const restored: BuildConfig = {};
-        components.forEach(c => {
-          restored[c.category as ComponentCategory] = c;
-        });
+        for (const [key, id] of Object.entries(idMap)) {
+          const comp = idToComponent.get(id);
+          if (comp) restored[key] = comp;
+        }
         setBuildState(restored);
       } catch (err) {
         console.error('Failed to restore build:', err);
@@ -60,7 +82,7 @@ export function BuildProvider({ children }: { children: ReactNode }) {
       }
     }
     restoreBuild();
-  }, []);  
+  }, []);
 
   // Persist to localStorage on every change
   useEffect(() => {
@@ -73,14 +95,30 @@ export function BuildProvider({ children }: { children: ReactNode }) {
     setBuildState(newBuild);
   }, []);
 
+  /**
+   * Add a component to the build.
+   * - RAM → placed in the first empty ram_N slot
+   * - Storage → placed in the first empty storage_N slot
+   * - Everything else → keyed by category name directly
+   *
+   * When a motherboard is added, prune any slots that exceed the new board's counts.
+   */
   const addToBuild = useCallback((component: Component) => {
-    setBuildState(prev => ({ ...prev, [component.category]: component }));
+    setBuildState(prev => {
+      const slotKey = findNextSlot(prev, component.category as ComponentCategory);
+      const next = { ...prev, [slotKey]: component };
+      // If a motherboard was just added, prune excess RAM/storage slots
+      if (component.category === 'motherboard') {
+        return pruneExcessSlots(next);
+      }
+      return next;
+    });
   }, []);
 
-  const removeFromBuild = useCallback((category: ComponentCategory) => {
+  const removeFromBuild = useCallback((slotKey: string) => {
     setBuildState(prev => {
       const next = { ...prev };
-      delete next[category];
+      delete next[slotKey];
       return next;
     });
   }, []);

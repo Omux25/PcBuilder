@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getPresets } from '../api';
 import type { PresetBuild } from '../types';
-import { CATEGORY_LABELS } from '../types';
+import { CATEGORY_LABELS, slotKeyToCategory } from '../types';
 import { SkeletonCard } from '../components/Skeleton';
 import { UI } from '../ui-strings';
 import styles from './Presets.module.css';
@@ -19,7 +19,7 @@ interface Props {
 export function Presets({ onLoadPreset }: Props) {
   const [presets, setPresets] = useState<PresetBuild[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -100,16 +100,19 @@ function PresetCard({ preset, onLoad }: { preset: PresetBuild; onLoad: (p: Prese
       {preset.description && <p className={styles.cardDesc}>{preset.description}</p>}
 
       <div className={styles.componentList}>
-        {Object.entries(preset.components).map(([category, component]) => (
-          <div key={category} className={`${styles.componentRow} ${!component.is_active ? styles.inactive : ''}`}>
-            <span className={styles.componentCat}>
-              {CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS] ?? category}
-            </span>
-            <span className={styles.componentName}>
-              {component.brand ? `${component.brand} ` : ''}{component.name}
-            </span>
-          </div>
-        ))}
+        {Object.entries(preset.components).map(([slotKey, component]) => {
+          const cat = slotKeyToCategory(slotKey);
+          const baseLabel = CATEGORY_LABELS[cat] ?? cat;
+          const label = slotKey !== cat ? `${baseLabel} #${slotKey.replace(/^\w+_/, '')}` : baseLabel;
+          return (
+            <div key={slotKey} className={`${styles.componentRow} ${!component.is_active ? styles.inactive : ''}`}>
+              <span className={styles.componentCat}>{label}</span>
+              <span className={styles.componentName}>
+                {component.brand ? `${component.brand} ` : ''}{component.name}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       <div className={styles.cardFooter}>
