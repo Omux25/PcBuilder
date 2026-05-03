@@ -2,7 +2,7 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { Hono } from 'hono';
 import jwt from 'jsonwebtoken';
-import { adminScrapersRouter } from '../scrapers.js';
+import { adminScrapersRouter, resetScraperLocks } from '../scrapers.js';
 import { setSql, resetSql } from '../../../db/index.js';
 
 const JWT_SECRET = 'test-secret';
@@ -57,8 +57,8 @@ describe('POST /api/admin/scrapers/run-all', () => {
 
 describe('POST /api/admin/scrapers/:retailerId/run', () => {
   let app: Hono;
-  beforeEach(() => { app = makeApp(); });
-  afterEach(() => { resetSql(); });
+  beforeEach(() => { app = makeApp(); resetScraperLocks(); });
+  afterEach(() => { resetSql(); resetScraperLocks(); });
 
   test('returns 401 without token', async () => {
     const res = await app.request('/api/admin/scrapers/10/run', { method: 'POST' });

@@ -94,6 +94,22 @@
   margin-bottom: 1.25rem;
 }
 
+.stopBtn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--accent-blue);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  opacity: 0.7;
+}
+
+.stopBtn:hover {
+  opacity: 1;
+}
+
 .spinner {
   width: 14px;
   height: 14px;
