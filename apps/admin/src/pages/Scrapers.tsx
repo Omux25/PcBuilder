@@ -45,10 +45,10 @@ export function Scrapers() {
     loadLogs();
   }, [loadRetailers, loadLogs]);
 
-  // Auto-scroll log box to bottom when new logs arrive
+  // Auto-scroll log box to TOP (newest logs are at the top from the API)
   useEffect(() => {
     if (logBoxRef.current) {
-      logBoxRef.current.scrollTop = logBoxRef.current.scrollHeight;
+      logBoxRef.current.scrollTop = 0;
     }
   }, [logs]);
 

@@ -142,6 +142,7 @@ export const getAdminLogs = (params: Record<string, string> = {}) => {
 
 export interface UnmatchedListingsResponse {
   listings: UnmatchedListing[];
+  total: number;
 }
 
 export const getUnmatchedListings = (params: Record<string, string> = {}) => {

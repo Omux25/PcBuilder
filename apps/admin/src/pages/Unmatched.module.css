@@ -1,24 +1,53 @@
-.page { padding: 1.5rem; max-width: 1100px; }
-.title { margin-bottom: 1.5rem; }
-.loading, .error, .empty { padding: 1rem; color: var(--text-muted); }
-.error { color: var(--danger-soft); }
-.date { font-size: 0.82rem; color: var(--text-muted); }
+.page {
+  padding: 1.5rem;
+  max-width: 1100px;
+}
 
-.productLink { color: var(--accent-blue); font-size: 0.88rem; }
-.productLink:hover { text-decoration: underline; }
+.title {
+  margin-bottom: 1.5rem;
+}
 
-.actions { display: flex; gap: 0.5rem; align-items: center; }
+.loading,
+.error,
+.empty {
+  padding: 1rem;
+  color: var(--text-muted);
+}
+
+.error {
+  color: var(--danger-soft);
+}
+
+.date {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.productLink {
+  color: var(--accent-blue);
+  font-size: 0.88rem;
+}
+
+.productLink:hover {
+  text-decoration: underline;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
 
 .linkBtn {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  background: rgba(137,180,250,0.1);
+  background: rgba(137, 180, 250, 0.1);
   color: var(--accent-blue);
   font-size: 0.8rem;
   padding: 0.3rem 0.6rem;
   border-radius: var(--radius);
-  border: 1px solid rgba(137,180,250,0.2);
+  border: 1px solid rgba(137, 180, 250, 0.2);
 }
 
 .dismissBtn {
@@ -29,12 +58,16 @@
   padding: 0.3rem;
   border-radius: 4px;
 }
-.dismissBtn:hover { color: var(--danger-soft); background: rgba(243,139,168,0.1); }
+
+.dismissBtn:hover {
+  color: var(--danger-soft);
+  background: rgba(243, 139, 168, 0.1);
+}
 
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -50,11 +83,26 @@
   width: 90%;
 }
 
-.dialog h3 { margin-bottom: 0.5rem; }
-.targetName { color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1rem; }
+.dialog h3 {
+  margin-bottom: 0.5rem;
+}
 
-.searchRow { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
-.searchRow input { flex: 1; }
+.targetName {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  margin-bottom: 1rem;
+}
+
+.searchRow {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.searchRow input {
+  flex: 1;
+}
+
 .searchBtn {
   background: var(--surface-3);
   color: var(--text);
@@ -63,7 +111,13 @@
   font-size: 0.85rem;
 }
 
-.resultList { list-style: none; margin-bottom: 1rem; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.resultList {
+  list-style: none;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
 
 .resultItem {
   display: flex;
@@ -74,11 +128,23 @@
   font-size: 0.88rem;
   border-bottom: 1px solid var(--border);
 }
-.resultItem:last-child { border-bottom: none; }
-.resultItem:hover { background: var(--surface-3); }
 
-.resultName { color: var(--text); }
-.resultCat  { color: var(--text-dim); font-size: 0.75rem; }
+.resultItem:last-child {
+  border-bottom: none;
+}
+
+.resultItem:hover {
+  background: var(--surface-3);
+}
+
+.resultName {
+  color: var(--text);
+}
+
+.resultCat {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+}
 
 .cancelBtn {
   background: var(--surface-3);
@@ -86,4 +152,63 @@
   padding: 0.45rem 0.9rem;
   border-radius: var(--radius);
   font-size: 0.85rem;
+}
+
+/* ── Header with filter ──────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.subtitle {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin-top: 0.35rem;
+  max-width: 600px;
+  line-height: 1.4;
+}
+
+.retailerFilter {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.7rem;
+}
+
+/* ── Pagination ───────────────────────────────────────────────────────────── */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1.25rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.pagination button {
+  display: flex;
+  align-items: center;
+  background: var(--surface-3);
+  color: var(--text);
+  padding: 0.3rem 0.5rem;
+  border-radius: var(--radius);
+}
+
+/* ── Target URL in link modal ─────────────────────────────────────────────── */
+
+.targetUrl {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-bottom: 1rem;
+  word-break: break-all;
+}
+
+.targetUrl a {
+  color: var(--accent-blue);
 }
