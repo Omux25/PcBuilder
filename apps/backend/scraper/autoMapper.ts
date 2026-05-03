@@ -106,7 +106,7 @@ export async function autoMap(onProgress?: (done: number, total: number) => void
 
   if (mapped > 0) {
     await logger.info(
-      `Auto-mapper: ${mapped} new mapping(s) created, ${skipped} unrecognized`,
+      `[AUTO-MAPPER] ${mapped} new mapping(s) created, ${skipped} unrecognized`,
     );
   }
 

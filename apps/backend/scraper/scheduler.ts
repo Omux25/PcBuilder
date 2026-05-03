@@ -30,7 +30,7 @@ async function runDueRetailers(): Promise<void> {
 
   if (retailers.length === 0) return;
 
-  await logger.info(`Scheduler: ${retailers.length} retailer(s) due for scraping`);
+  await logger.info(`[SCHEDULER] ${retailers.length} retailer(s) due for scraping`);
   await runScrapingSession();
 }
 

@@ -19,6 +19,7 @@ import type { ScrapedPrice } from './scrapers/baseScraper.js';
 import { UltraPcScraper } from './scrapers/ultrapcScraper.js';
 import { extractVariant } from '../src/utils/variantExtractor.js';
 import { getSql, setSql, resetSql } from '../src/db/index.js';
+import { logger } from './utils/logger.js';
 import { SCRAPER_CONFIG } from '@shared/scraper-config';
 
 // Re-export DI helpers so tests can inject a mock SQL function.
@@ -125,7 +126,7 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
       });
     } catch (err) {
       errors++;
-      console.error(`[aggregator] Mapping lookup failed for ${p.product_url}:`, err);
+      await logger.error(`[AGGREGATOR] Mapping lookup failed for ${p.product_url}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -185,10 +186,7 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
       updated++;
     } catch (err) {
       errors++;
-      console.error(
-        `[aggregator] UPSERT failed for component_id=${p.component_id} url=${p.product_url}:`,
-        err,
-      );
+      await logger.error(`[AGGREGATOR] UPSERT failed for component_id=${p.component_id} url=${p.product_url}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
