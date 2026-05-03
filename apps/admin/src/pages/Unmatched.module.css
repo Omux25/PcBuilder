@@ -64,27 +64,12 @@
   background: rgba(243, 139, 168, 0.1);
 }
 
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+/* ── Link modal body (inside shared Modal) ───────────────────────────────── */
+
+.linkModalBody {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-}
-
-.dialog {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.5rem;
-  max-width: 480px;
-  width: 90%;
-}
-
-.dialog h3 {
-  margin-bottom: 0.5rem;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .targetName {
@@ -146,14 +131,6 @@
   font-size: 0.75rem;
 }
 
-.cancelBtn {
-  background: var(--surface-3);
-  color: var(--text);
-  padding: 0.45rem 0.9rem;
-  border-radius: var(--radius);
-  font-size: 0.85rem;
-}
-
 /* ── Header with filter ──────────────────────────────────────────────────── */
 
 .header {
@@ -211,4 +188,36 @@
 
 .targetUrl a {
   color: var(--accent-blue);
+}
+
+.filters {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.searchForm {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.searchInputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.searchInput {
+  padding-left: 2.2rem !important;
+  font-size: 0.85rem;
+  min-width: 220px;
 }

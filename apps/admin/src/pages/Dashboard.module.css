@@ -1,6 +1,11 @@
-.page { padding: 1.5rem; max-width: 1100px; }
-.loading, .error, .empty { padding: 2rem; color: var(--text-muted); text-align: center; }
-.title { margin-bottom: 1.5rem; }
+.page {
+  padding: 1.5rem;
+  max-width: 1100px;
+}
+
+.title {
+  margin-bottom: 1.5rem;
+}
 
 .statsGrid {
   display: grid;
@@ -16,7 +21,9 @@
   padding: 1.25rem;
 }
 
-.statAccent { border-color: var(--warning-soft); }
+.statAccent {
+  border-color: var(--warning-soft);
+}
 
 .statValue {
   font-size: 1.8rem;
@@ -41,20 +48,13 @@
   gap: 0.5rem;
 }
 
-.statusBadge {
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
-  text-transform: uppercase;
+.section {
+  margin-top: 2rem;
 }
 
-.success { background: rgba(166, 227, 161, 0.15); color: var(--success-soft); }
-.failed  { background: rgba(243, 139, 168, 0.15); color: var(--danger-soft); }
-.partial { background: rgba(249, 226, 175, 0.15); color: var(--warning-soft); }
-
-.section { margin-top: 2rem; }
-.sectionTitle { margin-bottom: 1rem; }
+.sectionTitle {
+  margin-bottom: 1rem;
+}
 
 .chart {
   background: var(--surface);
@@ -63,7 +63,12 @@
   padding: 1rem;
 }
 
-.activityList { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+.activityList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
 
 .activityItem {
   display: flex;
@@ -76,6 +81,17 @@
   font-size: 0.85rem;
 }
 
-.activityAction { color: var(--accent-blue); font-weight: 500; }
-.activityEntity { color: var(--text-muted); }
-.activityTime   { color: var(--text-dim); margin-left: auto; font-size: 0.78rem; }
+.activityAction {
+  color: var(--accent-blue);
+  font-weight: 500;
+}
+
+.activityEntity {
+  color: var(--text-muted);
+}
+
+.activityTime {
+  color: var(--text-dim);
+  margin-left: auto;
+  font-size: 0.78rem;
+}

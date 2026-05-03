@@ -1,0 +1,43 @@
+/**
+ * Layout helpers for form rows — keeps inline styles out of TSX.
+ * Used by ComponentModal and any future forms that need multi-column layouts.
+ */
+
+.row {
+    display: flex;
+    gap: 1rem;
+}
+
+.row>* {
+    flex: 1;
+}
+
+.rowWrap {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.flexItem {
+    flex: 1;
+    min-width: 140px;
+}
+
+.rowSpaceBetween {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mono {
+    font-family: monospace;
+    min-height: 60px;
+}
+
+.yearInput {
+    width: 120px;
+}
+
+.checkboxTop {
+    margin-top: 1rem;
+}

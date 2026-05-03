@@ -45,27 +45,85 @@
   margin-bottom: 2rem;
 }
 
-.badge {
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
-  text-transform: uppercase;
+/* ── Disabled row ────────────────────────────────────────────────────────── */
+
+.rowDisabled {
+  opacity: 0.55;
 }
 
-.success {
-  background: rgba(166, 227, 161, 0.15);
-  color: var(--success-soft);
+.rowDisabled .retailerName {
+  color: var(--text-muted);
 }
 
-.failed {
-  background: rgba(243, 139, 168, 0.15);
-  color: var(--danger-soft);
+/* ── Schedule cell ───────────────────────────────────────────────────────── */
+
+.scheduleCell {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
 }
 
-.partial {
-  background: rgba(249, 226, 175, 0.15);
-  color: var(--warning-soft);
+.nextScrape {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ── Toggle switch ───────────────────────────────────────────────────────── */
+
+.toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.toggleOn {
+  background: var(--accent-blue);
+}
+
+.toggleOff {
+  background: var(--surface-3);
+}
+
+.toggleThumb {
+  position: absolute;
+  top: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.2s;
+}
+
+.toggleOn .toggleThumb {
+  left: 19px;
+}
+
+.toggleOff .toggleThumb {
+  left: 3px;
+}
+
+/* ── Interval select ─────────────────────────────────────────────────────── */
+
+.intervalSelect {
+  background: var(--surface-3);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  padding: 0.25rem 0.4rem;
+  cursor: pointer;
+}
+
+.intervalSelect:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .runBtn {
@@ -110,6 +168,15 @@
   opacity: 1;
 }
 
+.bannerStep {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--accent-blue);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .spinner {
   width: 14px;
   height: 14px;
@@ -146,6 +213,86 @@
   font-size: 0.82rem;
   padding: 0.3rem 0.6rem;
   border-radius: var(--radius);
+}
+
+.downloadBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--surface-3);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius);
+  margin-left: auto;
+}
+
+.downloadBtn:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.downloadBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Clear logs button & inline confirm ──────────────────────────────────── */
+
+.clearBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--surface-3);
+  color: var(--danger-soft);
+  font-size: 0.82rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius);
+  opacity: 0.7;
+}
+
+.clearBtn:hover:not(:disabled) {
+  opacity: 1;
+}
+
+.clearBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.clearConfirm {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  background: rgba(243, 139, 168, 0.06);
+  border: 1px solid rgba(243, 139, 168, 0.2);
+  border-radius: var(--radius);
+  padding: 0.25rem 0.6rem;
+}
+
+.clearConfirmOption {
+  background: var(--surface-3);
+  color: var(--text);
+  font-size: 0.78rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius);
+}
+
+.clearConfirmDanger {
+  color: var(--danger-soft);
+}
+
+.clearConfirmCancel {
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: var(--radius);
+}
+
+.clearConfirmCancel:hover {
+  color: var(--text);
 }
 
 .logBox {
