@@ -32,27 +32,55 @@ describe('encodeBuildToUrl', () => {
     expect(qs).toContain('cpu=42');
   });
 
-  test('encodes multiple components', () => {
+  test('encodes multiple single-slot components', () => {
     const build: BuildConfig = {
       cpu: makeComponent(1, 'cpu') as any,
       gpu: makeComponent(2, 'gpu') as any,
-      ram: makeComponent(3, 'ram') as any,
+      psu: makeComponent(3, 'psu') as any,
     };
     const qs = encodeBuildToUrl(build);
     expect(qs).toContain('cpu=1');
     expect(qs).toContain('gpu=2');
-    expect(qs).toContain('ram=3');
+    expect(qs).toContain('psu=3');
+  });
+
+  test('encodes indexed RAM slots', () => {
+    const build: BuildConfig = {
+      ram_1: makeComponent(10, 'ram') as any,
+      ram_2: makeComponent(11, 'ram') as any,
+    };
+    const qs = encodeBuildToUrl(build);
+    expect(qs).toContain('ram_1=10');
+    expect(qs).toContain('ram_2=11');
+  });
+
+  test('encodes indexed storage slots', () => {
+    const build: BuildConfig = {
+      storage_1: makeComponent(20, 'storage') as any,
+      storage_2: makeComponent(21, 'storage') as any,
+    };
+    const qs = encodeBuildToUrl(build);
+    expect(qs).toContain('storage_1=20');
+    expect(qs).toContain('storage_2=21');
+  });
+
+  test('encodes legacy bare ram key (backwards compat)', () => {
+    const build: BuildConfig = {
+      ram: makeComponent(5, 'ram') as any,
+    };
+    const qs = encodeBuildToUrl(build);
+    expect(qs).toContain('ram=5');
   });
 
   test('returns empty string for empty build', () => {
     expect(encodeBuildToUrl({})).toBe('');
   });
 
-  test('only includes categories that are set', () => {
+  test('only includes keys that are set', () => {
     const build: BuildConfig = { cpu: makeComponent(5, 'cpu') as any };
     const qs = encodeBuildToUrl(build);
     expect(qs).not.toContain('gpu=');
-    expect(qs).not.toContain('ram=');
+    expect(qs).not.toContain('ram_1=');
   });
 
   test('encoded string can be parsed back by URLSearchParams', () => {
@@ -75,18 +103,40 @@ describe('decodeBuildFromUrl', () => {
     expect(result.cpu).toBe(42);
   });
 
-  test('decodes multiple component IDs', () => {
-    const result = decodeBuildFromUrl('?cpu=1&gpu=2&ram=3');
+  test('decodes multiple single-slot component IDs', () => {
+    const result = decodeBuildFromUrl('?cpu=1&gpu=2&psu=3');
     expect(result.cpu).toBe(1);
     expect(result.gpu).toBe(2);
-    expect(result.ram).toBe(3);
+    expect(result.psu).toBe(3);
+  });
+
+  test('decodes indexed RAM slots', () => {
+    const result = decodeBuildFromUrl('?ram_1=10&ram_2=11');
+    expect(result.ram_1).toBe(10);
+    expect(result.ram_2).toBe(11);
+  });
+
+  test('decodes indexed storage slots', () => {
+    const result = decodeBuildFromUrl('?storage_1=20&storage_2=21');
+    expect(result.storage_1).toBe(20);
+    expect(result.storage_2).toBe(21);
+  });
+
+  test('decodes legacy bare ram key (backwards compat)', () => {
+    const result = decodeBuildFromUrl('?ram=5');
+    expect(result.ram).toBe(5);
+  });
+
+  test('decodes legacy bare storage key (backwards compat)', () => {
+    const result = decodeBuildFromUrl('?storage=7');
+    expect(result.storage).toBe(7);
   });
 
   test('returns empty object for empty search string', () => {
     expect(decodeBuildFromUrl('')).toEqual({});
   });
 
-  test('ignores unknown category keys', () => {
+  test('ignores unknown keys', () => {
     const result = decodeBuildFromUrl('?cpu=1&unknown=99');
     expect(result.cpu).toBe(1);
     expect(result.unknown).toBeUndefined();
@@ -97,7 +147,7 @@ describe('decodeBuildFromUrl', () => {
     expect(result.cpu).toBeUndefined();
   });
 
-  test('round-trips with encodeBuildToUrl', () => {
+  test('round-trips with encodeBuildToUrl — single-slot', () => {
     const build: BuildConfig = {
       cpu: makeComponent(7, 'cpu') as any,
       psu: makeComponent(99, 'psu') as any,
@@ -107,6 +157,23 @@ describe('decodeBuildFromUrl', () => {
     expect(decoded.cpu).toBe(7);
     expect(decoded.psu).toBe(99);
   });
+
+  test('round-trips with encodeBuildToUrl — multi-slot RAM and storage', () => {
+    const build: BuildConfig = {
+      cpu: makeComponent(1, 'cpu') as any,
+      ram_1: makeComponent(10, 'ram') as any,
+      ram_2: makeComponent(11, 'ram') as any,
+      storage_1: makeComponent(20, 'storage') as any,
+      storage_2: makeComponent(21, 'storage') as any,
+    };
+    const qs = encodeBuildToUrl(build);
+    const decoded = decodeBuildFromUrl(`?${qs}`);
+    expect(decoded.cpu).toBe(1);
+    expect(decoded.ram_1).toBe(10);
+    expect(decoded.ram_2).toBe(11);
+    expect(decoded.storage_1).toBe(20);
+    expect(decoded.storage_2).toBe(21);
+  });
 });
 
 // ── localStorage helpers ──────────────────────────────────────────────────────
@@ -115,7 +182,6 @@ describe('decodeBuildFromUrl', () => {
 
 describe('loadBuildFromStorage', () => {
   test('returns empty object when localStorage is unavailable', () => {
-    // In Bun test environment, localStorage is not defined
     const result = loadBuildFromStorage();
     expect(result).toEqual({});
   });
