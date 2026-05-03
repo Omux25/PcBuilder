@@ -13,6 +13,7 @@ interface ScraperLog {
 }
 
 const POLL_INTERVAL_MS = 3000;
+const POLL_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes max
 
 export function Scrapers() {
   const [retailers, setRetailers] = useState<AdminRetailer[]>([]);
@@ -22,6 +23,7 @@ export function Scrapers() {
   const [logLevel, setLogLevel] = useState('');
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollStartRef = useRef<number>(0);
   const logBoxRef = useRef<HTMLDivElement>(null);
 
   const loadRetailers = useCallback(() => {
@@ -55,14 +57,17 @@ export function Scrapers() {
   // Start polling logs every 3s while a scraper is running
   function startPolling() {
     if (pollRef.current) return;
+    pollStartRef.current = Date.now();
     pollRef.current = setInterval(async () => {
       const newLogs = await loadLogs();
       loadRetailers();
-      // Stop polling when we see a "Session complete" or "complete" log
+      // Stop when "complete" log appears
       const done = newLogs.some(l =>
         l.level === 'INFO' && l.message.toLowerCase().includes('complete')
       );
-      if (done) stopPolling();
+      // Also stop after 30 minutes to prevent infinite polling
+      const timedOut = Date.now() - pollStartRef.current > POLL_TIMEOUT_MS;
+      if (done || timedOut) stopPolling();
     }, POLL_INTERVAL_MS);
   }
 
@@ -115,6 +120,9 @@ export function Scrapers() {
         <div className={styles.runningBanner}>
           <span className={styles.spinner} />
           Scraping en cours — les logs se mettent à jour automatiquement...
+          <button className={styles.stopBtn} onClick={stopPolling} title="Masquer l'indicateur">
+            ✕
+          </button>
         </div>
       )}
 
@@ -183,7 +191,9 @@ export function Scrapers() {
             logs.map((log) => (
               <div key={log.id} className={`${styles.logEntry} ${styles[log.level?.toLowerCase()]}`}>
                 <span className={styles.logLevel}>{log.level}</span>
-                {log.site && <span className={styles.logSite}>[{log.site}]</span>}
+                {log.site && !log.message.startsWith(`[${log.site}]`) && (
+                  <span className={styles.logSite}>[{log.site}]</span>
+                )}
                 <span className={styles.logMsg}>{log.message}</span>
                 <span className={styles.logTime}>{new Date(log.created_at).toLocaleString('fr-MA')}</span>
               </div>

@@ -24,6 +24,12 @@ let fullSessionRunning = false;
 // Track running jobs to prevent duplicates (in-memory — sufficient for single-process)
 const runningJobs = new Set<number>();
 
+/** Reset locks — used in tests to ensure clean state between test cases. */
+export function resetScraperLocks(): void {
+  fullSessionRunning = false;
+  runningJobs.clear();
+}
+
 // POST /api/admin/scrapers/run-all
 adminScrapersRouter.post('/run-all', async (c) => {
   if (fullSessionRunning) {
@@ -47,6 +53,11 @@ adminScrapersRouter.post('/:retailerId/run', async (c) => {
   const retailerId = parseId(c.req.param('retailerId'));
   if (retailerId === null) {
     return c.json({ error: { code: 'VALIDATION_ERROR', message: 'retailerId must be a positive integer' } }, 400);
+  }
+
+  // Block targeted scrape if a full session is already running
+  if (fullSessionRunning) {
+    return c.json({ error: { code: 'CONFLICT', message: 'A full scraping session is already running' } }, 409);
   }
 
   try {
