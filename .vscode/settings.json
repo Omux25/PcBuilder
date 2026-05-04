@@ -18,5 +18,6 @@
   },
   "[typescriptreact]": {
     "editor.defaultFormatter": "vscode.typescript-language-features"
-  }
+  },
+  "typescript.autoClosingTags": false
 }
