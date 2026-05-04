@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Modal } from './Modal';
+import { FanSpecFields } from './FanSpecFields';
+import { ThermalPasteSpecFields } from './ThermalPasteSpecFields';
+import type { FanSpecValues } from './FanSpecFields';
+import type { ThermalPasteSpecValues } from './ThermalPasteSpecFields';
 import { createAdminComponent, updateAdminComponent } from '../api';
 import type { AdminComponent } from '../api';
 import { CATEGORY_ORDER } from '@shared/types';
@@ -22,6 +26,8 @@ const CATEGORY_FIELDS: Record<string, { key: string; label: string; type: 'text'
   case: [{ key: 'max_gpu_length_mm', label: 'GPU max (mm)', type: 'number', placeholder: 'Ex: 380' }],
   storage: [],
   cooling: [],
+  fan: [],        // handled by FanSpecFields
+  thermal_paste: [], // handled by ThermalPasteSpecFields
 };
 
 interface Props {
@@ -74,10 +80,12 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [fanSpecs, setFanSpecs] = useState<FanSpecValues>({ size_mm: '', airflow_cfm: '', noise_db: '', rgb: false, pack_size: '' });
+  const [thermalSpecs, setThermalSpecs] = useState<ThermalPasteSpecValues>({ weight_grams: '', thermal_conductivity: '', paste_type: '' });
 
   useEffect(() => {
     if (component) {
-      const c = component as Record<string, unknown>;
+      const c = component as unknown as Record<string, unknown>;
       setFormData({
         name: component.name,
         brand: String(component.brand ?? ''),
@@ -96,8 +104,27 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
         m2_slots: String(c.m2_slots ?? ''),
         sata_ports: String(c.sata_ports ?? ''),
       });
+      // Pre-fill fan/thermal specs when editing
+      if (component.category === 'fan') {
+        setFanSpecs({
+          size_mm: (c.size_mm as number) ?? '',
+          airflow_cfm: (c.airflow_cfm as number) ?? '',
+          noise_db: (c.noise_db as number) ?? '',
+          rgb: (c.rgb as boolean) ?? false,
+          pack_size: (c.pack_size as number) ?? '',
+        });
+      }
+      if (component.category === 'thermal_paste') {
+        setThermalSpecs({
+          weight_grams: (c.weight_grams as number) ?? '',
+          thermal_conductivity: (c.thermal_conductivity as number) ?? '',
+          paste_type: (c.paste_type as ThermalPasteSpecValues['paste_type']) ?? '',
+        });
+      }
     } else {
       setFormData(emptyForm());
+      setFanSpecs({ size_mm: '', airflow_cfm: '', noise_db: '', rgb: false, pack_size: '' });
+      setThermalSpecs({ weight_grams: '', thermal_conductivity: '', paste_type: '' });
     }
     setError(null);
     setValidationErrors({});
@@ -121,6 +148,8 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
       m2_slots: '',
       sata_ports: '',
     }));
+    setFanSpecs({ size_mm: '', airflow_cfm: '', noise_db: '', rgb: false, pack_size: '' });
+    setThermalSpecs({ weight_grams: '', thermal_conductivity: '', paste_type: '' });
   }
 
   function validate() {
@@ -169,6 +198,22 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
     if (formData.ram_slots) payload.ram_slots = Number(formData.ram_slots);
     if (formData.m2_slots) payload.m2_slots = Number(formData.m2_slots);
     if (formData.sata_ports) payload.sata_ports = Number(formData.sata_ports);
+
+    // Fan-specific fields
+    if (formData.category === 'fan') {
+      if (fanSpecs.size_mm !== '') payload.size_mm = Number(fanSpecs.size_mm);
+      if (fanSpecs.airflow_cfm !== '') payload.airflow_cfm = Number(fanSpecs.airflow_cfm);
+      if (fanSpecs.noise_db !== '') payload.noise_db = Number(fanSpecs.noise_db);
+      payload.rgb = fanSpecs.rgb;
+      if (fanSpecs.pack_size !== '') payload.pack_size = Number(fanSpecs.pack_size);
+    }
+
+    // Thermal paste-specific fields
+    if (formData.category === 'thermal_paste') {
+      if (thermalSpecs.weight_grams !== '') payload.weight_grams = Number(thermalSpecs.weight_grams);
+      if (thermalSpecs.thermal_conductivity !== '') payload.thermal_conductivity = Number(thermalSpecs.thermal_conductivity);
+      if (thermalSpecs.paste_type) payload.paste_type = thermalSpecs.paste_type;
+    }
 
     try {
       if (component) {
@@ -249,6 +294,16 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
               </div>
             ))}
           </div>
+        )}
+
+        {/* Fan-specific spec fields */}
+        {formData.category === 'fan' && (
+          <FanSpecFields values={fanSpecs} onChange={setFanSpecs} />
+        )}
+
+        {/* Thermal paste-specific spec fields */}
+        {formData.category === 'thermal_paste' && (
+          <ThermalPasteSpecFields values={thermalSpecs} onChange={setThermalSpecs} />
         )}
 
         {/* Description */}

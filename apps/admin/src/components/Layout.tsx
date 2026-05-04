@@ -1,16 +1,17 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, Store, Radio, AlertCircle, Layers, Upload, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, Store, Radio, AlertCircle, Layers, Upload, LogOut, Tag } from 'lucide-react';
 import { logout } from '../api';
 import styles from './Layout.module.css';
 
 const NAV = [
-  { to: '/admin/dashboard',           label: 'Tableau de bord', icon: LayoutDashboard },
-  { to: '/admin/components',          label: 'Composants',       icon: Package },
-  { to: '/admin/components/import',   label: 'Import en masse',  icon: Upload },
-  { to: '/admin/retailers',           label: 'Revendeurs',       icon: Store },
-  { to: '/admin/scrapers',            label: 'Scrapers',         icon: Radio },
-  { to: '/admin/unmatched',           label: 'Non associes',     icon: AlertCircle },
-  { to: '/admin/presets',             label: 'Configurations',   icon: Layers },
+  { to: '/admin/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
+  { to: '/admin/components', label: 'Composants', icon: Package },
+  { to: '/admin/components/import', label: 'Import en masse', icon: Upload },
+  { to: '/admin/retailers', label: 'Revendeurs', icon: Store },
+  { to: '/admin/scrapers', label: 'Scrapers', icon: Radio },
+  { to: '/admin/unmatched', label: 'Non associes', icon: AlertCircle },
+  { to: '/admin/presets', label: 'Configurations', icon: Layers },
+  { to: '/admin/keyword-rules', label: 'Règles mots-clés', icon: Tag },
 ];
 
 export function Layout() {

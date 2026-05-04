@@ -31,8 +31,6 @@ export function inferCategory(name: string): ComponentCategory | null {
   // Explicit skip patterns — accessories and non-components
   if (n.match(/\b(souris|mouse|clavier|keyboard|casque|headset|écran|monitor|webcam|micro(?:phone)?)\b/)) return null;
   if (n.match(/\b(câble|cable|adaptateur|adapter|riser|extension|hub|dock)\b/)) return null;
-  if (n.match(/\b(pâte|paste|thermal grease|graisse|mx-\d|mx\d)\b/)) return null;
-  if (n.match(/\b(fan|ventilateur)\b/) && !n.match(/\b(cooler|refroidissement|aio|liquid|ventirad)\b/)) return null;
   if (n.match(/\b(pack|bundle|kit\s*(pc|gaming)|pc\s*(gamer|gaming|complet))\b/)) return null;
   if (n.match(/\b(nvlink|sli bridge|bridge|upgrade kit|socket kit)\b/)) return null;
   if (n.match(/\b(so-dimm|sodimm)\b/)) return null; // laptop RAM — skip
@@ -63,7 +61,7 @@ export function inferCategory(name: string): ComponentCategory | null {
     n.match(/\b(alimentation|psu|gold|platinum|titanium|bronze|modular|80\s*plus|atx\s*3|semi.?mod|full.?mod)\b/) &&
     !n.match(/\b[abxhz]\d{3,4}[eimd]?\b/)) return 'psu';
 
-  // Cooling
+  // Cooling — must be checked BEFORE fan (AIO coolers contain "fan" in some names)
   // Guard: "Air" in a case name (Corsair AIR series, Montech Air) must not match cooling
   if (n.match(/\b(aio|liquid\s*cooler|watercooling|refroidissement\s*liquide)\b/)) return 'cooling';
   if (n.match(/\b(cooler|ventirad|refroidissement)\b/) &&
@@ -75,6 +73,21 @@ export function inferCategory(name: string): ComponentCategory | null {
   if (n.match(/\b(boitier|boîtier|case|tower|mid.?tower|full.?tower|mini.?tower)\b/)) return 'case';
   // Corsair AIR series, Montech Air series — these are cases, not coolers
   if (n.match(/\b(corsair\s*air|montech\s*air|fractal\s*pop\s*air|fractal\s*define\s*air)\b/)) return 'case';
+
+  // Thermal paste — checked before fan (some paste names contain "thermal" which could confuse)
+  if (n.match(/\b(kryonaut|conductonaut|hydronaut|aeronaut|duronaut|carbonaut|kryosheet)\b/)) return 'thermal_paste';
+  if (n.match(/\b(thermal\s*paste|pâte\s*thermique|pate\s*thermique|thermal\s*compound|thermal\s*grease)\b/)) return 'thermal_paste';
+  if (n.match(/\b(mx-4|mx-6|mx-7)\b/) && !n.match(/\b(ddr|ram|memory)\b/)) return 'thermal_paste';
+  if (n.match(/\b(thermal\s*grizzly|grizzly\s*kryonaut)\b/)) return 'thermal_paste';
+
+  // Fan — standalone case/system fans (NOT CPU coolers, NOT AIO coolers)
+  // Only match if not already matched as cooling above
+  if (n.match(/\b(fan|ventilateur)\b/) && !n.match(/\b(cooler|refroidissement|aio|liquid|ventirad)\b/)) return 'fan';
+  // Fan packs and specific fan model lines
+  if (n.match(/\b(f120|f140|ll120|ql120|fd12|fd14|fk120|sickleflow|sicklefan)\b/)) return 'fan';
+  if (n.match(/\b(light wings|pure wings|riing|toughfan)\b/)) return 'fan';
+  // Standalone fan by size (only if no other category matched)
+  if (n.match(/\b(120mm|140mm|200mm)\b/) && !n.match(/\b(aio|liquid|radiator|cooler)\b/)) return 'fan';
 
   return null;
 }
@@ -432,4 +445,46 @@ export function extractCaseSpecs(name: string): { form_factor: string; max_gpu_l
   else if (form_factor === 'mATX Mid Tower') max_gpu_length_mm = 350;
   else if (form_factor === 'ATX Full Tower') max_gpu_length_mm = 450;
   return { form_factor, max_gpu_length_mm };
+}
+
+/**
+ * Extracts fan-specific specs from a scraped product name.
+ * Used by catalogBuilder to auto-create fan components.
+ * Requirements: 15.1, 15.3, 15.4
+ */
+export function extractFanSpecs(name: string): { size_mm: number; rgb: boolean; pack_size: number } {
+  // Size: 80mm, 92mm, 120mm, 140mm, 200mm — default 120
+  const sizeMatch = name.match(/\b(80|92|120|140|200)\s*mm\b/i);
+  const size_mm = sizeMatch ? parseInt(sizeMatch[1]) : 120;
+
+  // RGB/ARGB lighting
+  const rgb = /\b(rgb|argb)\b/i.test(name);
+
+  // Pack size: triple/3-pack/3x → 3, dual/twin/2-pack/2x → 2, else 1
+  let pack_size = 1;
+  if (/\b(triple|3[\s-]?pack|3x)\b/i.test(name)) pack_size = 3;
+  else if (/\b(dual|twin|2[\s-]?pack|2x)\b/i.test(name)) pack_size = 2;
+
+  return { size_mm, rgb, pack_size };
+}
+
+/**
+ * Extracts thermal paste-specific specs from a scraped product name.
+ * Used by catalogBuilder to auto-create thermal_paste components.
+ * Requirements: 16.1, 16.3, 16.4
+ */
+export function extractThermalPasteSpecs(name: string): {
+  weight_grams: number | null;
+  paste_type: 'paste' | 'liquid_metal' | 'pad';
+} {
+  // Weight: "4g", "8g", "1 gramme", "4 grammes", "3.9 grammes"
+  const weightMatch = name.match(/\b(\d+(?:\.\d+)?)\s*(?:grammes?|g)\b/i);
+  const weight_grams = weightMatch ? parseFloat(weightMatch[1]) : null;
+
+  // Paste type
+  let paste_type: 'paste' | 'liquid_metal' | 'pad' = 'paste';
+  if (/\b(conductonaut|liquid\s*metal)\b/i.test(name)) paste_type = 'liquid_metal';
+  else if (/\b(carbonaut|kryosheet|pad)\b/i.test(name)) paste_type = 'pad';
+
+  return { weight_grams, paste_type };
 }

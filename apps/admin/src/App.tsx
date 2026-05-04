@@ -12,6 +12,7 @@ const Retailers = lazy(() => import('./pages/Retailers').then(m => ({ default: m
 const Scrapers = lazy(() => import('./pages/Scrapers').then(m => ({ default: m.Scrapers })));
 const Unmatched = lazy(() => import('./pages/Unmatched').then(m => ({ default: m.Unmatched })));
 const Presets = lazy(() => import('./pages/Presets').then(m => ({ default: m.Presets })));
+const KeywordRules = lazy(() => import('./pages/KeywordRules').then(m => ({ default: m.KeywordRules })));
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   if (!getAccessToken()) {
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="scrapers" element={<Scrapers />} />
           <Route path="unmatched" element={<Unmatched />} />
           <Route path="presets" element={<Presets />} />
+          <Route path="keyword-rules" element={<KeywordRules />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/admin/login" replace />} />

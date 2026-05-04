@@ -18,7 +18,8 @@ import { getSql, setSql, resetSql } from '../src/db/index.js';
 import {
   decodeHtml, inferCategory, extractBrand, cleanName,
   extractCpuSpecs, extractGpuSpecs, extractRamSpecs, extractStorageSpecs,
-  extractMotherboardSpecs, extractPsuSpecs, extractCoolingSpecs, extractCaseSpecs
+  extractMotherboardSpecs, extractPsuSpecs, extractCoolingSpecs, extractCaseSpecs,
+  extractFanSpecs, extractThermalPasteSpecs
 } from '@shared/component-utils';
 import { ComponentCategory } from '@shared/types';
 
@@ -173,6 +174,22 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         const rows = await sql`
           INSERT INTO components (slug, name, brand, category, max_gpu_length_mm, is_active)
           VALUES (${slug}, ${cleanedName}, ${brand}, 'case', ${specs.max_gpu_length_mm}, true)
+          RETURNING id
+        ` as { id: number }[];
+        newId = rows[0]?.id;
+      } else if (category === 'fan') {
+        const specs = extractFanSpecs(scrapedName);
+        const rows = await sql`
+          INSERT INTO components (slug, name, brand, category, size_mm, rgb, pack_size, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'fan', ${specs.size_mm}, ${specs.rgb}, ${specs.pack_size}, true)
+          RETURNING id
+        ` as { id: number }[];
+        newId = rows[0]?.id;
+      } else if (category === 'thermal_paste') {
+        const specs = extractThermalPasteSpecs(scrapedName);
+        const rows = await sql`
+          INSERT INTO components (slug, name, brand, category, weight_grams, paste_type, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'thermal_paste', ${specs.weight_grams}, ${specs.paste_type}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
