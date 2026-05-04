@@ -22,7 +22,10 @@ import { adminDashboardRouter } from './routes/admin/dashboard.js';
 import { adminRetailersRouter } from './routes/admin/retailers.js';
 import { adminScrapersRouter } from './routes/admin/scrapers.js';
 import { adminUnmatchedRouter } from './routes/admin/unmatched.js';
+import { unmatchedSuggestionsRouter } from './routes/admin/unmatchedSuggestions.js';
 import { adminPresetsRouter } from './routes/admin/presets.js';
+import { scraperUrlsRouter } from './routes/admin/scraperUrls.js';
+import { keywordRulesRouter } from './routes/admin/keywordRulesRouter.js';
 import { AppError } from './utils/errors.js';
 
 const app = new Hono();
@@ -66,8 +69,11 @@ app.route('/api/admin/components', adminComponentsRouter);
 app.route('/api/admin/logs', adminLogsRouter);
 app.route('/api/admin/retailers', adminRetailersRouter);
 app.route('/api/admin/scrapers', adminScrapersRouter);
+app.route('/api/admin/scrapers', scraperUrlsRouter);
 app.route('/api/admin/unmatched-listings', adminUnmatchedRouter);
+app.route('/api/admin/unmatched-listings', unmatchedSuggestionsRouter);
 app.route('/api/admin/presets', adminPresetsRouter);
+app.route('/api/admin/keyword-rules', keywordRulesRouter);
 
 // ── Global 404 ───────────────────────────────────────────────────────────────
 

@@ -10,6 +10,7 @@ import { logger } from './utils/logger.js';
 import { aggregate } from './aggregator.js';
 import { autoMap } from './autoMapper.js';
 import { buildFromUnmatched } from './catalogBuilder.js';
+import { runSuggestionPreprocessing } from '../src/services/suggestionPreprocessor.js';
 import { getSql } from '../src/db/index.js';
 import { RETAILER_SCRAPERS } from './config/retailers.config.js';
 import { importBenchmarks } from './benchmarkImporter.js';
@@ -21,7 +22,7 @@ import type { ScrapedPrice } from './scrapers/baseScraper.js';
  * @param targetRetailerId - If provided, only run the scraper for this specific retailer.
  */
 export async function runScrapingSession(targetRetailerId?: number): Promise<void> {
-  const targetName = targetRetailerId 
+  const targetName = targetRetailerId
     ? RETAILER_SCRAPERS.find(s => s.retailer_id === targetRetailerId)?.name ?? `Retailer ${targetRetailerId}`
     : 'Full';
   const sessionType = targetRetailerId ? `Targeted (${targetName})` : 'Full';
@@ -89,6 +90,9 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
     const second = await autoMap();
     secondPassMapped = second.mapped;
   }
+
+  // Pre-compute suggestions for all remaining pending listings
+  await runSuggestionPreprocessing();
 
   const summary = [
     `${updated} updated`,

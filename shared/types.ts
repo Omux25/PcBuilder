@@ -4,7 +4,8 @@
 
 export type ComponentCategory =
   | 'cpu' | 'motherboard' | 'gpu' | 'ram'
-  | 'storage' | 'psu' | 'case' | 'cooling';
+  | 'storage' | 'psu' | 'case' | 'cooling'
+  | 'fan' | 'thermal_paste';
 
 export interface Component {
   id: number;
@@ -36,6 +37,16 @@ export interface Component {
   ram_slots?: number;
   m2_slots?: number;
   sata_ports?: number;
+  // Fan-specific fields
+  size_mm?: number;
+  airflow_cfm?: number;
+  noise_db?: number;
+  rgb?: boolean;
+  pack_size?: number;
+  // Thermal paste-specific fields
+  weight_grams?: number;
+  thermal_conductivity?: number;
+  paste_type?: 'paste' | 'liquid_metal' | 'pad';
   created_at: string;
   updated_at: string;
 }
@@ -161,6 +172,8 @@ export const CATEGORY_LABELS: Record<ComponentCategory, string> = {
   psu: 'Alimentation (PSU)',
   case: 'Boîtier',
   cooling: 'Refroidissement',
+  fan: 'Ventilateur',
+  thermal_paste: 'Pâte thermique',
 };
 
 export const RULE_LABELS: Record<string, string> = {
@@ -189,5 +202,6 @@ export const RULE_TOOLTIPS: Record<string, string> = {
 
 export const CATEGORY_ORDER: ComponentCategory[] = [
   'cpu', 'motherboard', 'gpu', 'ram', 'storage', 'psu', 'case', 'cooling',
+  'fan', 'thermal_paste',
 ];
 

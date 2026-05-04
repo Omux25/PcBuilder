@@ -11,7 +11,7 @@ import type { ComponentCategory as SharedCategory } from '@shared/types';
 
 const baseSchema = z.object({
   name: z.string().min(1),
-  brand: z.string().optional(),
+  brand: z.string().nullable().optional(),
 });
 
 // ── Per-category schemas ─────────────────────────────────────────────────────
@@ -66,6 +66,25 @@ export const coolingSchema = baseSchema.extend({
   height_mm: z.number().optional(),
 });
 
+const VALID_FAN_SIZES = [80, 92, 120, 140, 200] as const;
+
+export const fanSchema = baseSchema.extend({
+  size_mm: z.number().int().refine(
+    (v) => (VALID_FAN_SIZES as readonly number[]).includes(v),
+    { message: `size_mm must be one of: ${VALID_FAN_SIZES.join(', ')}` },
+  ),
+  airflow_cfm: z.number().optional(),
+  noise_db: z.number().optional(),
+  rgb: z.boolean().optional(),
+  pack_size: z.number().int().min(1).optional(),
+});
+
+export const thermalPasteSchema = baseSchema.extend({
+  weight_grams: z.number().positive(),
+  thermal_conductivity: z.number().optional(),
+  paste_type: z.enum(['paste', 'liquid_metal', 'pad']).optional(),
+});
+
 // ── Category → schema map ────────────────────────────────────────────────────
 
 export const componentSchemas = {
@@ -77,6 +96,8 @@ export const componentSchemas = {
   psu: psuSchema,
   case: caseSchema,
   cooling: coolingSchema,
+  fan: fanSchema,
+  thermal_paste: thermalPasteSchema,
 } as const;
 
 export type ComponentCategory = SharedCategory;
@@ -96,4 +117,6 @@ export type ComponentInput =
   | (z.infer<typeof storageSchema> & { category: 'storage'; description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
   | (z.infer<typeof psuSchema> & { category: 'psu'; description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
   | (z.infer<typeof caseSchema> & { category: 'case'; description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number; form_factor?: string })
-  | (z.infer<typeof coolingSchema> & { category: 'cooling'; description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number });
+  | (z.infer<typeof coolingSchema> & { category: 'cooling'; description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
+  | (z.infer<typeof fanSchema> & { category: 'fan'; description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number })
+  | (z.infer<typeof thermalPasteSchema> & { category: 'thermal_paste'; description?: string; specs?: Record<string, unknown>; image_url?: string; release_year?: number });

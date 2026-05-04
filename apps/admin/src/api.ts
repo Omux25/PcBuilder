@@ -176,6 +176,65 @@ export const linkUnmatched = (id: number, componentId: number) =>
 export const dismissUnmatched = (id: number) =>
   request<{ message: string }>(`/admin/unmatched-listings/${id}/dismiss`, { method: 'POST' });
 
+// ── Unmatched suggestions (grouped view + bulk actions) ───────────────────────
+
+export interface CanonicalGroupListing {
+  id: number;
+  retailer_id: number;
+  retailer_name: string;
+  scraped_name: string;
+  scraped_price: number | null;
+  product_url: string;
+  scraped_at: string;
+}
+
+export interface CanonicalGroup {
+  canonical_name: string;
+  brand: string | null;
+  category: string | null;
+  confidence: 'high' | 'medium' | 'low' | 'unknown';
+  existing_component_id: number | null;
+  existing_component_name: string | null;
+  specs_hint: Record<string, unknown>;
+  retailer_count: number;
+  listing_count: number;
+  price_min: number | null;
+  price_max: number | null;
+  listings: CanonicalGroupListing[];
+}
+
+export interface GroupedUnmatchedResponse {
+  groups: CanonicalGroup[];
+  total_groups: number;
+  total_listings: number;
+}
+
+export const getGroupedUnmatched = (params: Record<string, string> = {}) => {
+  const qs = new URLSearchParams(params).toString();
+  return request<GroupedUnmatchedResponse>(`/admin/unmatched-listings/grouped${qs ? `?${qs}` : ''}`);
+};
+
+export const reprocessSuggestions = () =>
+  request<{ processed: number; skipped: number }>('/admin/unmatched-listings/reprocess', { method: 'POST' });
+
+export const bulkDismissUnmatched = (listingIds: number[]) =>
+  request<{ dismissed: number; skipped: number }>('/admin/unmatched-listings/bulk-dismiss', {
+    method: 'POST',
+    body: JSON.stringify({ listing_ids: listingIds }),
+  });
+
+export const bulkApproveUnmatched = (canonicalNames: string[]) =>
+  request<{ approved_groups: number; linked_listings: number; skipped_groups: number }>('/admin/unmatched-listings/bulk-approve', {
+    method: 'POST',
+    body: JSON.stringify({ canonical_names: canonicalNames }),
+  });
+
+export const scrapeUrls = (urls: Array<{ retailer_id: number; product_url: string }>) =>
+  request<{ scraped: number; failed: number }>('/admin/scrapers/scrape-urls', {
+    method: 'POST',
+    body: JSON.stringify({ urls }),
+  });
+
 // ── Presets ───────────────────────────────────────────────────────────────────
 
 export interface PresetPayload {
@@ -242,3 +301,46 @@ export async function bulkImportComponents(file: File): Promise<ImportResult> {
   if (!res.ok) throw new Error(data?.error?.message ?? `HTTP ${res.status}`);
   return data as ImportResult;
 }
+
+// ── Keyword Rules ─────────────────────────────────────────────────────────────
+
+export interface KeywordRuleResponse {
+  id: number;
+  keyword: string;
+  match_type: 'contains' | 'word' | 'starts_with' | 'number_before';
+  category: string;
+  source: 'admin' | 'builtin';
+  created_by: number | null;
+  created_at: string;
+  match_count: number;
+}
+
+export interface KeywordRulePreviewResponse {
+  match_count: number;
+  sample_names: string[];
+}
+
+export const getKeywordRules = () =>
+  request<KeywordRuleResponse[]>('/admin/keyword-rules');
+
+export const createKeywordRule = (data: {
+  keyword: string;
+  match_type: 'contains' | 'word' | 'starts_with' | 'number_before';
+  category: string;
+}) =>
+  request<KeywordRuleResponse>('/admin/keyword-rules', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+export const deleteKeywordRule = (id: number) =>
+  request<{ success: boolean }>(`/admin/keyword-rules/${id}`, { method: 'DELETE' });
+
+export const previewKeywordRule = (data: {
+  keyword: string;
+  match_type: 'contains' | 'word' | 'starts_with' | 'number_before';
+}) =>
+  request<KeywordRulePreviewResponse>('/admin/keyword-rules/preview', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
