@@ -7,7 +7,7 @@ notes/spec/rendered/
 docs/
 
 # IDE files
-.kiro/
+# .kiro/ (Removed as per user request to allow kiro files on GitHub)
 .vscode/
 
 # Dependencies
