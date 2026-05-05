@@ -8,7 +8,7 @@ This guide explains the database design decisions and how to work with the schem
 
 ## Schema overview
 
-19 migrations, 12 tables. All migrations are in `apps/backend/src/db/migrations/` numbered 001–019.
+26 migrations, 12 tables. All migrations are in `apps/backend/src/db/migrations/` numbered 001–026.
 
 Run all migrations:
 ```powershell
@@ -60,3 +60,17 @@ Floating-point types (`FLOAT`, `DOUBLE`) cannot represent decimal values exactly
 
 **Why `ON DELETE CASCADE` on foreign keys?**
 Deleting a component automatically removes its prices, mappings, and history. This prevents orphaned rows and simplifies the delete logic in the service layer.
+
+---
+
+## Recent migrations (020–026)
+
+| Migration | What it adds |
+|---|---|
+| 020 | `scraping_enabled` column on retailers — separate from `is_active` |
+| 021 | `ram_slots`, `m2_slots`, `sata_ports` on components (motherboard slot counts) |
+| 022 | Multi-slot preset support |
+| 023 | Smart catalog expansion columns |
+| 024 | `keyword_rules` table — admin-configurable category rules |
+| 025 | `UNIQUE (base_url)` constraint on retailers — enables reliable scraper-to-retailer matching by domain |
+| 026 | Performance indexes: `unmatched_listings.status`, `unmatched_listings.retailer_id`, `unmatched_suggestions.computed_at`, `unmatched_suggestions.existing_component_id` |
