@@ -68,13 +68,15 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
   }
 
   const pending = (await sql`
-    SELECT ul.id, ul.retailer_id, ul.product_url, ul.scraped_name
+    SELECT ul.id, ul.retailer_id, ul.product_url, ul.scraped_name,
+           us.category AS suggestion_category
     FROM unmatched_listings ul
+    LEFT JOIN unmatched_suggestions us ON us.unmatched_listing_id = ul.id
     WHERE ul.status = 'pending'
       AND ul.scraped_name IS NOT NULL
       AND ul.scraped_name != ''
     ORDER BY ul.scraped_at DESC
-  `) as { id: number; retailer_id: number; product_url: string; scraped_name: string }[];
+  `) as { id: number; retailer_id: number; product_url: string; scraped_name: string; suggestion_category: string | null }[];
 
   if (pending.length === 0) return { created, skipped };
 
@@ -100,8 +102,11 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
       ? (extractBrand(prefixMatch[1].trim()) ?? null)
       : null;
 
-    // Resolve category using both the full name AND the stripped name
-    const category = resolveCategory(scrapedName) ?? resolveCategory(nameForExtraction);
+    // Resolve category: suggestion engine result takes priority (it already ran),
+    // then admin keyword rules, then inferCategory on full/stripped name
+    const category = (listing.suggestion_category as ComponentCategory | null)
+      ?? resolveCategory(scrapedName)
+      ?? resolveCategory(nameForExtraction);
     if (!category) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
 
     const brand = prefixAsBrand ?? extractBrand(nameForExtraction);
@@ -124,7 +129,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
           WHERE id = ${listing.id}
         `;
         created++;
-      } catch { skipped++; }
+      } catch (err) { skipped++; await logger.error(`[CATALOG] DNA link error for "${cleanedName}": ${err instanceof Error ? err.message : String(err)}`); }
       onProgress?.(created + skipped, pending.length);
       continue;
     }
@@ -227,7 +232,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         newId = rows[0]?.id;
       }
 
-      if (!newId) { skipped++; } else {
+      if (!newId) { skipped++; await logger.error(`[CATALOG] Skipped: category=${category} name="${cleanedName}" brand="${brand}"`); } else {
         existingSlugs.add(slug);
         existingComponents.push({ id: newId, name: cleanedName, brand, category });
         await sql`
@@ -241,7 +246,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         `;
         created++;
       }
-    } catch { skipped++; }
+    } catch (err) { skipped++; await logger.error(`[CATALOG] Error for "${cleanedName ?? scrapedName}": ${err instanceof Error ? err.message : String(err)}`); }
     onProgress?.(created + skipped, pending.length);
   }
 
