@@ -21,6 +21,7 @@ import { extractVariant } from '../src/utils/variantExtractor.js';
 import { getSql, setSql, resetSql } from '../src/db/index.js';
 import { logger } from './utils/logger.js';
 import { SCRAPER_CONFIG } from '@shared/scraper-config';
+import { decodeHtml } from '@shared/component-utils';
 
 // Re-export DI helpers so tests can inject a mock SQL function.
 export { setSql, resetSql };
@@ -35,7 +36,7 @@ export interface AggregateResult {
 
 // ── Aggregator ────────────────────────────────────────────────────────────────
 
-export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult> {
+export async function aggregate(prices: ScrapedPrice[], retailerNameToId?: Map<string, number>): Promise<AggregateResult> {
   let updated = 0;
   let unmatched = 0;
   let errors = 0;
@@ -43,6 +44,31 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
   if (prices.length === 0) return { updated, unmatched, errors };
 
   const sql = getSql();
+
+  // Resolve UltraPC ID dynamically — never hardcode it.
+  // retailerNameToId is passed in from session.ts (which already queried the DB).
+  // Falls back to a DB lookup if not provided (e.g. in tests or direct calls).
+  // Normalizes the URL to origin so trailing slashes / paths don't cause mismatches.
+  function normalizeUrl(url: string): string {
+    try {
+      const { origin } = new URL(url.startsWith('http') ? url : `https://${url}`);
+      return origin;
+    } catch {
+      return url.replace(/\/+$/, '');
+    }
+  }
+  const ultrapcOrigin = normalizeUrl(SCRAPER_CONFIG.RETAILER_BASE_URLS.ULTRAPC);
+  let ultrapcId: number | undefined = retailerNameToId?.get(ultrapcOrigin);
+  if (ultrapcId === undefined) {
+    // Also try the raw key in case the map wasn't normalized
+    ultrapcId = retailerNameToId?.get(SCRAPER_CONFIG.RETAILER_BASE_URLS.ULTRAPC);
+  }
+  if (ultrapcId === undefined) {
+    try {
+      const rows = await sql`SELECT id FROM retailers WHERE base_url LIKE ${SCRAPER_CONFIG.RETAILER_BASE_URLS.ULTRAPC + '%'} LIMIT 1` as { id: number }[];
+      ultrapcId = rows[0]?.id;
+    } catch { /* non-critical */ }
+  }
 
   // isRealSql: true when running in production (real Bun.sql), false when mocked in tests.
   //
@@ -55,10 +81,10 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
   const isRealSql = (sql as unknown) === (bunSql as unknown);
 
   // UltraPC stock check — only in production (skip when SQL is mocked in tests)
-  const ultrapcPrices = prices.filter(p => p.retailer_id === SCRAPER_CONFIG.RETAILERS.ULTRAPC);
-  if (isRealSql && ultrapcPrices.length > 0) {
+  const ultrapcPrices = prices.filter(p => ultrapcId !== undefined && p.retailer_id === ultrapcId);
+  if (isRealSql && ultrapcId !== undefined && ultrapcPrices.length > 0) {
     const mappedUrls = (await sql`
-      SELECT product_url FROM scraper_mappings WHERE retailer_id = ${SCRAPER_CONFIG.RETAILERS.ULTRAPC}
+      SELECT product_url FROM scraper_mappings WHERE retailer_id = ${ultrapcId}
     `) as { product_url: string }[];
     const mappedSet = new Set(mappedUrls.map(r => r.product_url));
     const toCheck = ultrapcPrices.filter(p => mappedSet.has(p.product_url));
@@ -112,7 +138,7 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
       if (!mapping) {
         await sql`
           INSERT INTO unmatched_listings (retailer_id, product_url, scraped_name, scraped_price)
-          VALUES (${p.retailer_id}, ${p.product_url}, ${p.product_name ?? ''}, ${p.price})
+          VALUES (${p.retailer_id}, ${p.product_url}, ${decodeHtml(p.product_name ?? '')}, ${p.price})
           ON CONFLICT (retailer_id, product_url) DO NOTHING
         `;
         unmatched++;
@@ -153,7 +179,7 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
   for (const p of resolvedPrices) {
     try {
       const { label: variantLabel, details: variantDetails } =
-        extractVariant(p.product_name ?? '', p.category, p.product_description);
+        extractVariant(decodeHtml(p.product_name ?? ''), p.category, p.product_description);
 
       await sql`
         INSERT INTO prices (
@@ -198,7 +224,7 @@ export async function aggregate(prices: ScrapedPrice[]): Promise<AggregateResult
 
     for (const retailerId of retailerIds) {
       // Skip UltraPC — it shows all products including out-of-stock, handled by checkStock
-      if (retailerId === SCRAPER_CONFIG.RETAILERS.ULTRAPC) continue;
+      if (ultrapcId !== undefined && retailerId === ultrapcId) continue;
 
       try {
         // Get all mapped URLs for this retailer that are currently marked in_stock

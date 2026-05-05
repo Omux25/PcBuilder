@@ -37,7 +37,6 @@ import { fetch } from 'undici';
 import type { ScrapedPrice } from './baseScraper.js';
 
 const SITE_NAME = 'ultrapc.ma';
-const RETAILER_ID = 10; // ID in the retailers table
 
 const HEADERS = {
   'User-Agent': 'PCBuilderMaroc-Bot/1.0 (price comparator; +https://pcbuilder.ma)',
@@ -107,9 +106,9 @@ export class UltraPcScraper {
    * Note: in_stock defaults to true — the aggregator checks actual stock
    * only for mapped products via the PrestaShop product API.
    */
-  async scrapeAllCategories(): Promise<ScrapedPrice[]> {
+  async scrapeAllCategories(retailer_id: number): Promise<ScrapedPrice[]> {
     const results = await Promise.allSettled(
-      CATEGORY_URLS.map((url) => this.scrapeCategory(url))
+      CATEGORY_URLS.map((url) => this.scrapeCategory(url, retailer_id))
     );
 
     const allPrices: ScrapedPrice[] = [];
@@ -151,7 +150,7 @@ export class UltraPcScraper {
   /**
    * Scrapes all pages of a category and returns price records.
    */
-  private async scrapeCategory(baseUrl: string): Promise<ScrapedPrice[]> {
+  private async scrapeCategory(baseUrl: string, retailer_id: number): Promise<ScrapedPrice[]> {
     const prices: ScrapedPrice[] = [];
     let page = 1;
     let totalPages = 1;
@@ -179,7 +178,7 @@ export class UltraPcScraper {
           if (!product_url) continue;
 
           prices.push({
-            retailer_id: RETAILER_ID,
+            retailer_id,
             price,
             in_stock: true, // will be corrected by checkStockBatch after all pages are scraped
             product_url,

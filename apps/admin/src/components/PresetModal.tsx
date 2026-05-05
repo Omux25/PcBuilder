@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Modal } from './Modal';
-import { createAdminPreset, updateAdminPreset, searchComponents } from '../api';
+import { createAdminPreset, updateAdminPreset, searchComponents, getErrorMessage} from '../api';
 import type { AdminPreset, PresetPayload } from '../api';
 import type { AdminComponent } from '../api';
 import { CATEGORY_ORDER, CATEGORY_LABELS } from '@shared/types';
@@ -176,7 +176,7 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
             onSaved();
             onClose();
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Erreur inattendue');
+            setError(getErrorMessage(err));
         } finally {
             setLoading(false);
         }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../api';
+import { login, getErrorMessage} from '../api';
 import styles from './Login.module.css';
 
 export function Login() {
@@ -18,7 +18,7 @@ export function Login() {
       await login(username, password);
       navigate('/admin/dashboard');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

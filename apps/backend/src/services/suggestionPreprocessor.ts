@@ -34,7 +34,7 @@ export interface PreprocessResult {
  *
  * Requirements: 4.1–4.7
  */
-export async function runSuggestionPreprocessing(): Promise<PreprocessResult> {
+export async function runSuggestionPreprocessing(force = false): Promise<PreprocessResult> {
   let processed = 0;
   let skipped = 0;
 
@@ -59,6 +59,8 @@ export async function runSuggestionPreprocessing(): Promise<PreprocessResult> {
   }
 
   // Step 2: Fetch pending listings with no suggestion or stale suggestion (>24h)
+  // If force=true (e.g. triggered by a new keyword rule), reprocess ALL pending listings
+  // so the new rule is applied immediately even to listings with a cached suggestion.
   const pending = (await sql`
     SELECT ul.id, ul.scraped_name
     FROM unmatched_listings ul
@@ -67,7 +69,8 @@ export async function runSuggestionPreprocessing(): Promise<PreprocessResult> {
       AND ul.scraped_name IS NOT NULL
       AND ul.scraped_name != ''
       AND (
-        us.id IS NULL
+        ${force} = true
+        OR us.id IS NULL
         OR us.computed_at < NOW() - INTERVAL '24 hours'
       )
     ORDER BY ul.scraped_at DESC

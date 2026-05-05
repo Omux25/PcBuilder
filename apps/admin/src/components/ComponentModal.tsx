@@ -4,7 +4,7 @@ import { FanSpecFields } from './FanSpecFields';
 import { ThermalPasteSpecFields } from './ThermalPasteSpecFields';
 import type { FanSpecValues } from './FanSpecFields';
 import type { ThermalPasteSpecValues } from './ThermalPasteSpecFields';
-import { createAdminComponent, updateAdminComponent } from '../api';
+import { createAdminComponent, updateAdminComponent, getErrorMessage} from '../api';
 import type { AdminComponent } from '../api';
 import { CATEGORY_ORDER } from '@shared/types';
 import styles from './Form.module.css';
@@ -224,7 +224,7 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
       onSaved();
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur inattendue');
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

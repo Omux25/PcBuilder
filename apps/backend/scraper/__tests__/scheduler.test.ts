@@ -92,8 +92,18 @@ beforeEach(() => {
   setAggregatorSql(makeAggregatorSql());
   setAutoMapperSql(makeAutoMapperSql());
   setCatalogBuilderSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
-  // Mock session's own SQL (for UPDATE retailers status)
-  setSessionSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
+  // Mock session's own SQL (for SELECT retailers + UPDATE retailers status)
+  setSessionSql((strings: TemplateStringsArray, ..._values: unknown[]) => {
+    const query = strings.join('?');
+    if (query.includes('SELECT id, base_url FROM retailers')) {
+      return Promise.resolve([
+        { id: 10, base_url: 'https://www.ultrapc.ma' },
+        { id: 11, base_url: 'https://nextlevelpc.ma' },
+        { id: 13, base_url: 'https://setupgame.ma' },
+      ]);
+    }
+    return Promise.resolve([]);
+  });
   setFetch(makeEmptyPageFetch());
   setUltraPcFetch(makeEmptyUltraPcFetch());
   setSetupGameFetch((_url: string) => Promise.resolve({

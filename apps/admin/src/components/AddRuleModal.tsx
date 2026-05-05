@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { Modal } from './Modal';
 import { CATEGORY_ORDER, CATEGORY_LABELS } from '@shared/types';
 import type { ComponentCategory } from '@shared/types';
-import { createKeywordRule, previewKeywordRule } from '../api';
+import { createKeywordRule, previewKeywordRule, reprocessSuggestions, getErrorMessage} from '../api';
 import type { KeywordRuleResponse } from '../api';
 import styles from './Form.module.css';
 
@@ -67,7 +67,7 @@ export function AddRuleModal({ isOpen, onClose, onSuccess }: Props) {
             setPreview({ count: result.match_count, samples: result.sample_names });
             setPreviewPage(0);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Erreur lors de la prévisualisation');
+            setError(getErrorMessage(err));
         } finally {
             setPreviewLoading(false);
         }
@@ -82,8 +82,10 @@ export function AddRuleModal({ isOpen, onClose, onSuccess }: Props) {
             const rule = await createKeywordRule({ keyword: kw, match_type: matchType, category });
             reset();
             onSuccess(rule);
+            // Reprocess suggestions so existing listings immediately reflect the new rule
+            reprocessSuggestions().catch(() => { /* non-critical */ });
         } catch (err) {
-            const msg = err instanceof Error ? err.message : 'Erreur inattendue';
+            const msg = getErrorMessage(err);
             if (msg.includes('409') || msg.includes('DUPLICATE')) {
                 setError('Une règle pour ce mot + type + catégorie existe déjà.');
             } else {

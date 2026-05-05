@@ -408,6 +408,14 @@ async function updateComponent(id: number, data: ComponentInput): Promise<Compon
     throw new AppError('COMPONENT_NOT_FOUND', `Component with id ${id} not found`, 404);
   }
 
+  // Invalidate cached suggestions that reference this component — they may have stale
+  // canonical_name or specs_hint. Force recomputation on next preprocessing run.
+  await sql`
+    UPDATE unmatched_suggestions
+    SET computed_at = NOW() - INTERVAL '25 hours'
+    WHERE existing_component_id = ${id}
+  `;
+
   const { search_text: _st, ...component } = rows[0];
   return component as Component;
 }
@@ -437,30 +445,60 @@ async function deactivateComponent(id: number): Promise<Component> {
  * Throws COMPONENT_NOT_FOUND if no component matches.
  * Throws COMPONENT_HAS_DEPENDENCIES if linked records exist.
  */
+/**
+ * Unlinks a component from all its scraper mappings and resets linked
+ * unmatched listings back to 'pending' so they reappear in Non associés.
+ * Also clears prices and price_history for this component.
+ * The component itself is kept but deactivated.
+ */
+async function unlinkComponent(id: number): Promise<{ listings_reset: number }> {
+  const sql = getSql();
+
+  const exists = (await sql`SELECT id FROM components WHERE id = ${id} LIMIT 1`) as { id: number }[];
+  if (exists.length === 0) {
+    throw new AppError('COMPONENT_NOT_FOUND', `Component with id ${id} not found`, 404);
+  }
+
+  // Reset linked unmatched listings back to pending
+  const reset = (await sql`
+    UPDATE unmatched_listings
+    SET status = 'pending', linked_component_id = NULL
+    WHERE linked_component_id = ${id}
+    RETURNING id
+  `) as { id: number }[];
+
+  // Remove scraper mappings, prices, suggestions
+  await sql`DELETE FROM scraper_mappings WHERE component_id = ${id}`;
+  await sql`DELETE FROM prices WHERE component_id = ${id}`;
+  await sql`DELETE FROM price_history WHERE component_id = ${id}`;
+  await sql`DELETE FROM unmatched_suggestions WHERE existing_component_id = ${id}`;
+
+  // Deactivate the component so it's hidden but not lost
+  await sql`UPDATE components SET is_active = false, updated_at = NOW() WHERE id = ${id}`;
+
+  return { listings_reset: reset.length };
+}
+
 async function deleteComponent(id: number): Promise<void> {
   const sql = getSql();
-  const rows = (await sql`
-    WITH dep_check AS (
-      SELECT
-        (SELECT COUNT(id) FROM prices WHERE component_id = ${id}) AS price_count,
-        (SELECT COUNT(id) FROM scraper_mappings WHERE component_id = ${id}) AS mapping_count
-    )
-    DELETE FROM components
-    WHERE id = ${id}
-      AND (SELECT price_count FROM dep_check) = 0
-      AND (SELECT mapping_count FROM dep_check) = 0
-    RETURNING id,
-      (SELECT price_count FROM dep_check) AS price_count,
-      (SELECT mapping_count FROM dep_check) AS mapping_count
-  `) as { id: number; price_count: string; mapping_count: string }[];
 
-  if (rows.length === 0) {
-    const exists = (await sql`SELECT id FROM components WHERE id = ${id} LIMIT 1`) as { id: number }[];
-    if (exists.length === 0) {
-      throw new AppError('COMPONENT_NOT_FOUND', `Component with id ${id} not found`, 404);
-    }
-    throw new AppError('COMPONENT_HAS_DEPENDENCIES', `Component ${id} has linked records and cannot be deleted`, 409);
+  // Check component exists
+  const exists = (await sql`SELECT id FROM components WHERE id = ${id} LIMIT 1`) as { id: number }[];
+  if (exists.length === 0) {
+    throw new AppError('COMPONENT_NOT_FOUND', `Component with id ${id} not found`, 404);
   }
+
+  // Check for price history — if prices exist, block hard delete (data loss risk)
+  const priceRows = (await sql`SELECT COUNT(id) AS cnt FROM prices WHERE component_id = ${id}`) as { cnt: string }[];
+  if (parseInt(priceRows[0].cnt) > 0) {
+    throw new AppError('COMPONENT_HAS_DEPENDENCIES', `Component ${id} has linked price records and cannot be deleted. Deactivate it instead.`, 409);
+  }
+
+  // Safe to delete — cascade scraper_mappings and unmatched_listings first
+  await sql`DELETE FROM scraper_mappings WHERE component_id = ${id}`;
+  await sql`UPDATE unmatched_listings SET linked_component_id = NULL, status = 'pending' WHERE linked_component_id = ${id}`;
+  await sql`DELETE FROM unmatched_suggestions WHERE existing_component_id = ${id}`;
+  await sql`DELETE FROM components WHERE id = ${id}`;
 }
 
 export {
@@ -473,4 +511,5 @@ export {
   updateComponent,
   deactivateComponent,
   deleteComponent,
+  unlinkComponent,
 };

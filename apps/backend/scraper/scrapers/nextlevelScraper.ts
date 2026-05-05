@@ -20,7 +20,6 @@ import { BaseScraper, type ScrapedPrice } from './baseScraper.js';
 import type { CheerioAPI } from 'cheerio';
 
 const SITE_NAME = 'nextlevelpc.ma';
-const RETAILER_ID = 11;
 
 const CATEGORY_URLS: string[] = [
   'https://nextlevelpc.ma/165-processeur',
@@ -34,13 +33,16 @@ const CATEGORY_URLS: string[] = [
 ];
 
 export class NextLevelScraper extends BaseScraper {
+  private _retailerId: number = 0;
+
   constructor() {
     super(SITE_NAME);
   }
 
-  async scrapeAllCategories(): Promise<ScrapedPrice[]> {
+  async scrapeAllCategories(retailer_id: number): Promise<ScrapedPrice[]> {
+    this._retailerId = retailer_id;
     const results = await Promise.allSettled(
-      CATEGORY_URLS.map((url) => this.scrapeCategory(url))
+      CATEGORY_URLS.map((url) => this.scrapeCategory(url, retailer_id))
     );
 
     const allPrices: ScrapedPrice[] = [];
@@ -54,7 +56,7 @@ export class NextLevelScraper extends BaseScraper {
     return allPrices;
   }
 
-  private async scrapeCategory(baseUrl: string): Promise<ScrapedPrice[]> {
+  private async scrapeCategory(baseUrl: string, retailer_id: number): Promise<ScrapedPrice[]> {
     // Fetch page 1 once — parse both products AND total pages from the same HTML.
     // This avoids any shared instance state between parallel category calls.
     let $page1: CheerioAPI;
@@ -139,7 +141,7 @@ export class NextLevelScraper extends BaseScraper {
       const product_description = featureLines.length > 0 ? featureLines.join(' | ') : undefined;
 
       prices.push({
-        retailer_id: RETAILER_ID,
+        retailer_id: this._retailerId,
         price,
         in_stock,
         product_url: url,

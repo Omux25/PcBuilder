@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Pencil, Trash2, Plus, ToggleLeft, ToggleRight } from 'lucide-react';
-import { getAdminComponents, deleteAdminComponent, updateAdminComponent } from '../api';
+import { Pencil, Trash2, Plus, ToggleLeft, ToggleRight, Unlink } from 'lucide-react';
+import { getAdminComponents, deleteAdminComponent, activateAdminComponent, deactivateAdminComponent, unlinkAdminComponent, getErrorMessage } from '../api';
 import type { AdminComponent } from '../api';
 import { ComponentModal } from '../components/ComponentModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -47,10 +47,32 @@ export function Components() {
   async function handleToggleActive(component: AdminComponent) {
     setMutationError(null);
     try {
-      await updateAdminComponent(component.id, { is_active: !component.is_active });
+      if (component.is_active) {
+        await deactivateAdminComponent(component.id);
+      } else {
+        await activateAdminComponent(component.id);
+      }
       load();
     } catch (err: unknown) {
-      setMutationError(err instanceof Error ? err.message : 'Erreur inattendue');
+      setMutationError(getErrorMessage(err));
+    }
+  }
+
+  const [confirmUnlink, setConfirmUnlink] = useState<number | null>(null);
+
+  async function handleUnlink(id: number) {
+    setMutationError(null);
+    try {
+      const result = await unlinkAdminComponent(id);
+      setConfirmUnlink(null);
+      load();
+      setMutationError(null);
+      // Show success briefly
+      setError(`✓ ${result.listings_reset} listing(s) remis en attente.`);
+      setTimeout(() => setError(null), 4000);
+    } catch (err: unknown) {
+      setConfirmUnlink(null);
+      setMutationError(getErrorMessage(err));
     }
   }
 
@@ -62,7 +84,12 @@ export function Components() {
       load();
     } catch (err: unknown) {
       setConfirmDelete(null);
-      setMutationError(err instanceof Error ? err.message : 'Erreur inattendue');
+      const apiErr = err as { message?: string; status?: number; code?: string };
+      if (apiErr?.status === 409 || apiErr?.code === 'COMPONENT_HAS_DEPENDENCIES') {
+        setMutationError('Ce composant a des prix ou mappings liés. Utilisez "Désactiver" pour le masquer sans supprimer les données.');
+      } else {
+        setMutationError(apiErr?.message ?? (getErrorMessage(err)));
+      }
     }
   }
 
@@ -155,6 +182,15 @@ export function Components() {
                       >
                         <Trash2 size={15} />
                       </button>
+                      <button
+                        className={styles.editBtn}
+                        onClick={() => setConfirmUnlink(c.id)}
+                        title="Désassocier (remet en Non associés)"
+                        aria-label={`Désassocier ${c.name}`}
+                        style={{ color: 'var(--warning, #f59e0b)' }}
+                      >
+                        <Unlink size={15} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -189,6 +225,17 @@ export function Components() {
         onSaved={load}
         component={editingComponent}
       />
+
+      {confirmUnlink !== null && (
+        <ConfirmDialog
+          title="Désassocier ce composant ?"
+          message="Les mappings et prix seront supprimés. Les listings retourneront dans Non associés pour re-révision. Le composant sera désactivé."
+          confirmLabel="Désassocier"
+          danger
+          onConfirm={() => handleUnlink(confirmUnlink)}
+          onCancel={() => setConfirmUnlink(null)}
+        />
+      )}
     </div>
   );
 }

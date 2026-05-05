@@ -26,7 +26,6 @@ import { fetch } from 'undici';
 import type { ScrapedPrice } from './baseScraper.js';
 
 const SITE_NAME = 'setupgame.ma';
-const RETAILER_ID = 13; // ID in the retailers table
 
 const BASE_URL = 'https://setupgame.ma/wp-json/wc/store/v1/products';
 const PER_PAGE = 100;
@@ -65,9 +64,9 @@ export function resetSetupGameFetch(): void {
 export class SetupGameScraper {
   readonly siteName = SITE_NAME;
 
-  async scrapeAllCategories(): Promise<ScrapedPrice[]> {
+  async scrapeAllCategories(retailer_id: number): Promise<ScrapedPrice[]> {
     const results = await Promise.allSettled(
-      CATEGORY_IDS.map((id) => this.scrapeCategory(id))
+      CATEGORY_IDS.map((id) => this.scrapeCategory(id, retailer_id))
     );
 
     const allPrices: ScrapedPrice[] = [];
@@ -81,7 +80,7 @@ export class SetupGameScraper {
     return allPrices;
   }
 
-  private async scrapeCategory(categoryId: number): Promise<ScrapedPrice[]> {
+  private async scrapeCategory(categoryId: number, retailer_id: number): Promise<ScrapedPrice[]> {
     const prices: ScrapedPrice[] = [];
     let page = 1;
     let hasMore = true;
@@ -135,7 +134,7 @@ export class SetupGameScraper {
           : undefined;
 
         prices.push({
-          retailer_id: RETAILER_ID,
+          retailer_id,
           price,
           in_stock,
           product_url,

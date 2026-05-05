@@ -11,7 +11,7 @@
 import { useState } from 'react';
 import { CATEGORY_ORDER, CATEGORY_LABELS } from '@shared/types';
 import type { ComponentCategory } from '@shared/types';
-import { createKeywordRule, previewKeywordRule } from '../api';
+import { createKeywordRule, previewKeywordRule, getErrorMessage} from '../api';
 import type { KeywordRuleResponse } from '../api';
 
 // ── Token classification ──────────────────────────────────────────────────────
@@ -98,7 +98,7 @@ export function TokenPicker({ scrapedName, existingRuleKeywords, onRuleSaved }: 
             setPreview({ count: result.match_count, samples: result.sample_names });
             setPreviewPage(0);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Erreur lors de la prévisualisation');
+            setError(getErrorMessage(err));
         } finally {
             setPreviewLoading(false);
         }
@@ -118,7 +118,7 @@ export function TokenPicker({ scrapedName, existingRuleKeywords, onRuleSaved }: 
             resetPanel();
             onRuleSaved?.(rule);
         } catch (err) {
-            const msg = err instanceof Error ? err.message : 'Erreur inattendue';
+            const msg = getErrorMessage(err);
             if (msg.includes('409') || msg.includes('DUPLICATE')) {
                 setError('Une règle pour ce mot + type + catégorie existe déjà.');
             } else {

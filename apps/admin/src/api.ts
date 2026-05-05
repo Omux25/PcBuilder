@@ -30,6 +30,21 @@ export function getAccessToken(): string | null {
   return accessToken;
 }
 
+/**
+ * Extracts a human-readable error message from any thrown value.
+ * Handles both ApiError objects (plain objects from the API client)
+ * and standard Error instances.
+ */
+export function getErrorMessage(err: unknown, fallback = 'Erreur inattendue'): string {
+  if (err && typeof err === 'object') {
+    // ApiError from shared/api-client.ts — plain object with message + status
+    const apiErr = err as { message?: string; status?: number; code?: string };
+    if (apiErr.message) return apiErr.message;
+  }
+  if (err instanceof Error) return err.message;
+  return fallback;
+}
+
 async function request<T>(path: string, options: RequestOptions = {}, retry = true): Promise<T> {
   try {
     return await baseRequest<T>(path, {
@@ -114,6 +129,15 @@ export const updateAdminComponent = (id: number, data: Record<string, unknown>) 
 
 export const deleteAdminComponent = (id: number) =>
   request<{ message: string }>(`/admin/components/${id}`, { method: 'DELETE' });
+
+export const deactivateAdminComponent = (id: number) =>
+  request<{ message: string }>(`/admin/components/${id}/deactivate`, { method: 'POST' });
+
+export const activateAdminComponent = (id: number) =>
+  request<{ message: string }>(`/admin/components/${id}/activate`, { method: 'POST' });
+
+export const unlinkAdminComponent = (id: number) =>
+  request<{ message: string; listings_reset: number }>(`/admin/components/${id}/unlink`, { method: 'POST' });
 
 // ── Retailers ─────────────────────────────────────────────────────────────────
 

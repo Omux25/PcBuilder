@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ToggleLeft, ToggleRight, Trash2, Plus } from 'lucide-react';
-import { getAdminRetailers, updateAdminRetailer, hardDeleteRetailer } from '../api';
+import { getAdminRetailers, updateAdminRetailer, hardDeleteRetailer, getErrorMessage} from '../api';
 import type { AdminRetailer } from '../api';
 import { RetailerModal } from '../components/RetailerModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -37,7 +37,7 @@ export function Retailers() {
       setRetailers(prev =>
         prev.map(r => r.id === retailer.id ? { ...r, is_active: retailer.is_active } : r)
       );
-      setMutationError(err instanceof Error ? err.message : 'Erreur inattendue');
+      setMutationError(getErrorMessage(err));
     }
   }
 
@@ -49,7 +49,7 @@ export function Retailers() {
       load();
     } catch (err: unknown) {
       setConfirmDelete(null);
-      setMutationError(err instanceof Error ? err.message : 'Erreur inattendue');
+      setMutationError(getErrorMessage(err));
     }
   }
 
