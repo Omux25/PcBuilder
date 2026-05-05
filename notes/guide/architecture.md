@@ -69,6 +69,8 @@ apps/backend/
 | GET | `/api/admin/dashboard` | `admin/dashboard.ts` | Stats + chart + activity |
 | GET/POST/PUT/DELETE | `/api/admin/components` | `admin/components.ts` | Component CRUD |
 | POST | `/api/admin/components/:id/deactivate` | `admin/components.ts` | Soft-delete (hide from public) |
+| POST | `/api/admin/components/:id/activate` | `admin/components.ts` | Re-activate a deactivated component |
+| POST | `/api/admin/components/:id/unlink` | `admin/components.ts` | Remove mappings/prices, reset listings to pending |
 | POST | `/api/admin/components/import` | `admin/components.ts` | Bulk import |
 | GET/POST/PUT/DELETE | `/api/admin/retailers` | `admin/retailers.ts` | Retailer CRUD |
 | GET/POST/PUT/DELETE | `/api/admin/presets` | `admin/presets.ts` | Preset CRUD |
@@ -77,6 +79,13 @@ apps/backend/
 | GET | `/api/admin/unmatched-listings` | `admin/unmatched.ts` | Unmatched products |
 | POST | `/api/admin/unmatched-listings/:id/link` | `admin/unmatched.ts` | Link to component |
 | POST | `/api/admin/unmatched-listings/:id/dismiss` | `admin/unmatched.ts` | Dismiss listing |
+| GET | `/api/admin/unmatched-listings/grouped` | `admin/unmatchedSuggestions.ts` | Grouped view with suggestions |
+| POST | `/api/admin/unmatched-listings/reprocess` | `admin/unmatchedSuggestions.ts` | Trigger suggestion reprocessing (202) |
+| POST | `/api/admin/unmatched-listings/bulk-dismiss` | `admin/unmatchedSuggestions.ts` | Bulk dismiss |
+| POST | `/api/admin/unmatched-listings/bulk-approve` | `admin/unmatchedSuggestions.ts` | Bulk approve high-confidence matches |
+| POST | `/api/admin/unmatched-listings/create-and-link` | `admin/unmatchedSuggestions.ts` | Create component + link listings |
+| GET/POST/DELETE | `/api/admin/keyword-rules` | `admin/keywordRulesRouter.ts` | Keyword rule CRUD |
+| POST | `/api/admin/keyword-rules/preview` | `admin/keywordRulesRouter.ts` | Preview rule match count |
 | GET | `/api/admin/logs` | `admin/logs.ts` | Scraper logs |
 
 ---

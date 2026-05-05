@@ -163,16 +163,19 @@ const KEYWORD_SETS: Record<string, string[]> = {
         'aio', 'liquid', 'radiator', 'kraken', 'h100', 'h115', 'h150', 'h170',
         'le720', 'le520', 'le240', 'lq360', 'lq240', 'mystique', 'galahad',
         'coreliquid', 'mirage', 'freezer ii', 'pure loop', 'lt520', 'lt720',
-        'rl360', 'strix lc', 'rog lc', 'refroidisseur liquide', 'watercooling',
+        'rl360', 'strix lc', 'rog lc', 'refroidisseur liquide', 'watercooling', 'watercooler',
         'corefrozr', 'castle', 'castle 240', 'castle 360', 'aqua',
         'ml one', 'ml ultra', 'ml lcd', 'ml-one', 'ml-lcd',
         'sg 240ml', 'sg 360ml', '240ml argb', '360ml argb',
+        // Brand-specific AIO model names
+        'nautilus', 'ryujin', 'ryuo', 'capellix', 'elite capellix',
         // Air cooler keywords
         'ventirad', 'cooler', 'refroidissement', 'nh-d', 'nh-u', 'ak400', 'ak500',
         'ak620', 'ak700', 'assassin', 'dark rock', 'shadow rock', 'gammaxx',
         'hyper 212', 'arctic alpine', 'arctic freezer', 'ag200', 'ag300', 'ag400',
         'aircooler', 'air cooler', 'cpu cooler', 'cpu fan',
         'a30', 'a400 rgb', 'cylon 3',
+        'ets-t50', 'ets-t60', 'ets-t40', 'ets t50',
     ],
     fan: [
         '120mm', '140mm', '200mm', 'pwm fan', 'case fan', 'chassis fan',

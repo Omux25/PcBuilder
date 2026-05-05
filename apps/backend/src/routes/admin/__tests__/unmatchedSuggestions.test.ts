@@ -148,7 +148,7 @@ describe('POST /api/admin/unmatched-listings/reprocess', () => {
     });
 
     test('returns processed and skipped counts', async () => {
-        // Mock: no active components, no pending listings → processed=0, skipped=0
+        // Now returns 202 immediately (fire-and-forget) to avoid socket timeout on large datasets
         setSql(async () => []);
 
         const res = await app.request('/api/admin/unmatched-listings/reprocess', {
@@ -156,10 +156,9 @@ describe('POST /api/admin/unmatched-listings/reprocess', () => {
             headers: AUTH(),
         });
 
-        expect(res.status).toBe(200);
+        expect(res.status).toBe(202);
         const body = await res.json();
-        expect(typeof body.processed).toBe('number');
-        expect(typeof body.skipped).toBe('number');
+        expect(body.message).toBeDefined();
     });
 });
 

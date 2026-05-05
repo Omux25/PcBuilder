@@ -165,11 +165,16 @@ unmatchedSuggestionsRouter.get('/grouped', async (c) => {
 
 // ── POST /reprocess ───────────────────────────────────────────────────────────
 // Triggers suggestion pre-processing on demand.
+// Returns 202 immediately and processes in the background to avoid socket timeout
+// on large datasets (800+ listings can take 10-30s).
 // Requirements: 4.4
 
 unmatchedSuggestionsRouter.post('/reprocess', async (c) => {
-    const result = await runSuggestionPreprocessing(true); // force=true: reprocess all, not just stale
-    return c.json(result);
+    // Fire-and-forget — return immediately so the connection doesn't time out
+    runSuggestionPreprocessing(true).catch((err) =>
+        logger.error(`[SUGGESTIONS] Background reprocessing failed: ${err instanceof Error ? err.message : String(err)}`)
+    );
+    return c.json({ message: 'Reprocessing started in background' }, 202);
 });
 
 // ── POST /bulk-dismiss ────────────────────────────────────────────────────────

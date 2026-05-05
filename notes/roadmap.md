@@ -222,6 +222,38 @@ All critical and high-priority issues from the improvement report resolved:
 
 ---
 
+## Phase 24 — Dynamic Retailer IDs, Bug Fixes & Data Quality (May 2026)
+
+### Scraper architecture
+- Retailer IDs are now resolved dynamically from the DB by `base_url` — never hardcoded
+- URL normalization: trailing slashes and paths stripped before matching (e.g. `https://setupgame.ma/` matches `https://setupgame.ma`)
+- Scrapers receive `retailer_id` at runtime via `scrapeAllCategories(id)` — no more hardcoded constants
+- Config moved to `scraper/config/retailers.config.ts` — single source of truth, keyed by `base_url`
+- Migration 025: `UNIQUE (base_url)` constraint on retailers table
+
+### Data quality
+- HTML entities decoded before storing `scraped_name` in `unmatched_listings` (&#8211; → –, &Prime; → ″, etc.)
+- `deriveCanonicalName` improved: strips category prefix ("Watercooler – "), cleans empty parentheses, strips leading/trailing dashes
+- `inferCategory` extended: `watercooler`, `nautilus`, `ryujin`, `ryuo`, `ets-t50` and other brand-specific AIO model names now correctly detected as `cooling`
+- `KEYWORD_SETS` in suggestion engine updated to match `inferCategory` — both systems now agree on category detection
+
+### Admin panel
+- Component delete: cascades mappings and `unmatched_suggestions`; only blocked if prices exist
+- New `/activate` endpoint: re-enables a deactivated component
+- New `/unlink` endpoint: removes mappings/prices, resets listings to pending, deactivates component
+- Component activate/deactivate now uses dedicated endpoints (no longer sends full body via PUT)
+- Retailer `base_url` validated as absolute URL on create/update
+- `getErrorMessage(err)` helper: all frontend error handlers now show actual backend error messages
+- Suggestion reprocessing: `force=true` after keyword rule changes; `/reprocess` returns 202 (fire-and-forget) to avoid socket timeout on large datasets
+- `catalogBuilder` now checks admin keyword rules before `inferCategory` — admin rules take priority
+- Bulk import triggers suggestion reprocessing after new components added
+- Component update invalidates stale suggestion cache
+- `create-and-link`: fixed `ANY($1)` array bug — replaced with `bunSql(array)` pattern
+- Migration 026: performance indexes on `unmatched_listings.status`, `retailer_id` and `unmatched_suggestions.computed_at`, `existing_component_id`
+- 673 backend tests passing
+
+---
+
 ## Phase 23 — Full Codebase Audit & Admin Panel Overhaul (May 2026)
 
 ### Backend fixes

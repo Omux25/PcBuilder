@@ -70,17 +70,37 @@ Used in frontend URLs: `/components/amd-ryzen-7-7700x`.
 
 ## Scraper registry
 
-`apps/backend/scraper/session.ts` maintains a `SCRAPER_REGISTRY` array mapping scraper run functions to their retailer database IDs:
+`apps/backend/scraper/config/retailers.config.ts` is the single source of truth for scraper-to-retailer mapping. Each entry maps a retailer's `base_url` to its scraper implementation. The actual database ID is resolved at runtime — never hardcoded.
 
 ```typescript
-const SCRAPER_REGISTRY: { id: number; name: string; run: () => Promise<ScrapedPrice[]> }[] = [
-  { id: 10, name: 'UltraPC',      run: () => new UltraPcScraper().scrapeAllCategories()   },
-  { id: 11, name: 'NextLevel PC', run: () => new NextLevelScraper().scrapeAllCategories() },
-  { id: 13, name: 'SetupGame',    run: () => new SetupGameScraper().scrapeAllCategories() },
+export const RETAILER_SCRAPERS: RetailerScraperConfig[] = [
+  {
+    baseUrl: 'https://www.ultrapc.ma',
+    name: 'UltraPC',
+    run: (retailer_id: number) => new UltraPcScraper().scrapeAllCategories(retailer_id),
+  },
+  {
+    baseUrl: 'https://nextlevelpc.ma',
+    name: 'NextLevel PC',
+    run: (retailer_id: number) => new NextLevelScraper().scrapeAllCategories(retailer_id),
+  },
+  {
+    baseUrl: 'https://setupgame.ma',
+    name: 'SetupGame',
+    run: (retailer_id: number) => new SetupGameScraper().scrapeAllCategories(retailer_id),
+  },
 ];
 ```
 
-Each entry has a typed `run` function that returns a `Promise<ScrapedPrice[]>`. The IDs must match the actual `retailers.id` values in the database. When adding a new retailer, add its scraper here with the correct database ID.
+At session start, `session.ts` queries `SELECT id, base_url FROM retailers WHERE is_active = true` and builds a `baseUrl → id` map. Each scraper config entry is matched by normalizing both URLs to their origin (stripping paths and trailing slashes), so `https://setupgame.ma/` and `https://setupgame.ma/components` both match `https://setupgame.ma`.
+
+The `retailer_id` is passed into `scrapeAllCategories(id)` at runtime — scrapers never hardcode their own ID. This means the system works correctly on any machine regardless of what IDs the database assigned.
+
+**To add a new retailer:**
+1. Add a row to the `retailers` table via the admin panel
+2. Create a scraper class in `scraper/scrapers/`
+3. Add one entry to `RETAILER_SCRAPERS` with the retailer's `base_url`
+4. No changes to `session.ts` needed
 
 ---
 

@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Link2, X, ChevronLeft, ChevronRight, Search, Layers, List, Zap } from 'lucide-react';
+import { Link2, X, ChevronLeft, ChevronRight, Search, Layers, List, Zap, RefreshCw } from 'lucide-react';
 import {
   getUnmatchedListings, linkUnmatched, dismissUnmatched, searchComponents, getAdminRetailers,
-  getGroupedUnmatched, bulkDismissUnmatched, bulkApproveUnmatched, getErrorMessage} from '../api';
+  getGroupedUnmatched, bulkDismissUnmatched, bulkApproveUnmatched, reprocessSuggestions, getErrorMessage
+} from '../api';
 import type { UnmatchedListing, AdminComponent, AdminRetailer, CanonicalGroup } from '../api';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -45,6 +46,7 @@ export function Unmatched() {
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [confirmDismiss, setConfirmDismiss] = useState(false);
   const [confirmApprove, setConfirmApprove] = useState(false);
+  const [reprocessing, setReprocessing] = useState(false);
 
   const filtersRef = useRef({ page, retailerFilter, search });
   filtersRef.current = { page, retailerFilter, search };
@@ -229,6 +231,22 @@ export function Unmatched() {
     }
   }
 
+  async function handleReprocess() {
+    setReprocessing(true);
+    setGroupsError(null);
+    try {
+      await reprocessSuggestions();
+      setSuccessToast('✓ Recalcul lancé en arrière-plan. Actualisez dans quelques secondes.');
+      setTimeout(() => setSuccessToast(null), 5000);
+      // Reload after a short delay to pick up updated suggestions
+      setTimeout(() => loadGroups(search, retailerFilter), 3000);
+    } catch (err: unknown) {
+      setGroupsError(getErrorMessage(err));
+    } finally {
+      setReprocessing(false);
+    }
+  }
+
   function handleCreateLinkSuccess(result: CreateAndLinkResult) {
     setCreateLinkTarget(null);
     setSuccessToast(`✓ ${result.linked_count} listing${result.linked_count !== 1 ? 's' : ''} associé${result.linked_count !== 1 ? 's' : ''} à "${result.component_name}".`);
@@ -311,259 +329,282 @@ export function Unmatched() {
               <option key={r.id} value={String(r.id)}>{r.name}</option>
             ))}
           </select>
+
+          <button
+            onClick={handleReprocess}
+            disabled={reprocessing}
+            title="Recalculer toutes les suggestions (utile après ajout d'une règle)"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '5px',
+              padding: '6px 12px', fontSize: '12px',
+              background: 'var(--surface-2)', color: 'var(--text-muted)',
+              borderRadius: 'var(--radius)', border: '1px solid var(--border)',
+              cursor: reprocessing ? 'not-allowed' : 'pointer',
+              opacity: reprocessing ? 0.6 : 1,
+            }}
+          >
+            <RefreshCw size={13} style={{ animation: reprocessing ? 'spin 1s linear infinite' : 'none' }} />
+            {reprocessing ? 'Recalcul...' : 'Retraiter'}
+          </button>
         </div>
       </div>
 
       {/* Success toast */}
-      {successToast && (
-        <div style={{
-          background: 'var(--success)',
-          color: '#0f1117',
-          padding: '10px 16px',
-          borderRadius: 'var(--radius)',
-          marginBottom: '12px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          fontSize: '13px',
-          fontWeight: 500,
-        }}>
-          {successToast}
-          <button onClick={() => setSuccessToast(null)} style={{ background: 'none', color: '#0f1117', padding: '0 4px' }}>
-            <X size={14} />
-          </button>
-        </div>
-      )}
+      {
+        successToast && (
+          <div style={{
+            background: 'var(--success)',
+            color: '#0f1117',
+            padding: '10px 16px',
+            borderRadius: 'var(--radius)',
+            marginBottom: '12px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: '13px',
+            fontWeight: 500,
+          }}>
+            {successToast}
+            <button onClick={() => setSuccessToast(null)} style={{ background: 'none', color: '#0f1117', padding: '0 4px' }}>
+              <X size={14} />
+            </button>
+          </div>
+        )
+      }
 
       {error && <p className="admin-error">{error}</p>}
       {mutationError && <p className="admin-error">{mutationError}</p>}
       {groupsError && <p className="admin-error">{groupsError}</p>}
 
       {/* ── GROUPED VIEW ── */}
-      {viewMode === 'grouped' && (
-        <>
-          {/* Bulk action bar */}
-          {(selectedGroups.size > 0 || highConfidenceGroups.length > 0) && (
-            <div style={{
-              display: 'flex',
-              gap: '8px',
-              alignItems: 'center',
-              padding: '8px 12px',
-              background: 'var(--surface-2)',
-              borderRadius: 'var(--radius)',
-              marginBottom: '12px',
-              flexWrap: 'wrap',
-            }}>
-              {selectedGroups.size > 0 && (
-                <button
-                  onClick={() => setConfirmDismiss(true)}
-                  style={{ background: 'var(--danger)', color: '#fff', padding: '6px 12px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                >
-                  <X size={13} /> Ignorer {selectedGroups.size} groupe{selectedGroups.size !== 1 ? 's' : ''}
-                </button>
-              )}
-              {highConfidenceGroups.length > 0 && (
-                <button
-                  onClick={() => setConfirmApprove(true)}
-                  style={{ background: 'var(--success)', color: '#0f1117', padding: '6px 12px', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
-                >
-                  <Zap size={13} /> Approuver tout ({highConfidenceGroups.length} haute confiance)
-                </button>
-              )}
-            </div>
-          )}
+      {
+        viewMode === 'grouped' && (
+          <>
+            {/* Bulk action bar */}
+            {(selectedGroups.size > 0 || highConfidenceGroups.length > 0) && (
+              <div style={{
+                display: 'flex',
+                gap: '8px',
+                alignItems: 'center',
+                padding: '8px 12px',
+                background: 'var(--surface-2)',
+                borderRadius: 'var(--radius)',
+                marginBottom: '12px',
+                flexWrap: 'wrap',
+              }}>
+                {selectedGroups.size > 0 && (
+                  <button
+                    onClick={() => setConfirmDismiss(true)}
+                    style={{ background: 'var(--danger)', color: '#fff', padding: '6px 12px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <X size={13} /> Ignorer {selectedGroups.size} groupe{selectedGroups.size !== 1 ? 's' : ''}
+                  </button>
+                )}
+                {highConfidenceGroups.length > 0 && (
+                  <button
+                    onClick={() => setConfirmApprove(true)}
+                    style={{ background: 'var(--success)', color: '#0f1117', padding: '6px 12px', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <Zap size={13} /> Approuver tout ({highConfidenceGroups.length} haute confiance)
+                  </button>
+                )}
+              </div>
+            )}
 
-          {groupsLoading ? (
-            <p className="admin-loading">Chargement...</p>
-          ) : groups.length === 0 ? (
-            <p className="admin-empty">Aucun listing en attente{retailerFilter ? ' pour ce revendeur' : ''}.</p>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th style={{ width: '32px' }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedGroups.size === groups.length && groups.length > 0}
-                      onChange={toggleSelectAll}
-                      aria-label="Tout sélectionner"
-                      style={{ cursor: 'pointer' }}
-                    />
-                  </th>
-                  <th>Nom canonique</th>
-                  <th>Catégorie</th>
-                  <th>Revendeurs</th>
-                  <th>Prix</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {groups.map((group) => (
-                  <>
-                    <tr
-                      key={group.canonical_name}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => toggleGroup(group.canonical_name)}
-                    >
-                      <td onClick={e => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selectedGroups.has(group.canonical_name)}
-                          onChange={() => toggleSelectGroup(group.canonical_name)}
-                          aria-label={`Sélectionner ${group.canonical_name}`}
-                          style={{ cursor: 'pointer' }}
-                        />
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
-                            {expandedGroups.has(group.canonical_name) ? '▼' : '▶'}
-                          </span>
-                          <strong>{group.canonical_name}</strong>
-                          {group.brand && <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{group.brand}</span>}
-                          <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>
-                            ({group.listing_count})
-                          </span>
-                        </div>
-                      </td>
-                      <td onClick={e => e.stopPropagation()}>
-                        <ConfidenceBadge
-                          confidence={group.confidence as 'high' | 'medium' | 'low' | 'unknown'}
-                          category={group.category}
-                        />
-                      </td>
-                      <td>{group.retailer_count}</td>
-                      <td>
-                        {group.price_min !== null && group.price_max !== null
-                          ? group.price_min === group.price_max
-                            ? `${group.price_min.toLocaleString('fr-MA')} MAD`
-                            : `${group.price_min.toLocaleString('fr-MA')} – ${group.price_max.toLocaleString('fr-MA')} MAD`
-                          : '—'}
-                      </td>
-                      <td onClick={e => e.stopPropagation()}>
-                        <div className={styles.actions}>
-                          <button
-                            className={styles.linkBtn}
-                            onClick={() => setCreateLinkTarget(group)}
-                            title={group.existing_component_id ? 'Associer à l\'existant' : 'Créer et associer'}
-                            aria-label={`Associer ${group.canonical_name}`}
-                          >
-                            <Link2 size={15} />
-                            {group.existing_component_id ? 'Associer' : 'Créer'}
-                          </button>
-                          <button
-                            className={styles.dismissBtn}
-                            onClick={() => {
-                              setSelectedGroups(new Set([group.canonical_name]));
-                              setConfirmDismiss(true);
-                            }}
-                            title="Ignorer"
-                            aria-label={`Ignorer ${group.canonical_name}`}
-                          >
-                            <X size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-
-                    {/* Expanded: individual listings */}
-                    {expandedGroups.has(group.canonical_name) && group.listings.map(listing => (
-                      <tr key={listing.id} style={{ background: 'var(--surface-2)', fontSize: '13px' }}>
-                        <td />
-                        <td style={{ paddingLeft: '32px' }}>
-                          <a
-                            href={listing.product_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={styles.productLink}
-                          >
-                            {listing.scraped_name}
-                          </a>
-                        </td>
-                        <td style={{ color: 'var(--text-muted)' }}>{listing.retailer_name}</td>
-                        <td>{listing.scraped_price ? `${Number(listing.scraped_price).toLocaleString('fr-MA')} MAD` : '—'}</td>
-                        <td className={styles.date}>{new Date(listing.scraped_at).toLocaleDateString('fr-MA')}</td>
-                        <td />
-                      </tr>
-                    ))}
-                  </>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </>
-      )}
-
-      {/* ── FLAT VIEW (existing, unchanged) ── */}
-      {viewMode === 'flat' && (
-        <>
-          {loading ? <p className="admin-loading">Chargement...</p> : (
-            listings.length === 0 ? (
+            {groupsLoading ? (
+              <p className="admin-loading">Chargement...</p>
+            ) : groups.length === 0 ? (
               <p className="admin-empty">Aucun listing en attente{retailerFilter ? ' pour ce revendeur' : ''}.</p>
             ) : (
-              <>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Revendeur</th>
-                      <th>Nom scrappé</th>
-                      <th>Prix</th>
-                      <th>Date</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {listings.map((l) => (
-                      <tr key={l.id}>
-                        <td>{l.retailer_name}</td>
-                        <td>
-                          <a href={l.product_url} target="_blank" rel="noopener noreferrer" className={styles.productLink}>
-                            {l.scraped_name}
-                          </a>
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ width: '32px' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedGroups.size === groups.length && groups.length > 0}
+                        onChange={toggleSelectAll}
+                        aria-label="Tout sélectionner"
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </th>
+                    <th>Nom canonique</th>
+                    <th>Catégorie</th>
+                    <th>Revendeurs</th>
+                    <th>Prix</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {groups.map((group) => (
+                    <>
+                      <tr
+                        key={group.canonical_name}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => toggleGroup(group.canonical_name)}
+                      >
+                        <td onClick={e => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedGroups.has(group.canonical_name)}
+                            onChange={() => toggleSelectGroup(group.canonical_name)}
+                            aria-label={`Sélectionner ${group.canonical_name}`}
+                            style={{ cursor: 'pointer' }}
+                          />
                         </td>
-                        <td>{l.scraped_price ? `${Number(l.scraped_price).toLocaleString('fr-MA')} MAD` : '—'}</td>
-                        <td className={styles.date}>{new Date(l.scraped_at).toLocaleDateString('fr-MA')}</td>
                         <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+                              {expandedGroups.has(group.canonical_name) ? '▼' : '▶'}
+                            </span>
+                            <strong>{group.canonical_name}</strong>
+                            {group.brand && <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{group.brand}</span>}
+                            <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>
+                              ({group.listing_count})
+                            </span>
+                          </div>
+                        </td>
+                        <td onClick={e => e.stopPropagation()}>
+                          <ConfidenceBadge
+                            confidence={group.confidence as 'high' | 'medium' | 'low' | 'unknown'}
+                            category={group.category}
+                          />
+                        </td>
+                        <td>{group.retailer_count}</td>
+                        <td>
+                          {group.price_min !== null && group.price_max !== null
+                            ? group.price_min === group.price_max
+                              ? `${group.price_min.toLocaleString('fr-MA')} MAD`
+                              : `${group.price_min.toLocaleString('fr-MA')} – ${group.price_max.toLocaleString('fr-MA')} MAD`
+                            : '—'}
+                        </td>
+                        <td onClick={e => e.stopPropagation()}>
                           <div className={styles.actions}>
                             <button
                               className={styles.linkBtn}
-                              onClick={() => setLinkTarget(l)}
-                              title="Associer"
-                              aria-label={`Associer ${l.scraped_name}`}
+                              onClick={() => setCreateLinkTarget(group)}
+                              title={group.existing_component_id ? 'Associer à l\'existant' : 'Créer et associer'}
+                              aria-label={`Associer ${group.canonical_name}`}
                             >
-                              <Link2 size={15} /> Associer
+                              <Link2 size={15} />
+                              {group.existing_component_id ? 'Associer' : 'Créer'}
                             </button>
                             <button
                               className={styles.dismissBtn}
-                              onClick={() => handleDismiss(l.id)}
+                              onClick={() => {
+                                setSelectedGroups(new Set([group.canonical_name]));
+                                setConfirmDismiss(true);
+                              }}
                               title="Ignorer"
-                              aria-label={`Ignorer ${l.scraped_name}`}
+                              aria-label={`Ignorer ${group.canonical_name}`}
                             >
                               <X size={15} />
                             </button>
                           </div>
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
 
-                {totalPages > 1 && (
-                  <div className="admin-pagination">
-                    <button disabled={page <= 1} onClick={() => setPage(page - 1)} aria-label="Page précédente">
-                      <ChevronLeft size={14} />
-                    </button>
-                    <span>{page} / {totalPages} ({total} total)</span>
-                    <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} aria-label="Page suivante">
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
-                )}
-              </>
-            )
-          )}
-        </>
-      )}
+                      {/* Expanded: individual listings */}
+                      {expandedGroups.has(group.canonical_name) && group.listings.map(listing => (
+                        <tr key={listing.id} style={{ background: 'var(--surface-2)', fontSize: '13px' }}>
+                          <td />
+                          <td style={{ paddingLeft: '32px' }}>
+                            <a
+                              href={listing.product_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={styles.productLink}
+                            >
+                              {listing.scraped_name}
+                            </a>
+                          </td>
+                          <td style={{ color: 'var(--text-muted)' }}>{listing.retailer_name}</td>
+                          <td>{listing.scraped_price ? `${Number(listing.scraped_price).toLocaleString('fr-MA')} MAD` : '—'}</td>
+                          <td className={styles.date}>{new Date(listing.scraped_at).toLocaleDateString('fr-MA')}</td>
+                          <td />
+                        </tr>
+                      ))}
+                    </>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </>
+        )
+      }
+
+      {/* ── FLAT VIEW (existing, unchanged) ── */}
+      {
+        viewMode === 'flat' && (
+          <>
+            {loading ? <p className="admin-loading">Chargement...</p> : (
+              listings.length === 0 ? (
+                <p className="admin-empty">Aucun listing en attente{retailerFilter ? ' pour ce revendeur' : ''}.</p>
+              ) : (
+                <>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Revendeur</th>
+                        <th>Nom scrappé</th>
+                        <th>Prix</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {listings.map((l) => (
+                        <tr key={l.id}>
+                          <td>{l.retailer_name}</td>
+                          <td>
+                            <a href={l.product_url} target="_blank" rel="noopener noreferrer" className={styles.productLink}>
+                              {l.scraped_name}
+                            </a>
+                          </td>
+                          <td>{l.scraped_price ? `${Number(l.scraped_price).toLocaleString('fr-MA')} MAD` : '—'}</td>
+                          <td className={styles.date}>{new Date(l.scraped_at).toLocaleDateString('fr-MA')}</td>
+                          <td>
+                            <div className={styles.actions}>
+                              <button
+                                className={styles.linkBtn}
+                                onClick={() => setLinkTarget(l)}
+                                title="Associer"
+                                aria-label={`Associer ${l.scraped_name}`}
+                              >
+                                <Link2 size={15} /> Associer
+                              </button>
+                              <button
+                                className={styles.dismissBtn}
+                                onClick={() => handleDismiss(l.id)}
+                                title="Ignorer"
+                                aria-label={`Ignorer ${l.scraped_name}`}
+                              >
+                                <X size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {totalPages > 1 && (
+                    <div className="admin-pagination">
+                      <button disabled={page <= 1} onClick={() => setPage(page - 1)} aria-label="Page précédente">
+                        <ChevronLeft size={14} />
+                      </button>
+                      <span>{page} / {totalPages} ({total} total)</span>
+                      <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} aria-label="Page suivante">
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  )}
+                </>
+              )
+            )}
+          </>
+        )
+      }
 
       {/* ── Flat view link modal (existing, unchanged) ── */}
       <Modal
@@ -625,27 +666,31 @@ export function Unmatched() {
       />
 
       {/* ── Confirm bulk dismiss ── */}
-      {confirmDismiss && (
-        <ConfirmDialog
-          title="Ignorer les listings"
-          message={`Ignorer ${selectedGroups.size} groupe${selectedGroups.size !== 1 ? 's' : ''} (${groups.filter(g => selectedGroups.has(g.canonical_name)).reduce((s, g) => s + g.listing_count, 0)} listings) ?`}
-          confirmLabel="Ignorer"
-          danger
-          onConfirm={handleBulkDismiss}
-          onCancel={() => setConfirmDismiss(false)}
-        />
-      )}
+      {
+        confirmDismiss && (
+          <ConfirmDialog
+            title="Ignorer les listings"
+            message={`Ignorer ${selectedGroups.size} groupe${selectedGroups.size !== 1 ? 's' : ''} (${groups.filter(g => selectedGroups.has(g.canonical_name)).reduce((s, g) => s + g.listing_count, 0)} listings) ?`}
+            confirmLabel="Ignorer"
+            danger
+            onConfirm={handleBulkDismiss}
+            onCancel={() => setConfirmDismiss(false)}
+          />
+        )
+      }
 
       {/* ── Confirm bulk approve ── */}
-      {confirmApprove && (
-        <ConfirmDialog
-          title="Approuver les correspondances"
-          message={`Associer ${highConfidenceGroups.reduce((s, g) => s + g.listing_count, 0)} listings à leurs composants existants (${highConfidenceGroups.length} groupes haute confiance) ?`}
-          confirmLabel="Approuver"
-          onConfirm={handleBulkApprove}
-          onCancel={() => setConfirmApprove(false)}
-        />
-      )}
-    </div>
+      {
+        confirmApprove && (
+          <ConfirmDialog
+            title="Approuver les correspondances"
+            message={`Associer ${highConfidenceGroups.reduce((s, g) => s + g.listing_count, 0)} listings à leurs composants existants (${highConfidenceGroups.length} groupes haute confiance) ?`}
+            confirmLabel="Approuver"
+            onConfirm={handleBulkApprove}
+            onCancel={() => setConfirmApprove(false)}
+          />
+        )
+      }
+    </div >
   );
 }

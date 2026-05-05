@@ -42,7 +42,11 @@ The main catalog management page.
 - Auto-generated slug preview (updates as you type name/brand)
 - Zod validation on submit — errors shown inline
 
-**Delete behavior:** A component can only be deleted if it has no linked prices or scraper mappings. If it does, the API returns HTTP 409 and the UI shows an explanation. Use "Deactivate" instead to hide it from the public without losing price history.
+**Delete behavior:** A component can only be deleted if it has no linked prices. If it does, the API returns HTTP 409 and the UI shows an explanation. Use "Deactivate" instead to hide it from the public without losing price history.
+
+**Activate/Deactivate toggle:** The eye icon toggles `is_active`. Deactivated components are hidden from the public API but all their data is preserved.
+
+**Unlink button:** The chain-break icon removes all scraper mappings and prices for a component, resets its linked unmatched listings back to "pending" status, and deactivates the component. Use this to send a component back to Non associés for re-review — for example, if the auto-catalog builder created a component with the wrong name or specs.
 
 ### Bulk Import
 
@@ -82,6 +86,12 @@ Products that the scraper found but couldn't match to any catalog component. The
 
 **Table columns:** Retailer, scraped product name, price, URL, date scraped.
 
+**Grouped view:** The default view groups listings by canonical name (brand + model stripped of color/noise tokens). Each group shows the AI-computed category suggestion with a confidence badge (high/medium/low/unknown). High-confidence groups with an existing catalog match can be bulk-approved in one click.
+
+**"Retraiter" button:** Forces recomputation of all suggestion categories using the latest keyword rules. Returns immediately (202) — processing runs in the background. Use this after adding a new keyword rule to see the updated categories.
+
+**"Créer" button:** Opens a form pre-filled with the suggested name, brand, and category. Creates a new catalog component and links all listings in the group to it atomically.
+
 **"Link" button:** Opens a modal with a searchable component picker. Select the matching component → creates a `scraper_mappings` entry → future scrapes will automatically match this product.
 
 **"Dismiss" button:** Marks the listing as dismissed. Use this for products that are not PC components (accessories, peripherals, bundles).
@@ -117,3 +127,5 @@ API call fails with 401
 ```
 
 This is transparent to the admin — they never see a "session expired" error during normal use.
+
+The `getErrorMessage(err)` helper in `api.ts` extracts a human-readable message from any thrown value — handles both `ApiError` plain objects (from the API client) and standard `Error` instances. All error handlers in the admin panel use this helper to ensure the actual backend error message is always shown instead of a generic fallback.

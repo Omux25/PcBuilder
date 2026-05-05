@@ -474,6 +474,32 @@ Soft-delete a component: sets `is_active = false`. The component is hidden from 
 - `400` — id is not a positive integer
 - `404` — component not found
 
+### `POST /api/admin/components/:id/activate`
+
+Re-activate a previously deactivated component. Sets `is_active = true`.
+
+**Response 200:**
+```json
+{ "message": "Component 42 activated successfully." }
+```
+
+**Errors:**
+- `400` — id is not a positive integer
+- `404` — component not found
+
+### `POST /api/admin/components/:id/unlink`
+
+Removes all scraper mappings and prices for a component, resets linked unmatched listings back to `pending` status, and deactivates the component. Use this to send a component back to Non associés for re-review without losing the component record.
+
+**Response 200:**
+```json
+{ "message": "Component 42 unlinked. 3 listing(s) reset to pending.", "listings_reset": 3 }
+```
+
+**Errors:**
+- `400` — id is not a positive integer
+- `404` — component not found
+
 ### `POST /api/admin/components/import`
 
 Bulk import from CSV or JSON.
@@ -566,6 +592,103 @@ Link an unmatched listing to a catalog component. Creates a `scraper_mappings` e
 ### `POST /api/admin/unmatched-listings/:id/dismiss`
 
 Mark a listing as dismissed.
+
+---
+
+### `GET /api/admin/unmatched-listings/grouped`
+
+Returns unmatched listings grouped by canonical name, with AI-computed category suggestions and confidence scores. Used by the grouped view in the admin panel.
+
+**Query parameters:** `search`, `retailer_id`
+
+**Response 200:**
+```json
+{
+  "groups": [
+    {
+      "canonical_name": "Lian Li Galahad 240",
+      "brand": "Lian Li",
+      "category": "cooling",
+      "confidence": "medium",
+      "listing_count": 2,
+      "retailer_count": 1,
+      "price_min": 1790.00,
+      "price_max": 1790.00,
+      "existing_component_id": null,
+      "listings": [...]
+    }
+  ],
+  "total_groups": 731,
+  "total_listings": 807
+}
+```
+
+### `POST /api/admin/unmatched-listings/reprocess`
+
+Triggers suggestion pre-processing for all pending listings. Returns **202 Accepted** immediately — processing runs in the background to avoid HTTP timeout on large datasets (800+ listings).
+
+**Response 202:**
+```json
+{ "message": "Reprocessing started in background" }
+```
+
+### `POST /api/admin/unmatched-listings/create-and-link`
+
+Creates a new catalog component and links all listings in a canonical group to it in one atomic operation.
+
+**Request body:**
+```json
+{
+  "name": "Lian Li Galahad 240",
+  "brand": "Lian Li",
+  "category": "cooling",
+  "specs": { "tdp": null },
+  "listing_ids": [42, 43]
+}
+```
+
+**Response 200:**
+```json
+{ "component_id": 105, "component_slug": "lian-li-galahad-240", "linked_count": 2 }
+```
+
+**Errors:**
+- `400` — missing required fields or category-specific validation failed
+- `409` — a component with the same name + category + brand already exists
+
+---
+
+### `GET /api/admin/keyword-rules`
+
+List all keyword rules (admin-created + built-in) with live match counts.
+
+### `POST /api/admin/keyword-rules`
+
+Create a new admin keyword rule.
+
+**Request body:**
+```json
+{ "keyword": "Y70", "match_type": "word", "category": "case" }
+```
+
+Match types: `word` (whole word), `contains` (substring), `starts_with`, `number_before` (digits immediately before keyword, e.g. "240ML").
+
+**Response 201:** Created rule object.
+
+### `DELETE /api/admin/keyword-rules/:id`
+
+Delete an admin rule. Returns `403` for built-in rules.
+
+### `POST /api/admin/keyword-rules/preview`
+
+Preview how many pending listings a rule would match before saving it.
+
+**Request body:** `{ "keyword": "Y70", "match_type": "word" }`
+
+**Response 200:**
+```json
+{ "match_count": 9, "sample_names": ["Hyte Y70 Blanc", "Hyte Y70 Noir", ...] }
+```
 
 ---
 

@@ -1,6 +1,6 @@
 # Database Reference
 
-There are **12 application tables** in the PostgreSQL database, plus the internal `_migrations` tracking table. Migration files are in `apps/backend/src/db/migrations/` (001–022).
+There are **12 application tables** in the PostgreSQL database, plus the internal `_migrations` tracking table. Migration files are in `apps/backend/src/db/migrations/` (001–026).
 
 The 12 tables are:
 1. `components` — all PC components (polymorphic)
@@ -71,7 +71,7 @@ Moroccan e-commerce sites that sell PC components.
 |---|---|---|
 | `id` | SERIAL PK | |
 | `name` | VARCHAR(100) UNIQUE | e.g. "UltraPC" |
-| `base_url` | VARCHAR(255) | e.g. "https://ultrapc.ma" |
+| `base_url` | VARCHAR(255) UNIQUE | e.g. "https://ultrapc.ma" — UNIQUE constraint (migration 025) enables reliable scraper-to-retailer matching by domain |
 | `logo_url` | VARCHAR(500) | |
 | `country` | VARCHAR(50) | e.g. "MA" |
 | `is_active` | BOOLEAN DEFAULT true | Inactive = skipped by scheduler |
@@ -80,7 +80,7 @@ Moroccan e-commerce sites that sell PC components.
 | `last_scrape_status` | VARCHAR(20) | `SUCCESS`, `PARTIAL`, or `FAILED` |
 | `notes` | TEXT | Admin notes |
 
-Active retailers: UltraPC (id=10), NextLevel (id=11), SetupGame (id=13)
+Indexes: `is_active`, `base_url` (unique)
 
 ---
 

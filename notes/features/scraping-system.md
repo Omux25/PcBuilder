@@ -65,15 +65,19 @@ Every scraper returns an array of `ScrapedPrice` objects:
 
 ```typescript
 interface ScrapedPrice {
-  retailer_id:  number;   // FK → retailers.id
-  price:        number;   // price in MAD
-  in_stock:     boolean;
-  product_url:  string;   // direct link to the product page
-  product_name?: string;  // optional scraped product title (used for DNA matching)
+  retailer_id:          number;   // FK → retailers.id — passed in at runtime, never hardcoded
+  price:                number;   // price in MAD
+  in_stock:             boolean;
+  product_url:          string;   // direct link to the product page
+  product_name?:        string;   // optional scraped product title (used for DNA matching)
+  product_description?: string;   // optional short description — fallback for variant extraction
+                                  // when product name lacks detail (e.g. VRAM size)
 }
 ```
 
-The `product_name` field is the raw scraped product title — it's used by the DNA matcher to find the corresponding catalog component.
+The `retailer_id` is passed into `scrapeAllCategories(retailer_id)` at runtime by the session — scrapers never hardcode their own ID. This means the system works on any machine regardless of what IDs the database assigned.
+
+HTML entities in scraped names (e.g. `&#8211;` → `–`, `&Prime;` → `″`) are decoded by the aggregator before storing in `unmatched_listings`.
 
 ---
 
@@ -85,15 +89,7 @@ After every scrape session, three steps run automatically:
 Runs the DNA matcher against all pending `unmatched_listings`. For each listing where a confident match is found (score = 1.0, or 0.8 for case/cooling), it creates a `scraper_mapping` entry so the next scrape prices it correctly.
 
 ### Step 2 — buildFromUnmatched()
-For listings that still couldn't be matched, extracts structured specs from the product name and creates a new catalog entry. Supported categories:
-- **CPU** — socket inferred from model family (AM4/AM5/LGA1700/LGA1851)
-- **GPU** — length_mm and TDP estimated from model tier, VRAM from name
-- **RAM** — DDR type, frequency, capacity extracted from name
-- **Storage** — capacity and interface type extracted from name
-- **Motherboard** — socket and RAM type inferred from chipset
-- **PSU** — wattage extracted from name (requires explicit wattage + efficiency keyword)
-- **Cooling** — AIO size extracted from name; air coolers matched by brand/model keywords
-- **Case** — form factor inferred from name (ATX/mATX/ITX)
+For listings that still couldn't be matched, extracts structured specs from the product name and creates a new catalog entry. Before calling `inferCategory()`, it checks admin keyword rules — so if an admin has defined "Y70 → case", that rule takes priority over the built-in category detection. Supported categories: CPU, GPU, RAM, storage, motherboard, PSU, cooling, case, fan, thermal paste.
 
 ### Step 3 — autoMap() pass 2
 Runs the DNA matcher again to link listings to the newly created entries.
