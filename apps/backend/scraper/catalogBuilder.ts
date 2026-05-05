@@ -182,7 +182,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         if (specs) {
           const rows = await sql`
             INSERT INTO components (slug, name, brand, category, socket, supported_ram_types, max_ram_frequency, is_active)
-            VALUES (${slug}, ${cleanedName}, ${brand}, 'motherboard', ${specs.socket}, ${specs.supported_ram_types}, ${specs.max_ram_frequency}, true)
+            VALUES (${slug}, ${cleanedName}, ${brand}, 'motherboard', ${specs.socket}, ${specs.supported_ram_types as string[] | null}, ${specs.max_ram_frequency}, true)
             RETURNING id
           ` as { id: number }[];
           newId = rows[0]?.id;
