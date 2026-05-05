@@ -87,18 +87,25 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
 
   for (const listing of pending) {
     const scrapedName = decodeHtml(listing.scraped_name);
-    const category = resolveCategory(scrapedName);
-
-    if (!category) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
 
     // Strip category prefix before extracting brand/name
     // e.g. "Watercooler – Lian Li Galahad 240" → "Lian Li Galahad 240"
-    const nameForExtraction = scrapedName.replace(/^[^\u2013-]*[\u2013-]\s+/, '').trim();
+    // e.g. "DeepCool – Matrexx 55 V3" → "Matrexx 55 V3" (brand extracted from prefix)
+    const prefixMatch = scrapedName.match(/^([^–\-]+)[–\-]\s+(.+)$/);
+    const nameForExtraction = prefixMatch ? prefixMatch[2].trim() : scrapedName;
+    // Use prefix as brand only if it's a known brand, not a category word like "Boitier" or "Watercooler"
+    const CATEGORY_WORDS = new Set(['boitier', 'boîtier', 'watercooler', 'watercooling', 'processeur', 'carte graphique', 'alimentation', 'stockage', 'memoire', 'mémoire']);
+    const prefixWord = prefixMatch ? prefixMatch[1].trim().toLowerCase() : '';
+    const prefixAsBrand = (prefixMatch && !CATEGORY_WORDS.has(prefixWord))
+      ? (extractBrand(prefixMatch[1].trim()) ?? null)
+      : null;
 
-    const brand = extractBrand(nameForExtraction);
+    // Resolve category using both the full name AND the stripped name
+    const category = resolveCategory(scrapedName) ?? resolveCategory(nameForExtraction);
+    if (!category) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
+
+    const brand = prefixAsBrand ?? extractBrand(nameForExtraction);
     const cleanedName = cleanName(nameForExtraction, brand);
-
-    // DNA dedup
     const dnaMatch = existingComponents.find(c => {
       if (c.category !== category) return false;
       const { score } = scoreDnaMatch(nameForExtraction, `${c.brand ?? ''} ${c.name}`, category);

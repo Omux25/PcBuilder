@@ -79,6 +79,16 @@ export function inferCategory(name: string): ComponentCategory | null {
   if (n.match(/\b(boitier|boîtier|case|tower|mid.?tower|full.?tower|mini.?tower)\b/)) return 'case';
   // Corsair AIR series, Montech Air series — these are cases, not coolers
   if (n.match(/\b(corsair\s*air|montech\s*air|fractal\s*pop\s*air|fractal\s*define\s*air)\b/)) return 'case';
+  // Brand-specific case model lines not caught by generic keywords
+  if (n.match(/\b(lancool|meshify|define\s*r|define\s*s|define\s*c|torrent|north|ridge|terra)\b/)) return 'case';
+  if (n.match(/\b(carbide|obsidian|crystal|spec-\d|spec\s*omega|4000[dx]|5000[dx]|icue\s*\d{4})\b/)) return 'case';
+  if (n.match(/\b(matrexx|deepcool\s*cc|cc\d{3,4}|ch\d{3,4}|cg\d{3,4})\b/)) return 'case';
+  if (n.match(/\b(divider|view\s*\d{3}|level\s*20|s\d{3}|a\d{3}\s*argb)\b/) &&
+    !n.match(/\b(cpu|gpu|ram|ssd|nvme|psu|alimentation)\b/)) return 'case';
+  if (n.match(/\b(mc-[a-z0-9]+|mcart|mcorb|warship|stardust|elite\s*rainbow)\b/) &&
+    !n.match(/\b(cpu|gpu|ram|ssd|nvme|psu|cooler|ventirad)\b/)) return 'case';
+  if (n.match(/\b(h[5-9]\s*(flow|elite|elite\s*rgb)?|h\d{3}\s*(flow|elite)?)\b/) &&
+    n.match(/\b(nzxt)\b/)) return 'case';
 
   // Thermal paste — checked before fan (some paste names contain "thermal" which could confuse)
   if (n.match(/\b(kryonaut|conductonaut|hydronaut|aeronaut|duronaut|carbonaut|kryosheet)\b/)) return 'thermal_paste';
@@ -113,6 +123,7 @@ export function extractBrand(name: string): string {
     'Acer', 'HP', 'Toshiba', 'Patriot', 'Klevv', 'Geil', 'Mushkin',
     'FSP', 'Super Flower', 'XPG', 'Cougar', 'Chieftec', 'LC Power',
     '1stPlayer', 'Kolink', 'Sharkoon', 'BitFenix',
+    'Mars Gaming', 'M.RED', 'Enermax', 'Xigmatek', 'Montech', 'Cougar',
   ];
 
   for (const brand of BRANDS) {
