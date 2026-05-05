@@ -91,13 +91,17 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
 
     if (!category) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
 
-    const brand = extractBrand(scrapedName);
-    const cleanedName = cleanName(scrapedName, brand);
+    // Strip category prefix before extracting brand/name
+    // e.g. "Watercooler – Lian Li Galahad 240" → "Lian Li Galahad 240"
+    const nameForExtraction = scrapedName.replace(/^[^\u2013-]*[\u2013-]\s+/, '').trim();
+
+    const brand = extractBrand(nameForExtraction);
+    const cleanedName = cleanName(nameForExtraction, brand);
 
     // DNA dedup
     const dnaMatch = existingComponents.find(c => {
       if (c.category !== category) return false;
-      const { score } = scoreDnaMatch(scrapedName, `${c.brand ?? ''} ${c.name}`, category);
+      const { score } = scoreDnaMatch(nameForExtraction, `${c.brand ?? ''} ${c.name}`, category);
       return score >= 1.0;
     });
 
@@ -124,7 +128,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
       let newId: number | null = null;
 
       if (category === 'cpu') {
-        const specs = extractCpuSpecs(scrapedName);
+        const specs = extractCpuSpecs(nameForExtraction);
         if (specs) {
           const rows = await sql`
             INSERT INTO components (slug, name, brand, category, socket, tdp, is_active)
@@ -134,7 +138,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
           newId = rows[0]?.id;
         }
       } else if (category === 'gpu') {
-        const specs = extractGpuSpecs(scrapedName);
+        const specs = extractGpuSpecs(nameForExtraction);
         const rows = await sql`
           INSERT INTO components (slug, name, brand, category, length_mm, tdp, is_active)
           VALUES (${slug}, ${cleanedName}, ${brand}, 'gpu', ${specs.length_mm}, ${specs.tdp}, true)
@@ -142,7 +146,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         ` as { id: number }[];
         newId = rows[0]?.id;
       } else if (category === 'ram') {
-        const specs = extractRamSpecs(scrapedName);
+        const specs = extractRamSpecs(nameForExtraction);
         if (specs) {
           const rows = await sql`
             INSERT INTO components (slug, name, brand, category, ram_type, frequency_mhz, is_active)
@@ -152,7 +156,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
           newId = rows[0]?.id;
         }
       } else if (category === 'storage') {
-        const specs = extractStorageSpecs(scrapedName);
+        const specs = extractStorageSpecs(nameForExtraction);
         if (specs) {
           const rows = await sql`
             INSERT INTO components (slug, name, brand, category, is_active)
@@ -162,7 +166,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
           newId = rows[0]?.id;
         }
       } else if (category === 'motherboard') {
-        const specs = extractMotherboardSpecs(scrapedName);
+        const specs = extractMotherboardSpecs(nameForExtraction);
         if (specs) {
           const rows = await sql`
             INSERT INTO components (slug, name, brand, category, socket, supported_ram_types, max_ram_frequency, is_active)
@@ -172,7 +176,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
           newId = rows[0]?.id;
         }
       } else if (category === 'psu') {
-        const specs = extractPsuSpecs(scrapedName);
+        const specs = extractPsuSpecs(nameForExtraction);
         if (specs) {
           const rows = await sql`
             INSERT INTO components (slug, name, brand, category, wattage, is_active)
@@ -182,17 +186,16 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
           newId = rows[0]?.id;
         }
       } else if (category === 'cooling') {
-        const specs = extractCoolingSpecs(scrapedName);
-        if (specs) {
-          const rows = await sql`
-            INSERT INTO components (slug, name, brand, category, tdp, is_active)
-            VALUES (${slug}, ${cleanedName}, ${brand}, 'cooling', ${specs.tdp}, true)
-            RETURNING id
-          ` as { id: number }[];
-          newId = rows[0]?.id;
-        }
+        const specs = extractCoolingSpecs(nameForExtraction);
+        // Create cooling component even if specs can't be extracted — tdp is optional
+        const rows = await sql`
+          INSERT INTO components (slug, name, brand, category, tdp, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'cooling', ${specs?.tdp ?? null}, true)
+          RETURNING id
+        ` as { id: number }[];
+        newId = rows[0]?.id;
       } else if (category === 'case') {
-        const specs = extractCaseSpecs(scrapedName);
+        const specs = extractCaseSpecs(nameForExtraction);
         const rows = await sql`
           INSERT INTO components (slug, name, brand, category, max_gpu_length_mm, is_active)
           VALUES (${slug}, ${cleanedName}, ${brand}, 'case', ${specs.max_gpu_length_mm}, true)
@@ -200,7 +203,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         ` as { id: number }[];
         newId = rows[0]?.id;
       } else if (category === 'fan') {
-        const specs = extractFanSpecs(scrapedName);
+        const specs = extractFanSpecs(nameForExtraction);
         const rows = await sql`
           INSERT INTO components (slug, name, brand, category, size_mm, rgb, pack_size, is_active)
           VALUES (${slug}, ${cleanedName}, ${brand}, 'fan', ${specs.size_mm}, ${specs.rgb}, ${specs.pack_size}, true)
@@ -208,7 +211,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         ` as { id: number }[];
         newId = rows[0]?.id;
       } else if (category === 'thermal_paste') {
-        const specs = extractThermalPasteSpecs(scrapedName);
+        const specs = extractThermalPasteSpecs(nameForExtraction);
         const rows = await sql`
           INSERT INTO components (slug, name, brand, category, weight_grams, paste_type, is_active)
           VALUES (${slug}, ${cleanedName}, ${brand}, 'thermal_paste', ${specs.weight_grams}, ${specs.paste_type}, true)

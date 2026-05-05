@@ -241,6 +241,9 @@ export const getGroupedUnmatched = (params: Record<string, string> = {}) => {
 export const reprocessSuggestions = () =>
   request<{ processed: number; skipped: number }>('/admin/unmatched-listings/reprocess', { method: 'POST' });
 
+export const autoBuildCatalog = () =>
+  request<{ message: string }>('/admin/unmatched-listings/auto-build', { method: 'POST' });
+
 export const bulkDismissUnmatched = (listingIds: number[]) =>
   request<{ dismissed: number; skipped: number }>('/admin/unmatched-listings/bulk-dismiss', {
     method: 'POST',

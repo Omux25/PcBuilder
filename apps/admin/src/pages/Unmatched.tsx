@@ -236,10 +236,9 @@ export function Unmatched() {
     setGroupsError(null);
     try {
       await reprocessSuggestions();
-      setSuccessToast('✓ Recalcul lancé en arrière-plan. Actualisez dans quelques secondes.');
-      setTimeout(() => setSuccessToast(null), 5000);
-      // Reload after a short delay to pick up updated suggestions
-      setTimeout(() => loadGroups(search, retailerFilter), 3000);
+      setSuccessToast('✓ Recalcul et création automatique lancés. La liste se mettra à jour dans ~15 secondes.');
+      setTimeout(() => setSuccessToast(null), 15000);
+      setTimeout(() => loadGroups(search, retailerFilter), 15000);
     } catch (err: unknown) {
       setGroupsError(getErrorMessage(err));
     } finally {
@@ -333,7 +332,7 @@ export function Unmatched() {
           <button
             onClick={handleReprocess}
             disabled={reprocessing}
-            title="Recalculer toutes les suggestions (utile après ajout d'une règle)"
+            title="Recalculer les catégories et créer automatiquement les composants reconnus"
             style={{
               display: 'flex', alignItems: 'center', gap: '5px',
               padding: '6px 12px', fontSize: '12px',
@@ -344,7 +343,7 @@ export function Unmatched() {
             }}
           >
             <RefreshCw size={13} style={{ animation: reprocessing ? 'spin 1s linear infinite' : 'none' }} />
-            {reprocessing ? 'Recalcul...' : 'Retraiter'}
+            {reprocessing ? 'Traitement...' : 'Retraiter'}
           </button>
         </div>
       </div>
