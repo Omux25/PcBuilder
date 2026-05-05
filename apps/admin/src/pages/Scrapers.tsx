@@ -2,8 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Play, PlayCircle, RefreshCw, Download, Trash2 } from 'lucide-react';
 import {
   getAdminRetailers, getAdminLogs, runScraper, runAllScrapers,
-  getScraperStatus, updateAdminRetailer, clearAdminLogs,
-} from '../api';
+  getScraperStatus, updateAdminRetailer, clearAdminLogs, getErrorMessage} from '../api';
 import type { AdminRetailer } from '../api';
 import type { LogEntry } from '@shared/types';
 import styles from './Scrapers.module.css';
@@ -136,7 +135,7 @@ export function Scrapers() {
     } catch (err: unknown) {
       await syncStatus();
       const apiErr = err as { status?: number };
-      const msg = err instanceof Error ? err.message : String((err as { message?: string }).message ?? 'Error');
+      const msg = getErrorMessage(err);
       if (apiErr.status !== 409 && !msg.includes('already running')) {
         setMutationError(msg);
       }
@@ -152,7 +151,7 @@ export function Scrapers() {
     } catch (err: unknown) {
       const isRunning = await syncStatus();
       const apiErr = err as { status?: number };
-      const msg = err instanceof Error ? err.message : String((err as { message?: string }).message ?? 'Error');
+      const msg = getErrorMessage(err);
       if (apiErr.status === 409 || msg.includes('already running')) {
         if (isRunning) startPolling();
       } else {

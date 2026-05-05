@@ -32,7 +32,7 @@ keywordRulesRouter.use('/*', authMiddleware);
  */
 async function runAutoProcessingPipeline(): Promise<void> {
     try {
-        await runSuggestionPreprocessing();
+        await runSuggestionPreprocessing(true); // force=true: new rule must apply to all existing listings
         await buildFromUnmatched();
     } catch (err) {
         console.error('[KEYWORD-RULES] Auto-processing pipeline failed:', err);

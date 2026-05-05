@@ -21,6 +21,7 @@ import {
   updateComponent,
   deleteComponent,
   deactivateComponent,
+  unlinkComponent,
 } from '../../services/componentService.js';
 import { logActivity } from '../../services/adminService.js';
 import { AppError } from '../../utils/errors.js';
@@ -28,6 +29,7 @@ import { componentSchemas } from '../../schemas/componentSchemas.js';
 import type { ComponentInput } from '../../schemas/componentSchemas.js';
 import type { AdminEnv } from './types.js';
 import { parseId } from './types.js';
+import { runSuggestionPreprocessing } from '../../services/suggestionPreprocessor.js';
 
 const adminComponentsRouter = new Hono<AdminEnv>();
 
@@ -159,6 +161,63 @@ adminComponentsRouter.post('/:id/deactivate', async (c) => {
   }
 });
 
+// ── POST /api/admin/components/:id/activate ───────────────────────────────────
+
+adminComponentsRouter.post('/:id/activate', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (id === null) {
+    return c.json({ error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } }, 400);
+  }
+
+  const admin = c.get('admin') as { id: number } | undefined;
+  const sql = (await import('../../db/index.js')).getSql();
+
+  const rows = await sql`
+    UPDATE components SET is_active = true, updated_at = NOW()
+    WHERE id = ${id}
+    RETURNING name
+  ` as { name: string }[];
+
+  if (rows.length === 0) {
+    return c.json({ error: { code: 'COMPONENT_NOT_FOUND', message: `Component ${id} not found` } }, 404);
+  }
+
+  if (admin?.id) {
+    await logActivity(admin.id, 'component_activated', 'component', id, { name: rows[0].name });
+  }
+
+  return c.json({ message: `Component ${id} activated successfully.` });
+});
+
+// ── POST /api/admin/components/:id/unlink ─────────────────────────────────────
+// Removes all scraper mappings and prices, resets linked unmatched listings
+// back to 'pending', and deactivates the component.
+// Use this to send a component back to Non associés for re-review.
+
+adminComponentsRouter.post('/:id/unlink', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (id === null) {
+    return c.json({ error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } }, 400);
+  }
+
+  const admin = c.get('admin') as { id: number } | undefined;
+
+  try {
+    const result = await unlinkComponent(id);
+
+    if (admin?.id) {
+      await logActivity(admin.id, 'component_unlinked', 'component', id, result);
+    }
+
+    return c.json({ message: `Component ${id} unlinked. ${result.listings_reset} listing(s) reset to pending.`, ...result });
+  } catch (err: unknown) {
+    if (err instanceof AppError) {
+      return c.json(err.toJSON(), err.statusCode);
+    }
+    throw err;
+  }
+});
+
 // ── POST /api/admin/components/import ────────────────────────────────────────
 
 adminComponentsRouter.post('/import', async (c) => {
@@ -270,6 +329,12 @@ adminComponentsRouter.post('/import', async (c) => {
       skipped: results.skipped,
       failed: results.failed,
     });
+  }
+
+  // Fire-and-forget: reprocess suggestions so newly imported components
+  // can be matched against existing unmatched listings immediately.
+  if (results.imported > 0) {
+    runSuggestionPreprocessing(true).catch(() => { });
   }
 
   return c.json(results);

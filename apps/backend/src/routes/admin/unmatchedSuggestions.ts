@@ -12,12 +12,14 @@
  */
 
 import { Hono } from 'hono';
+import { sql as bunSql } from 'bun';
 import { getSql } from '../../db/index.js';
 import { authMiddleware } from '../../middleware/auth.js';
 import { logActivity } from '../../services/adminService.js';
 import { runSuggestionPreprocessing } from '../../services/suggestionPreprocessor.js';
 import { componentSchemas } from '../../schemas/componentSchemas.js';
 import { getUniqueSlug } from '../../services/slugService.js';
+import { logger } from '../../../scraper/utils/logger.js';
 import type { AdminEnv } from './types.js';
 import { parseId } from './types.js';
 
@@ -166,7 +168,7 @@ unmatchedSuggestionsRouter.get('/grouped', async (c) => {
 // Requirements: 4.4
 
 unmatchedSuggestionsRouter.post('/reprocess', async (c) => {
-    const result = await runSuggestionPreprocessing();
+    const result = await runSuggestionPreprocessing(true); // force=true: reprocess all, not just stale
     return c.json(result);
 });
 
@@ -253,7 +255,7 @@ unmatchedSuggestionsRouter.post('/bulk-approve', async (c) => {
     WHERE us.confidence = 'high'
       AND us.existing_component_id IS NOT NULL
       AND ul.status = 'pending'
-      AND us.canonical_name = ANY(${canonicalNames as string[]})
+      AND us.canonical_name IN ${bunSql(canonicalNames)}
   `) as {
         canonical_name: string;
         existing_component_id: number;
@@ -295,7 +297,7 @@ unmatchedSuggestionsRouter.post('/bulk-approve', async (c) => {
     });
 
     if (admin?.id) {
-        await logActivity(admin.id, 'bulk_approve', 'unmatched_listings', null, {
+        await logActivity(admin.id, 'bulk_approve', 'unmatched_listings', undefined, {
             approved_groups,
             linked_listings,
         });
@@ -377,7 +379,7 @@ unmatchedSuggestionsRouter.post('/create-and-link', async (c) => {
         const listings = (await sql`
       SELECT id, retailer_id, product_url, scraped_name
       FROM unmatched_listings
-      WHERE id = ANY(${validListingIds as number[]}) AND status = 'pending'
+      WHERE id IN ${bunSql(validListingIds)} AND status = 'pending'
     `) as { id: number; retailer_id: number; product_url: string; scraped_name: string }[];
 
         await sql.begin(async (tx) => {
@@ -406,7 +408,7 @@ unmatchedSuggestionsRouter.post('/create-and-link', async (c) => {
         }
 
         // Fire-and-forget: refresh suggestions for remaining pending listings
-        runSuggestionPreprocessing().catch(() => { });
+        runSuggestionPreprocessing().catch((err) => logger.error(`[SUGGESTIONS] Background reprocessing failed: ${err instanceof Error ? err.message : String(err)}`));
 
         return c.json({
             component_id: existing_component_id,
@@ -443,7 +445,7 @@ unmatchedSuggestionsRouter.post('/create-and-link', async (c) => {
     const listings = (await sql`
     SELECT id, retailer_id, product_url, scraped_name
     FROM unmatched_listings
-    WHERE id = ANY(${validListingIds as number[]}) AND status = 'pending'
+    WHERE id IN ${bunSql(validListingIds)} AND status = 'pending'
   `) as { id: number; retailer_id: number; product_url: string; scraped_name: string }[];
 
     if (listings.length === 0) {
@@ -541,7 +543,7 @@ unmatchedSuggestionsRouter.post('/create-and-link', async (c) => {
     }
 
     // Fire-and-forget: refresh suggestions for remaining pending listings
-    runSuggestionPreprocessing().catch(() => { });
+    runSuggestionPreprocessing().catch((err) => logger.error(`[SUGGESTIONS] Background reprocessing failed: ${err instanceof Error ? err.message : String(err)}`));
 
     return c.json({
         component_id: newComponentId!,

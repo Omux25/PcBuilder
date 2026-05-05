@@ -56,31 +56,28 @@ describe('Preservation: Migration files 001–015 are untouched', () => {
 // ── Scraper registry preservation ────────────────────────────────────────────
 
 describe('Preservation: Production scraper IDs match actual retailer IDs', () => {
-  test('UltraPC is registered with id 10', async () => {
+  test('UltraPC is registered by name (dynamic ID resolution)', async () => {
     const src = await readFile(
       join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
       'utf-8'
     );
-    expect(src).toMatch(/retailer_id:\s*10/);
-    expect(src).toMatch(/name:\s*['"]UltraPC['"]/);
+    expect(src).toMatch(/baseUrl:\s*['"]https:\/\/www\.ultrapc\.ma['"]/);
   });
 
-  test('NextLevel PC is registered with id 11', async () => {
+  test('NextLevel PC is registered by name (dynamic ID resolution)', async () => {
     const src = await readFile(
       join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
       'utf-8'
     );
-    expect(src).toMatch(/retailer_id:\s*11/);
-    expect(src).toMatch(/name:\s*['"]NextLevel PC['"]/);
+    expect(src).toMatch(/baseUrl:\s*['"]https:\/\/nextlevelpc\.ma['"]/);
   });
 
-  test('SetupGame is registered with id 13', async () => {
+  test('SetupGame is registered by name (dynamic ID resolution)', async () => {
     const src = await readFile(
       join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
       'utf-8'
     );
-    expect(src).toMatch(/retailer_id:\s*13/);
-    expect(src).toMatch(/name:\s*['"]SetupGame['"]/);
+    expect(src).toMatch(/baseUrl:\s*['"]https:\/\/setupgame\.ma['"]/);
   });
 });
 

@@ -2,8 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link2, X, ChevronLeft, ChevronRight, Search, Layers, List, Zap } from 'lucide-react';
 import {
   getUnmatchedListings, linkUnmatched, dismissUnmatched, searchComponents, getAdminRetailers,
-  getGroupedUnmatched, bulkDismissUnmatched, bulkApproveUnmatched,
-} from '../api';
+  getGroupedUnmatched, bulkDismissUnmatched, bulkApproveUnmatched, getErrorMessage} from '../api';
 import type { UnmatchedListing, AdminComponent, AdminRetailer, CanonicalGroup } from '../api';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -154,7 +153,7 @@ export function Unmatched() {
       setSearchResults([]);
       load(page, retailerFilter, search);
     } catch (err: unknown) {
-      setMutationError(err instanceof Error ? err.message : 'Erreur inattendue');
+      setMutationError(getErrorMessage(err));
     }
   }
 
@@ -164,7 +163,7 @@ export function Unmatched() {
       await dismissUnmatched(id);
       load(page, retailerFilter, search);
     } catch (err: unknown) {
-      setMutationError(err instanceof Error ? err.message : 'Erreur inattendue');
+      setMutationError(getErrorMessage(err));
     }
   }
 
@@ -212,7 +211,7 @@ export function Unmatched() {
       setConfirmDismiss(false);
       loadGroups(search, retailerFilter);
     } catch (err: unknown) {
-      setGroupsError(err instanceof Error ? err.message : 'Erreur inattendue');
+      setGroupsError(getErrorMessage(err));
     }
   }
 
@@ -226,7 +225,7 @@ export function Unmatched() {
       setConfirmApprove(false);
       loadGroups(search, retailerFilter);
     } catch (err: unknown) {
-      setGroupsError(err instanceof Error ? err.message : 'Erreur inattendue');
+      setGroupsError(getErrorMessage(err));
     }
   }
 

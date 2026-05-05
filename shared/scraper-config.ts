@@ -10,10 +10,12 @@ export const SCRAPER_CONFIG = {
   PARTIAL_THRESHOLD: 0.8,
   PERFECT_THRESHOLD: 1.0,
 
-  // Retailer IDs
-  RETAILERS: {
-    ULTRAPC: 10,
-    NEXTLEVEL: 11,
-    SETUPGAME: 13,
+  // Retailer base URLs — used to look up IDs dynamically from the DB at runtime.
+  // base_url has a UNIQUE constraint so it's a reliable identifier.
+  // Never hardcode IDs — they differ between machines/environments.
+  RETAILER_BASE_URLS: {
+    ULTRAPC: 'https://www.ultrapc.ma',
+    NEXTLEVEL: 'https://nextlevelpc.ma',
+    SETUPGAME: 'https://setupgame.ma',
   }
 };

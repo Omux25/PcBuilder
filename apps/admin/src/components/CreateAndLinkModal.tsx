@@ -20,7 +20,7 @@ import type { ThermalPasteSpecValues } from './ThermalPasteSpecFields';
 import { CATEGORY_ORDER, CATEGORY_LABELS } from '@shared/types';
 import type { ComponentCategory } from '@shared/types';
 import styles from './Form.module.css';
-import { getKeywordRules, reprocessSuggestions } from '../api';
+import { getKeywordRules, reprocessSuggestions, getErrorMessage} from '../api';
 import type { CanonicalGroup, KeywordRuleResponse } from '../api';
 
 export interface CreateAndLinkResult {
@@ -182,7 +182,7 @@ export function CreateAndLinkModal({ group, isOpen, onClose, onSuccess }: Props)
             setDone(result);
             onSuccess(result);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Erreur inattendue');
+            setError(getErrorMessage(err));
         } finally {
             setLoading(false);
         }

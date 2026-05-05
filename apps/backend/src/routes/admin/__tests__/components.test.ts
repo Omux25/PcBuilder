@@ -174,12 +174,15 @@ describe('DELETE /api/admin/components/:id', () => {
   });
 
   test('returns 200 with success message when component deleted', async () => {
-    // New deleteComponent uses a single CTE — returns the deleted row on success
-    let callCount = 0;
-    setSql(async () => {
-      callCount++;
-      if (callCount === 1) return [{ id: 1, price_count: '0', mapping_count: '0' }]; // CTE DELETE success
-      return []; // fallback SELECT (not reached on success)
+    // deleteComponent now makes multiple queries:
+    // 1. SELECT id FROM components (exists check) → returns row
+    // 2. SELECT COUNT FROM prices (dependency check) → returns 0
+    // 3. DELETE scraper_mappings, UPDATE unmatched_listings, DELETE components
+    setSql(async (strings: TemplateStringsArray) => {
+      const q = strings.join('?');
+      if (q.includes('SELECT id FROM components')) return [{ id: 1 }];
+      if (q.includes('COUNT(id)')) return [{ cnt: '0' }];
+      return [];
     });
 
     const res = await app.request('/api/admin/components/1', {

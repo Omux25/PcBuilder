@@ -1,9 +1,9 @@
 /**
  * PC Builder Migration Runner
- * 
+ *
  * Programmatically executes SQL migration files in sequence.
  * Tracks executed migrations in a `_migrations` table to ensure idempotency.
- * 
+ *
  * Usage: bun src/db/migrate.ts
  */
 

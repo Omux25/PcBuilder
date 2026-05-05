@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Pencil, Trash2, Plus } from 'lucide-react';
-import { getAdminPresets, deleteAdminPreset } from '../api';
+import { getAdminPresets, deleteAdminPreset, getErrorMessage} from '../api';
 import type { AdminPreset } from '../api';
 import type { PresetComponent } from '@shared/types';
 import { CATEGORY_LABELS } from '@shared/types';
@@ -47,7 +47,7 @@ export function Presets() {
       load();
     } catch (err: unknown) {
       setConfirmDelete(null);
-      setMutationError(err instanceof Error ? err.message : 'Erreur inattendue');
+      setMutationError(getErrorMessage(err));
     }
   }
 

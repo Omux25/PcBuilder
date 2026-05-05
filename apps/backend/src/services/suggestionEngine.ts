@@ -72,6 +72,10 @@ const NOISE_TOKENS = [
 export function deriveCanonicalName(scrapedName: string, brand: string | null): string {
     let name = scrapedName.trim();
 
+    // Strip category prefix — SetupGame names often start with "Watercooler – " or "Boitier – "
+    // Remove everything up to and including the first em-dash or hyphen separator
+    name = name.replace(/^[^\u2013-]*[\u2013-]\s+/, '').trim();
+
     // Strip brand prefix (case-insensitive)
     if (brand) {
         const escaped = brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -87,6 +91,12 @@ export function deriveCanonicalName(scrapedName: string, brand: string | null): 
 
     // Normalize whitespace
     name = name.replace(/\s+/g, ' ').trim();
+
+    // Clean up empty parentheses left after token stripping e.g. "Galahad 240 ( )" -> "Galahad 240"
+    name = name.replace(/\(\s*\)/g, '').trim();
+
+    // Strip leading/trailing dashes or en-dashes left after stripping
+    name = name.replace(/^[\s\u2013-]+|[\s\u2013-]+$/g, '').trim();
 
     // Fallback: if stripping left nothing, return original minus brand
     if (!name) {

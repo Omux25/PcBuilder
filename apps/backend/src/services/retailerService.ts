@@ -86,6 +86,17 @@ async function createRetailer(data: {
   notes?: string;
 }): Promise<Retailer> {
   const sql = getSql();
+
+  // Validate base_url is an absolute URL
+  try {
+    const url = new URL(data.base_url);
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      throw new AppError('INVALID_URL', 'base_url must use http or https protocol', 400);
+    }
+  } catch (e) {
+    if (e instanceof AppError) throw e;
+    throw new AppError('INVALID_URL', 'base_url must be a valid absolute URL (e.g. https://example.com)', 400);
+  }
   const rows = (await sql`
     INSERT INTO retailers (name, base_url, logo_url, country, is_active, scraping_interval_hours, notes)
     VALUES (
@@ -121,6 +132,19 @@ async function updateRetailer(
   }>
 ): Promise<Retailer> {
   const sql = getSql();
+
+  // Validate base_url if provided
+  if (data.base_url !== undefined) {
+    try {
+      const url = new URL(data.base_url);
+      if (!['http:', 'https:'].includes(url.protocol)) {
+        throw new AppError('INVALID_URL', 'base_url must use http or https protocol', 400);
+      }
+    } catch (e) {
+      if (e instanceof AppError) throw e;
+      throw new AppError('INVALID_URL', 'base_url must be a valid absolute URL (e.g. https://example.com)', 400);
+    }
+  }
   const rows = (await sql`
     UPDATE retailers SET
       name                    = COALESCE(${data.name ?? null}, name),

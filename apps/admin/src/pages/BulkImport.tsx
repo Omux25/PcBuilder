@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Upload } from 'lucide-react';
-import { bulkImportComponents } from '../api';
+import { bulkImportComponents, getErrorMessage} from '../api';
 import type { ImportResult } from '../api';
 import styles from './BulkImport.module.css';
 
@@ -58,7 +58,7 @@ export function BulkImport() {
       const data = await bulkImportComponents(file);
       setResult(data);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Import failed');
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

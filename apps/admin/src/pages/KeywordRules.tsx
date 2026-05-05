@@ -9,7 +9,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-import { getKeywordRules, deleteKeywordRule } from '../api';
+import { getKeywordRules, deleteKeywordRule, getErrorMessage} from '../api';
 import type { KeywordRuleResponse } from '../api';
 import { CATEGORY_LABELS } from '@shared/types';
 import type { ComponentCategory } from '@shared/types';
@@ -69,7 +69,7 @@ export function KeywordRules() {
             setToast(`Règle "${deleteTarget.keyword}" supprimée.`);
             setTimeout(() => setToast(null), 4000);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Erreur lors de la suppression');
+            setError(getErrorMessage(err));
         } finally {
             setDeleteTarget(null);
         }

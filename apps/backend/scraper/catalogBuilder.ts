@@ -22,6 +22,7 @@ import {
   extractFanSpecs, extractThermalPasteSpecs
 } from '@shared/component-utils';
 import { ComponentCategory } from '@shared/types';
+import { loadAdminRules, matchesRule, type KeywordRule } from '../src/services/keywordRulesService.js';
 
 // Re-export DI helpers so tests can inject a mock SQL function.
 export { setSql, resetSql };
@@ -45,6 +46,27 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
 
   const sql = getSql();
 
+  // Load admin keyword rules once — used to categorize listings that inferCategory() misses
+  // (e.g. "Hyte Y70" has no generic case keyword, but an admin rule maps "Y70" → case)
+  let adminRules: KeywordRule[] = [];
+  try {
+    adminRules = await loadAdminRules();
+  } catch { /* non-critical — fall back to inferCategory only */ }
+
+  /**
+   * Resolves the category for a scraped name.
+   * Admin keyword rules take priority over the built-in inferCategory logic,
+   * so that admin-configured mappings (e.g. "Y70" → case) are always respected.
+   */
+  function resolveCategory(name: string): ComponentCategory | null {
+    for (const rule of adminRules) {
+      if (matchesRule(rule, name)) {
+        return rule.category as ComponentCategory;
+      }
+    }
+    return inferCategory(name);
+  }
+
   const pending = (await sql`
     SELECT ul.id, ul.retailer_id, ul.product_url, ul.scraped_name
     FROM unmatched_listings ul
@@ -65,7 +87,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
 
   for (const listing of pending) {
     const scrapedName = decodeHtml(listing.scraped_name);
-    const category = inferCategory(scrapedName);
+    const category = resolveCategory(scrapedName);
 
     if (!category) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
 

@@ -13,6 +13,7 @@ import { buildFromUnmatched } from './catalogBuilder.js';
 import { runSuggestionPreprocessing } from '../src/services/suggestionPreprocessor.js';
 import { getSql } from '../src/db/index.js';
 import { RETAILER_SCRAPERS } from './config/retailers.config.js';
+import type { ResolvedRetailerScraperConfig } from './config/retailers.config.js';
 import { importBenchmarks } from './benchmarkImporter.js';
 import type { ScrapedPrice } from './scrapers/baseScraper.js';
 
@@ -22,8 +23,41 @@ import type { ScrapedPrice } from './scrapers/baseScraper.js';
  * @param targetRetailerId - If provided, only run the scraper for this specific retailer.
  */
 export async function runScrapingSession(targetRetailerId?: number): Promise<void> {
+  const sql = getSql();
+
+  // Normalize a URL to just its origin (scheme + hostname, no path, no trailing slash).
+  // e.g. "https://setupgame.ma/components" → "https://setupgame.ma"
+  //      "https://www.ultrapc.ma/"         → "https://www.ultrapc.ma"
+  function normalizeUrl(url: string): string {
+    try {
+      const { origin } = new URL(url.startsWith('http') ? url : `https://${url}`);
+      return origin;
+    } catch {
+      return url.replace(/\/+$/, ''); // fallback: just strip trailing slashes
+    }
+  }
+
+  // Resolve retailer IDs dynamically from the DB by base_url.
+  // base_url is the stable identifier — tied to the domain the scraper was written for.
+  // Both sides are normalized to origin so trailing slashes and paths don't cause mismatches.
+  const dbRetailers = await sql`
+    SELECT id, base_url FROM retailers WHERE is_active = true
+  ` as { id: number; base_url: string }[];
+
+  const urlToId = new Map(dbRetailers.map(r => [normalizeUrl(r.base_url), r.id]));
+
+  const resolvedScrapers: ResolvedRetailerScraperConfig[] = [];
+  for (const config of RETAILER_SCRAPERS) {
+    const id = urlToId.get(normalizeUrl(config.baseUrl));
+    if (id === undefined) {
+      await logger.warn(`[SESSION] Retailer "${config.baseUrl}" not found in DB — skipping scraper`);
+      continue;
+    }
+    resolvedScrapers.push({ ...config, retailer_id: id });
+  }
+
   const targetName = targetRetailerId
-    ? RETAILER_SCRAPERS.find(s => s.retailer_id === targetRetailerId)?.name ?? `Retailer ${targetRetailerId}`
+    ? resolvedScrapers.find(s => s.retailer_id === targetRetailerId)?.name ?? `Retailer ${targetRetailerId}`
     : 'Full';
   const sessionType = targetRetailerId ? `Targeted (${targetName})` : 'Full';
   await logger.info(`[SESSION] Scraping session started: ${sessionType}`);
@@ -32,8 +66,8 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
   const queue = new PQueue({ concurrency: 2 });
 
   const scrapersToRun = targetRetailerId
-    ? RETAILER_SCRAPERS.filter(s => s.retailer_id === targetRetailerId)
-    : RETAILER_SCRAPERS;
+    ? resolvedScrapers.filter(s => s.retailer_id === targetRetailerId)
+    : resolvedScrapers;
 
   if (scrapersToRun.length === 0 && targetRetailerId) {
     await logger.warn(`[SESSION] No scraper registered for retailer ID ${targetRetailerId}`);
@@ -46,7 +80,7 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
     queue.add(async () => {
       try {
         await logger.info(`[${config.name}] Scraper started`, config.name);
-        const prices = await config.run();
+        const prices = await config.run(config.retailer_id);
         allPrices.push(...prices);
         await logger.info(`[${config.name}] Successfully scraped ${prices.length} product(s)`, config.name);
         scraperResults.set(config.retailer_id, 'SUCCESS');
@@ -60,7 +94,6 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
     })
   ));
 
-  const sql = getSql();
   for (const [retailerId, status] of scraperResults) {
     try {
       await sql`
@@ -77,7 +110,7 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
   }
 
   await logger.info(`[SESSION] Matching ${allPrices.length} listing(s) to catalog...`);
-  const { updated, unmatched, errors } = await aggregate(allPrices);
+  const { updated, unmatched, errors } = await aggregate(allPrices, urlToId);
 
   await logger.info(`[SESSION] Auto-mapping unmatched listings...`);
   const { mapped: autoMapped } = await autoMap();

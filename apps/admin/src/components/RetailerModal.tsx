@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Modal } from './Modal';
-import { createAdminRetailer, updateAdminRetailer } from '../api';
+import { createAdminRetailer, updateAdminRetailer, getErrorMessage} from '../api';
 import type { AdminRetailer } from '../api';
 import styles from './Form.module.css';
 
@@ -79,7 +79,7 @@ export function RetailerModal({ isOpen, onClose, onSaved, retailer }: Props) {
       onSaved();
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur inattendue');
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
