@@ -40,6 +40,8 @@ export function Unmatched() {
   const [totalListings, setTotalListings] = useState(0);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [groupsError, setGroupsError] = useState<string | null>(null);
+  const [groupPage, setGroupPage] = useState(1);
+  const GROUP_PAGE_SIZE = 50;
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
   const [createLinkTarget, setCreateLinkTarget] = useState<CanonicalGroup | null>(null);
@@ -72,10 +74,10 @@ export function Unmatched() {
   }, []);
 
   // ── Grouped view load ─────────────────────────────────────────────────────
-  const loadGroups = useCallback((s: string, rid: string) => {
+  const loadGroups = useCallback((s: string, rid: string, gp = 1) => {
     setGroupsLoading(true);
     setGroupsError(null);
-    const params: Record<string, string> = {};
+    const params: Record<string, string> = { page: String(gp), limit: String(GROUP_PAGE_SIZE) };
     if (s) params.search = s;
     if (rid) params.retailer_id = rid;
 
@@ -96,7 +98,7 @@ export function Unmatched() {
   // Initial load
   useEffect(() => {
     load(page, retailerFilter, search);
-    loadGroups(search, retailerFilter);
+    loadGroups(search, retailerFilter, 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -108,8 +110,9 @@ export function Unmatched() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setPage(1);
+      setGroupPage(1);
       load(1, filtersRef.current.retailerFilter, search);
-      loadGroups(search, filtersRef.current.retailerFilter);
+      loadGroups(search, filtersRef.current.retailerFilter, 1);
     }, 400);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,20 +120,22 @@ export function Unmatched() {
 
   useEffect(() => {
     if (viewMode === 'grouped') {
-      loadGroups(search, retailerFilter);
+      loadGroups(search, retailerFilter, groupPage);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewMode, retailerFilter]);
+  }, [viewMode, retailerFilter, groupPage]);
 
   function handleRetailerFilter(rid: string) {
     setRetailerFilter(rid);
     setPage(1);
+    setGroupPage(1);
   }
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setGroupPage(1);
     load(1, retailerFilter, search);
-    loadGroups(search, retailerFilter);
+    loadGroups(search, retailerFilter, 1);
   }
 
   // ── Flat view handlers (existing, unchanged) ──────────────────────────────
@@ -211,7 +216,7 @@ export function Unmatched() {
       setSuccessToast(`${result.dismissed} listing${result.dismissed !== 1 ? 's' : ''} ignoré${result.dismissed !== 1 ? 's' : ''}.`);
       setSelectedGroups(new Set());
       setConfirmDismiss(false);
-      loadGroups(search, retailerFilter);
+      loadGroups(search, retailerFilter, groupPage);
     } catch (err: unknown) {
       setGroupsError(getErrorMessage(err));
     }
@@ -225,7 +230,7 @@ export function Unmatched() {
       const result = await bulkApproveUnmatched(highConfidenceNames);
       setSuccessToast(`${result.linked_listings} listing${result.linked_listings !== 1 ? 's' : ''} associé${result.linked_listings !== 1 ? 's' : ''} (${result.approved_groups} groupe${result.approved_groups !== 1 ? 's' : ''}).`);
       setConfirmApprove(false);
-      loadGroups(search, retailerFilter);
+      loadGroups(search, retailerFilter, groupPage);
     } catch (err: unknown) {
       setGroupsError(getErrorMessage(err));
     }
@@ -249,7 +254,7 @@ export function Unmatched() {
   function handleCreateLinkSuccess(result: CreateAndLinkResult) {
     setCreateLinkTarget(null);
     setSuccessToast(`✓ ${result.linked_count} listing${result.linked_count !== 1 ? 's' : ''} associé${result.linked_count !== 1 ? 's' : ''} à "${result.component_name}".`);
-    loadGroups(search, retailerFilter);
+    loadGroups(search, retailerFilter, groupPage);
     setTimeout(() => setSuccessToast(null), 5000);
   }
 
@@ -531,6 +536,19 @@ export function Unmatched() {
           </>
         )
       }
+
+      {/* ── GROUPED VIEW PAGINATION ── */}
+      {viewMode === 'grouped' && Math.ceil(totalGroups / GROUP_PAGE_SIZE) > 1 && (
+        <div className="admin-pagination">
+          <button disabled={groupPage <= 1} onClick={() => setGroupPage(groupPage - 1)} aria-label="Page précédente">
+            <ChevronLeft size={14} />
+          </button>
+          <span>{groupPage} / {Math.ceil(totalGroups / GROUP_PAGE_SIZE)} ({totalGroups} groupes)</span>
+          <button disabled={groupPage >= Math.ceil(totalGroups / GROUP_PAGE_SIZE)} onClick={() => setGroupPage(groupPage + 1)} aria-label="Page suivante">
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
 
       {/* ── FLAT VIEW (existing, unchanged) ── */}
       {
