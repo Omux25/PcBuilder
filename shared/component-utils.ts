@@ -69,7 +69,7 @@ export function inferCategory(name: string): ComponentCategory | null {
   if (n.match(/\b(noctua|deepcool|arctic|thermalright|scythe|id.?cooling|be\s*quiet)\b/) &&
     n.match(/\b(nh|ak|lc|le|se|sl|bk|dk|sk|ld|lf|lp|lx|pure|shadow|dark|silent|freezer|liquid)\b/)) return 'cooling';
   // Brand-specific AIO model lines not caught by generic keywords
-  if (n.match(/\b(nautilus|ryujin|ryuo|kraken|h\d{3}i|h\d{3}|elite\s*capellix|capellix)\b/)) return 'cooling';
+  if (n.match(/\b(nautilus|ryujin|ryuo|kraken|h\d{3}i|h\d{3}|elite\s*capellix|capellix|coreliquid|corefrozr)\b/)) return 'cooling';
   if (n.match(/\b(ets-t\d+|ets\s*t\d+|hyper\s*\d{3}|hyper\s*evo)\b/)) return 'cooling';
   if (n.match(/\b(enermax|mars\s*gaming)\b/) &&
     n.match(/\b(\d{3}\s*mm|\d{3}\s*argb|argb|frgb|lcd)\b/) &&

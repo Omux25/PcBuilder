@@ -171,10 +171,30 @@ unmatchedSuggestionsRouter.get('/grouped', async (c) => {
 
 unmatchedSuggestionsRouter.post('/reprocess', async (c) => {
     // Fire-and-forget — return immediately so the connection doesn't time out
-    runSuggestionPreprocessing(true).catch((err) =>
-        logger.error(`[SUGGESTIONS] Background reprocessing failed: ${err instanceof Error ? err.message : String(err)}`)
-    );
+    // Runs full pipeline: recompute suggestions → auto-create catalog entries
+    (async () => {
+        try {
+            await runSuggestionPreprocessing(true);
+            const { buildFromUnmatched } = await import('../../../scraper/catalogBuilder.js');
+            await buildFromUnmatched();
+        } catch (err: unknown) {
+            logger.error(`[SUGGESTIONS] Background reprocessing failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
+    })();
     return c.json({ message: 'Reprocessing started in background' }, 202);
+});
+
+// ── POST /auto-build ──────────────────────────────────────────────────────────
+// Runs buildFromUnmatched() — auto-creates catalog components for all pending
+// listings that have a recognized category, then links them.
+// Returns 202 immediately and processes in the background.
+
+unmatchedSuggestionsRouter.post('/auto-build', async (c) => {
+    const { buildFromUnmatched } = await import('../../../scraper/catalogBuilder.js');
+    buildFromUnmatched().catch((err: unknown) =>
+        logger.error(`[CATALOG] Auto-build failed: ${err instanceof Error ? err.message : String(err)}`)
+    );
+    return c.json({ message: 'Auto-build started in background' }, 202);
 });
 
 // ── POST /bulk-dismiss ────────────────────────────────────────────────────────
