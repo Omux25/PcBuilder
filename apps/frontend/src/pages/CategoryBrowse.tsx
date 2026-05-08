@@ -48,6 +48,7 @@ export function CategoryBrowse() {
   // ── Data state ────────────────────────────────────────────────────────────
   const [components, setComponents] = useState<SmartComponent[]>([]);
   const [total, setTotal] = useState(0);
+  const [inStockTotal, setInStockTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [availableBrands, setAvailableBrands] = useState<string[]>([]);
@@ -81,7 +82,7 @@ export function CategoryBrowse() {
     setError(null);
 
     try {
-      const { components: list, total: t } = await smartSearch({
+      const { components: list, total: t, in_stock_total: ist, available_brands: ab, available_sockets: as_ } = await smartSearch({
         category: cat,
         search: searchTerm || undefined,
         brand: brandFilter || undefined,
@@ -94,16 +95,13 @@ export function CategoryBrowse() {
 
       setComponents(list);
       setTotal(t);
+      setInStockTotal(ist);
 
-      // Populate filter options once from the first unfiltered fetch
+      // Populate filter options from full result set (not just current page)
       if (!brandsPopulated.current) {
         brandsPopulated.current = true;
-        const brands = [...new Set(list.map(c => c.brand).filter(Boolean) as string[])].sort();
-        setAvailableBrands(brands);
-        if (SOCKET_CATEGORIES.has(cat)) {
-          const sockets = [...new Set(list.map(c => c.socket).filter(Boolean) as string[])].sort();
-          setAvailableSockets(sockets);
-        }
+        setAvailableBrands(ab);
+        setAvailableSockets(as_);
       }
     } catch (e: unknown) {
       if (e instanceof Error && e.name !== 'AbortError') {
@@ -273,12 +271,7 @@ export function CategoryBrowse() {
             {!loading && total > 0 && (
               <div className={styles.resultsCount}>
                 {total} composant{total > 1 ? 's' : ''}
-                {inStockOnly
-                  ? ' en stock'
-                  : ` · ${components.filter(c => c.in_stock).length > 0
-                    ? `${components.filter(c => c.in_stock).length} en stock sur cette page`
-                    : 'aucun en stock sur cette page'}`
-                }
+                {inStockTotal > 0 && ` · ${inStockTotal} en stock`}
                 {totalPages > 1 && ` · page ${page}/${totalPages}`}
               </div>
             )}
