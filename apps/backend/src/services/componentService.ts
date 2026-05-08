@@ -66,7 +66,7 @@ async function getComponents(
   const sql = getSql();
   const { category, socket, ram_type, brand, search, in_stock, include_inactive, is_active } = filters;
   const page = Math.max(1, filters.page ?? 1);
-  const limit = Math.min(100, Math.max(1, filters.limit ?? 20));
+  const limit = Math.min(1000, Math.max(1, filters.limit ?? 20)); // 1000 cap — smartSearch needs up to 700+ for full category
   const offset = (page - 1) * limit;
 
   if (!search || search.trim() === '') {

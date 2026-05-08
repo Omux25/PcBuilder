@@ -282,6 +282,13 @@ export function cleanName(rawName: string, brand: string): string {
   name = name.replace(/^(i\d)\s+(\d)/i, 'Core $1 $2');
   name = name.replace(/^(I\d)-(\d)/i, 'Core $1 $2');
 
+  // Strip DDR4/DDR5 suffix from motherboard names — redundant since RAM type
+  // is shown as a separate spec. Keep only if it's the only differentiator
+  // between two otherwise identical names (handled by dedup logic).
+  // Pattern: trailing " DDR4", " DDR5", " D4", " D5" (case-insensitive)
+  name = name.replace(/\s+DDR[45]\s*$/i, '');
+  name = name.replace(/\s+D[45]\s*$/i, '');
+
   // If after stripping everything it's empty, use the original (fallback)
   if (name.length < 2) name = rawName;
 
@@ -292,10 +299,37 @@ export function cleanName(rawName: string, brand: string): string {
 // ── Real spec extractors ──
 
 export const extractCpuSpecs = (n: string) => {
-  const socketMatch = n.match(/\b(LGA\s*1700|AM[45]|LGA\s*1200|LGA\s*1151)\b/i);
+  const socketMatch = n.match(/\b(LGA\s*1700|LGA\s*1851|AM[45]|LGA\s*1200|LGA\s*1151)\b/i);
   const tdpMatch = n.match(/\b(\d+)\s*W\b/i);
+
+  // Infer socket from CPU model series when not explicit in name
+  let socket = socketMatch ? socketMatch[1].toUpperCase().replace(/\s+/, '') : null;
+  if (!socket) {
+    const lower = n.toLowerCase();
+    // AMD AM5: Ryzen 7000/8000/9000 series, Ryzen AI 300, Ryzen PRO 7000+
+    if (lower.match(/ryzen\s+[3579]\s+[789]\d{3}/) || lower.match(/ryzen\s+ai\s+3\d{2}/) ||
+      lower.match(/ryzen\s+[3579]\s+pro\s+[789]\d{3}/)) socket = 'AM5';
+    // AMD AM4: Ryzen 1000-5000 series, Athlon 3000G, Ryzen PRO 3000-5000
+    else if (lower.match(/ryzen\s+[3579]\s+[1-5]\d{3}/) || lower.match(/athlon\s+3\d{3}g/) ||
+      lower.match(/ryzen\s+[3579]\s+pro\s+[1-5]\d{3}/)) socket = 'AM4';
+    // Intel LGA1851: Core Ultra 200 series (Arrow Lake) — 2xx, 265K, 285K, etc.
+    else if (lower.match(/core\s+ultra\s+\d+\s+2\d{2}[a-z]*/)) socket = 'LGA1851';
+    // Intel LGA1700: Core Ultra 100 series (Meteor Lake) + Core 12th/13th/14th gen
+    else if (lower.match(/core\s+ultra\s+\d+\s+1\d{2}[a-z]*/) || lower.match(/core\s+[iu]\d\s+1[234]\d{3}/)) socket = 'LGA1700';
+    // Intel LGA1200: Core 10th/11th gen (10xxx, 11xxx)
+    else if (lower.match(/core\s+[iu]\d\s+1[01]\d{3}/)) socket = 'LGA1200';
+    // Intel LGA1151: Core 8th/9th gen (8xxx, 9xxx)
+    else if (lower.match(/core\s+[iu]\d\s+[89]\d{3}/)) socket = 'LGA1151';
+    // Threadripper PRO
+    else if (lower.match(/threadripper\s+pro\s+[7]\d{3}/)) socket = 'sTR5';
+    else if (lower.match(/threadripper\s+pro\s+[35]\d{3}/)) socket = 'sWRX8';
+    // Threadripper
+    else if (lower.match(/threadripper\s+[57]\d{3}/)) socket = 'sTR5';
+    else if (lower.match(/threadripper\s+[34]\d{3}/)) socket = 'sTRX4';
+  }
+
   return {
-    socket: socketMatch ? socketMatch[1].toUpperCase() : null,
+    socket,
     tdp: tdpMatch ? parseInt(tdpMatch[1]) : null
   };
 };

@@ -139,6 +139,10 @@
   font-size: 0.85rem;
   color: var(--text-muted);
   font-style: italic;
+  min-height: 80px;
+  /* prevent layout shift when prices load into expansion panel */
+  display: flex;
+  align-items: center;
 }
 
 /* ── OOS collapse ────────────────────────────────────────────────────────── */
