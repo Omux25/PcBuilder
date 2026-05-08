@@ -15,9 +15,9 @@ interface Props {
 
 const CONFIDENCE_STYLES: Record<string, React.CSSProperties> = {
     high: {
-        background: 'var(--success)',
-        color: '#0f1117',
-        border: 'none',
+        background: 'transparent',
+        color: 'var(--accent-blue)',
+        border: '1px solid var(--accent-blue)',
     },
     medium: {
         background: 'transparent',

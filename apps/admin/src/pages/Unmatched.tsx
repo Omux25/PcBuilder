@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Link2, X, ChevronLeft, ChevronRight, Search, Layers, List, Zap, RefreshCw } from 'lucide-react';
+import { Link2, X, ChevronLeft, ChevronRight, Search, Layers, List, RefreshCw } from 'lucide-react';
 import {
   getUnmatchedListings, linkUnmatched, dismissUnmatched, searchComponents, getAdminRetailers,
-  getGroupedUnmatched, bulkDismissUnmatched, bulkApproveUnmatched, reprocessSuggestions, getErrorMessage
+  getGroupedUnmatched, bulkDismissUnmatched, reprocessSuggestions, getErrorMessage, updateUnmatchedCategory
 } from '../api';
 import type { UnmatchedListing, AdminComponent, AdminRetailer, CanonicalGroup } from '../api';
 import { Modal } from '../components/Modal';
@@ -10,6 +10,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ConfidenceBadge } from '../components/ConfidenceBadge';
 import { CreateAndLinkModal } from '../components/CreateAndLinkModal';
 import type { CreateAndLinkResult } from '../components/CreateAndLinkModal';
+import { CATEGORY_ORDER, CATEGORY_LABELS } from '@shared/types';
 import styles from './Unmatched.module.css';
 
 const PAGE_SIZE = 50;
@@ -30,6 +31,7 @@ export function Unmatched() {
   const [retailers, setRetailers] = useState<AdminRetailer[]>([]);
   const [search, setSearch] = useState('');
   const [retailerFilter, setRetailerFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [linkTarget, setLinkTarget] = useState<UnmatchedListing | null>(null);
   const [componentSearch, setComponentSearch] = useState('');
   const [searchResults, setSearchResults] = useState<AdminComponent[]>([]);
@@ -47,14 +49,13 @@ export function Unmatched() {
   const [createLinkTarget, setCreateLinkTarget] = useState<CanonicalGroup | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [confirmDismiss, setConfirmDismiss] = useState(false);
-  const [confirmApprove, setConfirmApprove] = useState(false);
   const [reprocessing, setReprocessing] = useState(false);
 
-  const filtersRef = useRef({ page, retailerFilter, search });
-  filtersRef.current = { page, retailerFilter, search };
+  const filtersRef = useRef({ page, retailerFilter, categoryFilter, search });
+  filtersRef.current = { page, retailerFilter, categoryFilter, search };
 
   // ── Flat view load (existing logic, unchanged) ────────────────────────────
-  const load = useCallback((p: number, rid: string, s: string) => {
+  const load = useCallback((p: number, rid: string, cat: string, s: string) => {
     setLoading(true);
     const params: Record<string, string> = {
       status: 'pending',
@@ -62,6 +63,7 @@ export function Unmatched() {
       limit: String(PAGE_SIZE),
     };
     if (rid) params.retailer_id = rid;
+    if (cat) params.category = cat;
     if (s) params.search = s;
 
     getUnmatchedListings(params)
@@ -74,12 +76,13 @@ export function Unmatched() {
   }, []);
 
   // ── Grouped view load ─────────────────────────────────────────────────────
-  const loadGroups = useCallback((s: string, rid: string, gp = 1) => {
+  const loadGroups = useCallback((s: string, rid: string, cat: string, gp = 1) => {
     setGroupsLoading(true);
     setGroupsError(null);
     const params: Record<string, string> = { page: String(gp), limit: String(GROUP_PAGE_SIZE) };
     if (s) params.search = s;
     if (rid) params.retailer_id = rid;
+    if (cat) params.category = cat;
 
     getGroupedUnmatched(params)
       .then((data) => {
@@ -97,22 +100,22 @@ export function Unmatched() {
 
   // Initial load
   useEffect(() => {
-    load(page, retailerFilter, search);
-    loadGroups(search, retailerFilter, 1);
+    load(page, retailerFilter, categoryFilter, search);
+    loadGroups(search, retailerFilter, categoryFilter, 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    load(page, retailerFilter, search);
+    load(page, retailerFilter, categoryFilter, search);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, retailerFilter]);
+  }, [page, retailerFilter, categoryFilter]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setPage(1);
       setGroupPage(1);
-      load(1, filtersRef.current.retailerFilter, search);
-      loadGroups(search, filtersRef.current.retailerFilter, 1);
+      load(1, filtersRef.current.retailerFilter, filtersRef.current.categoryFilter, search);
+      loadGroups(search, filtersRef.current.retailerFilter, filtersRef.current.categoryFilter, 1);
     }, 400);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -120,10 +123,10 @@ export function Unmatched() {
 
   useEffect(() => {
     if (viewMode === 'grouped') {
-      loadGroups(search, retailerFilter, groupPage);
+      loadGroups(search, retailerFilter, categoryFilter, groupPage);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewMode, retailerFilter, groupPage]);
+  }, [viewMode, retailerFilter, categoryFilter, groupPage]);
 
   function handleRetailerFilter(rid: string) {
     setRetailerFilter(rid);
@@ -134,8 +137,8 @@ export function Unmatched() {
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
     setGroupPage(1);
-    load(1, retailerFilter, search);
-    loadGroups(search, retailerFilter, 1);
+    load(1, retailerFilter, categoryFilter, search);
+    loadGroups(search, retailerFilter, categoryFilter, 1);
   }
 
   // ── Flat view handlers (existing, unchanged) ──────────────────────────────
@@ -158,7 +161,7 @@ export function Unmatched() {
       setLinkTarget(null);
       setComponentSearch('');
       setSearchResults([]);
-      load(page, retailerFilter, search);
+      load(page, retailerFilter, categoryFilter, search);
     } catch (err: unknown) {
       setMutationError(getErrorMessage(err));
     }
@@ -168,7 +171,7 @@ export function Unmatched() {
     setMutationError(null);
     try {
       await dismissUnmatched(id);
-      load(page, retailerFilter, search);
+      load(page, retailerFilter, categoryFilter, search);
     } catch (err: unknown) {
       setMutationError(getErrorMessage(err));
     }
@@ -216,25 +219,12 @@ export function Unmatched() {
       setSuccessToast(`${result.dismissed} listing${result.dismissed !== 1 ? 's' : ''} ignoré${result.dismissed !== 1 ? 's' : ''}.`);
       setSelectedGroups(new Set());
       setConfirmDismiss(false);
-      loadGroups(search, retailerFilter, groupPage);
+      loadGroups(search, retailerFilter, categoryFilter, groupPage);
     } catch (err: unknown) {
       setGroupsError(getErrorMessage(err));
     }
   }
 
-  async function handleBulkApprove() {
-    const highConfidenceNames = groups
-      .filter(g => g.confidence === 'high' && g.existing_component_id)
-      .map(g => g.canonical_name);
-    try {
-      const result = await bulkApproveUnmatched(highConfidenceNames);
-      setSuccessToast(`${result.linked_listings} listing${result.linked_listings !== 1 ? 's' : ''} associé${result.linked_listings !== 1 ? 's' : ''} (${result.approved_groups} groupe${result.approved_groups !== 1 ? 's' : ''}).`);
-      setConfirmApprove(false);
-      loadGroups(search, retailerFilter, groupPage);
-    } catch (err: unknown) {
-      setGroupsError(getErrorMessage(err));
-    }
-  }
 
   async function handleReprocess() {
     setReprocessing(true);
@@ -243,7 +233,10 @@ export function Unmatched() {
       await reprocessSuggestions();
       setSuccessToast('✓ Recalcul et création automatique lancés. La liste se mettra à jour dans ~15 secondes.');
       setTimeout(() => setSuccessToast(null), 15000);
-      setTimeout(() => loadGroups(search, retailerFilter), 15000);
+      setTimeout(() => {
+        load(page, retailerFilter, categoryFilter, search);
+        loadGroups(search, retailerFilter, categoryFilter, groupPage);
+      }, 15000);
     } catch (err: unknown) {
       setGroupsError(getErrorMessage(err));
     } finally {
@@ -251,22 +244,46 @@ export function Unmatched() {
     }
   }
 
+  async function handleManualCategoryChange(listingId: number, category: string | null) {
+    try {
+      await updateUnmatchedCategory(listingId, category);
+      // Update local state for immediate feedback
+      setListings(prev => prev.map(l => l.id === listingId ? { ...l, manual_category: category } : l));
+      setGroups(prev => prev.map(g => ({
+        ...g,
+        listings: g.listings.map(l => l.id === listingId ? { ...l, manual_category: category } : l)
+      })));
+    } catch (err: unknown) {
+      setMutationError(getErrorMessage(err));
+    }
+  }
+
+  async function handleGroupManualCategoryChange(group: CanonicalGroup, category: string | null) {
+    try {
+      await Promise.all(group.listings.map(l => updateUnmatchedCategory(l.id, category)));
+      setSuccessToast(`✓ Catégorie mise à jour pour ${group.listings.length} listings.`);
+      loadGroups(search, retailerFilter, categoryFilter, groupPage);
+      load(page, retailerFilter, categoryFilter, search);
+      setTimeout(() => setSuccessToast(null), 5000);
+    } catch (err: unknown) {
+      setGroupsError(getErrorMessage(err));
+    }
+  }
+
   function handleCreateLinkSuccess(result: CreateAndLinkResult) {
     setCreateLinkTarget(null);
     setSuccessToast(`✓ ${result.linked_count} listing${result.linked_count !== 1 ? 's' : ''} associé${result.linked_count !== 1 ? 's' : ''} à "${result.component_name}".`);
-    loadGroups(search, retailerFilter, groupPage);
+    loadGroups(search, retailerFilter, categoryFilter, groupPage);
     setTimeout(() => setSuccessToast(null), 5000);
   }
 
-  const highConfidenceGroups = groups.filter(g => g.confidence === 'high' && g.existing_component_id);
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
     <div className={styles.page}>
-      {/* Header */}
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>Listings non associés</h1>
+          <h1 className={styles.title}>Produits non associés</h1>
           <p className={styles.subtitle}>
             {viewMode === 'grouped'
               ? `${totalGroups} groupe${totalGroups !== 1 ? 's' : ''} — ${totalListings} listing${totalListings !== 1 ? 's' : ''} en attente.`
@@ -277,34 +294,32 @@ export function Unmatched() {
 
         <div className={styles.filters}>
           {/* View toggle */}
-          <div style={{ display: 'flex', gap: '4px', background: 'var(--surface-2)', borderRadius: 'var(--radius)', padding: '3px' }}>
+          <div style={{ display: 'flex', gap: '4px', background: 'var(--surface-2)', borderRadius: 'var(--radius)', padding: '3px', border: '1px solid var(--border-2)' }}>
             <button
-              onClick={() => setViewMode('grouped')}
+              onClick={() => { setViewMode('grouped'); setGroupPage(1); }}
               style={{
                 background: viewMode === 'grouped' ? 'var(--accent)' : 'transparent',
                 color: viewMode === 'grouped' ? '#fff' : 'var(--text-muted)',
-                padding: '5px 10px',
+                padding: '5px 12px',
                 fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
+                borderRadius: 'calc(var(--radius) - 2px)',
+                fontWeight: viewMode === 'grouped' ? 600 : 400
               }}
-              title="Vue groupée"
+              title="Vue groupée par IA"
             >
               <Layers size={13} /> Groupé
             </button>
             <button
-              onClick={() => setViewMode('flat')}
+              onClick={() => { setViewMode('flat'); setPage(1); }}
               style={{
                 background: viewMode === 'flat' ? 'var(--accent)' : 'transparent',
                 color: viewMode === 'flat' ? '#fff' : 'var(--text-muted)',
-                padding: '5px 10px',
+                padding: '5px 12px',
                 fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
+                borderRadius: 'calc(var(--radius) - 2px)',
+                fontWeight: viewMode === 'flat' ? 600 : 400
               }}
-              title="Vue liste"
+              title="Liste à plat"
             >
               <List size={13} /> Liste
             </button>
@@ -334,21 +349,33 @@ export function Unmatched() {
             ))}
           </select>
 
+          <select
+            value={categoryFilter}
+            onChange={e => { setCategoryFilter(e.target.value); setPage(1); setGroupPage(1); }}
+            className={styles.retailerFilter}
+            style={{ width: '170px' }}
+          >
+            <option value="">Toutes catégories</option>
+            <option value="none">⚠️ Inconnu / Non-PC</option>
+            {CATEGORY_ORDER.map(cat => (
+              <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
+            ))}
+          </select>
+
           <button
             onClick={handleReprocess}
             disabled={reprocessing}
+            className="btn-primary"
             title="Recalculer les catégories et créer automatiquement les composants reconnus"
             style={{
               display: 'flex', alignItems: 'center', gap: '5px',
               padding: '6px 12px', fontSize: '12px',
-              background: 'var(--surface-2)', color: 'var(--text-muted)',
-              borderRadius: 'var(--radius)', border: '1px solid var(--border)',
               cursor: reprocessing ? 'not-allowed' : 'pointer',
               opacity: reprocessing ? 0.6 : 1,
             }}
           >
             <RefreshCw size={13} style={{ animation: reprocessing ? 'spin 1s linear infinite' : 'none' }} />
-            {reprocessing ? 'Traitement...' : 'Retraiter'}
+            {reprocessing ? 'Traitement...' : 'Tout Traiter'}
           </button>
         </div>
       </div>
@@ -376,6 +403,32 @@ export function Unmatched() {
         )
       }
 
+      {/* ── TOP PAGINATION ── */}
+      <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem' }}>
+        {viewMode === 'grouped' && Math.ceil(totalGroups / GROUP_PAGE_SIZE) > 1 && (
+          <div className="admin-pagination" style={{ margin: 0 }}>
+            <button disabled={groupPage <= 1} onClick={() => setGroupPage(groupPage - 1)} aria-label="Page précédente">
+              <ChevronLeft size={14} />
+            </button>
+            <span>Page {groupPage} / {Math.ceil(totalGroups / GROUP_PAGE_SIZE)}</span>
+            <button disabled={groupPage >= Math.ceil(totalGroups / GROUP_PAGE_SIZE)} onClick={() => setGroupPage(groupPage + 1)} aria-label="Page suivante">
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
+        {viewMode === 'flat' && totalPages > 1 && (
+          <div className="admin-pagination" style={{ margin: 0 }}>
+            <button disabled={page <= 1} onClick={() => setPage(page - 1)} aria-label="Page précédente">
+              <ChevronLeft size={14} />
+            </button>
+            <span>Page {page} / {totalPages}</span>
+            <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} aria-label="Page suivante">
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
+      </div>
+
       {error && <p className="admin-error">{error}</p>}
       {mutationError && <p className="admin-error">{mutationError}</p>}
       {groupsError && <p className="admin-error">{groupsError}</p>}
@@ -385,7 +438,7 @@ export function Unmatched() {
         viewMode === 'grouped' && (
           <>
             {/* Bulk action bar */}
-            {(selectedGroups.size > 0 || highConfidenceGroups.length > 0) && (
+            {selectedGroups.size > 0 && (
               <div style={{
                 display: 'flex',
                 gap: '8px',
@@ -402,14 +455,6 @@ export function Unmatched() {
                     style={{ background: 'var(--danger)', color: '#fff', padding: '6px 12px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
                     <X size={13} /> Ignorer {selectedGroups.size} groupe{selectedGroups.size !== 1 ? 's' : ''}
-                  </button>
-                )}
-                {highConfidenceGroups.length > 0 && (
-                  <button
-                    onClick={() => setConfirmApprove(true)}
-                    style={{ background: 'var(--success)', color: '#0f1117', padding: '6px 12px', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
-                  >
-                    <Zap size={13} /> Approuver tout ({highConfidenceGroups.length} haute confiance)
                   </button>
                 )}
               </div>
@@ -469,10 +514,23 @@ export function Unmatched() {
                           </div>
                         </td>
                         <td onClick={e => e.stopPropagation()}>
-                          <ConfidenceBadge
-                            confidence={group.confidence as 'high' | 'medium' | 'low' | 'unknown'}
-                            category={group.category}
-                          />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <ConfidenceBadge
+                              confidence={group.confidence as 'high' | 'medium' | 'low' | 'unknown'}
+                              category={group.category}
+                            />
+                            <select
+                              value={group.category || ''}
+                              onChange={(e) => handleGroupManualCategoryChange(group, e.target.value || null)}
+                              className={styles.rowSelect}
+                              style={{ padding: '2px 4px', fontSize: '11px', height: '24px', width: '120px' }}
+                            >
+                              <option value="">Modifier...</option>
+                              {CATEGORY_ORDER.map(cat => (
+                                <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
+                              ))}
+                            </select>
+                          </div>
                         </td>
                         <td>{group.retailer_count}</td>
                         <td>
@@ -524,6 +582,19 @@ export function Unmatched() {
                           </td>
                           <td style={{ color: 'var(--text-muted)' }}>{listing.retailer_name}</td>
                           <td>{listing.scraped_price ? `${Number(listing.scraped_price).toLocaleString('fr-MA')} MAD` : '—'}</td>
+                          <td>
+                            <select
+                              value={(listing as any).manual_category || ''}
+                              onChange={(e) => handleManualCategoryChange(listing.id, e.target.value || null)}
+                              className={styles.rowSelect}
+                              style={{ padding: '2px 4px', fontSize: '11px', height: '22px' }}
+                            >
+                              <option value="">Aucune</option>
+                              {CATEGORY_ORDER.map(cat => (
+                                <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
+                              ))}
+                            </select>
+                          </td>
                           <td className={styles.date}>{new Date(listing.scraped_at).toLocaleDateString('fr-MA')}</td>
                           <td />
                         </tr>
@@ -537,7 +608,7 @@ export function Unmatched() {
         )
       }
 
-      {/* ── GROUPED VIEW PAGINATION ── */}
+      {/* ── GROUPED VIEW PAGINATION (BOTTOM) ── */}
       {viewMode === 'grouped' && Math.ceil(totalGroups / GROUP_PAGE_SIZE) > 1 && (
         <div className="admin-pagination">
           <button disabled={groupPage <= 1} onClick={() => setGroupPage(groupPage - 1)} aria-label="Page précédente">
@@ -565,6 +636,7 @@ export function Unmatched() {
                         <th>Revendeur</th>
                         <th>Nom scrappé</th>
                         <th>Prix</th>
+                        <th style={{ width: '140px' }}>Catégorie</th>
                         <th>Date</th>
                         <th>Actions</th>
                       </tr>
@@ -579,6 +651,19 @@ export function Unmatched() {
                             </a>
                           </td>
                           <td>{l.scraped_price ? `${Number(l.scraped_price).toLocaleString('fr-MA')} MAD` : '—'}</td>
+                          <td>
+                            <select
+                              value={l.manual_category || ''}
+                              onChange={(e) => handleManualCategoryChange(l.id, e.target.value || null)}
+                              className={styles.rowSelect}
+                              style={{ padding: '4px 8px', fontSize: '12px', height: '30px', width: '100%' }}
+                            >
+                              <option value="">Auto-détecter</option>
+                              {CATEGORY_ORDER.map(cat => (
+                                <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
+                              ))}
+                            </select>
+                          </td>
                           <td className={styles.date}>{new Date(l.scraped_at).toLocaleDateString('fr-MA')}</td>
                           <td>
                             <div className={styles.actions}>
@@ -696,18 +781,6 @@ export function Unmatched() {
         )
       }
 
-      {/* ── Confirm bulk approve ── */}
-      {
-        confirmApprove && (
-          <ConfirmDialog
-            title="Approuver les correspondances"
-            message={`Associer ${highConfidenceGroups.reduce((s, g) => s + g.listing_count, 0)} listings à leurs composants existants (${highConfidenceGroups.length} groupes haute confiance) ?`}
-            confirmLabel="Approuver"
-            onConfirm={handleBulkApprove}
-            onCancel={() => setConfirmApprove(false)}
-          />
-        )
-      }
     </div >
   );
 }

@@ -20,8 +20,8 @@ import type { ThermalPasteSpecValues } from './ThermalPasteSpecFields';
 import { CATEGORY_ORDER, CATEGORY_LABELS } from '@shared/types';
 import type { ComponentCategory } from '@shared/types';
 import styles from './Form.module.css';
-import { getKeywordRules, reprocessSuggestions, getErrorMessage} from '../api';
-import type { CanonicalGroup, KeywordRuleResponse } from '../api';
+import { getKeywordRules, reprocessSuggestions, getErrorMessage, scrapeUrls, createAndLinkComponent } from '../api';
+import type { CanonicalGroup, KeywordRuleResponse, CreateAndLinkPayload } from '../api';
 
 export interface CreateAndLinkResult {
     component_id: number;
@@ -36,8 +36,6 @@ interface Props {
     onClose: () => void;
     onSuccess: (result: CreateAndLinkResult) => void;
 }
-
-const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
 export function CreateAndLinkModal({ group, isOpen, onClose, onSuccess }: Props) {
     const [name, setName] = useState('');
@@ -139,10 +137,9 @@ export function CreateAndLinkModal({ group, isOpen, onClose, onSuccess }: Props)
         setError(null);
 
         try {
-            const token = (await import('../api')).getAccessToken();
             const listingIds = group.listings.map(l => l.id);
 
-            const body: Record<string, unknown> = {
+            const payload: CreateAndLinkPayload = {
                 name: linkToExisting ? (group.existing_component_name ?? name) : name.trim(),
                 brand: brand.trim() || null,
                 category,
@@ -151,27 +148,11 @@ export function CreateAndLinkModal({ group, isOpen, onClose, onSuccess }: Props)
             };
 
             if (linkToExisting && group.existing_component_id) {
-                body.link_to_existing = true;
-                body.existing_component_id = group.existing_component_id;
+                payload.link_to_existing = true;
+                payload.existing_component_id = group.existing_component_id;
             }
 
-            const res = await fetch(`${BASE}/admin/unmatched-listings/create-and-link`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                },
-                credentials: 'include',
-                body: JSON.stringify(body),
-            });
-
-            const data = await res.json();
-            if (!res.ok) {
-                if (res.status === 409) {
-                    throw new Error(`Doublon: "${data.error?.existing?.name}" existe déjà dans cette catégorie.`);
-                }
-                throw new Error(data?.error?.message ?? `HTTP ${res.status}`);
-            }
+            const data = await createAndLinkComponent(payload);
 
             const result: CreateAndLinkResult = {
                 component_id: data.component_id,
@@ -181,8 +162,14 @@ export function CreateAndLinkModal({ group, isOpen, onClose, onSuccess }: Props)
             };
             setDone(result);
             onSuccess(result);
-        } catch (err) {
-            setError(getErrorMessage(err));
+        } catch (err: unknown) {
+            // Handle duplicate component error specifically
+            const apiErr = err as { status?: number; code?: string; existing?: { name: string } };
+            if (apiErr.status === 409) {
+                setError(`Doublon: "${apiErr.existing?.name ?? 'composant'}" existe déjà dans cette catégorie.`);
+            } else {
+                setError(getErrorMessage(err));
+            }
         } finally {
             setLoading(false);
         }
@@ -191,17 +178,8 @@ export function CreateAndLinkModal({ group, isOpen, onClose, onSuccess }: Props)
     async function handleFetchPrices() {
         if (!group || !done) return;
         try {
-            const token = (await import('../api')).getAccessToken();
             const urls = group.listings.map(l => ({ retailer_id: l.retailer_id, product_url: l.product_url }));
-            await fetch(`${BASE}/admin/scrapers/scrape-urls`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                },
-                credentials: 'include',
-                body: JSON.stringify({ urls }),
-            });
+            await scrapeUrls(urls);
         } catch { /* non-critical */ }
         onClose();
     }
