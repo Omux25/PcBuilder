@@ -111,6 +111,18 @@ Noctua NH-D15 (165mm)  +  Case max 155mm  → cooler_too_tall error
 
 AIO liquid coolers are not affected by this rule — they mount to the case radiator slots, not inside the case.
 
+### Rule 7 — RAM slots exceeded (error)
+
+**Applies to:** RAM + Motherboard
+
+The engine counts the number of RAM sticks in the build and compares it to the motherboard's `ram_slots`. If you try to add 4 sticks to a motherboard with only 2 slots, an error is triggered.
+
+### Rule 8 — Storage slots exceeded (error)
+
+**Applies to:** Storage + Motherboard
+
+The engine sums the motherboard's `m2_slots` and `sata_ports` to determine the total physical capacity for storage drives. If the number of selected drives exceeds this total, an error is triggered.
+
 ### TDP calculation (always runs)
 
 **Applies to:** All components
