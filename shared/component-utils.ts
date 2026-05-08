@@ -263,6 +263,8 @@ export function cleanName(rawName: string, brand: string): string {
     .replace(/\s*\(jusqu['\u2019]?\u00e0?\s*[\d.,]+\s*GHz[^)]*\)\s*/gi, ' ')
     .replace(/\s*\(\d+\.?\d*\s*GHz\s*\/\s*\d+\.?\d*\s*GHz\)\s*/gi, '') // (3.7 GHz / 4.6 GHz)
     .replace(/\s*\(\d+\.?\d*\s*GHz[^)]*\)\s*/gi, '') // (3.7 GHz Max)
+    .replace(/\s*\(\d+\.?\d*\s*GHz[^)]*\.{3}?\s*/gi, '') // (3.7 GHz /... truncated — no closing paren
+    .replace(/\s*\(\d+\.?\d*\s*GHz[^)]*$/, '') // (3.7 GHz... at end of string with no closing paren
     .replace(/\s+\d+\.?\d*\s*GHz\s*\/\s*\d+\.?\d*\s*GHz\s*/gi, ' ') // 3.7 GHz / 4.6 GHz
     .replace(/\s+\d+\s*(MHZ|GHZ|mhz|ghz)\s*$/i, '') // Trailing MHz/GHz
     .replace(/\s*-\s*ed\s*$/i, '') // "- ed" suffix
@@ -288,6 +290,14 @@ export function cleanName(rawName: string, brand: string): string {
   // Pattern: trailing " DDR4", " DDR5", " D4", " D5" (case-insensitive)
   name = name.replace(/\s+DDR[45]\s*$/i, '');
   name = name.replace(/\s+D[45]\s*$/i, '');
+
+  // Normalize all-caps names: "RYZEN 3 3300X" → "Ryzen 3 3300X"
+  // Only apply if the name is mostly uppercase (>60% uppercase letters)
+  const letters = name.replace(/[^a-zA-Z]/g, '');
+  const upperCount = (name.match(/[A-Z]/g) || []).length;
+  if (letters.length > 3 && upperCount / letters.length > 0.6) {
+    name = name.toLowerCase().replace(/\b(\w)/g, (c) => c.toUpperCase());
+  }
 
   // If after stripping everything it's empty, use the original (fallback)
   if (name.length < 2) name = rawName;
