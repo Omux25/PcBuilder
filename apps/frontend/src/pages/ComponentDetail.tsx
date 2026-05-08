@@ -3,11 +3,12 @@
  * Accessible at /components/:slug
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { GitCompare, ShoppingCart, ArrowLeft } from 'lucide-react';
 import { getComponentBySlug, getPrices, getPriceHistory } from '../api';
-import { PriceHistoryChart } from '../components/PriceHistoryChart';
+import { PriceHistoryChart, PERIOD_DAYS } from '../components/PriceHistoryChart';
+import type { HistoryPeriod } from '../components/PriceHistoryChart';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { useCompare } from '../context/CompareContext';
@@ -27,10 +28,28 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
   const [component, setComponent] = useState<Component | null>(null);
   const [prices, setPrices] = useState<PriceOffer[]>([]);
   const [history, setHistory] = useState<PriceHistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [period, setPeriod] = useState<HistoryPeriod>('30d');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [addedToBuild, setAddedToBuild] = useState(false);
   const [showOos, setShowOos] = useState(false);
+  const [componentId, setComponentId] = useState<number | null>(null);
+
+  // Fetch history separately so period changes don't reload the whole page
+  const fetchHistory = useCallback(async (id: number, p: HistoryPeriod) => {
+    setHistoryLoading(true);
+    try {
+      const data = await getPriceHistory(id, { days: PERIOD_DAYS[p] });
+      setHistory(data);
+    } catch { /* non-critical */ }
+    finally { setHistoryLoading(false); }
+  }, []);
+
+  function handlePeriodChange(p: HistoryPeriod) {
+    setPeriod(p);
+    if (componentId) fetchHistory(componentId, p);
+  }
 
   useEffect(() => {
     if (!slug) return;
@@ -40,9 +59,10 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
     getComponentBySlug(slug)
       .then(async (found) => {
         setComponent(found);
+        setComponentId(found.id);
         const [priceData, historyData] = await Promise.all([
           getPrices(found.id),
-          getPriceHistory(found.id, { days: 30 }),
+          getPriceHistory(found.id, { days: PERIOD_DAYS[period] }),
         ]);
         setPrices(priceData);
         setHistory(historyData);
@@ -285,7 +305,12 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
 
         <section className={`${styles.card} ${styles.fullWidth}`}>
           <h2 className={styles.cardTitle}>{UI.detail.priceHistory}</h2>
-          <PriceHistoryChart history={history} />
+          <PriceHistoryChart
+            history={history}
+            loading={historyLoading}
+            period={period}
+            onPeriodChange={handlePeriodChange}
+          />
         </section>
       </div>
     </div>

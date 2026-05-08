@@ -22,11 +22,12 @@ export interface PriceHistoryEntry {
 // ── Service Functions ────────────────────────────────────────────────────────
 
 /**
- * Returns price history for a component, optionally filtered by retailer and time range.
+ * Returns price history for a component aggregated to one data point per day per retailer.
+ * Aggregation prevents chart noise from multiple scrapes per day.
  *
  * @param componentId - The component's primary key
  * @param retailerId  - Optional: filter to a single retailer
- * @param days        - Optional: number of past days to include (default 30)
+ * @param days        - Number of past days to include (default 30)
  */
 async function getPriceHistory(
   componentId: number,
@@ -34,22 +35,25 @@ async function getPriceHistory(
   days: number = 30
 ): Promise<PriceHistoryEntry[]> {
   const sql = getSql();
-  // Single query with nullable retailer filter — avoids duplicating the SQL.
+  // Aggregate to one row per (day, retailer) — MIN price for that day.
+  // This eliminates chart noise from multiple scrapes per day while preserving
+  // the lowest price seen (most useful for the user).
   return sql`
     SELECT
-      ph.id,
+      MIN(ph.id)                                    AS id,
       ph.component_id,
       ph.retailer_id,
-      r.name AS retailer_name,
-      ph.price,
-      ph.in_stock,
-      ph.recorded_at
+      r.name                                        AS retailer_name,
+      MIN(ph.price)                                 AS price,
+      BOOL_OR(ph.in_stock)                          AS in_stock,
+      DATE_TRUNC('day', ph.recorded_at)::timestamptz AS recorded_at
     FROM price_history ph
     JOIN retailers r ON r.id = ph.retailer_id
     WHERE ph.component_id = ${componentId}
       AND (${retailerId ?? null}::int IS NULL OR ph.retailer_id = ${retailerId ?? null})
       AND ph.recorded_at >= NOW() - (${days} || ' days')::INTERVAL
-    ORDER BY ph.recorded_at ASC
+    GROUP BY ph.component_id, ph.retailer_id, r.name, DATE_TRUNC('day', ph.recorded_at)
+    ORDER BY recorded_at ASC
   ` as Promise<PriceHistoryEntry[]>;
 }
 
