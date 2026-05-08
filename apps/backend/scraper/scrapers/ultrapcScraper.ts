@@ -137,8 +137,20 @@ export class UltraPcScraper extends BaseScraper {
       if (!url) return;
 
       // Skip bundles (contain "+")
-      const name = $(card).find('.product-title a, h3 a, h2 a').first().text().trim();
-      if (!name || name.includes('+')) return;
+      const truncatedName = $(card).find('.product-title a, h3 a, h2 a').first().text().trim();
+      if (!truncatedName || truncatedName.includes('+')) return;
+
+      // Use img alt attribute for full name when title is truncated (ends with "...")
+      // UltraPC truncates product titles in listing HTML but alt text has the full name
+      let name = truncatedName;
+      if (truncatedName.endsWith('...')) {
+        const altText = $(card).find('img').first().attr('alt') ?? '';
+        // Alt format: "Full Product Name BRAND, Ultra Pc Gamer Maroc" — strip the suffix
+        const altClean = altText.replace(/,?\s*(NVIDIA|AMD|Intel)?\s*\w+,?\s*Ultra\s*Pc\s*Gamer\s*Maroc\s*$/i, '').trim();
+        if (altClean.length > truncatedName.length) {
+          name = altClean;
+        }
+      }
 
       // Price — first span.price in this card
       const rawPrice = $(card).find('span.price').first().text().trim();

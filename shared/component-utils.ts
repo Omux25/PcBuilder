@@ -268,6 +268,8 @@ export function cleanName(rawName: string, brand: string): string {
     .replace(/\s+\d+\.?\d*\s*GHz\s*\/\s*\d+\.?\d*\s*GHz\s*/gi, ' ') // 3.7 GHz / 4.6 GHz
     .replace(/\s+\d+\s*(MHZ|GHZ|mhz|ghz)\s*$/i, '') // Trailing MHz/GHz
     .replace(/\s*-\s*ed\s*$/i, '') // "- ed" suffix
+    // Strip trailing ellipsis from truncated scraper names
+    .replace(/\s*\.{2,}\s*$/, '')
     // Strip spec text appended after em-dash: "– 32 Cœurs / 64 threads", "– 8 Cœurs"
     .replace(/\s*[–\-]\s*\d+\s*[Cc][œo]urs?.*$/i, '')
     // Compatibility info in parens: (Micro ATX), (Mini ITX), (LGA1700)
