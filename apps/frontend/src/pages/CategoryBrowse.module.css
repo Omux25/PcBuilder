@@ -78,6 +78,8 @@
   border-radius: var(--radius-xl);
   padding: 1.25rem;
   box-shadow: var(--shadow-sm);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
 }
 
 .mainSection {
@@ -549,4 +551,13 @@
   .filterGrid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── Loading fade — keep old results visible during refetch ─────────────── */
+/* Prevents hard skeleton swap flash when filters change */
+
+.tbodyFading {
+  opacity: 0.4;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
 }
