@@ -109,7 +109,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
         {/* Product image */}
         <div className={styles.heroImage}>
           {component.image_url ? (
-            <img src={component.image_url} alt={component.name} className={styles.productImg} />
+            <img src={component.image_url} alt={component.name} className={styles.productImg} referrerPolicy="no-referrer" />
           ) : (
             <div className={styles.productImgPlaceholder}>
               <CategoryIcon category={component.category as ComponentCategory} size={48} />

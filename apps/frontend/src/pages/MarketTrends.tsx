@@ -19,13 +19,13 @@ const DAY_OPTIONS = [3, 7, 14, 30];
 
 export function MarketTrends() {
   const { addToBuild } = useBuild();
-  const [trends, setTrends]       = useState<MarketTrend[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState<string | null>(null);
-  const [days, setDays]           = useState(7);
-  const [category, setCategory]   = useState('');
+  const [trends, setTrends] = useState<MarketTrend[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [days, setDays] = useState(7);
+  const [category, setCategory] = useState('');
   const [trendType, setTrendType] = useState<'drops' | 'hikes'>('drops');
-  const [added, setAdded]         = useState<number | null>(null);
+  const [added, setAdded] = useState<number | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -155,7 +155,7 @@ function TrendCard({ trend, isAdded, onAdd }: { trend: MarketTrend; isAdded: boo
     <div className={styles.card}>
       <div className={styles.cardImageWrap}>
         {trend.image_url ? (
-          <img src={trend.image_url} alt={trend.name} className={styles.cardImage} />
+          <img src={trend.image_url} alt={trend.name} className={styles.cardImage} referrerPolicy="no-referrer" />
         ) : (
           <div className={styles.cardImagePlaceholder}>
             <CategoryIcon category={trend.category as ComponentCategory} size={28} />

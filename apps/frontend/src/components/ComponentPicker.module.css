@@ -43,11 +43,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-blue) 100%);
-  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: var(--surface-3);
+  color: var(--text-secondary);
   font-size: 1rem;
   font-weight: bold;
   margin-right: 0.5rem;
@@ -76,7 +76,10 @@
   background: var(--surface-3);
 }
 
-.iconSvg { flex-shrink: 0; color: var(--text-muted); }
+.iconSvg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
 
 .chevron {
   font-size: 0.65rem;
@@ -101,7 +104,10 @@
   z-index: 1;
 }
 
-.clear:hover { color: var(--danger); background: var(--danger-tint); }
+.clear:hover {
+  color: var(--danger);
+  background: var(--danger-tint);
+}
 
 .dropdown {
   position: absolute;
@@ -163,7 +169,10 @@
   align-items: center;
   border-radius: 3px;
 }
-.clearSearch:hover { color: var(--text); }
+
+.clearSearch:hover {
+  color: var(--text);
+}
 
 .filterToggle {
   position: relative;
@@ -180,7 +189,9 @@
   flex-shrink: 0;
   transition: all 0.15s;
 }
-.filterToggle:hover, .filterToggleActive {
+
+.filterToggle:hover,
+.filterToggleActive {
   color: var(--accent);
   border-color: var(--accent);
   background: var(--accent-glow);
@@ -304,6 +315,7 @@
   align-self: flex-end;
   transition: all 0.15s;
 }
+
 .clearFiltersBtn:hover {
   color: var(--danger);
   border-color: var(--danger);
@@ -318,8 +330,17 @@
   overflow-y: auto;
 }
 
-.hint { padding: 0.75rem 1rem; color: var(--text-dim); font-size: 0.85rem; }
-.errorItem { padding: 0.75rem 1rem; color: var(--danger-soft); font-size: 0.85rem; }
+.hint {
+  padding: 0.75rem 1rem;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.errorItem {
+  padding: 0.75rem 1rem;
+  color: var(--danger-soft);
+  font-size: 0.85rem;
+}
 
 /* ── Component row ─────────────────────────────────────────────────────────── */
 
@@ -335,7 +356,9 @@
   border-radius: var(--radius);
 }
 
-.item:hover { background: var(--surface-2); }
+.item:hover {
+  background: var(--surface-2);
+}
 
 .itemSelected {
   background: var(--accent-glow);
@@ -348,7 +371,10 @@
   background: var(--danger-row);
 }
 
-.itemIncompatible:hover { background: var(--danger-row); filter: brightness(0.95); }
+.itemIncompatible:hover {
+  background: var(--danger-row);
+  filter: brightness(0.95);
+}
 
 .itemMain {
   display: flex;
@@ -367,7 +393,7 @@
 
 .brand {
   font-size: 0.68rem;
-  color: var(--accent);
+  color: var(--text-dim);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -485,12 +511,23 @@
   color: var(--accent);
 }
 
-.pageBtn:disabled { opacity: 0.4; cursor: not-allowed; }
-.pageInfo { font-size: 0.78rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.pageBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pageInfo {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
 
 /* ── Skeleton ──────────────────────────────────────────────────────────────── */
 
-.skeleton { padding: 0.5rem 0.75rem; list-style: none; }
+.skeleton {
+  padding: 0.5rem 0.75rem;
+  list-style: none;
+}
 
 .skeletonLine {
   display: block;
@@ -502,5 +539,10 @@
   width: 70%;
 }
 
-.skeleton:nth-child(2) .skeletonLine { width: 55%; }
-.skeleton:nth-child(3) .skeletonLine { width: 80%; }
+.skeleton:nth-child(2) .skeletonLine {
+  width: 55%;
+}
+
+.skeleton:nth-child(3) .skeletonLine {
+  width: 80%;
+}

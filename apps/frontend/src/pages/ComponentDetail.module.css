@@ -81,9 +81,9 @@
   gap: 0.3rem;
   font-size: 0.72rem;
   font-weight: 700;
-  color: var(--accent);
-  background: var(--accent-glow);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   padding: 0.2rem 0.65rem;
   border-radius: 999px;
   text-transform: uppercase;
@@ -167,8 +167,8 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.55rem 1.1rem;
-  background: var(--accent);
-  color: white;
+  background: var(--text-primary);
+  color: var(--bg-app);
   border: none;
   border-radius: var(--radius);
   font-size: 0.85rem;
@@ -178,18 +178,18 @@
 }
 
 .addToBuildBtn:hover {
-  background: var(--accent-h);
+  opacity: 0.85;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 .addToBuildBtnDone {
   background: var(--success);
+  color: #fff;
 }
 
 .addToBuildBtnDone:hover {
   background: var(--success-soft);
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+  color: #fff;
 }
 
 .compareBtn {
@@ -208,9 +208,9 @@
 }
 
 .compareBtn:hover {
-  color: var(--accent-blue);
-  border-color: var(--accent-blue);
-  background: rgba(96, 165, 250, 0.1);
+  color: var(--text);
+  border-color: var(--border-2);
+  background: var(--surface-3);
   text-decoration: none;
 }
 
@@ -304,12 +304,13 @@
 
 .retailerLink {
   font-weight: 600;
-  color: var(--accent);
+  color: var(--text);
   text-decoration: none;
 }
 
 .retailerLink:hover {
   text-decoration: underline;
+  color: var(--text-primary);
 }
 
 .variantCell {

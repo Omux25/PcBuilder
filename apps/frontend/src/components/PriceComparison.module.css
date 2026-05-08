@@ -147,8 +147,8 @@
   display: inline-flex;
   align-items: center;
   padding: 0.3rem 0.75rem;
-  background: var(--accent);
-  color: #ffffff !important;
+  background: var(--text-primary);
+  color: var(--bg-app) !important;
   border-radius: var(--radius);
   font-size: 0.78rem;
   font-weight: 600;
@@ -158,11 +158,10 @@
 }
 
 .buyBtn:hover {
-  background: var(--accent-h);
+  opacity: 0.85;
   text-decoration: none !important;
-  color: #ffffff !important;
+  color: var(--bg-app) !important;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
 
 .hint {

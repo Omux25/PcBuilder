@@ -3,7 +3,7 @@
  * Persists selected component IDs in localStorage.
  */
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
 interface CompareContextType {
   compareIds: number[];

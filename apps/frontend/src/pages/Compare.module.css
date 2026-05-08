@@ -17,7 +17,11 @@
   margin-bottom: 0.75rem;
   transition: color 0.15s;
 }
-.back:hover { color: var(--accent); text-decoration: none; }
+
+.back:hover {
+  color: var(--accent);
+  text-decoration: none;
+}
 
 .title {
   font-size: 1.4rem;
@@ -34,7 +38,7 @@
 
 .loadingBar {
   height: 3px;
-  background: linear-gradient(90deg, var(--accent), var(--accent-blue));
+  background: linear-gradient(90deg, var(--border-2), var(--text-dim));
   border-radius: 2px;
   margin-bottom: 1rem;
   animation: shimmer 1.5s infinite;
@@ -243,7 +247,10 @@
   min-width: 220px;
   background: var(--surface);
 }
-.componentCol:last-child { border-right: none; }
+
+.componentCol:last-child {
+  border-right: none;
+}
 
 /* ── Component header card ──────────────────────────────────────────────── */
 
@@ -287,7 +294,11 @@
   line-height: 1.3;
   transition: color 0.15s;
 }
-.componentName:hover { color: var(--accent); text-decoration: none; }
+
+.componentName:hover {
+  color: var(--accent);
+  text-decoration: none;
+}
 
 .componentMeta {
   display: flex;
@@ -338,6 +349,7 @@
   align-items: center;
   transition: all 0.15s;
 }
+
 .removeBtn:hover {
   color: var(--danger);
   background: var(--danger-tint);
@@ -371,7 +383,10 @@
   text-decoration: none;
   transition: color 0.15s;
 }
-.browseLink:hover { text-decoration: underline; }
+
+.browseLink:hover {
+  text-decoration: underline;
+}
 
 /* ── Section header rows ────────────────────────────────────────────────── */
 
@@ -393,8 +408,14 @@
   border-bottom: 1px solid var(--border);
   transition: background 0.1s;
 }
-.specRow:hover td { background: var(--surface-2); }
-.specRow:last-child { border-bottom: none; }
+
+.specRow:hover td {
+  background: var(--surface-2);
+}
+
+.specRow:last-child {
+  border-bottom: none;
+}
 
 .specLabel {
   padding: 0.6rem 1.25rem;
@@ -418,7 +439,10 @@
   vertical-align: middle;
   font-variant-numeric: tabular-nums;
 }
-.specValue:last-child { border-right: none; }
+
+.specValue:last-child {
+  border-right: none;
+}
 
 .specBest {
   background: var(--success-row);
@@ -481,6 +505,7 @@
   transition: all 0.15s;
   width: fit-content;
 }
+
 .offerChip:hover {
   border-color: var(--accent);
   color: var(--accent);
@@ -556,17 +581,32 @@
   transition: all 0.15s;
   margin-top: 0.5rem;
 }
+
 .browseBtn:hover {
   background: var(--accent-h);
   text-decoration: none;
-  color: white;
+  color: var(--bg-app);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  opacity: 0.9;
 }
 
 @media (max-width: 768px) {
-  .labelCol { width: 110px; min-width: 110px; padding: 0.6rem 0.75rem; }
-  .componentCol { min-width: 160px; padding: 0.75rem; }
-  .specLabel { padding: 0.5rem 0.75rem; }
-  .specValue { padding: 0.5rem 0.75rem; }
+  .labelCol {
+    width: 110px;
+    min-width: 110px;
+    padding: 0.6rem 0.75rem;
+  }
+
+  .componentCol {
+    min-width: 160px;
+    padding: 0.75rem;
+  }
+
+  .specLabel {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .specValue {
+    padding: 0.5rem 0.75rem;
+  }
 }

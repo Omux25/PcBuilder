@@ -209,7 +209,7 @@ export function Compare() {
                   {item ? (
                     <div className={styles.componentHeader}>
                       {item.component.image_url && (
-                        <img src={item.component.image_url} alt={item.component.name} className={styles.componentImg} />
+                        <img src={item.component.image_url} alt={item.component.name} className={styles.componentImg} referrerPolicy="no-referrer" />
                       )}
                       <div className={styles.componentHeaderInfo}>
                         <span className={styles.componentBrand}>{item.component.brand}</span>
