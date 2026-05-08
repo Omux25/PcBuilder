@@ -83,12 +83,11 @@ componentsRouter.post('/smart-search', async (c) => {
     socket: socket || undefined,
     ram_type: ram_type || undefined,
     page: 1,
-    // Fetch up to 300 candidates for in-memory compatibility scoring and sorting.
-    // This is intentional: compatibility scoring requires all candidates to be
-    // present so incompatible ones can be ranked last. The trade-off is that
-    // categories with >300 components will silently drop results beyond 300.
-    // In practice no category currently exceeds 300 components.
-    limit: 300,
+    // Fetch up to 1000 candidates for in-memory compatibility scoring and sorting.
+    // Previously capped at 300 — but motherboard category has 681 components,
+    // so only 100 were returned (getComponents had a 100 hard cap). Now both
+    // caps raised to 1000 to cover all current categories.
+    limit: 1000,
   });
 
   if (components.length === 0) return c.json({ components: [], total: 0 });
