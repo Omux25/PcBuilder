@@ -218,11 +218,10 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
   let lastReported = 0;
   const PROGRESS_INTERVAL = 500;
 
-  const { updated, unmatched, errors, autoMapped, autoCreated } = await aggregate(allPrices, urlToId, {}, (done, total) => {
+  const { updated, unmatched, errors, autoMapped, autoCreated } = await aggregate(allPrices, urlToId, {}, async (done, total) => {
     if (done - lastReported >= PROGRESS_INTERVAL || done === total) {
       const pct = Math.round((done / total) * 100);
-      console.log(`   Progress: ${done}/${total} (${pct}%)`);
-      logger.info(`[SESSION] Pipeline progress: ${done}/${total} (${pct}%)`);
+      await logger.info(`[SESSION] Pipeline progress: ${done}/${total} (${pct}%)`);
       lastReported = done;
     }
   });

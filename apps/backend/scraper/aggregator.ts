@@ -49,7 +49,7 @@ export async function aggregate(
   prices: ScrapedPrice[],
   retailerNameToId?: Map<string, number>,
   options: { skipStockSync?: boolean } = {},
-  onProgress?: (done: number, total: number) => void
+  onProgress?: (done: number, total: number) => void | Promise<void>
 ): Promise<AggregateResult & { autoMapped: number; autoCreated: number }> {
   const { skipStockSync = false } = options;
   let updated = 0;
@@ -286,7 +286,7 @@ export async function aggregate(
       await logger.error(`[PIPELINE] Classification failed for ${p.product_url}: ${err instanceof Error ? err.message : String(err)}`);
     }
     classifiedCount++;
-    onProgress?.(classifiedCount, prices.length);
+    await onProgress?.(classifiedCount, prices.length);
   }
 
   // ── Phase B: bulk-insert all new components ────────────────────────────────
