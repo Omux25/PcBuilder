@@ -5,18 +5,24 @@
 
 ---
 
-## Current Status (May 2026)
+## Current Status (May 8, 2026)
 
 The platform is functional and deployed. All 666 backend tests and 43 frontend tests pass.
 
 **What works:**
 - Price scraping from 3 Moroccan retailers (UltraPC, NextLevel PC, SetupGame)
-- Compatibility checking (7 rules: socket, RAM type, RAM frequency, GPU length, PSU wattage, form factor, cooler height)
+- UltraPC scraper: HTML card parsing (stock status from "Produit en stock" text, no extra HTTP calls)
+- Compatibility checking (8 rules: socket, RAM type, RAM frequency, GPU length, PSU wattage, form factor, cooler height, RAM slots)
 - Component catalog with ~4,000 components across 25 categories
-- Admin panel: dashboard, component CRUD, bulk import, unmatched listings queue
-- Frontend: configurator, category browse, component detail, price comparison, presets, market trends
-- Image extraction from retailer websites (~87% coverage)
+- Motherboard specs: 665/665 boards have correct socket + DDR type (inferred from chipset naming)
+- CPU specs: 137/137 CPUs have correct socket (inferred from model series)
+- Admin panel: dashboard, component CRUD, bulk import, unmatched listings queue, preset management
+- Frontend: configurator, category browse (681 motherboards, all sockets visible), component detail, price comparison, presets, market trends
+- Image extraction: UltraPC + NextLevel upgraded to large_default (800px) — 100% coverage
+- Stock status: per-retailer display with staleness warning, accurate OOS detection
+- Price history: daily aggregation, 7j/30j/1an period toggle
 - Automatic data quality pass after every scrape (deduplication, name cleaning, category fixes)
+- smartSearch returns full catalog (1000 cap) — all 681 motherboards visible, not just 100
 
 ---
 
