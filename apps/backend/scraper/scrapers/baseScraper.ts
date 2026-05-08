@@ -37,6 +37,10 @@ export interface ScrapedPrice {
   /** Optional: short description from the retailer — used as fallback for variant extraction
    *  when the product name doesn't contain enough detail (e.g. VRAM size) */
   product_description?: string;
+  /** Optional: Manually assigned category for reprocessing */
+  manual_category?: string;
+  /** Optional: Product image URL from the retailer */
+  image_url?: string;
 }
 
 // ── Dependency injection ──────────────────────────────────────────────────────
@@ -63,6 +67,11 @@ export function setLoad(mockLoad: LoadFn): void {
 /** Override retry delay — set to 0 in tests to avoid waiting. */
 export function setRetryDelay(ms: number | null): void {
   _retryDelayMs = ms;
+}
+
+/** Returns the current retry delay — used by subclasses for inter-page delays. */
+export function getRetryDelay(defaultMs: number): number {
+  return _retryDelayMs !== null ? _retryDelayMs : defaultMs;
 }
 
 /**
@@ -101,18 +110,17 @@ export abstract class BaseScraper {
     const MAX_RETRIES = 3;
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 30000); // 30s per request
-        let response: Awaited<ReturnType<FetchFn>>;
         try {
-          response = await _fetch(url, {
-            signal: controller.signal,
-            headers: { 'User-Agent': 'PCBuilderMaroc-Bot/1.0 (price comparator; +https://pcbuilder.ma)' },
-          } as RequestInit);
-        } finally {
-          clearTimeout(timeout);
-        }
+          const response = await _fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'fr-MA,fr;q=0.9,en;q=0.8',
+          },
+        } as RequestInit);
 
         // HTTP errors are not retried — throw immediately
         if (!response.ok) {
@@ -132,11 +140,16 @@ export abstract class BaseScraper {
 
         const delayMs = _retryDelayMs !== null ? _retryDelayMs : Math.pow(2, attempt) * 1000; // 2s, 4s
         if (!_silent) {
+          // Use console.warn for retry messages — they're transient and the logger
+          // is async (writes to DB). A fire-and-forget logger call here would
+          // complicate the retry flow without adding meaningful value.
           console.warn(
             `[${this.siteName}] Attempt ${attempt}/${MAX_RETRIES} failed: ${(err as Error).message}. Retrying in ${delayMs}ms...`,
           );
         }
         await new Promise((resolve) => setTimeout(resolve, delayMs));
+      } finally {
+        clearTimeout(timeout);
       }
     }
 
@@ -157,19 +170,48 @@ export abstract class BaseScraper {
    * from the same HTML without calling scrape() twice.
    */
   protected async fetchAndParse(url: string): Promise<CheerioAPI> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
-    let response: Awaited<ReturnType<FetchFn>>;
-    try {
-      response = await _fetch(url, {
-        signal: controller.signal,
-        headers: { 'User-Agent': 'PCBuilderMaroc-Bot/1.0 (price comparator; +https://pcbuilder.ma)' },
-      } as RequestInit);
-    } finally {
-      clearTimeout(timeout);
+    const MAX_RETRIES = 3;
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+      try {
+        const response = await _fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'fr-MA,fr;q=0.9,en;q=0.8',
+          },
+        } as RequestInit);
+
+        // Retry on 503 (rate limit / server overload) with backoff
+        if (response.status === 503) {
+          if (attempt === MAX_RETRIES) throw new Error(`HTTP 503 fetching ${url}`);
+          const delayMs = _retryDelayMs !== null ? _retryDelayMs : attempt * 3000; // 3s, 6s
+          if (!_silent) console.warn(`[${this.siteName}] 503 on ${url} — retrying in ${delayMs}ms (attempt ${attempt}/${MAX_RETRIES})`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+          continue;
+        }
+        if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${url}`);
+        const html = await response.text();
+        return _load(html);
+      } catch (err) {
+        // If it's the last attempt, or an HTTP error other than 503, throw it
+        const isHttpError = err instanceof Error && err.message.startsWith('HTTP ');
+        if (attempt === MAX_RETRIES || (isHttpError && !err.message.includes('503'))) {
+          throw err;
+        }
+        
+        // For network errors, retry with exponential backoff
+        const delayMs = _retryDelayMs !== null ? _retryDelayMs : Math.pow(2, attempt) * 1000;
+        if (!_silent) console.warn(`[${this.siteName}] Network error on ${url} — retrying in ${delayMs}ms (attempt ${attempt}/${MAX_RETRIES})`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      } finally {
+        clearTimeout(timeout);
+      }
     }
-    if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${url}`);
-    const html = await response.text();
-    return _load(html);
+
+    throw new Error('Unreachable');
   }
 }

@@ -24,6 +24,7 @@
 
 import { fetch } from 'undici';
 import type { ScrapedPrice } from './baseScraper.js';
+import { logger } from '../utils/logger.js';
 
 const SITE_NAME = 'setupgame.ma';
 
@@ -43,6 +44,7 @@ interface StoreProduct {
   };
   is_in_stock: boolean;
   categories: { id: number; name: string }[];
+  images: { src: string }[];
 }
 
 // ── Dependency injection for tests ───────────────────────────────────────────
@@ -74,7 +76,7 @@ export class SetupGameScraper {
       if (result.status === 'fulfilled') {
         allPrices.push(...result.value);
       } else {
-        console.error(`[${SITE_NAME}] Category failed: ${result.reason}`);
+        await logger.error(`[${SITE_NAME}] Category failed: ${result.reason}`, SITE_NAME);
       }
     }
     return allPrices;
@@ -133,6 +135,11 @@ export class SetupGameScraper {
           ? rawDesc.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || undefined
           : undefined;
 
+        // Extract first image URL if available
+        const image_url = product.images && product.images.length > 0
+          ? product.images[0].src
+          : undefined;
+
         prices.push({
           retailer_id,
           price,
@@ -140,6 +147,7 @@ export class SetupGameScraper {
           product_url,
           product_name,
           product_description,
+          image_url,
         });
       }
 
@@ -147,7 +155,7 @@ export class SetupGameScraper {
       page++;
 
       if (hasMore) {
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        await new Promise((resolve) => setTimeout(resolve, 100)); // Reduced from 300ms to 100ms
       }
     }
 

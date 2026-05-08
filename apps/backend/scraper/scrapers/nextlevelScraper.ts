@@ -16,7 +16,7 @@
  * Requirements: 6.1, 6.2, 6.3
  */
 
-import { BaseScraper, type ScrapedPrice } from './baseScraper.js';
+import { BaseScraper, type ScrapedPrice, getRetryDelay } from './baseScraper.js';
 import type { CheerioAPI } from 'cheerio';
 
 const SITE_NAME = 'nextlevelpc.ma';
@@ -41,45 +41,56 @@ export class NextLevelScraper extends BaseScraper {
 
   async scrapeAllCategories(retailer_id: number): Promise<ScrapedPrice[]> {
     this._retailerId = retailer_id;
-    const results = await Promise.allSettled(
-      CATEGORY_URLS.map((url) => this.scrapeCategory(url, retailer_id))
-    );
 
+    // Scrape categories sequentially to avoid triggering rate limiting (503s).
+    // Parallel scraping hammers the server and gets blocked on later pages.
     const allPrices: ScrapedPrice[] = [];
-    for (const result of results) {
-      if (result.status === 'fulfilled') {
-        allPrices.push(...result.value);
-      } else {
-        console.error(`[${SITE_NAME}] Category failed: ${result.reason}`);
+    for (const url of CATEGORY_URLS) {
+      try {
+        const prices = await this.scrapeCategory(url, retailer_id);
+        allPrices.push(...prices);
+      } catch (err) {
+        console.error(`[${SITE_NAME}] Category failed: ${err}`);
       }
+      // Balanced pause between categories - 500ms to avoid 503 errors
+      const categoryDelay = getRetryDelay(500);
+      if (categoryDelay > 0) await new Promise(resolve => setTimeout(resolve, categoryDelay));
     }
     return allPrices;
   }
 
   private async scrapeCategory(baseUrl: string, retailer_id: number): Promise<ScrapedPrice[]> {
-    // Fetch page 1 once — parse both products AND total pages from the same HTML.
-    // This avoids any shared instance state between parallel category calls.
-    let $page1: CheerioAPI;
-    try {
-      $page1 = await this.fetchAndParse(baseUrl);
-    } catch {
-      return [];
-    }
+    const allPrices: ScrapedPrice[] = [];
+    let page = 1;
+    let totalPages = 1;
 
-    const page1Prices = this.extractPrices($page1);
-    if (page1Prices.length === 0) return [];
+    do {
+      const url = page === 1 ? baseUrl : `${baseUrl}?page=${page}`;
+      try {
+        const $ = await this.fetchAndParse(url);
+        const pagePrices = this.extractPrices($);
+        if (pagePrices.length === 0) break;
 
-    // Extract total pages from the same Cheerio object — no race condition possible
-    const totalPages = this.parseTotalPages($page1);
-    if (totalPages <= 1) return page1Prices;
+        allPrices.push(...pagePrices);
 
-    // Fetch all remaining pages in parallel
-    const pagePromises = Array.from({ length: totalPages - 1 }, (_, i) =>
-      this.scrape(`${baseUrl}?page=${i + 2}`).catch(() => [] as ScrapedPrice[])
-    );
-    const pageResults = await Promise.all(pagePromises);
+        if (page === 1) {
+          totalPages = this.parseTotalPages($);
+        }
 
-    return [...page1Prices, ...pageResults.flat()];
+        page++;
+
+        // Balanced delay between pages - 200ms to avoid 503 errors
+        if (page <= totalPages) {
+          const pageDelay = getRetryDelay(200);
+          if (pageDelay > 0) await new Promise(resolve => setTimeout(resolve, pageDelay));
+        }
+      } catch (err) {
+        console.error(`[${SITE_NAME}] Failed to fetch page ${page} of ${baseUrl}: ${err}`);
+        break;
+      }
+    } while (page <= totalPages);
+
+    return allPrices;
   }
 
   /**
@@ -140,6 +151,11 @@ export class NextLevelScraper extends BaseScraper {
         .filter(Boolean);
       const product_description = featureLines.length > 0 ? featureLines.join(' | ') : undefined;
 
+      // Extract product image URL from the thumbnail
+      const image_url = $(card).find('img[itemprop="image"], img.product-thumbnail, .product-thumbnail img')
+        .first()
+        .attr('src') || undefined;
+
       prices.push({
         retailer_id: this._retailerId,
         price,
@@ -147,6 +163,7 @@ export class NextLevelScraper extends BaseScraper {
         product_url: url,
         product_name: name,
         product_description,
+        image_url,
       });
     });
 
