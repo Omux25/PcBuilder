@@ -220,7 +220,7 @@ export async function aggregate(
         lowerScraped.includes('sans emballage') ||
         /^\d+\s*(cœurs?|cores?)\s*[/\\]?\s*\d*/i.test(scrapedName) ||
         /^\d+\s*(go|gb|to|tb)\s*(ddr[45])?$/i.test(scrapedName) ||
-        (lowerScraped.includes('direct die') && !lowerScraped.includes('ryzen')) ||
+        lowerScraped.includes('direct die') ||
         (lowerScraped.includes('frame') && lowerScraped.includes('thermal') && !lowerScraped.includes('thermaltake'))
       ) {
         dismissedListingsToUpdate.push({ retailer_id: p.retailer_id, product_url: p.product_url });

@@ -151,21 +151,19 @@ async function validate(): Promise<{ passed: number; failed: number }> {
     }
 
     // 5. Duplicates
-    const dupes = await query<{ name: string; cnt: number }>(`
-    SELECT name, COUNT(*) as cnt
-    FROM components
-    WHERE is_active = true
-    GROUP BY LOWER(TRIM(COALESCE(brand,''))), LOWER(TRIM(name))
-    HAVING COUNT(*) > 1
-    ORDER BY cnt DESC
-    LIMIT 10
+    const dupes = await query<{ cnt: number }>(`
+    SELECT COUNT(*) as cnt FROM (
+      SELECT 1 FROM components WHERE is_active = true
+      GROUP BY LOWER(TRIM(COALESCE(brand,''))), LOWER(TRIM(name))
+      HAVING COUNT(*) > 1
+    ) sub
   `);
-    if (dupes.length === 0) {
+    const dupeCount = Number(dupes[0]?.cnt ?? 0);
+    if (dupeCount === 0) {
         pass('No duplicate components');
         passed++;
     } else {
-        fail(`${dupes.length} duplicate component groups:`);
-        dupes.forEach(d => console.log(`     ${d.name} (${d.cnt}x)`));
+        fail(`${dupeCount} duplicate component groups found`);
         failed++;
     }
 
