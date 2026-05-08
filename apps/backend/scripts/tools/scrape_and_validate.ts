@@ -52,7 +52,7 @@ async function validate(): Promise<{ passed: number; failed: number }> {
     // 1. Junk CPU entries
     const junkCpus = await q<{ id: number; brand: string; name: string }>(
         "SELECT id, brand, name FROM components WHERE category = 'cpu' AND (" +
-        "name ILIKE '%cœur%' OR " +
+        "name ~ '^[0-9].*[Cc][œo]urs' OR " +
         "(name ILIKE '%thread%' AND name NOT ILIKE '%threadripper%') OR " +
         "brand ILIKE '%thermal%' OR " +
         "name ILIKE '%grizzly%' OR " +
