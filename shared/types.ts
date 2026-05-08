@@ -5,7 +5,11 @@
 export type ComponentCategory =
   | 'cpu' | 'motherboard' | 'gpu' | 'ram'
   | 'storage' | 'psu' | 'case' | 'cooling'
-  | 'fan' | 'thermal_paste';
+  | 'fan' | 'thermal_paste' | 'monitor'
+  | 'keyboard' | 'mouse' | 'headphones' | 'speakers' | 'webcam'
+  | 'os' | 'wired_network_adapter' | 'wireless_network_adapter'
+  | 'sound_card' | 'case_accessory' | 'fan_controller'
+  | 'external_storage' | 'optical_drive' | 'ups' | 'accessory';
 
 export interface Component {
   id: number;
@@ -49,6 +53,7 @@ export interface Component {
   paste_type?: 'paste' | 'liquid_metal' | 'pad';
   created_at: string;
   updated_at: string;
+  lowest_price?: number | null;
 }
 
 export interface PriceOffer {
@@ -122,6 +127,7 @@ export interface UnmatchedListing {
   scraped_name: string;
   scraped_price: number;
   status: 'pending' | 'linked' | 'dismissed';
+  manual_category: string | null;
   linked_component_id: number | null;
   scraped_at: string;
 }
@@ -174,6 +180,22 @@ export const CATEGORY_LABELS: Record<ComponentCategory, string> = {
   cooling: 'Refroidissement',
   fan: 'Ventilateur',
   thermal_paste: 'Pâte thermique',
+  monitor: 'Écran',
+  keyboard: 'Clavier',
+  mouse: 'Souris',
+  headphones: 'Casque / Audio',
+  speakers: 'Enceintes',
+  webcam: 'Webcam',
+  os: 'Système d\'exploitation',
+  wired_network_adapter: 'Réseau (Filaire)',
+  wireless_network_adapter: 'Réseau (WiFi)',
+  sound_card: 'Carte son',
+  case_accessory: 'Accessoire boîtier',
+  fan_controller: 'Contrôleur ventilateur',
+  external_storage: 'Stockage externe',
+  optical_drive: 'Lecteur optique',
+  ups: 'Onduleur (UPS)',
+  accessory: 'Autre accessoire',
 };
 
 export const RULE_LABELS: Record<string, string> = {
@@ -200,8 +222,30 @@ export const RULE_TOOLTIPS: Record<string, string> = {
   storage_slots_exceeded: 'La carte mère n\'a pas assez de ports M.2 et SATA pour le nombre de disques sélectionnés.',
 };
 
+export const CORE_CATEGORIES: ComponentCategory[] = [
+  'cpu', 'cooling', 'motherboard', 'ram', 'storage', 'gpu', 'case', 'psu', 'os'
+];
+
+export const CATEGORY_GROUPS: { label: string; categories: ComponentCategory[] }[] = [
+  {
+    label: 'Cartes d\'extension / Réseau',
+    categories: ['sound_card', 'wired_network_adapter', 'wireless_network_adapter']
+  },
+  {
+    label: 'Périphériques',
+    categories: ['monitor', 'keyboard', 'mouse', 'headphones', 'speakers', 'webcam']
+  },
+  {
+    label: 'Accessoires / Autres',
+    categories: [
+      'fan', 'case_accessory', 'fan_controller', 'thermal_paste',
+      'external_storage', 'optical_drive', 'ups', 'accessory'
+    ]
+  }
+];
+
 export const CATEGORY_ORDER: ComponentCategory[] = [
-  'cpu', 'motherboard', 'gpu', 'ram', 'storage', 'psu', 'case', 'cooling',
-  'fan', 'thermal_paste',
+  ...CORE_CATEGORIES,
+  ...CATEGORY_GROUPS.flatMap(g => g.categories)
 ];
 

@@ -37,6 +37,9 @@ export function createRequest(defaultBaseUrl: string) {
     const res = await fetch(url, {
       ...init,
       headers,
+      // Default to 'include' so httpOnly refresh-token cookies are sent automatically.
+      // Callers can override by passing credentials: 'omit' or 'same-origin'.
+      credentials: init.credentials ?? 'include',
     });
 
     // Parse JSON safely
