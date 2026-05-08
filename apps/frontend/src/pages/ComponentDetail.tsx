@@ -243,7 +243,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
                   new Date(p.last_updated) > new Date(latest) ? p.last_updated : latest,
                   prices[0].last_updated
                 );
-                const ageHours = (Date.now() - new Date(mostRecent).getTime()) / 3_600_000;
+                const ageHours = (Date.now() - (mostRecent instanceof Date ? mostRecent : new Date(mostRecent)).getTime()) / 3_600_000;
                 return (
                   <>
                     {ageHours > 24 && (
@@ -323,8 +323,10 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
  * Returns a human-readable relative time string.
  * e.g. "il y a 6h", "il y a 2j", "il y a 3 min"
  */
-function formatRelativeTime(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
+function formatRelativeTime(dateStr: string | Date): string {
+  const date = dateStr instanceof Date ? dateStr : new Date(dateStr);
+  if (isNaN(date.getTime())) return '—';
+  const diff = Date.now() - date.getTime();
   const minutes = Math.floor(diff / 60_000);
   const hours = Math.floor(diff / 3_600_000);
   const days = Math.floor(diff / 86_400_000);
@@ -333,7 +335,7 @@ function formatRelativeTime(dateStr: string): string {
   if (minutes < 60) return `il y a ${minutes} min`;
   if (hours < 24) return `il y a ${hours}h`;
   if (days < 7) return `il y a ${days}j`;
-  return new Date(dateStr).toLocaleDateString('fr-MA');
+  return date.toLocaleDateString('fr-MA');
 }
 
 const SPEC_KEY_LABELS: Record<string, string> = {
