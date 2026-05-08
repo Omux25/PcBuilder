@@ -129,7 +129,7 @@ export const UI = {
     specs: 'Spécifications',
     prices: 'Prix actuels',
     noRetailer: "Ce composant n'est disponible chez aucun revendeur référencé.",
-    priceHistory: 'Historique des prix (30 jours)',
+    priceHistory: 'Historique des prix',
     retailer: 'Revendeur',
     variant: 'Variante',
     price: 'Prix',
@@ -263,6 +263,10 @@ export const UI = {
   priceHistory: {
     noData: "L'historique des prix n'est pas encore disponible pour ce composant.",
     madUnit: (v: number) => `${v} MAD`,
+    title: 'Historique des prix',
+    period7d: '7 jours',
+    period30d: '30 jours',
+    period1y: '1 an',
   },
 
   // ── Compare tray ──────────────────────────────────────────────────────────

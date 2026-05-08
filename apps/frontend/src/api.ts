@@ -116,7 +116,8 @@ export async function getPriceHistory(
 ): Promise<PriceHistoryEntry[]> {
   const qs = new URLSearchParams();
   if (params.retailer_id) qs.set('retailer_id', String(params.retailer_id));
-  if (params.days) qs.set('days', String(params.days));
+  const days = params.days ?? 30;
+  qs.set('days', String(days));
   const query = qs.toString() ? `?${qs.toString()}` : '';
   const data = await request<{ component_id: number; history: PriceHistoryEntry[] }>(
     `/components/${componentId}/price-history${query}`
