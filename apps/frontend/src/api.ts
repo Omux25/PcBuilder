@@ -39,6 +39,9 @@ export interface SmartComponent extends Component {
 export interface SmartSearchResult {
   components: SmartComponent[];
   total: number;
+  in_stock_total: number;
+  available_brands: string[];
+  available_sockets: string[];
 }
 
 /** Smart search — returns components sorted by compatibility, stock, and price. */
@@ -54,13 +57,13 @@ export async function smartSearch(params: {
 }): Promise<SmartSearchResult> {
   const qs = new URLSearchParams();
   qs.set('category', params.category);
-  if (params.search)   qs.set('search',   params.search);
-  if (params.brand)    qs.set('brand',    params.brand);
-  if (params.socket)   qs.set('socket',   params.socket);
+  if (params.search) qs.set('search', params.search);
+  if (params.brand) qs.set('brand', params.brand);
+  if (params.socket) qs.set('socket', params.socket);
   if (params.ram_type) qs.set('ram_type', params.ram_type);
-  if (params.page)     qs.set('page',     String(params.page));
-  if (params.limit)    qs.set('limit',    String(params.limit));
-  
+  if (params.page) qs.set('page', String(params.page));
+  if (params.limit) qs.set('limit', String(params.limit));
+
   return request<SmartSearchResult>(`/components/smart-search?${qs.toString()}`, {
     method: 'POST',
     body: JSON.stringify({ build: params.build || {} })
@@ -71,12 +74,12 @@ export async function smartSearch(params: {
 export async function getComponents(params: GetComponentsParams = {}): Promise<ComponentListResult> {
   const qs = new URLSearchParams();
   if (params.category) qs.set('category', params.category);
-  if (params.search)   qs.set('search', params.search);
-  if (params.brand)    qs.set('brand', params.brand);
-  if (params.socket)   qs.set('socket', params.socket);
+  if (params.search) qs.set('search', params.search);
+  if (params.brand) qs.set('brand', params.brand);
+  if (params.socket) qs.set('socket', params.socket);
   if (params.ram_type) qs.set('ram_type', params.ram_type);
-  if (params.page)     qs.set('page', String(params.page));
-  if (params.limit)    qs.set('limit', String(params.limit));
+  if (params.page) qs.set('page', String(params.page));
+  if (params.limit) qs.set('limit', String(params.limit));
   const query = qs.toString() ? `?${qs.toString()}` : '';
   return request<ComponentListResult>(`/components${query}`);
 }
@@ -113,7 +116,7 @@ export async function getPriceHistory(
 ): Promise<PriceHistoryEntry[]> {
   const qs = new URLSearchParams();
   if (params.retailer_id) qs.set('retailer_id', String(params.retailer_id));
-  if (params.days)        qs.set('days', String(params.days));
+  if (params.days) qs.set('days', String(params.days));
   const query = qs.toString() ? `?${qs.toString()}` : '';
   const data = await request<{ component_id: number; history: PriceHistoryEntry[] }>(
     `/components/${componentId}/price-history${query}`
@@ -165,10 +168,10 @@ export async function getMarketTrends(params: {
   type?: 'drops' | 'hikes';
 } = {}): Promise<MarketTrendsResult> {
   const qs = new URLSearchParams();
-  if (params.days)     qs.set('days',     String(params.days));
-  if (params.limit)    qs.set('limit',    String(params.limit));
+  if (params.days) qs.set('days', String(params.days));
+  if (params.limit) qs.set('limit', String(params.limit));
   if (params.category) qs.set('category', params.category);
-  if (params.type)     qs.set('type',     params.type);
+  if (params.type) qs.set('type', params.type);
   const query = qs.toString() ? `?${qs.toString()}` : '';
   return request<MarketTrendsResult>(`/market-trends${query}`);
 }
