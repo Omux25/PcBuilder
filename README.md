@@ -10,7 +10,9 @@ A price comparator and compatibility checker for PC components in Morocco. Users
 
 ## What it does
 
-- **Compatibility checker** — select CPU, motherboard, GPU, RAM, storage, PSU, case, and cooling. Get instant errors (socket mismatch, RAM type mismatch, GPU too long) and warnings (RAM speed exceeded, PSU underpowered).
+- **Clean Configurator experience** — a professional, high-utility build interface modeled after industry leaders like PCPartPicker. Features clear "Choisir/Modifier" workflows and a clutter-free table layout.
+- **Advanced Full-Page Selection** — dedicated selection pages for every component with professional tables, persistent sidebar filters (Brand, Socket, Price), and real-time compatibility indicators.
+- **Compatibility checker** — instant feedback on socket mismatches, RAM types, physical clearances (GPU length, cooler height), and multi-slot limits (RAM/Storage slots).
 - **Price comparison** — see all available offers for a component across UltraPC, NextLevel, and SetupGame, sorted by availability and price. Includes variant labels (AIB partner, CPU packaging, RAM kit config).
 - **Price history** — track how prices have changed over time with a line chart per retailer.
 - **Admin panel** — manage the component catalog, monitor scrapers, review unmatched listings, and view dashboard stats.

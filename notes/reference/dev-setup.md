@@ -85,17 +85,26 @@ foreach ($m in $migrations) {
 
 ### 4. Seed the database
 
+Only the retailers seed is needed. The component catalog is built automatically by the scraper — no manual seeding required.
+
 ```powershell
-$db = "echo '2525' | sudo -S -u postgres psql -d pc_builder"
-# Retailers + admin account
-wsl -d Ubuntu -- bash -c "$db -f /mnt/c/Headquarters/Projects/PcBuilder/apps/backend/seed/01_retailers.sql"
-# Component catalog
-wsl -d Ubuntu -- bash -c "$db -f /mnt/c/Headquarters/Projects/PcBuilder/apps/backend/seed/02_catalog.sql"
-# Preset builds
-wsl -d Ubuntu -- bash -c "$db -f /mnt/c/Headquarters/Projects/PcBuilder/apps/backend/seed/03_presets.sql"
+# Retailers (required — scrapers look up retailer IDs from this table)
+wsl -d Ubuntu -- bash -c "echo '2525' | sudo -S -u postgres psql -d pc_builder -f /mnt/c/Headquarters/Projects/PcBuilder/apps/backend/seed/01_retailers.sql"
 ```
 
-Admin credentials: `admin` / `admin123`
+### 5. Create an admin account
+
+```powershell
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/apps/backend && ~/.bun/bin/bun scripts/tools/create_admin.ts omux 2525"
+```
+
+### 6. Run the scraper to populate the catalog
+
+```powershell
+wsl -d Ubuntu -- bash -c "cd /mnt/c/Headquarters/Projects/PcBuilder/apps/backend && ~/.bun/bin/bun scripts/tools/run_all_scrapes.ts"
+```
+
+This takes ~10 minutes and auto-creates all components from scraped product names. After it completes, the catalog is fully populated with real data and real prices.
 
 ### 5. Install dependencies
 

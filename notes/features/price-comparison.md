@@ -93,31 +93,20 @@ GET /api/components/42/price-history?retailer_id=10&days=30
 
 ---
 
-## How the frontend displays prices
+### CategoryBrowse Selection Table
 
-### PriceComparison component
+In the new full-page browse workflow, the lowest available price for every component is displayed directly in the results table. This allows users to compare basic pricing across all compatible parts at a glance without expanding rows.
 
-The `PriceComparison` component fetches prices when a component is selected in the configurator. It:
+### PriceComparison (Inline Prices)
 
-1. Separates in-stock offers from out-of-stock offers
-2. Shows in-stock offers first, sorted cheapest first
-3. Highlights the cheapest in-stock offer
-4. Shows out-of-stock offers below with a visual distinction
-5. Shows the variant column only when labels differ across offers
-6. Each row has a "Voir →" link that opens the retailer's product page in a new tab
+When a component is already selected in the configurator, clicking the row expands it to show the `InlinePrices` (or `PriceComparison`) component. This provides:
+1.  **Detailed Offers**: List of every retailer offering the part, including variant details (e.g., "Sapphire Pulse" vs. "MSI Gaming X").
+2.  **In-Stock Priority**: In-stock offers are shown first, sorted cheapest first.
+3.  **Direct Links**: "Voir →" links redirect users to the retailer's product page.
 
-### PriceHistoryChart component
+### PriceHistoryChart
 
-A line chart (using Recharts) showing price over time. One line per retailer. Tooltip shows exact price and date on hover. Shows a "Price history not yet available" message when fewer than 2 data points exist.
-
-### ComponentDetail page
-
-The detail page for a single component (accessed via `/components/:slug`) shows:
-- Component image, name, brand
-- Specs table with French labels (e.g. "Fréquence de base (GHz)" instead of "base_clock_ghz")
-- Price comparison table
-- Price history chart
-- "Add to Build" button
+A line chart showing price trends over time for the selected component. Available in both expanded configurator rows and the standalone product detail page.
 
 ---
 
