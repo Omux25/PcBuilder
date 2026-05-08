@@ -81,38 +81,52 @@ describe('calculateBuildTotalPrice', () => {
 });
 
 describe('getConfiguratorSlots', () => {
-  test('returns default 2 RAM + 2 storage slots when no motherboard', () => {
+  test('returns no RAM or storage slots when build is empty (PCPartPicker style)', () => {
     const slots = getConfiguratorSlots({});
-    expect(slots).toContain('ram_1');
-    expect(slots).toContain('ram_2');
-    expect(slots).not.toContain('ram_3');
-    expect(slots).toContain('storage_1');
-    expect(slots).toContain('storage_2');
-    expect(slots).not.toContain('storage_3');
+    // No pre-generated empty slots — only filled slots appear
+    expect(slots).not.toContain('ram_1');
+    expect(slots).not.toContain('ram_2');
+    expect(slots).not.toContain('storage_1');
+    expect(slots).not.toContain('storage_2');
   });
 
-  test('returns 4 RAM slots when motherboard has ram_slots=4', () => {
+  test('returns only filled RAM slots — not all motherboard slots', () => {
     const build: BuildConfig = {
       motherboard: makeComponent(1, 'motherboard', null, { ram_slots: 4 }) as any,
+      ram_1: makeComponent(2, 'ram', 499) as any,
+    };
+    const slots = getConfiguratorSlots(build);
+    // Only ram_1 is filled — ram_2/3/4 should NOT appear
+    expect(slots).toContain('ram_1');
+    expect(slots).not.toContain('ram_2');
+    expect(slots).not.toContain('ram_3');
+    expect(slots).not.toContain('ram_4');
+  });
+
+  test('returns all filled RAM slots regardless of motherboard slot count', () => {
+    const build: BuildConfig = {
+      motherboard: makeComponent(1, 'motherboard', null, { ram_slots: 4 }) as any,
+      ram_1: makeComponent(2, 'ram', 499) as any,
+      ram_2: makeComponent(3, 'ram', 499) as any,
+      ram_3: makeComponent(4, 'ram', 499) as any,
     };
     const slots = getConfiguratorSlots(build);
     expect(slots).toContain('ram_1');
     expect(slots).toContain('ram_2');
     expect(slots).toContain('ram_3');
-    expect(slots).toContain('ram_4');
-    expect(slots).not.toContain('ram_5');
+    expect(slots).not.toContain('ram_4');
   });
 
-  test('returns correct storage slots from m2_slots + sata_ports', () => {
+  test('returns correct filled storage slots', () => {
     const build: BuildConfig = {
       motherboard: makeComponent(1, 'motherboard', null, { m2_slots: 2, sata_ports: 4 }) as any,
+      storage_1: makeComponent(2, 'storage', 699) as any,
+      storage_2: makeComponent(3, 'storage', 399) as any,
     };
     const slots = getConfiguratorSlots(build);
-    // 2 + 4 = 6 storage slots
-    for (let i = 1; i <= 6; i++) {
-      expect(slots).toContain(`storage_${i}`);
-    }
-    expect(slots).not.toContain('storage_7');
+    expect(slots).toContain('storage_1');
+    expect(slots).toContain('storage_2');
+    expect(slots).not.toContain('storage_3');
   });
 
   test('single-slot categories appear exactly once', () => {

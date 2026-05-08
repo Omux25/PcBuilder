@@ -183,7 +183,7 @@
 .loadBtn:hover:not(:disabled) {
   background: var(--accent-h);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  opacity: 0.9;
 }
 
 .loadBtn:disabled {

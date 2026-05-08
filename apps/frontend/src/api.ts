@@ -125,9 +125,9 @@ export async function getPriceHistory(
 
 /** Validate a build configuration. */
 export function validateBuild(build: BuildConfig): Promise<CompatibilityResult> {
-  const payload: Record<string, unknown> = {};
+  const payload: Record<string, number> = {};
   for (const [category, component] of Object.entries(build)) {
-    if (component) payload[category] = component;
+    if (component) payload[category] = component.id;
   }
   return request<CompatibilityResult>('/compatibility/validate', {
     method: 'POST',

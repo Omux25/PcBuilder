@@ -1,309 +1,403 @@
+/* ── Configurator ─────────────────────────────────────────────────────────── */
+
 .configurator {
-  background: var(--surface);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
-  animation: slideUp 0.4s var(--ease-out);
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2.5rem 0 3rem;
+  animation: fadeIn 0.4s var(--ease-out);
 }
 
-/* ── Header ─────────────────────────────────────────────────────────────── */
+/* ── Header ───────────────────────────────────────────────────────────────── */
 
 .header {
+  margin-bottom: 1.5rem;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-2);
-}
-
-.headerLeft {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text);
-  margin: 0;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.04em;
+  line-height: 1.2;
 }
 
-.badge {
+.statusBadge {
   font-size: 0.72rem;
   font-weight: 600;
-  padding: 0.2rem 0.6rem;
+  padding: 0.3rem 0.75rem;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  animation: scaleIn 0.2s var(--ease-spring);
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+  letter-spacing: 0.01em;
 }
 
-.badgeOk {
+.statusOk {
   background: var(--success-tint);
-  color: var(--success);
+  color: var(--success-soft);
 }
 
-.badgeFail {
+.statusFail {
   background: var(--danger-tint);
-  color: var(--danger);
+  color: var(--danger-soft);
 }
 
-.resetBtn {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  font-weight: 500;
-  padding: 0.35rem 0.75rem;
-  transition: all 0.15s;
+/* ── Main card ────────────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
 }
 
-.resetBtn:hover:not(:disabled) {
-  border-color: var(--danger);
-  color: var(--danger);
-  background: var(--danger-row);
+/* ── Row wrapper (holds row + optional expansion) ─────────────────────────── */
+
+.rowWrap {
+  border-bottom: 1px solid var(--border-subtle);
 }
 
-.resetBtn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-/* ── Table ──────────────────────────────────────────────────────────────── */
-
-.tableWrap { overflow-x: auto; }
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table thead th {
-  padding: 0.6rem 1.5rem;
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  background: var(--surface-2);
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-}
-
-.thCat { width: 18%; }
-.thSel { width: 48%; }
-.thPrice { width: 22%; text-align: right; }
-.thAct { width: 12%; text-align: center; }
-
-/* ── Rows ──────────────────────────────────────────────────────────────── */
-
-.row {
-  cursor: default;
-  transition: background 0.15s var(--ease-out);
-}
-
-.row td {
-  padding: 0.7rem 1.5rem;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-}
-
-.row:last-child td {
+.rowWrap:last-child,
+.rowWrapLast {
   border-bottom: none;
 }
 
-.rowFilled {
-  cursor: pointer;
-}
+/* ── Slot count badge (shown next to RAM/Storage category label) ──────────── */
 
-.rowFilled:hover td {
-  background: var(--surface-2);
-}
-
-.rowOpen td {
-  background: var(--surface-2);
-  border-bottom-color: transparent;
-}
-
-/* ── Cells ─────────────────────────────────────────────────────────────── */
-
-.catCell {
-  user-select: none;
-}
-
-.catLabel {
+.slotCount {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 0.4rem;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+/* ── Row ──────────────────────────────────────────────────────────────────── */
+
+.row {
+  display: grid;
+  grid-template-columns: 200px 1fr 180px;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1.5rem;
+  transition: background 0.15s;
+  min-height: 64px;
+}
+
+.row:hover {
+  background: var(--bg-surface-hover);
+}
+
+/* ── Column 1: Category ───────────────────────────────────────────────────── */
+
+.catCol {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
   font-weight: 600;
-  color: var(--text-2);
-  font-size: 0.86rem;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .catIcon {
   color: var(--text-dim);
   flex-shrink: 0;
-  transition: color 0.15s;
 }
 
-.rowFilled .catIcon {
-  color: var(--accent);
+/* ── Column 2: Picker ─────────────────────────────────────────────────────── */
+
+.pickerCol {
+  display: flex;
+  align-items: center;
+  min-width: 0;
 }
 
+/* ── Empty state button ───────────────────────────────────────────────────── */
 
-.priceCell {
-  text-align: right;
-}
-
-.priceWrap {
+.emptyButton {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 0.45rem 1rem;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.emptyButton:hover {
+  background: var(--bg-surface-2);
+  border-color: var(--border-2);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+/* ── Filled state ─────────────────────────────────────────────────────────── */
+
+.filledState {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.compThumb {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  background: #fff;
+  padding: 6px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.compInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.compBrand {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.compName {
+  display: block;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.compSpecs {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Column 3: Price & actions ────────────────────────────────────────────── */
+
+.priceCol {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
 }
 
 .priceVal {
   font-weight: 700;
-  color: var(--text);
-  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-size: 0.95rem;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.chevron {
-  font-size: 0.55rem;
+.actionBtn {
+  background: transparent;
   color: var(--text-dim);
-  transition: transform 0.2s var(--ease-out);
+  padding: 0.35rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  flex-shrink: 0;
 }
 
-.rowOpen .chevron {
-  transform: rotate(180deg);
-}
-
-.actCell {
-  text-align: center;
-}
-
-.removeBtn {
-  background: none;
-  border: none;
-  color: var(--text-dim);
-  font-size: 1.3rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0.2rem 0.45rem;
-  border-radius: 6px;
-  transition: all 0.15s;
-}
-
-.removeBtn:hover {
+.actionBtn:hover {
   background: var(--danger-tint);
   color: var(--danger);
 }
 
-/* ── Expanded price row ────────────────────────────────────────────────── */
+/* ── Expansion panel ──────────────────────────────────────────────────────── */
 
-.expandRow td {
-  padding: 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.expandCell {
-  background: var(--surface-2);
-  padding: 0.75rem 1.5rem 0.75rem 1.5rem !important;
-  border-left: 3px solid var(--accent);
+.expandContent {
+  padding: 0.75rem 1.5rem 1rem;
+  background: var(--bg-surface-2);
+  border-top: 1px solid var(--border-subtle);
   animation: slideDown 0.2s var(--ease-out);
 }
 
-/* ── Total footer ──────────────────────────────────────────────────────── */
+/* ── Footer ───────────────────────────────────────────────────────────────── */
 
-.totalRow td {
-  padding: 0.85rem 1.5rem;
-  border-top: 2px solid var(--border);
-  background: var(--surface-2);
+.footer {
+  margin-top: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.footerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
 }
 
 .totalLabel {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
   font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--text);
-  text-align: right;
-  padding-right: 2rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
-.totalVal {
-  text-align: right;
+.totalPrice {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.6rem;
   font-weight: 800;
-  font-size: 1.1rem;
-  color: var(--accent);
+  color: var(--text-primary);
+  letter-spacing: -0.04em;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Compatibility footer ──────────────────────────────────────────────── */
-
-.compatFooter {
-  border-top: 1px solid var(--border);
-  padding: 0.75rem 1.5rem;
+.resetBtn {
+  background: var(--bg-surface-2);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  padding: 0.55rem 1.1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
   display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  animation: fadeIn 0.3s var(--ease-out);
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
 }
 
-.compatErr, .compatWarn {
+.resetBtn:hover:not(:disabled) {
+  background: var(--danger-tint);
+  border-color: var(--danger);
+  color: var(--danger-soft);
+}
+
+.resetBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ── Compatibility section ────────────────────────────────────────────────── */
+
+.compatSection {
+  margin-top: 1rem;
   display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-  font-size: 0.82rem;
-  padding: 0.45rem 0.65rem;
-  border-radius: var(--radius);
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.compatCard {
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-lg);
+  font-size: 0.85rem;
+  display: flex;
+  gap: 0.85rem;
+  line-height: 1.5;
+  align-items: flex-start;
+}
+
+.compatCard strong {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 0.2rem;
+}
+
+.compatCard p {
+  margin: 0;
+  opacity: 0.85;
 }
 
 .compatErr {
   background: var(--danger-tint);
-  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  color: var(--danger-soft);
 }
 
 .compatWarn {
-  background: var(--warning-tint);
-  color: var(--warning-soft);
+  background: rgba(245, 158, 11, 0.07);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
 }
 
-.compatIcon {
-  flex-shrink: 0;
-  font-size: 0.75rem;
-}
-
-.compatOk {
-  border-top: 1px solid var(--border);
-  padding: 0.65rem 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--success);
-  background: var(--success-row);
-  animation: fadeIn 0.3s var(--ease-out);
-}
-
-.tdpInfo {
-  font-weight: 400;
-  color: var(--text-muted);
-  font-size: 0.8rem;
-}
-
-/* ── Responsive ────────────────────────────────────────────────────────── */
+/* ── Responsive ───────────────────────────────────────────────────────────── */
 
 @media (max-width: 768px) {
-  .table thead th { padding: 0.5rem 1rem; }
-  .row td { padding: 0.5rem 1rem; }
-  .thCat { width: 22%; }
-  .thSel { width: 50%; }
-  .thAct { display: none; }
-  .actCell { display: none; }
-  .expandCell { padding: 0.5rem 1rem 0.5rem 1rem !important; }
+  .configurator {
+    padding: 1.5rem 0 2rem;
+  }
+
+  .row {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    padding: 0.85rem 1rem;
+  }
+
+  .catCol {
+    font-size: 0.72rem;
+  }
+
+  .priceCol {
+    justify-content: flex-start;
+  }
+
+  .footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .resetBtn {
+    width: 100%;
+    justify-content: center;
+  }
 }

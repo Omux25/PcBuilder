@@ -10,7 +10,6 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import type { BuildConfig, Component, ComponentCategory } from '../types';
-import { isRamSlotKey, isStorageSlotKey } from '../types';
 import { getComponentsByIds } from '../api';
 import {
   saveBuildToStorage,
@@ -23,7 +22,7 @@ import { pruneExcessSlots } from '../utils/buildUtils';
 interface BuildContextValue {
   build: BuildConfig;
   setBuild: (build: BuildConfig) => void;
-  addToBuild: (component: Component) => void;
+  addToBuild: (component: Component, specificSlotKey?: string) => void;
   removeFromBuild: (slotKey: string) => void;
   resetBuild: () => void;
   initializing: boolean;
@@ -34,13 +33,13 @@ const BuildContext = createContext<BuildContextValue | null>(null);
 /** Find the first available slot key for a given category in the current build. */
 function findNextSlot(build: BuildConfig, category: ComponentCategory): string {
   if (category === 'ram') {
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= 8; i++) {
       if (!build[`ram_${i}`]) return `ram_${i}`;
     }
     return 'ram_1'; // fallback: overwrite slot 1
   }
   if (category === 'storage') {
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= 8; i++) {
       if (!build[`storage_${i}`]) return `storage_${i}`;
     }
     return 'storage_1'; // fallback: overwrite slot 1
@@ -103,9 +102,9 @@ export function BuildProvider({ children }: { children: ReactNode }) {
    *
    * When a motherboard is added, prune any slots that exceed the new board's counts.
    */
-  const addToBuild = useCallback((component: Component) => {
+  const addToBuild = useCallback((component: Component, specificSlotKey?: string) => {
     setBuildState(prev => {
-      const slotKey = findNextSlot(prev, component.category as ComponentCategory);
+      const slotKey = specificSlotKey || findNextSlot(prev, component.category as ComponentCategory);
       const next = { ...prev, [slotKey]: component };
       // If a motherboard was just added, prune excess RAM/storage slots
       if (component.category === 'motherboard') {

@@ -6,7 +6,7 @@ import { Skeleton } from './components/Skeleton';
 import { CompareTray } from './components/CompareTray';
 import { useBuild } from './context/BuildContext';
 import { calculateBuildTotalPrice } from './utils/buildUtils';
-import { CATEGORY_ORDER, CATEGORY_LABELS, slotKeyToCategory, isRamSlotKey, isStorageSlotKey } from './types';
+import { CATEGORY_ORDER, CATEGORY_LABELS } from './types';
 import { encodeBuildToUrl } from './utils/buildUrl';
 import { getInitialTheme, applyTheme, toggleTheme } from './utils/theme';
 import { getComponentById } from './api';
@@ -248,7 +248,7 @@ export default function App() {
           </main>
         } />
 
-        <Route path="/browse/:category" element={
+        <Route path="/browse/:category/:slotKey?" element={
           <main className={styles.main}>
             <Suspense fallback={<Skeleton height={400} />}>
               <CategoryBrowse />

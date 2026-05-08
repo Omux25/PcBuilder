@@ -2,21 +2,28 @@
   position: fixed;
   bottom: 24px;
   right: 24px;
-  width: 300px;
-  background: var(--bg-card);
+  width: 280px;
+  background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
   z-index: 1000;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: slideIn 0.3s var(--ease-out);
 }
 
 @keyframes slideIn {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .header {
@@ -48,8 +55,8 @@
 }
 
 .clearBtn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--error);
+  background: var(--danger-tint);
+  color: var(--danger);
 }
 
 .items {
@@ -92,7 +99,7 @@
 }
 
 .removeItem:hover {
-  color: var(--error);
+  color: var(--danger);
 }
 
 .itemLoading {
@@ -110,24 +117,25 @@
 
 .compareBtn {
   width: 100%;
-  padding: 10px;
-  background: var(--accent);
-  color: white;
+  padding: 0.6rem;
+  background: var(--text-primary);
+  color: var(--bg-app);
   border: none;
-  border-radius: 8px;
-  font-size: 0.85rem;
+  border-radius: var(--radius);
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .compareBtn:hover:not(:disabled) {
+  opacity: 0.85;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.3);
 }
 
 .compareBtn:disabled {
-  opacity: 0.5;
+  opacity: 0.3;
   cursor: not-allowed;
-  background: var(--text-muted);
+  background: var(--surface-3);
+  color: var(--text-dim);
 }

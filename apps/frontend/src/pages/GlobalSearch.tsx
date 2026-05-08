@@ -27,12 +27,12 @@ export function GlobalSearch() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('q') ?? '';
 
-  const [input, setInput]       = useState(query);
-  const [results, setResults]   = useState<CategoryResults[]>([]);
-  const [loading, setLoading]   = useState(false);
+  const [input, setInput] = useState(query);
+  const [results, setResults] = useState<CategoryResults[]>([]);
+  const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inputRef    = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
@@ -132,7 +132,7 @@ export function GlobalSearch() {
                 {components.map(c => (
                   <Link key={c.id} to={`/product/${c.slug}`} className={styles.componentRow}>
                     {c.image_url ? (
-                      <img src={c.image_url} alt={c.name} className={styles.componentImg} />
+                      <img src={c.image_url} alt={c.name} className={styles.componentImg} referrerPolicy="no-referrer" />
                     ) : (
                       <div className={styles.componentImgPlaceholder}>
                         <CategoryIcon category={c.category as ComponentCategory} size={18} />
@@ -188,15 +188,15 @@ export function GlobalSearch() {
 
 function getKeySpec(c: Component): string | null {
   const specs = c.specs as Record<string, unknown> | undefined;
-  const get = (k: string) => specs?.[k] ?? (c as Record<string, unknown>)[k];
+  const get = (k: string) => specs?.[k] ?? (c as unknown as Record<string, unknown>)[k];
   switch (c.category) {
-    case 'cpu':         return c.socket ? `Socket ${c.socket}` : null;
+    case 'cpu': return c.socket ? `Socket ${c.socket}` : null;
     case 'motherboard': return c.socket ? `Socket ${c.socket}` : null;
-    case 'gpu':         return get('vram_gb') ? `${get('vram_gb')} Go VRAM` : null;
-    case 'ram':         return c.ram_type && c.frequency_mhz ? `${c.ram_type} ${c.frequency_mhz} MHz` : null;
-    case 'storage':     return get('capacity_gb') ? `${get('capacity_gb')} Go` : null;
-    case 'psu':         return c.wattage ? `${c.wattage}W` : null;
-    case 'case':        return c.max_gpu_length_mm ? `GPU max ${c.max_gpu_length_mm}mm` : null;
-    default:            return null;
+    case 'gpu': return get('vram_gb') ? `${get('vram_gb')} Go VRAM` : null;
+    case 'ram': return c.ram_type && c.frequency_mhz ? `${c.ram_type} ${c.frequency_mhz} MHz` : null;
+    case 'storage': return get('capacity_gb') ? `${get('capacity_gb')} Go` : null;
+    case 'psu': return c.wattage ? `${c.wattage}W` : null;
+    case 'case': return c.max_gpu_length_mm ? `GPU max ${c.max_gpu_length_mm}mm` : null;
+    default: return null;
   }
 }

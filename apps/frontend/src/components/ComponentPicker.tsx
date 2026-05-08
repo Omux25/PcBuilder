@@ -222,7 +222,7 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
         {selected ? (
           <span className={styles.selectedLabel}>
             {selected.image_url ? (
-              <img src={selected.image_url} alt={selected.name} className={styles.thumbnail} />
+              <img src={selected.image_url} alt={selected.name} className={styles.thumbnail} referrerPolicy="no-referrer" />
             ) : (
               <CategoryIcon category={category} size={20} className={styles.iconSvg} />
             )}

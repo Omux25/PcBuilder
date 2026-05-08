@@ -1,5 +1,5 @@
 import type { BuildConfig, Component } from '../types';
-import { CATEGORY_ORDER, isRamSlotKey, isStorageSlotKey } from '../types';
+import { CORE_CATEGORIES, CATEGORY_ORDER, isRamSlotKey, isStorageSlotKey } from '../types';
 
 /** Compute total estimated price from the current build. */
 export function calculateBuildTotalPrice(build: BuildConfig): number {
@@ -12,36 +12,57 @@ export function calculateBuildTotalPrice(build: BuildConfig): number {
 
 /**
  * Returns the ordered list of slot keys to render in the configurator.
- * Single-slot categories use their plain name.
- * RAM and storage use indexed keys (ram_1, ram_2, ...) based on the
- * motherboard's slot counts, with sensible defaults when no board is selected.
+ *
+ * RAM and storage use a PCPartPicker-style model:
+ * - Only slots that actually contain a component are shown.
+ * - The Configurator renders an "+ Add Memory / + Add Storage" button separately.
+ * - Compatibility errors fire when the count exceeds the motherboard's capacity.
+ *
+ * Non-RAM/storage CORE categories are always shown (empty or filled).
+ * EXTRA categories are only shown when they contain a component.
  */
 export function getConfiguratorSlots(build: BuildConfig): string[] {
-  const motherboard = build['motherboard'];
-  const ramSlots = motherboard?.ram_slots ?? 2;
-  const storageSlots = (motherboard?.m2_slots ?? 1) + (motherboard?.sata_ports ?? 1);
-
   const slots: string[] = [];
+
   for (const cat of CATEGORY_ORDER) {
+    const isCore = CORE_CATEGORIES.includes(cat);
+
     if (cat === 'ram') {
-      for (let i = 1; i <= ramSlots; i++) slots.push(`ram_${i}`);
-    } else if (cat === 'storage') {
-      for (let i = 1; i <= storageSlots; i++) slots.push(`storage_${i}`);
-    } else {
-      slots.push(cat);
+      // Only include slots that have a component
+      for (let i = 1; i <= 8; i++) {
+        if (build[`ram_${i}`]) slots.push(`ram_${i}`);
+      }
+      // Legacy bare 'ram' key (backwards compat)
+      if (build['ram']) slots.push('ram');
+      continue;
     }
+
+    if (cat === 'storage') {
+      // Only include slots that have a component
+      for (let i = 1; i <= 8; i++) {
+        if (build[`storage_${i}`]) slots.push(`storage_${i}`);
+      }
+      if (build['storage']) slots.push('storage');
+      continue;
+    }
+
+    // For all other categories: show if core OR if it has a component
+    const hasComponent = isCore || !!build[cat];
+    if (hasComponent) slots.push(cat);
   }
+
   return slots;
 }
 
 /**
  * When the motherboard changes and its slot counts decrease, remove any
- * RAM/storage slots that no longer fit. Returns the cleaned build.
+ * RAM/storage slots that exceed the new board's capacity.
+ * Returns the cleaned build.
  */
 export function pruneExcessSlots(build: BuildConfig): BuildConfig {
   const motherboard = build['motherboard'];
-  const ramSlots = motherboard?.ram_slots ?? 4; // be generous when pruning
-  const storageSlots = (motherboard?.m2_slots ?? 4) + (motherboard?.sata_ports ?? 4);
+  const ramSlots = motherboard?.ram_slots ?? 8;
+  const storageSlots = (motherboard?.m2_slots ?? 8) + (motherboard?.sata_ports ?? 8);
 
   const next = { ...build };
   for (const key of Object.keys(next)) {
