@@ -87,17 +87,20 @@ export async function aggregate(
 
   const isRealSql = (sql as unknown) === (bunSql as unknown);
 
-  // UltraPC stock check — only in production
+  // UltraPC stock check — only in production.
+  // The UltraPC listing API never exposes stock status (always returns products
+  // regardless of availability). We must make a secondary per-product HTTP call
+  // to the PrestaShop AJAX endpoint to get the real in_stock value.
+  //
+  // Previously this only ran for already-mapped products. Now it runs on ALL
+  // UltraPC prices so that new products also get correct stock status on first
+  // insertion, not just on the second scrape.
   const ultrapcPrices = prices.filter(p => ultrapcId !== undefined && p.retailer_id === ultrapcId);
   if (isRealSql && ultrapcId !== undefined && ultrapcPrices.length > 0) {
-    const mappedUrls = (await sql`
-      SELECT product_url FROM scraper_mappings WHERE retailer_id = ${ultrapcId}
-    `) as { product_url: string }[];
-    const mappedSet = new Set(mappedUrls.map(r => r.product_url));
-    const toCheck = ultrapcPrices.filter(p => mappedSet.has(p.product_url));
-    if (toCheck.length > 0) {
-      await new UltraPcScraper().checkStock(toCheck);
-    }
+    await logger.info(`[PIPELINE] UltraPC stock check: verifying ${ultrapcPrices.length} products...`);
+    await new UltraPcScraper().checkStock(ultrapcPrices);
+    const inStockCount = ultrapcPrices.filter(p => p.in_stock).length;
+    await logger.info(`[PIPELINE] UltraPC stock check done: ${inStockCount}/${ultrapcPrices.length} in stock`);
   }
 
   // ── PRE-FETCH CONTEXT ──────────────────────────────────────────────────────
