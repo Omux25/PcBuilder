@@ -16,7 +16,6 @@
 
 import { sql as bunSql } from 'bun';
 import type { ScrapedPrice } from './scrapers/baseScraper.js';
-import { UltraPcScraper } from './scrapers/ultrapcScraper.js';
 import { extractVariant } from '../src/utils/variantExtractor.js';
 import { getSql, setSql, resetSql } from '../src/db/index.js';
 import { logger } from './utils/logger.js';
@@ -73,35 +72,10 @@ export async function aggregate(
     }
   }
 
-  const ultrapcOrigin = normalizeUrl(SCRAPER_CONFIG.RETAILER_BASE_URLS.ULTRAPC);
-  let ultrapcId: number | undefined = retailerNameToId?.get(ultrapcOrigin);
-  if (ultrapcId === undefined) {
-    ultrapcId = retailerNameToId?.get(SCRAPER_CONFIG.RETAILER_BASE_URLS.ULTRAPC);
-  }
-  if (ultrapcId === undefined) {
-    try {
-      const rows = await sql`SELECT id FROM retailers WHERE base_url LIKE ${SCRAPER_CONFIG.RETAILER_BASE_URLS.ULTRAPC + '%'} LIMIT 1` as { id: number }[];
-      ultrapcId = rows[0]?.id;
-    } catch { /* non-critical */ }
-  }
-
   const isRealSql = (sql as unknown) === (bunSql as unknown);
 
-  // UltraPC stock check — only in production.
-  // The UltraPC listing API never exposes stock status (always returns products
-  // regardless of availability). We must make a secondary per-product HTTP call
-  // to the PrestaShop AJAX endpoint to get the real in_stock value.
-  //
-  // Previously this only ran for already-mapped products. Now it runs on ALL
-  // UltraPC prices so that new products also get correct stock status on first
-  // insertion, not just on the second scrape.
-  const ultrapcPrices = prices.filter(p => ultrapcId !== undefined && p.retailer_id === ultrapcId);
-  if (isRealSql && ultrapcId !== undefined && ultrapcPrices.length > 0) {
-    await logger.info(`[PIPELINE] UltraPC stock check: verifying ${ultrapcPrices.length} products...`);
-    await new UltraPcScraper().checkStock(ultrapcPrices);
-    const inStockCount = ultrapcPrices.filter(p => p.in_stock).length;
-    await logger.info(`[PIPELINE] UltraPC stock check done: ${inStockCount}/${ultrapcPrices.length} in stock`);
-  }
+  // UltraPC stock is now parsed directly from HTML listing cards (no extra HTTP calls).
+  // checkStock() removed — "Produit en stock" text extracted per card in the scraper.
 
   // ── PRE-FETCH CONTEXT ──────────────────────────────────────────────────────
 

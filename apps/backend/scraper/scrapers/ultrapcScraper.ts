@@ -1,39 +1,24 @@
 /**
  * UltraPC Scraper — scrapes PC component prices from ultrapc.ma
  *
- * ultrapc.ma is a PrestaShop store. When a category page is requested with
- * the X-Requested-With: XMLHttpRequest header, it returns a JSON response
- * containing all product data (name, URL, price, stock status).
+ * ultrapc.ma is a PrestaShop store. The category page (with X-Requested-With
+ * header) returns HTML that embeds both:
+ *   1. A JSON blob in a <script> tag — product name, URL, price, image
+ *   2. Rendered product cards in HTML — "Produit en stock" text per card
  *
- * Stock status: the listing API does NOT expose stock. We use the PrestaShop
- * product AJAX endpoint (?controller=product&id_product=X&ajax=1&action=refresh)
- * which returns HTML containing either "product-unavailable" or "product-available".
- * We only check stock for products that have a scraper_mapping (i.e. products we
- * actually display to users), not all 2164 products.
+ * We extract name/price/url/image from JSON (fast, structured) and
+ * in_stock from the HTML card (no extra HTTP calls needed).
  *
- * JSON response structure (verified 2026-04-27):
- *   {
- *     products: [
- *       {
- *         name: "AMD Ryzen 5 7600X (4.7 GHz / 5.3 GHz)",
- *         url: "https://www.ultrapc.ma/socket-am5/4996-amd-ryzen-5-7600x.html",
- *         price_amount: 2390,
- *         active: "1",
- *         id_product: 4996,
- *         ...
- *       }
- *     ],
- *     pagination: {
- *       total_items: 157,
- *       pages_count: 5,
- *       current_page: 1
- *     }
- *   }
+ * Stock detection: card contains "Produit en stock" → in stock.
+ * No text / "Rupture de stock" → out of stock.
+ *
+ * Pagination: ?page=N, extracted from JSON pagination object.
  *
  * Requirements: 6.1, 6.2, 6.3
  */
 
 import { fetch } from 'undici';
+import * as cheerio from 'cheerio';
 import type { ScrapedPrice } from './baseScraper.js';
 
 const SITE_NAME = 'ultrapc.ma';
@@ -41,7 +26,7 @@ const SITE_NAME = 'ultrapc.ma';
 const HEADERS = {
   'User-Agent': 'PCBuilderMaroc-Bot/1.0 (price comparator; +https://pcbuilder.ma)',
   'X-Requested-With': 'XMLHttpRequest',
-  'Accept': 'application/json, text/javascript, */*',
+  'Accept': 'text/html,application/xhtml+xml,*/*',
 };
 
 // ── Dependency injection ──────────────────────────────────────────────────────
@@ -58,14 +43,6 @@ export function resetUltraPcFetch(): void {
   _fetch = fetch as unknown as FetchFn;
 }
 
-/**
- * Category pages to scrape.
- * The JSON API returns 32 products per page by default.
- *
- * Note: category 35 (memoire-vive-pc) is the parent RAM category covering both
- * DDR4 and DDR5. Category 37 (memoire-vive-ddr4) is a subcategory — scraping
- * both would cause DDR4 products to be fetched twice. We use only the parent.
- */
 const CATEGORY_URLS: string[] = [
   'https://www.ultrapc.ma/21-processeurs',
   'https://www.ultrapc.ma/28-cartes-meres',
@@ -86,7 +63,6 @@ interface UltraPcProduct {
   active: string;
   id_product?: number;
   description_short?: string;
-  /** PrestaShop product cover image with multiple resolutions */
   cover?: {
     bySize?: Record<string, { url: string; width: number; height: number }>;
     medium?: { url: string };
@@ -106,12 +82,6 @@ interface UltraPcResponse {
 export class UltraPcScraper {
   readonly siteName = SITE_NAME;
 
-  /**
-   * Scrapes all component category pages and returns all found price records.
-   * Categories are fetched in parallel to reduce total time.
-   * Note: in_stock defaults to true — the aggregator checks actual stock
-   * only for mapped products via the PrestaShop product API.
-   */
   async scrapeAllCategories(retailer_id: number): Promise<ScrapedPrice[]> {
     const results = await Promise.allSettled(
       CATEGORY_URLS.map((url) => this.scrapeCategory(url, retailer_id))
@@ -128,34 +98,6 @@ export class UltraPcScraper {
     return allPrices;
   }
 
-  /**
-   * Checks stock status for a subset of products using the PrestaShop AJAX endpoint.
-   * Called by the aggregator only for mapped products (not all 2164 scraped products).
-   * Mutates in_stock in place. Runs in parallel batches of 20.
-   */
-  async checkStock(prices: ScrapedPrice[]): Promise<void> {
-    const BATCH_SIZE = 20;
-    for (let i = 0; i < prices.length; i += BATCH_SIZE) {
-      const batch = prices.slice(i, i + BATCH_SIZE);
-      await Promise.all(batch.map(async (price) => {
-        const idMatch = price.product_url.match(/\/(\d+)-[^/]+\.html$/);
-        if (!idMatch) return;
-        try {
-          const res = await _fetch(
-            `https://www.ultrapc.ma/index.php?controller=product&id_product=${idMatch[1]}&ajax=1&action=refresh`,
-            { headers: HEADERS as Record<string, unknown> }
-          );
-          if (!res.ok) return;
-          const html = await res.text();
-          price.in_stock = !html.includes('product-unavailable') && !html.includes('Rupture de stock');
-        } catch { /* leave as true on failure */ }
-      }));
-    }
-  }
-
-  /**
-   * Scrapes all pages of a category and returns price records.
-   */
   private async scrapeCategory(baseUrl: string, retailer_id: number): Promise<ScrapedPrice[]> {
     const prices: ScrapedPrice[] = [];
     let page = 1;
@@ -169,11 +111,15 @@ export class UltraPcScraper {
         throw new Error(`HTTP ${response.status} fetching ${url}`);
       }
 
-      const text = await response.text();
+      const html = await response.text();
 
-      // The response is a mix of HTML and embedded JSON.
-      // Extract the JSON from the prestashop variable or parse the product data.
-      const data = this.extractProductData(text);
+      // Extract structured product data from embedded JSON
+      const data = this.extractProductData(html);
+
+      // Build URL → in_stock map from HTML card parsing.
+      // Each card has a canonical URL and optionally "Produit en stock" text.
+      // This is O(1) per product — no extra HTTP calls.
+      const stockByUrl = this.extractStockFromHtml(html);
 
       if (data.products) {
         for (const product of data.products) {
@@ -183,8 +129,10 @@ export class UltraPcScraper {
           const product_url = product.canonical_url || product.url;
           if (!product_url) continue;
 
-          // Extract best available product image from PrestaShop cover data.
-          // Prefer home_default (280x280) — good balance for thumbnails.
+          // Prefer HTML-parsed stock (accurate). Fall back to false if URL not found
+          // in the stock map — safer than assuming in_stock=true.
+          const in_stock = stockByUrl.get(product_url) ?? stockByUrl.get(product.url) ?? false;
+
           const image_url =
             product.cover?.bySize?.home_default?.url ??
             product.cover?.medium?.url ??
@@ -194,7 +142,7 @@ export class UltraPcScraper {
           prices.push({
             retailer_id,
             price,
-            in_stock: true, // will be corrected by checkStockBatch after all pages are scraped
+            in_stock,
             product_url,
             product_name: product.name,
             product_description: product.description_short || undefined,
@@ -209,52 +157,91 @@ export class UltraPcScraper {
 
       page++;
 
-      // Small delay between pages to be respectful (100ms is enough for a JSON API)
       if (page <= totalPages) {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
-    } while (page <= totalPages && page <= 10); // cap at 10 pages per category
+    } while (page <= totalPages && page <= 10);
 
     return prices;
   }
 
   /**
-   * Extracts product data from the response.
-   * The AJAX response embeds JSON in a JavaScript variable or returns raw JSON.
+   * Parse stock status from HTML product cards.
+   * Returns Map<product_url, in_stock>.
+   *
+   * UltraPC card structure (simplified):
+   *   <article class="product-miniature" ...>
+   *     <a class="product-thumbnail" href="https://www.ultrapc.ma/...">
+   *     ...
+   *     <span class="product-availability">Produit en stock</span>  ← in stock
+   *     OR nothing / "Rupture de stock"                              ← OOS
+   *   </article>
+   *
+   * Also handles the plain-text "Produit en stock" that appears after the
+   * price in the rendered HTML (seen in fetched content above).
    */
+  private extractStockFromHtml(html: string): Map<string, boolean> {
+    const stockMap = new Map<string, boolean>();
+    const $ = cheerio.load(html);
+
+    // Method 1: article.product-miniature cards (standard PrestaShop structure)
+    $('article.product-miniature, .js-product-miniature').each((_i, card) => {
+      const url = $(card).find('a.product-thumbnail, a[itemprop="url"]').first().attr('href');
+      if (!url) return;
+
+      const availText = $(card).find('.product-availability, .availability').first().text().trim();
+      const cardHtml = $(card).html() ?? '';
+
+      const inStock =
+        availText.toLowerCase().includes('en stock') ||
+        availText.toLowerCase().includes('produit en stock') ||
+        cardHtml.includes('Produit en stock') ||
+        cardHtml.includes('product-available');
+
+      stockMap.set(url, inStock);
+    });
+
+    // Method 2: fallback — scan all product links and check nearby text
+    // Handles cases where PrestaShop renders cards differently
+    if (stockMap.size === 0) {
+      $('a[href*="ultrapc.ma"]').each((_i, el) => {
+        const url = $(el).attr('href');
+        if (!url || !url.includes('.html')) return;
+        // Check parent container for stock text
+        const parent = $(el).closest('div, article, li');
+        const text = parent.text();
+        const inStock = text.includes('Produit en stock') && !text.includes('Rupture de stock');
+        if (!stockMap.has(url)) stockMap.set(url, inStock);
+      });
+    }
+
+    return stockMap;
+  }
+
   private extractProductData(text: string): UltraPcResponse {
-    // Try parsing as raw JSON first
+    // Try raw JSON first
     try {
       const data = JSON.parse(text) as UltraPcResponse;
       if (data.products) return data;
-    } catch {
-      // Not raw JSON — try extracting from embedded script
-    }
+    } catch { /* not raw JSON */ }
 
-    // Extract from the rendered_products JSON embedded in the page
-    // Pattern: "products":[{...}]
+    // Extract from embedded script JSON
     const productsMatch = text.match(/"products"\s*:\s*(\[[\s\S]*?\])\s*,\s*"sort_orders"/);
     if (productsMatch) {
       try {
         const products = JSON.parse(productsMatch[1]) as UltraPcProduct[];
-        // Also extract pagination
         const paginationMatch = text.match(/"pagination"\s*:\s*(\{[^}]+\})/);
         let pagination;
         if (paginationMatch) {
           try { pagination = JSON.parse(paginationMatch[1]); } catch { /* ignore */ }
         }
         return { products, pagination };
-      } catch {
-        // Parsing failed
-      }
+      } catch { /* parsing failed */ }
     }
 
     return {};
   }
 
-  /**
-   * Parses a price value. The API returns price_amount as a number (e.g. 2390).
-   */
   private parsePrice(priceAmount: number | string | undefined): number {
     if (typeof priceAmount === 'number') return priceAmount;
     if (typeof priceAmount === 'string') {
