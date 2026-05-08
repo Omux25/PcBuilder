@@ -156,12 +156,17 @@ export class UltraPcScraper extends BaseScraper {
         cardHtml.includes('Produit en stock') ||
         cardHtml.includes('product-available');
 
-      // Image — prefer large thumbnail
-      const image_url =
+      // Image — prefer large_default (800×800 square product shot).
+      // UltraPC serves large_banner (banner crop) by default — swap to large_default.
+      const rawImageUrl =
         $(card).find('img[data-full-size-image-url]').attr('data-full-size-image-url') ??
         $(card).find('img.js-lazy-image').attr('data-src') ??
         $(card).find('img').first().attr('src') ??
         undefined;
+      const image_url = rawImageUrl
+        ? rawImageUrl.replace(/-large_banner\//, '-large_default/')
+          .replace(/-home_default\//, '-large_default/')
+        : undefined;
 
       // Description from short desc if present
       const product_description = $(card).find('.product-description, .short-desc').first().text().trim() || undefined;
