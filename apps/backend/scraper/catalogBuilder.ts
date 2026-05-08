@@ -17,7 +17,7 @@ import { logger } from './utils/logger.js';
 import { getSql, setSql, resetSql } from '../src/db/index.js';
 import {
   decodeHtml, inferCategory, extractBrand, cleanName,
-  extractCpuSpecs, extractGpuSpecs, extractRamSpecs, extractStorageSpecs,
+  extractCpuSpecs, extractGpuSpecs, extractRamSpecs,
   extractMotherboardSpecs, extractPsuSpecs, extractCoolingSpecs, extractCaseSpecs,
   extractFanSpecs, extractThermalPasteSpecs
 } from '@shared/component-utils';
@@ -68,7 +68,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
   }
 
   const pending = (await sql`
-    SELECT ul.id, ul.retailer_id, ul.product_url, ul.scraped_name,
+    SELECT ul.id, ul.retailer_id, ul.product_url, ul.scraped_name, ul.scraped_price, ul.image_url,
            us.category AS suggestion_category
     FROM unmatched_listings ul
     LEFT JOIN unmatched_suggestions us ON us.unmatched_listing_id = ul.id
@@ -76,7 +76,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
       AND ul.scraped_name IS NOT NULL
       AND ul.scraped_name != ''
     ORDER BY ul.scraped_at DESC
-  `) as { id: number; retailer_id: number; product_url: string; scraped_name: string; suggestion_category: string | null }[];
+  `) as { id: number; retailer_id: number; product_url: string; scraped_name: string; scraped_price: number; image_url: string | null; suggestion_category: string | null }[];
 
   if (pending.length === 0) return { created, skipped };
 
@@ -96,7 +96,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
     const prefixMatch = scrapedName.match(/^([^–\-]+)[–\-]\s+(.+)$/);
     const nameForExtraction = prefixMatch ? prefixMatch[2].trim() : scrapedName;
     // Use prefix as brand only if it's a known brand, not a category word like "Boitier" or "Watercooler"
-    const CATEGORY_WORDS = new Set(['boitier', 'boîtier', 'watercooler', 'watercooling', 'processeur', 'carte graphique', 'alimentation', 'stockage', 'memoire', 'mémoire']);
+    const CATEGORY_WORDS = new Set(['boitier', 'boîtier', 'watercooler', 'watercooling', 'processeur', 'carte graphique', 'alimentation', 'stockage', 'memoire', 'mémoire', 'aircooler', 'air cooler', 'carte mère', 'carte mere', 'disque']);
     const prefixWord = prefixMatch ? prefixMatch[1].trim().toLowerCase() : '';
     const prefixAsBrand = (prefixMatch && !CATEGORY_WORDS.has(prefixWord))
       ? (extractBrand(prefixMatch[1].trim()) ?? null)
@@ -128,6 +128,13 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
           UPDATE unmatched_listings SET status = 'linked', linked_component_id = ${dnaMatch.id}
           WHERE id = ${listing.id}
         `;
+        // Immediate price insertion — avoids "No price" until next scrape
+        await sql`
+          INSERT INTO prices (component_id, retailer_id, product_url, price, in_stock, last_updated)
+          VALUES (${dnaMatch.id}, ${listing.retailer_id}, ${listing.product_url}, ${listing.scraped_price}, true, NOW())
+          ON CONFLICT (component_id, retailer_id, product_url)
+          DO UPDATE SET price = EXCLUDED.price, in_stock = true, last_updated = NOW()
+        `;
         created++;
       } catch (err) { skipped++; await logger.error(`[CATALOG] DNA link error for "${cleanedName}": ${err instanceof Error ? err.message : String(err)}`); }
       onProgress?.(created + skipped, pending.length);
@@ -141,92 +148,89 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
 
       if (category === 'cpu') {
         const specs = extractCpuSpecs(nameForExtraction);
-        if (specs) {
-          const rows = await sql`
-            INSERT INTO components (slug, name, brand, category, socket, tdp, is_active)
-            VALUES (${slug}, ${cleanedName}, ${brand}, 'cpu', ${specs.socket}, ${specs.tdp}, true)
-            RETURNING id
-          ` as { id: number }[];
-          newId = rows[0]?.id;
-        }
+        const rows = await sql`
+          INSERT INTO components (slug, name, brand, category, socket, tdp, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'cpu', ${specs?.socket ?? null}, ${specs?.tdp ?? null}, ${listing.image_url}, true)
+          RETURNING id
+        ` as { id: number }[];
+        newId = rows[0]?.id;
       } else if (category === 'gpu') {
         const specs = extractGpuSpecs(nameForExtraction);
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, length_mm, tdp, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'gpu', ${specs.length_mm}, ${specs.tdp}, true)
+          INSERT INTO components (slug, name, brand, category, length_mm, tdp, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'gpu', ${specs.length_mm}, ${specs.tdp}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
       } else if (category === 'ram') {
         const specs = extractRamSpecs(nameForExtraction);
-        if (specs) {
-          const rows = await sql`
-            INSERT INTO components (slug, name, brand, category, ram_type, frequency_mhz, is_active)
-            VALUES (${slug}, ${cleanedName}, ${brand}, 'ram', ${specs.ram_type}, ${specs.frequency_mhz}, true)
-            RETURNING id
-          ` as { id: number }[];
-          newId = rows[0]?.id;
-        }
+        // Use extracted specs or sensible defaults
+        const ramType = specs?.ram_type ?? (nameForExtraction.toLowerCase().includes('ddr5') ? 'DDR5' : 'DDR4');
+        const freqMhz = specs?.frequency_mhz ?? (ramType === 'DDR5' ? 4800 : 3200);
+        const rows = await sql`
+          INSERT INTO components (slug, name, brand, category, ram_type, frequency_mhz, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'ram', ${ramType}, ${freqMhz}, ${listing.image_url}, true)
+          RETURNING id
+        ` as { id: number }[];
+        newId = rows[0]?.id;
       } else if (category === 'storage') {
-        const specs = extractStorageSpecs(nameForExtraction);
-        if (specs) {
-          const rows = await sql`
-            INSERT INTO components (slug, name, brand, category, is_active)
-            VALUES (${slug}, ${cleanedName}, ${brand}, 'storage', true)
-            RETURNING id
-          ` as { id: number }[];
-          newId = rows[0]?.id;
-        }
+        // Create storage even without extractable specs — name alone is sufficient
+        const rows = await sql`
+          INSERT INTO components (slug, name, brand, category, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'storage', ${listing.image_url}, true)
+          RETURNING id
+        ` as { id: number }[];
+        newId = rows[0]?.id;
       } else if (category === 'motherboard') {
         const specs = extractMotherboardSpecs(nameForExtraction);
-        if (specs) {
-          const rows = await sql`
-            INSERT INTO components (slug, name, brand, category, socket, supported_ram_types, max_ram_frequency, is_active)
-            VALUES (${slug}, ${cleanedName}, ${brand}, 'motherboard', ${specs.socket}, ${specs.supported_ram_types as string[] | null}, ${specs.max_ram_frequency}, true)
-            RETURNING id
-          ` as { id: number }[];
-          newId = rows[0]?.id;
-        }
+        // Use extracted specs or create with null fields — better to have the component than skip it
+        const ramTypes = specs ? specs.supported_ram_types : null;
+        const rows = await sql`
+          INSERT INTO components (slug, name, brand, category, socket, supported_ram_types, max_ram_frequency, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'motherboard', ${specs?.socket ?? null}, ${ramTypes}, ${specs?.max_ram_frequency ?? null}, ${listing.image_url}, true)
+          RETURNING id
+        ` as { id: number }[];
+        newId = rows[0]?.id;
       } else if (category === 'psu') {
         const specs = extractPsuSpecs(nameForExtraction);
-        if (specs) {
-          const rows = await sql`
-            INSERT INTO components (slug, name, brand, category, wattage, is_active)
-            VALUES (${slug}, ${cleanedName}, ${brand}, 'psu', ${specs.wattage}, true)
-            RETURNING id
-          ` as { id: number }[];
-          newId = rows[0]?.id;
-        }
+        // Create PSU even without extractable wattage — wattage is often in the name but format varies
+        const wattage = specs?.wattage ?? null;
+        const rows = await sql`
+          INSERT INTO components (slug, name, brand, category, wattage, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'psu', ${wattage}, ${listing.image_url}, true)
+          RETURNING id
+        ` as { id: number }[];
+        newId = rows[0]?.id;
       } else if (category === 'cooling') {
         const specs = extractCoolingSpecs(nameForExtraction);
         // Create cooling component even if specs can't be extracted — tdp is optional
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, tdp, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'cooling', ${specs?.tdp ?? null}, true)
+          INSERT INTO components (slug, name, brand, category, tdp, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'cooling', ${specs?.tdp ?? null}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
       } else if (category === 'case') {
         const specs = extractCaseSpecs(nameForExtraction);
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, max_gpu_length_mm, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'case', ${specs.max_gpu_length_mm}, true)
+          INSERT INTO components (slug, name, brand, category, max_gpu_length_mm, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'case', ${specs.max_gpu_length_mm}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
       } else if (category === 'fan') {
         const specs = extractFanSpecs(nameForExtraction);
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, size_mm, rgb, pack_size, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'fan', ${specs.size_mm}, ${specs.rgb}, ${specs.pack_size}, true)
+          INSERT INTO components (slug, name, brand, category, size_mm, rgb, pack_size, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'fan', ${specs.size_mm}, ${specs.rgb}, ${specs.pack_size}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
       } else if (category === 'thermal_paste') {
         const specs = extractThermalPasteSpecs(nameForExtraction);
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, weight_grams, paste_type, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'thermal_paste', ${specs.weight_grams}, ${specs.paste_type}, true)
+          INSERT INTO components (slug, name, brand, category, weight_grams, paste_type, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'thermal_paste', ${specs.weight_grams}, ${specs.paste_type}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
@@ -243,6 +247,13 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         await sql`
           UPDATE unmatched_listings SET status = 'linked', linked_component_id = ${newId}
           WHERE id = ${listing.id}
+        `;
+        // Immediate price insertion — avoids "No price" until next scrape
+        await sql`
+          INSERT INTO prices (component_id, retailer_id, product_url, price, in_stock, last_updated)
+          VALUES (${newId}, ${listing.retailer_id}, ${listing.product_url}, ${listing.scraped_price}, true, NOW())
+          ON CONFLICT (component_id, retailer_id, product_url)
+          DO UPDATE SET price = EXCLUDED.price, in_stock = true, last_updated = NOW()
         `;
         created++;
       }
