@@ -74,7 +74,7 @@ async function runDataQualityPass(sql: SqlFn): Promise<void> {
   // 3. Fix Intel CPU names: normalize dash to space (Core i5-14400F → Core i5 14400F)
   await sql`
     UPDATE components
-    SET name = REGEXP_REPLACE(name, '(i[0-9])-([0-9])', '\1 \2', 'g')
+    SET name = REGEXP_REPLACE(name, '(i[0-9])-([0-9])', '\\1 \\2', 'g')
     WHERE brand = 'Intel' AND name ~ 'i[0-9]-[0-9]'
   `;
 
