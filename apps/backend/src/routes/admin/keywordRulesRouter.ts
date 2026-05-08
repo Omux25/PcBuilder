@@ -12,9 +12,9 @@
 import { Hono } from 'hono';
 import { getSql } from '../../db/index.js';
 import { authMiddleware } from '../../middleware/auth.js';
-import { matchesRule, type KeywordRule } from '../../services/keywordRulesService.js';
+import { matchesRule, clearRegexCache, type KeywordRule } from '../../services/keywordRulesService.js';
 import { runSuggestionPreprocessing } from '../../services/suggestionPreprocessor.js';
-import { buildFromUnmatched } from '../../../scraper/catalogBuilder.js';
+import { reprocessUnmatched } from '../../../scraper/aggregator.js';
 import { logActivity } from '../../services/adminService.js';
 import type { AdminEnv } from './types.js';
 import { parseId } from './types.js';
@@ -32,8 +32,8 @@ keywordRulesRouter.use('/*', authMiddleware);
  */
 async function runAutoProcessingPipeline(): Promise<void> {
     try {
+        await reprocessUnmatched();
         await runSuggestionPreprocessing(true); // force=true: new rule must apply to all existing listings
-        await buildFromUnmatched();
     } catch (err) {
         console.error('[KEYWORD-RULES] Auto-processing pipeline failed:', err);
     }
@@ -179,6 +179,9 @@ keywordRulesRouter.post('/', async (c) => {
             });
         }
 
+        // Clear regex cache so the new rule takes effect immediately in matchesRule()
+        clearRegexCache();
+
         // Fire-and-forget: re-process suggestions + auto-build components with new rule
         runAutoProcessingPipeline();
 
@@ -237,6 +240,9 @@ keywordRulesRouter.delete('/:id', async (c) => {
             category: rows[0].category,
         });
     }
+
+    // Clear regex cache so the deleted rule no longer matches
+    clearRegexCache();
 
     // Fire-and-forget: re-process suggestions without deleted rule
     runAutoProcessingPipeline();

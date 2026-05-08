@@ -38,7 +38,7 @@ function hashRefreshToken(raw: string): string {
   return createHash('sha256').update(raw).digest('hex');
 }
 
-const ACCESS_TOKEN_EXPIRY  = process.env.JWT_EXPIRES_IN || '15m';
+const ACCESS_TOKEN_EXPIRY = process.env.JWT_EXPIRES_IN || '15m';
 const REFRESH_TOKEN_EXPIRY_DAYS = 7;
 const COOKIE_NAME = 'refresh_token';
 
@@ -67,7 +67,7 @@ function refreshTokenExpiry(): Date {
 
 function setRefreshCookie(c: Context, token: string): void {
   const expires = refreshTokenExpiry();
-  const secure  = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
   c.header(
     'Set-Cookie',
     `${COOKIE_NAME}=${token}; HttpOnly; Path=/; SameSite=Strict; Expires=${expires.toUTCString()}${secure}`,
@@ -145,10 +145,10 @@ authRouter.post('/login', async (c) => {
   }
 
   // Generate tokens
-  const accessToken  = makeAccessToken(admin.id, admin.username);
-  const rawRefresh   = generateRefreshToken();
-  const refreshHash  = hashRefreshToken(rawRefresh);
-  const expiresAt    = refreshTokenExpiry();
+  const accessToken = makeAccessToken(admin.id, admin.username);
+  const rawRefresh = generateRefreshToken();
+  const refreshHash = hashRefreshToken(rawRefresh);
+  const expiresAt = refreshTokenExpiry();
 
   // Store SHA-256 hash in DB — never the raw token
   await sql`
@@ -196,9 +196,9 @@ authRouter.post('/refresh', async (c) => {
   // Rotate refresh token atomically: delete old and insert new in a single transaction.
   // Without a transaction, a server crash between the DELETE and INSERT would leave
   // the user with no valid refresh token, forcing them to log in again.
-  const newRawRefresh  = generateRefreshToken();
+  const newRawRefresh = generateRefreshToken();
   const newRefreshHash = hashRefreshToken(newRawRefresh);
-  const newExpiresAt   = refreshTokenExpiry();
+  const newExpiresAt = refreshTokenExpiry();
 
   await sql.begin(async (tx) => {
     await tx`DELETE FROM refresh_tokens WHERE id = ${matched.id}`;
@@ -247,7 +247,17 @@ export function startRefreshTokenCleanup(): void {
     try {
       const sql = getSql();
       await sql`DELETE FROM refresh_tokens WHERE expires_at < NOW()`;
-    } catch { /* non-critical — will retry next interval */ }
+    } catch (err) {
+      // Log errors even though cleanup is non-critical — DB issues should be visible
+      console.error('[auth] Refresh token cleanup failed:', err instanceof Error ? err.message : String(err));
+    }
   }, 6 * 60 * 60 * 1000); // every 6 hours
   _cleanupInterval.unref?.();
+}
+
+export function stopRefreshTokenCleanup(): void {
+  if (_cleanupInterval) {
+    clearInterval(_cleanupInterval);
+    _cleanupInterval = null;
+  }
 }

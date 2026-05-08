@@ -4,7 +4,7 @@
  * Requirements: 8.2, 8.3, 11.2
  */
 
-import { z } from 'zod/v4';
+import { z } from 'zod';
 import type { ComponentCategory as SharedCategory } from '@shared/types';
 
 // ── Shared base ──────────────────────────────────────────────────────────────
@@ -23,6 +23,7 @@ export const cpuSchema = baseSchema.extend({
 
 export const motherboardSchema = baseSchema.extend({
   socket: z.string().min(1),
+  form_factor: z.string().optional(),
   supported_ram_types: z.array(z.string().min(1)).min(1),
   max_ram_frequency: z.number(),
   tdp: z.number().optional(),
@@ -44,6 +45,7 @@ export const ramSchema = baseSchema.extend({
 });
 
 export const storageSchema = baseSchema.extend({
+  interface: z.string().optional(),
   tdp: z.number().optional(),
 });
 
@@ -53,6 +55,7 @@ export const psuSchema = baseSchema.extend({
 
 export const caseSchema = baseSchema.extend({
   max_gpu_length_mm: z.number(),
+  form_factor: z.string().optional(),
   // Rule 5 (form_factor_mismatch): list of supported motherboard form factors
   // e.g. ['ATX', 'mATX', 'Mini-ITX']
   supported_motherboards: z.array(z.string().min(1)).optional(),
