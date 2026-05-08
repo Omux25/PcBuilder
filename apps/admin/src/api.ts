@@ -200,6 +200,12 @@ export const linkUnmatched = (id: number, componentId: number) =>
 export const dismissUnmatched = (id: number) =>
   request<{ message: string }>(`/admin/unmatched-listings/${id}/dismiss`, { method: 'POST' });
 
+export const updateUnmatchedCategory = (id: number, category: string | null) =>
+  request<{ success: boolean }>(`/admin/unmatched-listings/${id}/category`, {
+    method: 'PATCH',
+    body: JSON.stringify({ category }),
+  });
+
 // ── Unmatched suggestions (grouped view + bulk actions) ───────────────────────
 
 export interface CanonicalGroupListing {
@@ -241,25 +247,39 @@ export const getGroupedUnmatched = (params: Record<string, string> = {}) => {
 export const reprocessSuggestions = () =>
   request<{ processed: number; skipped: number }>('/admin/unmatched-listings/reprocess', { method: 'POST' });
 
-export const autoBuildCatalog = () =>
-  request<{ message: string }>('/admin/unmatched-listings/auto-build', { method: 'POST' });
-
 export const bulkDismissUnmatched = (listingIds: number[]) =>
   request<{ dismissed: number; skipped: number }>('/admin/unmatched-listings/bulk-dismiss', {
     method: 'POST',
     body: JSON.stringify({ listing_ids: listingIds }),
   });
 
-export const bulkApproveUnmatched = (canonicalNames: string[]) =>
-  request<{ approved_groups: number; linked_listings: number; skipped_groups: number }>('/admin/unmatched-listings/bulk-approve', {
-    method: 'POST',
-    body: JSON.stringify({ canonical_names: canonicalNames }),
-  });
 
 export const scrapeUrls = (urls: Array<{ retailer_id: number; product_url: string }>) =>
   request<{ scraped: number; failed: number }>('/admin/scrapers/scrape-urls', {
     method: 'POST',
     body: JSON.stringify({ urls }),
+  });
+
+export interface CreateAndLinkPayload {
+  name: string;
+  brand: string | null;
+  category: string;
+  specs: Record<string, unknown>;
+  listing_ids: number[];
+  link_to_existing?: boolean;
+  existing_component_id?: number;
+}
+
+export interface CreateAndLinkResponse {
+  component_id: number;
+  component_slug: string | null;
+  linked_count: number;
+}
+
+export const createAndLinkComponent = (payload: CreateAndLinkPayload) =>
+  request<CreateAndLinkResponse>('/admin/unmatched-listings/create-and-link', {
+    method: 'POST',
+    body: JSON.stringify(payload),
   });
 
 // ── Presets ───────────────────────────────────────────────────────────────────
