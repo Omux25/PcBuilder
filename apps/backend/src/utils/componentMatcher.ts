@@ -60,19 +60,32 @@ function extractGpuDna(name: string): string[] {
   const n = normalize(name);
   const tokens: string[] = [];
 
-  // NVIDIA RTX/GTX — capture Ti SUPER, Ti, SUPER, or plain
-  // Order matters: check "ti super" before "ti" and "super" individually
-  const rtxMatch = n.match(/\b(rtx|gtx)\s*(\d{4})\s*(ti\s*super|ti|super)?\b/);
+  // NVIDIA RTX/GTX — token-based suffix detection.
+  // Retailers insert noise tokens (OC, GAMING, DUAL, TRIPLE, etc.) between the model
+  // number and the suffix (Ti, SUPER). We scan the full string for suffix tokens
+  // rather than requiring them to appear immediately after the model number.
+  // e.g. "RTX 4070 OC SUPER" and "RTX 4070 SUPER OC" both resolve to "rtx4070super".
+  const rtxMatch = n.match(/\b(rtx|gtx)\s*(\d{4})\b/);
   if (rtxMatch) {
-    const suffix = (rtxMatch[3] ?? '').replace(/\s+/g, '');
-    tokens.push(`${rtxMatch[1]}${rtxMatch[2]}${suffix}`);
+    const base = `${rtxMatch[1]}${rtxMatch[2]}`;
+    // Check for suffix tokens anywhere in the string (order: ti super > ti > super)
+    const hasTi = /\bti\b/.test(n);
+    const hasSuper = /\bsuper\b/.test(n);
+    const suffix = hasTi && hasSuper ? 'tisuper' : hasTi ? 'ti' : hasSuper ? 'super' : '';
+    tokens.push(`${base}${suffix}`);
     return tokens;
   }
 
-  // AMD RX — capture xtx, xt, gre, m suffixes (covers RX 6000, 7000, 9000 series)
-  const rxMatch = n.match(/\brx\s*(\d{4})\s*(xtx|xt|gre|m)?\b/);
+  // AMD RX — same token-based approach for xtx/xt/gre/m suffixes
+  const rxMatch = n.match(/\brx\s*(\d{4})\b/);
   if (rxMatch) {
-    tokens.push(`rx${rxMatch[1]}${rxMatch[2] ?? ''}`);
+    const base = `rx${rxMatch[1]}`;
+    const hasXtx = /\bxtx\b/.test(n);
+    const hasXt = /\bxt\b/.test(n);
+    const hasGre = /\bgre\b/.test(n);
+    const hasM = /\b(\d{4})\s*m\b/.test(n); // only "m" directly after model number
+    const suffix = hasXtx ? 'xtx' : hasXt ? 'xt' : hasGre ? 'gre' : hasM ? 'm' : '';
+    tokens.push(`${base}${suffix}`);
     return tokens;
   }
 

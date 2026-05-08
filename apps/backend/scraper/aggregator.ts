@@ -398,13 +398,145 @@ export async function aggregate(
 
   // ── PERSISTENCE ────────────────────────────────────────────────────────────
 
-  // Phase 4: Bulk Persist Mappings & Unmatched
+  // imageUpdates collected during Phase 5 — used by Phase 5.5 (image backfill)
+  const imageUpdates = new Map<number, { url: string; score: number }>(); // component_id → best image
+
+  // Phase 4 + 5: Bulk Persist Mappings, Unmatched, Prices & History
+  // Wrapped in a single transaction so mappings + prices either both commit or
+  // both roll back — prevents ghost data (mapping exists but price missing, etc.)
   if (isRealSql) {
+    await bunSql.begin(async (tx) => {
+      // Phase 4: Mappings & Unmatched
+      if (finalResolved.length > 0) {
+        // Deduplicate by (retailer_id, product_url) — keep last occurrence.
+        // PostgreSQL's ON CONFLICT DO UPDATE cannot update the same row twice
+        // in a single statement, which happens when a retailer lists the same
+        // URL under multiple categories (e.g. a product in two sections).
+        const mappingMap2 = new Map<string, { component_id: number; retailer_id: number; product_url: string; product_identifier: string }>();
+        for (const p of finalResolved) {
+          mappingMap2.set(`${p.retailer_id}|${p.product_url}`, {
+            component_id: p.component_id,
+            retailer_id: p.retailer_id,
+            product_url: p.product_url,
+            product_identifier: decodeHtml(p.product_name ?? '')
+          });
+        }
+        const mappingRows = [...mappingMap2.values()];
+        for (let i = 0; i < mappingRows.length; i += 500) {
+          const batch = mappingRows.slice(i, i + 500);
+          await tx`
+            INSERT INTO scraper_mappings ${tx(batch)}
+            ON CONFLICT (retailer_id, product_url) DO UPDATE SET
+              component_id = EXCLUDED.component_id,
+              product_identifier = EXCLUDED.product_identifier
+          `;
+        }
+      }
+
+      if (unmatchedListingsToUpsert.length > 0) {
+        // Deduplicate unmatched by (retailer_id, product_url) as well
+        const unmatchedMap = new Map<string, typeof unmatchedListingsToUpsert[0]>();
+        for (const u of unmatchedListingsToUpsert) {
+          unmatchedMap.set(`${u.retailer_id}|${u.product_url}`, u);
+        }
+        const dedupedUnmatched = [...unmatchedMap.values()];
+        for (let i = 0; i < dedupedUnmatched.length; i += 500) {
+          const batch = dedupedUnmatched.slice(i, i + 500);
+          await tx`
+            INSERT INTO unmatched_listings ${tx(batch)}
+            ON CONFLICT (retailer_id, product_url) DO UPDATE SET
+              scraped_name = EXCLUDED.scraped_name,
+              scraped_price = EXCLUDED.scraped_price,
+              image_url = EXCLUDED.image_url,
+              scraped_at = NOW(),
+              status = 'pending'
+          `;
+        }
+      }
+
+      if (dismissedListingsToUpdate.length > 0) {
+        for (let i = 0; i < dismissedListingsToUpdate.length; i += 500) {
+          const batch = dismissedListingsToUpdate.slice(i, i + 500);
+          // Bun.sql doesn't support multi-column WHERE IN — use individual updates
+          await Promise.all(batch.map(b => tx`
+            UPDATE unmatched_listings
+            SET status = 'dismissed'
+            WHERE retailer_id = ${b.retailer_id} AND product_url = ${b.product_url}
+          `));
+        }
+      }
+
+      // Phase 5: Prices & History
+      if (finalResolved.length > 0) {
+        // Deduplicate by (component_id, retailer_id, product_url) — keep last
+        const priceRowMap = new Map<string, { component_id: number; retailer_id: number; price: number; in_stock: boolean; product_url: string; variant_label: string | null; variant_details: Record<string, unknown> | null }>();
+        const historyRows: { component_id: number; retailer_id: number; price: number; in_stock: boolean }[] = [];
+
+        for (const p of finalResolved) {
+          const { label: variantLabel, details: variantDetails } = extractVariant(decodeHtml(p.product_name ?? ''), p.category, p.product_description);
+          const key = `${p.component_id}|${p.retailer_id}|${p.product_url}`;
+          priceRowMap.set(key, {
+            component_id: p.component_id,
+            retailer_id: p.retailer_id,
+            price: p.price,
+            in_stock: p.in_stock,
+            product_url: p.product_url,
+            variant_label: variantLabel || null,
+            variant_details: Object.keys(variantDetails).length > 0 ? variantDetails as Record<string, unknown> : null,
+          });
+          const lastPrice = priceMap.get(key) ?? null;
+          if (lastPrice === null || Math.abs(lastPrice - p.price) > 0.01) {
+            historyRows.push({ component_id: p.component_id, retailer_id: p.retailer_id, price: p.price, in_stock: p.in_stock });
+          }
+          // Collect image URLs for components - choose best quality image
+          if ((p as any).image_url) {
+            const imageUrl = (p as any).image_url;
+            const productName = p.product_name ?? '';
+            const score = scoreImageQuality(imageUrl, productName);
+            const existing = imageUpdates.get(p.component_id);
+            if (!existing || score > existing.score) {
+              imageUpdates.set(p.component_id, { url: imageUrl, score });
+            }
+          }
+        }
+
+        const priceRows = [...priceRowMap.values()];
+        const BATCH = 500;
+        for (let i = 0; i < priceRows.length; i += BATCH) {
+          const batch = priceRows.slice(i, i + BATCH);
+          try {
+            await tx`
+              INSERT INTO prices ${tx(batch.map(r => ({ ...r, last_updated: new Date() })))}
+              ON CONFLICT (component_id, retailer_id, product_url)
+              DO UPDATE SET
+                price = EXCLUDED.price,
+                in_stock = EXCLUDED.in_stock,
+                variant_label = EXCLUDED.variant_label,
+                variant_details = EXCLUDED.variant_details,
+                last_updated = EXCLUDED.last_updated
+            `;
+            updated += batch.length;
+          } catch (err) {
+            errors += batch.length;
+            await logger.error(`[PIPELINE] Bulk price upsert failed: ${err instanceof Error ? err.message : String(err)}`);
+            throw err; // re-throw to roll back transaction
+          }
+        }
+
+        // Bulk insert price history
+        if (historyRows.length > 0) {
+          for (let i = 0; i < historyRows.length; i += BATCH) {
+            const batch = historyRows.slice(i, i + BATCH);
+            try {
+              await tx`INSERT INTO price_history ${tx(batch)}`;
+            } catch { /* non-critical — history failure must not roll back prices */ }
+          }
+        }
+      }
+    });
+  } else {
+    // ── TEST MODE (injected mock sql — no transactions) ──────────────────────
     if (finalResolved.length > 0) {
-      // Deduplicate by (retailer_id, product_url) — keep last occurrence.
-      // PostgreSQL's ON CONFLICT DO UPDATE cannot update the same row twice
-      // in a single statement, which happens when a retailer lists the same
-      // URL under multiple categories (e.g. a product in two sections).
       const mappingMap2 = new Map<string, { component_id: number; retailer_id: number; product_url: string; product_identifier: string }>();
       for (const p of finalResolved) {
         mappingMap2.set(`${p.retailer_id}|${p.product_url}`, {
@@ -417,17 +549,21 @@ export async function aggregate(
       const mappingRows = [...mappingMap2.values()];
       for (let i = 0; i < mappingRows.length; i += 500) {
         const batch = mappingRows.slice(i, i + 500);
-        await bunSql`
-          INSERT INTO scraper_mappings ${bunSql(batch)}
-          ON CONFLICT (retailer_id, product_url) DO UPDATE SET
-            component_id = EXCLUDED.component_id,
-            product_identifier = EXCLUDED.product_identifier
-        `;
+        try {
+          for (const m of batch) {
+            await sql`
+              INSERT INTO scraper_mappings (component_id, retailer_id, product_url, product_identifier)
+              VALUES (${m.component_id}, ${m.retailer_id}, ${m.product_url}, ${m.product_identifier})
+              ON CONFLICT (retailer_id, product_url) DO UPDATE SET
+                component_id = EXCLUDED.component_id,
+                product_identifier = EXCLUDED.product_identifier
+            `;
+          }
+        } catch { /* non-critical in test mode */ }
       }
     }
 
     if (unmatchedListingsToUpsert.length > 0) {
-      // Deduplicate unmatched by (retailer_id, product_url) as well
       const unmatchedMap = new Map<string, typeof unmatchedListingsToUpsert[0]>();
       for (const u of unmatchedListingsToUpsert) {
         unmatchedMap.set(`${u.retailer_id}|${u.product_url}`, u);
@@ -435,124 +571,49 @@ export async function aggregate(
       const dedupedUnmatched = [...unmatchedMap.values()];
       for (let i = 0; i < dedupedUnmatched.length; i += 500) {
         const batch = dedupedUnmatched.slice(i, i + 500);
-        await bunSql`
-          INSERT INTO unmatched_listings ${bunSql(batch)}
-          ON CONFLICT (retailer_id, product_url) DO UPDATE SET
-            scraped_name = EXCLUDED.scraped_name,
-            scraped_price = EXCLUDED.scraped_price,
-            image_url = EXCLUDED.image_url,
-            scraped_at = NOW(),
-            status = 'pending'
-        `;
+        try {
+          for (const u of batch) {
+            await sql`
+              INSERT INTO unmatched_listings (retailer_id, product_url, scraped_name, scraped_price, image_url, scraped_at, status)
+              VALUES (${u.retailer_id}, ${u.product_url}, ${u.scraped_name}, ${u.scraped_price}, ${u.image_url ?? null}, NOW(), 'pending')
+              ON CONFLICT (retailer_id, product_url) DO UPDATE SET
+                scraped_name = EXCLUDED.scraped_name,
+                scraped_price = EXCLUDED.scraped_price,
+                image_url = EXCLUDED.image_url,
+                scraped_at = NOW(),
+                status = 'pending'
+            `;
+          }
+        } catch { /* non-critical in test mode */ }
       }
     }
 
     if (dismissedListingsToUpdate.length > 0) {
       for (let i = 0; i < dismissedListingsToUpdate.length; i += 500) {
         const batch = dismissedListingsToUpdate.slice(i, i + 500);
-        // Bun.sql doesn't support multi-column WHERE IN — use individual updates
-        await Promise.all(batch.map(b => bunSql`
-          UPDATE unmatched_listings
-          SET status = 'dismissed'
-          WHERE retailer_id = ${b.retailer_id} AND product_url = ${b.product_url}
-        `));
+        try {
+          await Promise.all(batch.map(b => sql`
+            UPDATE unmatched_listings
+            SET status = 'dismissed'
+            WHERE retailer_id = ${b.retailer_id} AND product_url = ${b.product_url}
+          `));
+        } catch { /* non-critical in test mode */ }
       }
     }
-  }
 
-  // Phase 5: Bulk UPSERT Prices & History
-  // Build all price rows in memory first, then insert in one batch per 500.
-  // Also collect price_history rows for prices that changed.
-  // Also collect image URLs to backfill components without images (choose best quality).
-  const imageUpdates = new Map<number, { url: string; score: number }>(); // component_id → best image
-
-  if (finalResolved.length > 0) {
-    // Deduplicate by (component_id, retailer_id, product_url) — keep last
-    const priceRowMap = new Map<string, { component_id: number; retailer_id: number; price: number; in_stock: boolean; product_url: string; variant_label: string | null; variant_details: Record<string, unknown> | null }>();
-    const historyRows: { component_id: number; retailer_id: number; price: number; in_stock: boolean }[] = [];
-
+    // Test mode prices
     for (const p of finalResolved) {
       const { label: variantLabel, details: variantDetails } = extractVariant(decodeHtml(p.product_name ?? ''), p.category, p.product_description);
-      const key = `${p.component_id}|${p.retailer_id}|${p.product_url}`;
-      priceRowMap.set(key, {
-        component_id: p.component_id,
-        retailer_id: p.retailer_id,
-        price: p.price,
-        in_stock: p.in_stock,
-        product_url: p.product_url,
-        variant_label: variantLabel || null,
-        variant_details: Object.keys(variantDetails).length > 0 ? variantDetails as Record<string, unknown> : null,
-      });
-      const lastPrice = priceMap.get(key) ?? null;
-      if (lastPrice === null || Math.abs(lastPrice - p.price) > 0.01) {
-        historyRows.push({ component_id: p.component_id, retailer_id: p.retailer_id, price: p.price, in_stock: p.in_stock });
-      }
-      // Collect image URLs for components - choose best quality image
-      if ((p as any).image_url) {
-        const imageUrl = (p as any).image_url;
-        const productName = p.product_name ?? '';
-        const score = scoreImageQuality(imageUrl, productName);
-
-        const existing = imageUpdates.get(p.component_id);
-        if (!existing || score > existing.score) {
-          imageUpdates.set(p.component_id, { url: imageUrl, score });
-        }
-      }
-    }
-
-    const priceRows = [...priceRowMap.values()];
-    const BATCH = 500;
-    if (isRealSql) {
-      // Production: bulk upsert in batches of 500
-      for (let i = 0; i < priceRows.length; i += BATCH) {
-        const batch = priceRows.slice(i, i + BATCH);
-        try {
-          await bunSql`
-            INSERT INTO prices ${bunSql(batch.map(r => ({ ...r, last_updated: new Date() })))}
-            ON CONFLICT (component_id, retailer_id, product_url)
-            DO UPDATE SET
-              price = EXCLUDED.price,
-              in_stock = EXCLUDED.in_stock,
-              variant_label = EXCLUDED.variant_label,
-              variant_details = EXCLUDED.variant_details,
-              last_updated = EXCLUDED.last_updated
-          `;
-          updated += batch.length;
-        } catch (err) {
-          errors += batch.length;
-          await logger.error(`[PIPELINE] Bulk price upsert failed: ${err instanceof Error ? err.message : String(err)}`);
-        }
-      }
-    } else {
-      // Test mode: use injected sql, one row at a time so mocks work
-      for (const r of priceRows) {
-        try {
-          await sql`
-            INSERT INTO prices (component_id, retailer_id, price, in_stock, product_url, variant_label, variant_details, last_updated)
-            VALUES (${r.component_id}, ${r.retailer_id}, ${r.price}, ${r.in_stock}, ${r.product_url}, ${r.variant_label}, ${r.variant_details}, NOW())
-            ON CONFLICT (component_id, retailer_id, product_url)
-            DO UPDATE SET price = EXCLUDED.price, in_stock = EXCLUDED.in_stock, last_updated = NOW()
-          `;
-          updated++;
-        } catch (err) {
-          errors++;
-        }
-      }
-    }
-
-    // Bulk insert price history
-    if (historyRows.length > 0) {
-      for (let i = 0; i < historyRows.length; i += BATCH) {
-        const batch = historyRows.slice(i, i + BATCH);
-        try {
-          if (isRealSql) {
-            await bunSql`INSERT INTO price_history ${bunSql(batch)}`;
-          } else {
-            for (const r of batch) {
-              await sql`INSERT INTO price_history (component_id, retailer_id, price, in_stock) VALUES (${r.component_id}, ${r.retailer_id}, ${r.price}, ${r.in_stock})`;
-            }
-          }
-        } catch { /* non-critical */ }
+      try {
+        await sql`
+          INSERT INTO prices (component_id, retailer_id, price, in_stock, product_url, variant_label, variant_details, last_updated)
+          VALUES (${p.component_id}, ${p.retailer_id}, ${p.price}, ${p.in_stock}, ${p.product_url}, ${variantLabel || null}, ${Object.keys(variantDetails).length > 0 ? variantDetails as Record<string, unknown> : null}, NOW())
+          ON CONFLICT (component_id, retailer_id, product_url)
+          DO UPDATE SET price = EXCLUDED.price, in_stock = EXCLUDED.in_stock, last_updated = NOW()
+        `;
+        updated++;
+      } catch (err) {
+        errors++;
       }
     }
   }
@@ -605,6 +666,9 @@ export async function aggregate(
   }
 
   // Phase 6: Mark Out-of-Stock — bulk update per retailer
+  // Safety threshold: only mark OOS if current scrape returned ≥ 50% of the previous
+  // run's count. Protects against partial scrapes (network errors, rate limits) wiping
+  // valid stock status for thousands of products.
   if (isRealSql && prices.length > 0 && !skipStockSync) {
     for (const rid of retailerIds) {
       const currentUrlsForRid = new Set(
@@ -615,6 +679,19 @@ export async function aggregate(
         const inStockUrls = (await bunSql`
           SELECT product_url FROM prices WHERE retailer_id = ${rid} AND in_stock = true
         `) as { product_url: string }[];
+
+        const previousInStockCount = inStockUrls.length;
+        const currentCountForRid = currentUrlsForRid.size;
+
+        // Threshold check: if we scraped fewer than 50% of previously known in-stock items,
+        // the scrape was likely partial/failed — skip OOS marking to avoid data corruption.
+        const OOS_THRESHOLD = 0.5;
+        if (previousInStockCount > 0 && currentCountForRid < previousInStockCount * OOS_THRESHOLD) {
+          await logger.warn(
+            `[PIPELINE] Retailer ${rid}: scraped ${currentCountForRid} items vs ${previousInStockCount} previously in-stock — below ${OOS_THRESHOLD * 100}% threshold, skipping OOS marking to protect data integrity`
+          );
+          continue;
+        }
 
         const toMarkOos = inStockUrls.map(r => r.product_url).filter(u => !currentUrlsForRid.has(u));
         if (toMarkOos.length > 0) {
