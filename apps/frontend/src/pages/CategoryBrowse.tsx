@@ -255,6 +255,18 @@ export function CategoryBrowse() {
           </div>
 
           <div className={styles.tableWrap}>
+            {!loading && total > 0 && (
+              <div className={styles.resultsCount}>
+                {total} composant{total > 1 ? 's' : ''}
+                {inStockOnly
+                  ? ' en stock'
+                  : ` · ${components.filter(c => c.in_stock).length > 0
+                    ? `${components.filter(c => c.in_stock).length} en stock sur cette page`
+                    : 'aucun en stock sur cette page'}`
+                }
+                {totalPages > 1 && ` · page ${page}/${totalPages}`}
+              </div>
+            )}
             <table className={styles.table}>
               <thead>
                 <tr>

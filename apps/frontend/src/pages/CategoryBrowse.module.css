@@ -244,6 +244,15 @@
 
 /* ── Results Table ──────────────────────────────────────────────────────── */
 
+.resultsCount {
+  padding: 0.5rem 1rem;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
 .tableWrap {
   background: var(--surface);
   border: 1px solid var(--border);
