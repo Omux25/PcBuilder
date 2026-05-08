@@ -35,6 +35,29 @@ export function escapeRegex(s: string): string {
     return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// ── Regex cache ───────────────────────────────────────────────────────────────
+
+/**
+ * Pre-compiled regex cache keyed by `${match_type}:${keyword}`.
+ * Avoids re-compiling the same regex on every call to matchesRule() during
+ * batch processing (O(N*M) calls), which was a critical CPU bottleneck
+ * (PERF-001 / PERF-002).
+ */
+const regexCache = new Map<string, RegExp>();
+
+function getCachedRegex(cacheKey: string, pattern: string, flags: string): RegExp {
+    const cached = regexCache.get(cacheKey);
+    if (cached) return cached;
+    const re = new RegExp(pattern, flags);
+    regexCache.set(cacheKey, re);
+    return re;
+}
+
+/** Clears the regex cache — call this after admin rules are updated in the DB. */
+export function clearRegexCache(): void {
+    regexCache.clear();
+}
+
 // ── Core matching function ────────────────────────────────────────────────────
 
 /**
@@ -66,16 +89,20 @@ export function matchesRule(
             case 'contains':
                 return name.toLowerCase().includes(keyword.toLowerCase());
 
-            case 'word':
-                return new RegExp(`\\b${escaped}\\b`, 'i').test(name);
+            case 'word': {
+                const re = getCachedRegex(`word:${keyword}`, `\\b${escaped}\\b`, 'i');
+                return re.test(name);
+            }
 
             case 'starts_with':
                 return name.toLowerCase().startsWith(keyword.toLowerCase());
 
-            case 'number_before':
+            case 'number_before': {
                 // Matches when one or more digits immediately precede the keyword
                 // e.g. keyword="ML" matches "240ML", "360ML" but NOT "ML" alone or "HTML"
-                return new RegExp(`\\d+${escaped}\\b`, 'i').test(name);
+                const re = getCachedRegex(`number_before:${keyword}`, `\\d+${escaped}\\b`, 'i');
+                return re.test(name);
+            }
 
             default:
                 return false;

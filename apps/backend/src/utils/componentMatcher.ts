@@ -22,6 +22,8 @@
  * while \b word boundaries prevent "rx7900xt" from matching "rx7900xtx".
  */
 
+import { extractBrand } from '@shared/component-utils';
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface MatchResult {
@@ -354,18 +356,29 @@ function extractCoolingDna(name: string): string[] {
   const n = normalize(name);
   const tokens: string[] = [];
 
-  // AIO: size is the primary identifier (240mm, 360mm, etc.)
-  const aioMatch = n.match(/\b(120|140|240|280|360|420)\s*mm\b/);
-  if (aioMatch) {
-    tokens.push(`${aioMatch[1]}mm`);
-    tokens.push('aio');
-    return tokens;
+  // 1. Radiator Size (handle 120, 140, 240, 280, 360, 420)
+  // Handle "360mm", "360L", "360", etc.
+  const sizeMatch = n.match(/\b(120|140|240|280|360|420)(?:\s*mm|\s*l|\b)/i);
+  if (sizeMatch) {
+    tokens.push(`${sizeMatch[1]}mm`);
   }
 
-  // Air cooler — use model name tokens only (no synthetic "air" token).
-  // Colors (black, white) are kept as they distinguish variants.
-  const noise = new Set(['cooler', 'cpu', 'air', 'tower', 'fan', 'rgb', 'argb']);
-  const modelTokens = n.split(' ').filter((t) => t.length > 2 && !noise.has(t) && !/^\d+$/.test(t));
+  // 2. Cooling Type
+  if (n.includes('aio') || n.includes('liquid') || n.includes('water') || sizeMatch) {
+    tokens.push('aio');
+  }
+
+  // 3. Model tokens — ALWAYS include these to distinguish between different AIOs/Air coolers
+  // e.g. "MasterLiquid", "Core", "ARGB", "Elite", "Halo", "NH-D15"
+  const noise = new Set(['cooler', 'cpu', 'air', 'tower', 'fan', 'rgb', 'argb', 'aio', 'liquid', 'water', 'refroidissement']);
+  const modelTokens = n.split(' ').filter((t) => {
+    if (t.length <= 2) return false;
+    if (noise.has(t)) return false;
+    if (/^\d+(mm|l)?$/.test(t)) return false; // already captured as size
+    if (/^\d+$/.test(t) && parseInt(t) > 50 && parseInt(t) < 500) return false; // likely size
+    return true;
+  });
+
   tokens.push(...modelTokens.slice(0, 4));
 
   return tokens.filter(Boolean);
@@ -379,15 +392,15 @@ function extractCoolingDna(name: string): string[] {
  */
 export function extractDna(name: string, category: string): string[] {
   switch (category) {
-    case 'gpu':         return extractGpuDna(name);
-    case 'cpu':         return extractCpuDna(name);
-    case 'ram':         return extractRamDna(name);
-    case 'storage':     return extractStorageDna(name);
-    case 'psu':         return extractPsuDna(name);
+    case 'gpu': return extractGpuDna(name);
+    case 'cpu': return extractCpuDna(name);
+    case 'ram': return extractRamDna(name);
+    case 'storage': return extractStorageDna(name);
+    case 'psu': return extractPsuDna(name);
     case 'motherboard': return extractMotherboardDna(name);
-    case 'case':        return extractCaseDna(name);
-    case 'cooling':     return extractCoolingDna(name);
-    default:            return normalize(name).split(' ').filter((t) => t.length > 2);
+    case 'case': return extractCaseDna(name);
+    case 'cooling': return extractCoolingDna(name);
+    default: return normalize(name).split(' ').filter((t) => t.length > 2);
   }
 }
 
@@ -407,7 +420,11 @@ export function extractDna(name: string, category: string): string[] {
  *   "7600x"     → /\b7600\s*x\b/i     matches "7600X" but NOT "7600"
  *   "ryzen5"    → /\bryzen\s*5\b/i     matches "Ryzen 5" and "Ryzen5"
  */
+const regexCache = new Map<string, RegExp>();
+
 export function tokenToRegex(token: string): RegExp {
+  if (regexCache.has(token)) return regexCache.get(token)!;
+
   // Insert \s* at every letter↔digit boundary
   let pattern = token
     .replace(/([a-z])(\d)/g, '$1\\s*$2')
@@ -417,7 +434,9 @@ export function tokenToRegex(token: string): RegExp {
   // "tisuper" → "ti\s*super", so "RTX 4070 Ti SUPER" matches token "rtx4070tisuper"
   pattern = pattern.replace(/ti(\\s\*)?super/i, 'ti\\s*super');
 
-  return new RegExp(`\\b${pattern}\\b`, 'i');
+  const regex = new RegExp(`\\b${pattern}\\b`, 'i');
+  regexCache.set(token, regex);
+  return regex;
 }
 
 // ── Matcher ───────────────────────────────────────────────────────────────────
@@ -435,10 +454,28 @@ export function tokenToRegex(token: string): RegExp {
  * optional spaces at letter↔digit boundaries, while \b prevents substring
  * matches ("rx7900xt" won't match "rx7900xtx").
  */
-export function scoreDnaMatch(productName: string, catalogName: string, category: string): {
+export function scoreDnaMatch(productName: string, catalogName: string, category: string, skipBrandCheck = false): {
   score: number;
   dnaTokens: string[];
 } {
+  if (!skipBrandCheck) {
+    const pBrand = extractBrand(productName);
+    const cBrand = extractBrand(catalogName);
+
+    // Strict Brand Enforcement:
+    // If we found a specific brand in BOTH and they don't match, it's a 0.
+    // This prevents an MSI PSU from matching a Cooler Master PSU just because they are both 1000W.
+    //
+    // Exception for GPUs: catalog entries use the chip manufacturer (NVIDIA/AMD) as brand,
+    // but scraped products use the AIB partner (Gigabyte, ASUS, MSI, Sapphire, etc.).
+    // We skip brand enforcement for GPUs to allow AIB partner products to match chip-brand catalog entries.
+    const GPU_CHIP_BRANDS = new Set(['nvidia', 'amd', 'intel']);
+    const isGpuWithChipBrand = category === 'gpu' && cBrand && GPU_CHIP_BRANDS.has(cBrand.toLowerCase());
+    if (pBrand && cBrand && pBrand.toLowerCase() !== cBrand.toLowerCase() && !isGpuWithChipBrand) {
+      return { score: 0, dnaTokens: [] };
+    }
+  }
+
   const dnaTokens = extractDna(catalogName, category);
   if (dnaTokens.length === 0) return { score: 0, dnaTokens: [] };
 
@@ -501,11 +538,13 @@ export function findBestMatch(
   minScore = 1.0,
 ): MatchResult | null {
   // Bundle detection: count how many distinct MAJOR categories have a perfect DNA match.
+  // Use brand-agnostic scoring here — a bundle like "PC Gamer Ryzen 5 7600X RTX 4090" should
+  // be detected even if the product brand doesn't match the catalog brand.
   const MAJOR_CATEGORIES = new Set(['cpu', 'gpu', 'motherboard']);
   const matchingCategories = new Set<string>();
   for (const component of components) {
     const fullName = component.brand ? `${component.brand} ${component.name}` : component.name;
-    const { score } = scoreDnaMatch(productName, fullName, component.category);
+    const { score } = scoreDnaMatch(productName, fullName, component.category, true /* skipBrandCheck */);
     if (score >= 1.0) matchingCategories.add(component.category);
     if (matchingCategories.size >= 2 && [...matchingCategories].some((c) => MAJOR_CATEGORIES.has(c))) {
       return null; // bundle — reject
@@ -527,8 +566,8 @@ export function findBestMatch(
     // too weak — it would match any product containing that RAM type.
     // Exception: GPU and CPU can have 1 token (chipset model is sufficient).
     if (dnaTokens.length === 1 &&
-        !['gpu', 'cpu'].includes(component.category) &&
-        (dnaTokens[0] === 'ddr4' || dnaTokens[0] === 'ddr5')) continue;
+      !['gpu', 'cpu'].includes(component.category) &&
+      (dnaTokens[0] === 'ddr4' || dnaTokens[0] === 'ddr5')) continue;
 
     const specificity = dnaTokens.reduce((sum, t) => sum + t.length, 0);
 

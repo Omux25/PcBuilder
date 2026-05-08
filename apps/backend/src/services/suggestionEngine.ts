@@ -27,6 +27,7 @@ import {
     extractCoolingSpecs,
     extractCaseSpecs,
     decodeHtml,
+    inferCategory as resolveCategory,
 } from '@shared/component-utils';
 import { SCRAPER_CONFIG } from '@shared/scraper-config';
 import type { ComponentCategory } from '@shared/types';
@@ -187,10 +188,9 @@ const KEYWORD_SETS: Record<string, string[]> = {
         'sickleflow', 'sicklefan',
     ],
     thermal_paste: [
-        'thermal', 'paste', 'grizzly', 'kryonaut', 'conductonaut', 'hydronaut',
-        'aeronaut', 'duronaut', 'mx-4', 'mx-6', 'mx-7', 'carbonaut', 'kryosheet',
-        'pate thermique', 'pâte thermique', 'thermal compound', 'thermal grease',
-        'contact frame', 'sealing frame', 'cleaning wipes', 'mx cleaner',
+        'thermal paste', 'pate thermique', 'pâte thermique', 'thermal compound', 'thermal grease',
+        'grizzly', 'kryonaut', 'conductonaut', 'hydronaut', 'aeronaut', 'duronaut', 'mx-4', 'mx-6', 'mx-7',
+        'carbonaut', 'kryosheet', 'contact frame', 'sealing frame', 'cleaning wipes', 'mx cleaner',
     ],
     case: [
         // Generic case words
@@ -350,7 +350,7 @@ function buildSpecsHint(scrapedName: string, category: SuggestionCategory): Reco
             }
             case 'gpu': {
                 const specs = extractGpuSpecs(scrapedName);
-                return { length_mm: specs.length_mm, tdp: specs.tdp };
+                return specs ? { length_mm: specs.length_mm, tdp: specs.tdp } : {};
             }
             case 'ram': {
                 const specs = extractRamSpecs(scrapedName);
@@ -378,7 +378,7 @@ function buildSpecsHint(scrapedName: string, category: SuggestionCategory): Reco
             }
             case 'case': {
                 const specs = extractCaseSpecs(scrapedName);
-                return { max_gpu_length_mm: specs.max_gpu_length_mm };
+                return specs ? { max_gpu_length_mm: specs.max_gpu_length_mm } : {};
             }
             case 'fan': {
                 // Extract size from name (e.g. "120mm", "140mm")
@@ -434,34 +434,41 @@ export function suggestForListing(
     const brand = extractBrandFromName(name);
     const canonical_name = deriveCanonicalName(name, brand);
 
-    // Step 2: DNA match at perfect threshold (use decoded name)
+    // Step 1.5: Infer category FIRST to avoid cross-pollination
+    const inferredCategory = resolveCategory(name) ?? resolveCategory(canonical_name);
+    const { category: kwCategory, confidence: kwConfidence } = keywordScore(name);
+    const category = inferredCategory || kwCategory;
+
+    // Step 2: DNA match at perfect threshold (ONLY if it matches our inferred category!)
     const perfectMatch = findBestMatch(name, catalog, SCRAPER_CONFIG.PERFECT_THRESHOLD);
     if (perfectMatch) {
         const matched = catalog.find(c => c.id === perfectMatch.componentId);
-        const category = (matched?.category ?? null) as SuggestionCategory;
-        return {
-            category,
-            confidence: 'high',
-            canonical_name,
-            brand,
-            existing_component_id: perfectMatch.componentId,
-            specs_hint: buildSpecsHint(name, category),
-        };
+        if (matched && (!category || matched.category === category)) {
+            return {
+                category: matched.category as SuggestionCategory,
+                confidence: 'high',
+                canonical_name,
+                brand,
+                existing_component_id: perfectMatch.componentId,
+                specs_hint: buildSpecsHint(name, matched.category as SuggestionCategory),
+            };
+        }
     }
 
     // Step 3: DNA match at partial threshold
     const partialMatch = findBestMatch(name, catalog, SCRAPER_CONFIG.PARTIAL_THRESHOLD);
     if (partialMatch) {
         const matched = catalog.find(c => c.id === partialMatch.componentId);
-        const category = (matched?.category ?? null) as SuggestionCategory;
-        return {
-            category,
-            confidence: 'medium',
-            canonical_name,
-            brand,
-            existing_component_id: partialMatch.componentId,
-            specs_hint: buildSpecsHint(name, category),
-        };
+        if (matched && (!category || matched.category === category)) {
+            return {
+                category: matched.category as SuggestionCategory,
+                confidence: 'medium',
+                canonical_name,
+                brand,
+                existing_component_id: partialMatch.componentId,
+                specs_hint: buildSpecsHint(name, matched.category as SuggestionCategory),
+            };
+        }
     }
 
     // Step 4: Admin rules check — before hardcoded keyword scorer
@@ -488,15 +495,13 @@ export function suggestForListing(
     }
 
     // Step 5: Keyword scorer fallback (use decoded name)
-    const { category: kwCategory, confidence: kwConfidence } = keywordScore(name);
-
     return {
-        category: kwCategory,
-        confidence: kwConfidence,
+        category: category as SuggestionCategory,
+        confidence: (inferredCategory && !kwCategory) ? 'high' : kwConfidence,
         canonical_name,
         brand,
         existing_component_id: null,
-        specs_hint: buildSpecsHint(name, kwCategory),
+        specs_hint: buildSpecsHint(name, category as SuggestionCategory),
     };
 }
 

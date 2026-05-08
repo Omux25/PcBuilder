@@ -21,7 +21,6 @@ import { componentSchemas } from '../../schemas/componentSchemas.js';
 import { getUniqueSlug } from '../../services/slugService.js';
 import { logger } from '../../../scraper/utils/logger.js';
 import type { AdminEnv } from './types.js';
-import { parseId } from './types.js';
 
 const unmatchedSuggestionsRouter = new Hono<AdminEnv>();
 
@@ -38,6 +37,7 @@ unmatchedSuggestionsRouter.get('/grouped', async (c) => {
     const search = c.req.query('search')?.trim() ?? '';
     const retailerIdRaw = c.req.query('retailer_id');
     const retailerId = retailerIdRaw ? Number(retailerIdRaw) : null;
+    const category = c.req.query('category')?.trim() ?? '';
     const page = Math.max(1, Number(c.req.query('page') ?? 1) || 1);
     const limit = Math.min(100, Math.max(1, Number(c.req.query('limit') ?? 50) || 50));
     const offset = (page - 1) * limit;
@@ -67,6 +67,11 @@ unmatchedSuggestionsRouter.get('/grouped', async (c) => {
     LEFT JOIN components ec ON ec.id = us.existing_component_id
     WHERE ul.status = 'pending'
       AND (${retailerId}::int IS NULL OR ul.retailer_id = ${retailerId})
+      AND (
+        ${category}::text = ''
+        OR (${category} = 'none' AND us.category IS NULL)
+        OR us.category = ${category}
+      )
       AND (
         ${search}::text = ''
         OR ul.scraped_name ILIKE '%' || ${search} || '%'
@@ -174,9 +179,9 @@ unmatchedSuggestionsRouter.post('/reprocess', async (c) => {
     // Runs full pipeline: recompute suggestions → auto-create catalog entries
     (async () => {
         try {
+            const { reprocessUnmatched } = await import('../../../scraper/aggregator.js');
+            await reprocessUnmatched();
             await runSuggestionPreprocessing(true);
-            const { buildFromUnmatched } = await import('../../../scraper/catalogBuilder.js');
-            await buildFromUnmatched();
         } catch (err: unknown) {
             logger.error(`[SUGGESTIONS] Background reprocessing failed: ${err instanceof Error ? err.message : String(err)}`);
         }
@@ -190,8 +195,8 @@ unmatchedSuggestionsRouter.post('/reprocess', async (c) => {
 // Returns 202 immediately and processes in the background.
 
 unmatchedSuggestionsRouter.post('/auto-build', async (c) => {
-    const { buildFromUnmatched } = await import('../../../scraper/catalogBuilder.js');
-    buildFromUnmatched().catch((err: unknown) =>
+    const { reprocessUnmatched } = await import('../../../scraper/aggregator.js');
+    reprocessUnmatched().catch((err: unknown) =>
         logger.error(`[CATALOG] Auto-build failed: ${err instanceof Error ? err.message : String(err)}`)
     );
     return c.json({ message: 'Auto-build started in background' }, 202);
@@ -222,6 +227,8 @@ unmatchedSuggestionsRouter.post('/bulk-dismiss', async (c) => {
     }
 
     // Update only pending listings — skip others
+    // IDs are validated as positive integers above — sql.unsafe() is safe here
+    // because we're interpolating only integer values, not user-controlled strings.
     const idList = validIds.join(',');
     const updated = (await sql.unsafe(`
     UPDATE unmatched_listings

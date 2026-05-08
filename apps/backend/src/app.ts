@@ -38,14 +38,25 @@ app.use('*', logger());
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
 // Allow configured origins (comma-separated in ALLOWED_ORIGINS env var).
-// Normalize: if unset or '*', allow all. Otherwise split and trim.
+// When credentials: true is used, a wildcard origin is not allowed by browsers
+// (CORS spec forbids it). We require an explicit origin list in production.
+// In development (no ALLOWED_ORIGINS set), we allow all origins for convenience.
 
 function getAllowedOrigins(): string | string[] {
   const raw = process.env.ALLOWED_ORIGINS?.trim();
-  if (!raw || raw === '*') return '*';
+  if (!raw || raw === '*') {
+    // In production, log a warning — credentials + wildcard is a security risk
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[CORS] WARNING: ALLOWED_ORIGINS is not set. Defaulting to * in production is a security risk. Set ALLOWED_ORIGINS to a comma-separated list of allowed origins.');
+    }
+    return '*';
+  }
   return raw.split(',').map((o) => o.trim()).filter(Boolean);
 }
 
+// credentials: true is required for the httpOnly refresh-token cookie to be sent.
+// Note: when origin is '*', browsers will reject credentialed requests — this is
+// intentional behavior that forces proper ALLOWED_ORIGINS configuration in production.
 app.use('/api/*', cors({
   origin: getAllowedOrigins(),
   allowHeaders: ['Content-Type', 'Authorization'],
@@ -69,8 +80,10 @@ app.route('/api/admin/components', adminComponentsRouter);
 app.route('/api/admin/logs', adminLogsRouter);
 app.route('/api/admin/retailers', adminRetailersRouter);
 app.route('/api/admin/scrapers', adminScrapersRouter);
+// scraperUrlsRouter adds POST /api/admin/scrapers/scrape-urls — no conflict with adminScrapersRouter
 app.route('/api/admin/scrapers', scraperUrlsRouter);
 app.route('/api/admin/unmatched-listings', adminUnmatchedRouter);
+// unmatchedSuggestionsRouter adds /grouped, /reprocess, /bulk-* — no conflict with adminUnmatchedRouter
 app.route('/api/admin/unmatched-listings', unmatchedSuggestionsRouter);
 app.route('/api/admin/presets', adminPresetsRouter);
 app.route('/api/admin/keyword-rules', keywordRulesRouter);
@@ -114,12 +127,17 @@ app.onError((err, c) => {
 // Enabled when NODE_ENV=production and SERVE_STATIC=true.
 // Serves the admin panel at /admin and the frontend at /.
 // In development, Vite dev servers handle this instead.
+//
+// Paths are relative to the backend's dist output directory (apps/backend/dist/).
+// The monorepo build copies admin/dist and frontend/dist there.
 
 if (process.env.NODE_ENV === 'production' && process.env.SERVE_STATIC === 'true') {
-  app.use('/admin/*', serveStatic({ root: './admin/dist' }));
-  app.use('/*', serveStatic({ root: './frontend/dist' }));
-  // SPA fallback — serve index.html for any unmatched path
-  app.use('/*', serveStatic({ path: './frontend/dist/index.html' }));
+  // Admin panel — must be mounted before the frontend catch-all
+  app.use('/admin/*', serveStatic({ root: '../admin/dist' }));
+  // Frontend SPA
+  app.use('/*', serveStatic({ root: '../frontend/dist' }));
+  // SPA fallback — serve index.html for any unmatched path (client-side routing)
+  app.use('/*', serveStatic({ path: '../frontend/dist/index.html' }));
 }
 
 export { app };

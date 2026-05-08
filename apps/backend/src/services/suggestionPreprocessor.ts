@@ -62,7 +62,7 @@ export async function runSuggestionPreprocessing(force = false): Promise<Preproc
   // If force=true (e.g. triggered by a new keyword rule), reprocess ALL pending listings
   // so the new rule is applied immediately even to listings with a cached suggestion.
   const pending = (await sql`
-    SELECT ul.id, ul.scraped_name
+    SELECT ul.id, ul.scraped_name, ul.manual_category
     FROM unmatched_listings ul
     LEFT JOIN unmatched_suggestions us ON us.unmatched_listing_id = ul.id
     WHERE ul.status = 'pending'
@@ -74,7 +74,7 @@ export async function runSuggestionPreprocessing(force = false): Promise<Preproc
         OR us.computed_at < NOW() - INTERVAL '24 hours'
       )
     ORDER BY ul.scraped_at DESC
-  `) as { id: number; scraped_name: string }[];
+  `) as { id: number; scraped_name: string; manual_category: string | null }[];
 
   if (pending.length === 0) return { processed, skipped };
 
@@ -87,6 +87,12 @@ export async function runSuggestionPreprocessing(force = false): Promise<Preproc
     if (!suggestion) {
       skipped++;
       continue;
+    }
+
+    // If there is a manual category, override the suggestion's category and boost confidence
+    if (listing.manual_category) {
+      suggestion.category = listing.manual_category as any;
+      suggestion.confidence = 'high';
     }
 
     try {
@@ -103,24 +109,23 @@ export async function runSuggestionPreprocessing(force = false): Promise<Preproc
         )
         VALUES (
           ${listing.id},
-          ${suggestion.category},
+          ${suggestion.category || null},
           ${suggestion.confidence},
-          ${suggestion.canonical_name},
-          ${suggestion.brand},
-          ${suggestion.existing_component_id},
-          ${Object.keys(suggestion.specs_hint).length > 0
-          ? suggestion.specs_hint as Record<string, unknown>
-          : null},
+          ${suggestion.canonical_name || listing.scraped_name},
+          ${suggestion.brand || null},
+          ${suggestion.existing_component_id || null},
+          ${suggestion.specs_hint ? JSON.stringify(suggestion.specs_hint) : null},
           NOW()
         )
-        ON CONFLICT (unmatched_listing_id) DO UPDATE SET
-          category              = EXCLUDED.category,
-          confidence            = EXCLUDED.confidence,
-          canonical_name        = EXCLUDED.canonical_name,
-          brand                 = EXCLUDED.brand,
+        ON CONFLICT (unmatched_listing_id)
+        DO UPDATE SET
+          category = EXCLUDED.category,
+          confidence = EXCLUDED.confidence,
+          canonical_name = EXCLUDED.canonical_name,
+          brand = EXCLUDED.brand,
           existing_component_id = EXCLUDED.existing_component_id,
-          specs_hint            = EXCLUDED.specs_hint,
-          computed_at           = NOW()
+          specs_hint = EXCLUDED.specs_hint,
+          computed_at = NOW()
       `;
       processed++;
     } catch (err) {

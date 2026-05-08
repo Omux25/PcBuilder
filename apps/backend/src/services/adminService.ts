@@ -75,7 +75,7 @@ async function getDashboardStats(): Promise<DashboardStats> {
 
       getSql()`
         SELECT
-          COUNT(id) AS total,
+          COUNT(id) FILTER (WHERE is_active = true) AS total,
           COUNT(id) FILTER (WHERE is_active = true) AS active
         FROM retailers
       ` as Promise<{ total: string; active: string }[]>,
@@ -105,19 +105,19 @@ async function getDashboardStats(): Promise<DashboardStats> {
   }
 
   const retailerRow = retailerStats.status === 'fulfilled' ? retailerStats.value[0] : null;
-  const priceRow    = priceStats.status === 'fulfilled'    ? priceStats.value[0]    : null;
+  const priceRow = priceStats.status === 'fulfilled' ? priceStats.value[0] : null;
   const unmatchedRow = unmatchedStats.status === 'fulfilled' ? unmatchedStats.value[0] : null;
-  const scrapeRow   = scrapeStats.status === 'fulfilled'   ? scrapeStats.value[0]   : null;
+  const scrapeRow = scrapeStats.status === 'fulfilled' ? scrapeStats.value[0] : null;
 
   return {
     total_components,
     components_by_category,
-    total_retailers:          retailerRow ? parseInt(retailerRow.total, 10)  : 0,
-    active_retailers:         retailerRow ? parseInt(retailerRow.active, 10) : 0,
-    total_price_records:      priceRow    ? parseInt(priceRow.total, 10)     : 0,
+    total_retailers: retailerRow ? parseInt(retailerRow.total, 10) : 0,
+    active_retailers: retailerRow ? parseInt(retailerRow.active, 10) : 0,
+    total_price_records: priceRow ? parseInt(priceRow.total, 10) : 0,
     unmatched_listings_count: unmatchedRow ? parseInt(unmatchedRow.total, 10) : 0,
     last_scrape: {
-      time:   scrapeRow?.last_scrape_at     ?? null,
+      time: scrapeRow?.last_scrape_at ?? null,
       status: scrapeRow?.last_scrape_status ?? null,
     },
   };

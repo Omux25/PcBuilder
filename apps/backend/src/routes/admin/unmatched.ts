@@ -25,6 +25,7 @@ adminUnmatchedRouter.get('/', async (c) => {
   const status     = c.req.query('status');
   const retailerId = c.req.query('retailer_id') ? Number(c.req.query('retailer_id')) : undefined;
   const search     = c.req.query('search');
+  const category   = c.req.query('category');
   const page       = Math.max(1, Number(c.req.query('page') ?? 1) || 1);
   const limit      = Math.min(200, Math.max(1, Number(c.req.query('limit') ?? 50) || 50));
   const offset     = (page - 1) * limit;
@@ -33,11 +34,18 @@ adminUnmatchedRouter.get('/', async (c) => {
     SELECT
       ul.*,
       r.name AS retailer_name,
+      us.category AS suggested_category,
       COUNT(*) OVER() AS total_count
     FROM unmatched_listings ul
     JOIN retailers r ON r.id = ul.retailer_id
+    LEFT JOIN unmatched_suggestions us ON us.unmatched_listing_id = ul.id
     WHERE (${status ?? null}::text IS NULL OR ul.status = ${status ?? null})
       AND (${retailerId ?? null}::int IS NULL OR ul.retailer_id = ${retailerId ?? null})
+      AND (
+        ${category ?? ''}::text = '' 
+        OR (${category} = 'none' AND us.category IS NULL)
+        OR us.category = ${category}
+      )
       AND (${search ?? null}::text IS NULL OR (
         SELECT bool_and(ul.scraped_name ILIKE '%' || word || '%')
         FROM unnest(string_to_array(trim(regexp_replace(${search ?? ''}, '\\s+', ' ', 'g')), ' ')) AS word
@@ -127,6 +135,35 @@ adminUnmatchedRouter.post('/:id/dismiss', async (c) => {
 
   const rows = await sql`
     UPDATE unmatched_listings SET status = 'dismissed' WHERE id = ${id} RETURNING id
+  ` as { id: number }[];
+
+  if (rows.length === 0) {
+    return c.json({ error: { code: 'NOT_FOUND', message: `Unmatched listing ${id} not found` } }, 404);
+  }
+
+  return c.json({ success: true });
+});
+
+// PATCH /api/admin/unmatched-listings/:id/category
+adminUnmatchedRouter.patch('/:id/category', async (c) => {
+  const sql = getSql();
+  const id = parseId(c.req.param('id'));
+  if (id === null) {
+    return c.json({ error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } }, 400);
+  }
+
+  let body: { category: string | null };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid JSON body' } }, 400);
+  }
+
+  const rows = await sql`
+    UPDATE unmatched_listings 
+    SET manual_category = ${body.category ?? null} 
+    WHERE id = ${id} 
+    RETURNING id
   ` as { id: number }[];
 
   if (rows.length === 0) {
