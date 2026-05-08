@@ -96,7 +96,7 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
     ramTypeFilter: string,
     pageNum: number,
   ) => {
-    setLoading(prev => prev || allComponents.length === 0);
+    setLoading(true); // always — prevents stale results flashing
     setError(null);
 
     smartSearch({
@@ -370,7 +370,7 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
 
           {/* Results */}
           <ul className={styles.list}>
-            {loading && components.length === 0 && (
+            {loading && allComponents.length === 0 && (
               [1, 2, 3].map(i => (
                 <li key={i} className={styles.skeleton}>
                   <span className={styles.skeletonLine} />
@@ -381,20 +381,22 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
             {!loading && !error && components.length === 0 && (
               <li className={styles.hint}>{UI.picker.noResults}</li>
             )}
-            {components.map(c => (
-              <ComponentRow
-                key={c.id}
-                component={c}
-                isSelected={selected?.id === c.id}
-                onSelect={() => {
-                  if (c.compatibility !== 'incompatible') {
-                    onSelect(c);
-                    setOpen(false);
-                    setSearch('');
-                  }
-                }}
-              />
-            ))}
+            <div className={loading && allComponents.length > 0 ? styles.listFading : undefined}>
+              {components.map(c => (
+                <ComponentRow
+                  key={c.id}
+                  component={c}
+                  isSelected={selected?.id === c.id}
+                  onSelect={() => {
+                    if (c.compatibility !== 'incompatible') {
+                      onSelect(c);
+                      setOpen(false);
+                      setSearch('');
+                    }
+                  }}
+                />
+              ))}
+            </div>
           </ul>
 
           {totalPages > 1 && (

@@ -546,3 +546,11 @@
 .skeleton:nth-child(3) .skeletonLine {
   width: 80%;
 }
+
+/* ── Loading fade — keep old results visible during refetch ─────────────── */
+
+.listFading {
+  opacity: 0.4;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}

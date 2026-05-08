@@ -64,6 +64,9 @@ export function CategoryBrowse() {
   }, [build, slotKey]);
 
   // ── Fetch components ──────────────────────────────────────────────────────
+  // Track whether filter options have been populated (only needed once)
+  const brandsPopulated = useRef(false);
+
   const fetchComponents = useCallback(async (
     searchTerm: string,
     brandFilter: string,
@@ -92,8 +95,9 @@ export function CategoryBrowse() {
       setComponents(list);
       setTotal(t);
 
-      // Extract filter options from first fetch if empty
-      if (availableBrands.length === 0) {
+      // Populate filter options once from the first unfiltered fetch
+      if (!brandsPopulated.current) {
+        brandsPopulated.current = true;
         const brands = [...new Set(list.map(c => c.brand).filter(Boolean) as string[])].sort();
         setAvailableBrands(brands);
         if (SOCKET_CATEGORIES.has(cat)) {
@@ -108,13 +112,19 @@ export function CategoryBrowse() {
     } finally {
       setLoading(false);
     }
-  }, [cat, buildContext, availableBrands.length]);
+  }, [cat, buildContext]); // removed availableBrands.length — use ref instead
 
-  // ── Sync URL & Fetch ──────────────────────────────────────────────────────
+  // ── Sync URL & Fetch on filter change ────────────────────────────────────
+  // Debounced so rapid typing doesn't fire on every keystroke.
+  // Uses a ref to track the latest fetchComponents without adding it to deps
+  // (avoids the double-fetch loop where fetchComponents recreation triggers this effect).
+  const fetchRef = useRef(fetchComponents);
+  useEffect(() => { fetchRef.current = fetchComponents; }, [fetchComponents]);
+
   useEffect(() => {
     const timeout = setTimeout(() => {
       setPage(1);
-      fetchComponents(search, brand, socket, ramType, 1);
+      fetchRef.current(search, brand, socket, ramType, 1);
 
       const params: Record<string, string> = {};
       if (search) params.q = search;
@@ -128,11 +138,16 @@ export function CategoryBrowse() {
       setSearchParams(params, { replace: true });
     }, DEBOUNCE_MS);
     return () => clearTimeout(timeout);
-  }, [search, brand, socket, ramType, minPrice, maxPrice, sort, inStockOnly, fetchComponents, setSearchParams]);
+  }, [search, brand, socket, ramType, minPrice, maxPrice, sort, inStockOnly, setSearchParams]);
+  // Note: fetchComponents intentionally excluded — using fetchRef to avoid double-fetch
 
+  // ── Fetch on page change only ─────────────────────────────────────────────
+  const prevPageRef = useRef(page);
   useEffect(() => {
-    fetchComponents(search, brand, socket, ramType, page);
-  }, [page, fetchComponents]);
+    if (prevPageRef.current === page) return; // skip on initial mount / filter resets
+    prevPageRef.current = page;
+    fetchRef.current(search, brand, socket, ramType, page);
+  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalPages = Math.ceil(total / LIMIT);
   const activeFilters = [brand, socket, ramType, minPrice, maxPrice].filter(Boolean).length;
@@ -276,8 +291,8 @@ export function CategoryBrowse() {
                   <th className={styles.actionCell}></th>
                 </tr>
               </thead>
-              <tbody>
-                {loading ? (
+              <tbody className={loading && components.length > 0 ? styles.tbodyFading : undefined}>
+                {loading && components.length === 0 ? (
                   Array.from({ length: 10 }).map((_, i) => (
                     <tr key={i} className={styles.skeletonRow}>
                       <td colSpan={5}><Skeleton height={40} /></td>
