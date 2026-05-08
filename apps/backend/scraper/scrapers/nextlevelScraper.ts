@@ -152,9 +152,13 @@ export class NextLevelScraper extends BaseScraper {
       const product_description = featureLines.length > 0 ? featureLines.join(' | ') : undefined;
 
       // Extract product image URL from the thumbnail
-      const image_url = $(card).find('img[itemprop="image"], img.product-thumbnail, .product-thumbnail img')
+      // Upgrade NextLevel image size: home_default (250px) → large_default (800px)
+      const rawImageUrl = $(card).find('img[itemprop="image"], img.product-thumbnail, .product-thumbnail img')
         .first()
         .attr('src') || undefined;
+      const image_url = rawImageUrl
+        ? rawImageUrl.replace(/-home_default\//, '-large_default/')
+        : undefined;
 
       prices.push({
         retailer_id: this._retailerId,
