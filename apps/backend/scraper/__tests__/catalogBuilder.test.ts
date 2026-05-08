@@ -34,8 +34,10 @@ function makeSql(
   const updatedListings: { id: number; component_id: number }[] = [];
   let nextId = 100;
 
-  const mock = (strings: TemplateStringsArray, ...values: unknown[]) => {
-    const query = strings.join('?').trim();
+  const mock = (strings: any, ...values: unknown[]) => {
+    // If called as a tagged template, strings is an array.
+    // If called directly (not expected here, but for safety), handle accordingly.
+    const query = Array.isArray(strings) ? strings.join('?').trim() : String(strings).trim();
 
     // SELECT slugs
     if (query.includes('SELECT slug FROM components')) {
@@ -54,7 +56,7 @@ function makeSql(
       const id = nextId++;
       // Category is a string literal in the SQL template (not a parameter),
       // so extract it from the query string directly.
-      const catMatch = query.match(/'(cpu|gpu|ram|storage|motherboard|psu|cooling|case)'/);
+      const catMatch = query.match(/'(cpu|gpu|ram|storage|motherboard|psu|cooling|case|fan|thermal_paste)'/);
       const category = catMatch ? catMatch[1] : 'unknown';
       insertedComponents.push({ category, name: values[1] as string, slug: values[0] as string });
       return Promise.resolve([{ id }]);
@@ -79,7 +81,7 @@ function makeSql(
   return { mock, insertedComponents, insertedMappings, updatedListings };
 }
 
-beforeEach(() => {});
+beforeEach(() => { });
 afterAll(() => resetSql());
 
 // ── Core behavior ─────────────────────────────────────────────────────────────
@@ -378,7 +380,7 @@ describe('buildFromUnmatched — slug uniqueness', () => {
   test('generates a unique slug when the base slug already exists', async () => {
     const existingSlugs = [{ slug: 'amd-ryzen-5-7600x' }];
     const { mock, insertedComponents } = makeSql(
-      [{ id: 60, retailer_id: 11, product_url: 'https://nextlevelpc.ma/cpu/1', scraped_name: 'AMD Ryzen 5 7600X Tray' }],
+      [{ id: 60, retailer_id: 11, product_url: 'https://nextlevelpc.ma/cpu/1', scraped_name: 'AMD Ryzen 5 7600X BOX' }],
       [],
       existingSlugs,
     );

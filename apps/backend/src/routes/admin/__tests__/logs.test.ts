@@ -3,6 +3,7 @@ import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { Hono } from 'hono';
 import jwt from 'jsonwebtoken';
 import { adminLogsRouter } from '../logs.js';
+import { setSql, resetSql } from '../../../db/index.js';
 
 const JWT_SECRET = 'test-secret-logs';
 
@@ -17,19 +18,20 @@ function makeToken() {
   return jwt.sign({ id: 1, username: 'admin' }, JWT_SECRET, { expiresIn: '1h' });
 }
 
-// ── Mock SQL ─────────────────────────────────────────────────────────────────
-
-// The logs route uses getSql() from db/index.ts (DI-injectable since the
-// DI fix in the cleanup spec). Full DB-level tests are in the PBT file.
-// Here we only test auth guards, input validation, and response shape —
-// none of which require a real DB connection.
+// Mock SQL that returns empty results — no real DB needed
+function makeLogsSql() {
+  return (strings: TemplateStringsArray, ...values: unknown[]) => {
+    return Promise.resolve([]);
+  };
+}
 
 // ── Auth guard tests ──────────────────────────────────────────────────────────
 
 describe('GET /api/admin/logs — auth', () => {
   let app: Hono;
 
-  beforeEach(() => { app = makeApp(); });
+  beforeEach(() => { app = makeApp(); setSql(makeLogsSql()); });
+  afterEach(() => resetSql());
 
   test('returns 401 when no token provided', async () => {
     const res = await app.request('/api/admin/logs');
@@ -51,7 +53,8 @@ describe('GET /api/admin/logs — auth', () => {
 describe('GET /api/admin/logs — validation', () => {
   let app: Hono;
 
-  beforeEach(() => { app = makeApp(); });
+  beforeEach(() => { app = makeApp(); setSql(makeLogsSql()); });
+  afterEach(() => resetSql());
 
   test('returns 400 when level is invalid', async () => {
     const res = await app.request('/api/admin/logs?level=DEBUG', {
@@ -92,15 +95,14 @@ describe('GET /api/admin/logs — validation', () => {
   });
 
   test('accepts valid level values: INFO, WARNING, ERROR', async () => {
-    // We can't easily mock Bun.sql here without a service layer,
-    // so we just verify the validation passes (the DB call will fail in test env,
-    // but the 400 vs non-400 distinction is what we're testing).
     for (const level of ['INFO', 'WARNING', 'ERROR']) {
       const res = await app.request(`/api/admin/logs?level=${level}`, {
         headers: { Authorization: `Bearer ${makeToken()}` },
       });
-      // Should NOT be a 400 validation error (may be 500 if no DB, but not 400)
-      expect(res.status).not.toBe(400);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toHaveProperty('logs');
+      expect(Array.isArray(body.logs)).toBe(true);
     }
   });
 });
@@ -108,8 +110,8 @@ describe('GET /api/admin/logs — validation', () => {
 // ── Response shape tests ──────────────────────────────────────────────────────
 
 describe('GET /api/admin/logs — response shape', () => {
-  // These tests verify the response structure using a mock that bypasses the DB.
-  // We test the route logic by importing and wrapping it with a mock sql.
+  beforeEach(() => setSql(makeLogsSql()));
+  afterEach(() => resetSql());
 
   test('error response has the expected shape', async () => {
     const app = makeApp();
@@ -125,11 +127,27 @@ describe('GET /api/admin/logs — response shape', () => {
     expect(body.error).toHaveProperty('fields');
     expect(Array.isArray(body.error.fields)).toBe(true);
   });
+
+  test('success response has logs array and count', async () => {
+    const app = makeApp();
+    const res = await app.request('/api/admin/logs', {
+      headers: { Authorization: `Bearer ${makeToken()}` },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toHaveProperty('logs');
+    expect(body).toHaveProperty('count');
+    expect(Array.isArray(body.logs)).toBe(true);
+    expect(typeof body.count).toBe('number');
+  });
 });
 
 // ── DELETE /api/admin/logs ────────────────────────────────────────────────────
 
 describe('DELETE /api/admin/logs — auth', () => {
+  beforeEach(() => setSql(makeLogsSql()));
+  afterEach(() => resetSql());
+
   test('returns 401 without token', async () => {
     const app = makeApp();
     const res = await app.request('/api/admin/logs?all=true', { method: 'DELETE' });
@@ -138,6 +156,9 @@ describe('DELETE /api/admin/logs — auth', () => {
 });
 
 describe('DELETE /api/admin/logs — validation', () => {
+  beforeEach(() => setSql(makeLogsSql()));
+  afterEach(() => resetSql());
+
   test('returns 400 when neither keep_days nor all is provided', async () => {
     const app = makeApp();
     const res = await app.request('/api/admin/logs', {
@@ -169,22 +190,25 @@ describe('DELETE /api/admin/logs — validation', () => {
     expect(res.status).toBe(400);
   });
 
-  test('does not return 400 for valid ?all=true', async () => {
+  test('returns 200 for valid ?all=true', async () => {
     const app = makeApp();
     const res = await app.request('/api/admin/logs?all=true', {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${makeToken()}` },
     });
-    // May be 500 if no DB in test env — but must not be 400
-    expect(res.status).not.toBe(400);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toHaveProperty('deleted');
   });
 
-  test('does not return 400 for valid ?keep_days=7', async () => {
+  test('returns 200 for valid ?keep_days=7', async () => {
     const app = makeApp();
     const res = await app.request('/api/admin/logs?keep_days=7', {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${makeToken()}` },
     });
-    expect(res.status).not.toBe(400);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toHaveProperty('deleted');
   });
 });
