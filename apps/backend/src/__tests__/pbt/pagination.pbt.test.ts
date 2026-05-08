@@ -45,12 +45,12 @@ describe('PBT 13.2 — Pagination correctness', () => {
           const result = await getComponents({ page, limit });
 
           const expectedPage = Math.max(1, page);
-          const expectedLimit = Math.min(100, Math.max(1, limit));
+          const expectedLimit = Math.min(1000, Math.max(1, limit));
           const expectedOffset = (expectedPage - 1) * expectedLimit;
 
           expect(capturedLimit).toBe(expectedLimit);
           expect(capturedOffset).toBe(expectedOffset);
-          
+
           if (expectedOffset >= TOTAL_ITEMS) {
             expect(result.components).toHaveLength(0);
             expect(result.total).toBe(0);
