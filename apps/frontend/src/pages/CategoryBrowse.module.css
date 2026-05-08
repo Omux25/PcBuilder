@@ -427,6 +427,12 @@
   background: var(--accent-glow);
 }
 
+.iconBtnActive {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+
 /* ── States ─────────────────────────────────────────────────────────────── */
 
 .skeletonRow td {
@@ -560,4 +566,21 @@
   opacity: 0.4;
   pointer-events: none;
   transition: opacity 0.15s ease;
+}
+
+/* ── Missing classes referenced in JSX ──────────────────────────────────── */
+
+.incompatibleRow td {
+  opacity: 0.45;
+}
+
+.specList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.specItem {
+  display: flex;
+  flex-direction: column;
 }
