@@ -180,6 +180,14 @@ export async function aggregate(
 
   const CATEGORY_WORDS = new Set(['boitier', 'boîtier', 'watercooler', 'watercooling', 'processeur', 'carte graphique', 'alimentation', 'stockage', 'memoire', 'mémoire', 'aircooler', 'air cooler', 'carte mère', 'carte mere', 'disque']);
 
+  // Categories the DB components table accepts (matches components_category_check constraint).
+  // Peripherals and accessories inferred by inferCategory() are intentionally excluded —
+  // they go to unmatched_listings instead of being auto-created as components.
+  const DB_CATEGORIES = new Set([
+    'cpu', 'motherboard', 'gpu', 'ram', 'storage',
+    'psu', 'case', 'cooling', 'fan', 'thermal_paste',
+  ]);
+
   // ── Phase A: classify all items in memory ──────────────────────────────────
   let classifiedCount = 0;
   for (const p of prices) {
@@ -250,7 +258,21 @@ export async function aggregate(
         continue;
       }
 
-      // Step 5: Queue for creation — deduplicate by slug
+      // Step 5: Queue for creation — only for DB-supported categories.
+      // Peripherals/accessories (mouse, keyboard, monitor, etc.) are not in the
+      // components_category_check constraint — send them to unmatched instead.
+      if (!DB_CATEGORIES.has(category)) {
+        unmatchedListingsToUpsert.push({
+          retailer_id: p.retailer_id,
+          product_url: p.product_url,
+          scraped_name: scrapedName,
+          scraped_price: p.price,
+          image_url: p.image_url ?? null
+        });
+        unmatched++;
+        continue;
+      }
+
       const existing = toCreateBySlug.get(baseSlug);
       if (existing) {
         existing.prices.push(p);
