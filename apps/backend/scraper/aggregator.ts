@@ -203,7 +203,11 @@ export async function aggregate(
 
       // Step 2: Resolve category
       const prefixMatch = scrapedName.match(/^([^–\-]+)[–\-]\s+(.+)$/);
-      const nameForExtraction = prefixMatch ? prefixMatch[2].trim() : scrapedName;
+      // Only use prefix split if the prefix looks like a category label (short, no brand/model words)
+      // e.g. "Processeur – Ryzen 5 5600" → use split
+      // but "Thermaltake Smart 700W – RGB" → don't split (prefix is the product name)
+      const prefixIsCategory = prefixMatch && prefixMatch[1].trim().split(/\s+/).length <= 3 && CATEGORY_WORDS.has(prefixMatch[1].trim().toLowerCase());
+      const nameForExtraction = (prefixMatch && prefixIsCategory) ? prefixMatch[2].trim() : scrapedName;
       const category = p.manual_category || resolveCategory(scrapedName) || resolveCategory(nameForExtraction) || (p as any).sug_category;
 
       // Dismiss known junk
@@ -243,7 +247,7 @@ export async function aggregate(
         continue;
       }
 
-      const prefixWord = prefixMatch ? prefixMatch[1].trim().toLowerCase() : '';
+      const prefixWord = (prefixMatch && prefixIsCategory) ? prefixMatch[1].trim().toLowerCase() : '';
       const prefixAsBrand = (prefixMatch && !CATEGORY_WORDS.has(prefixWord)) ? (extractBrand(prefixMatch[1].trim()) ?? null) : null;
       const brand = prefixAsBrand ?? extractBrand(nameForExtraction);
 
