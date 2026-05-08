@@ -13,7 +13,6 @@ import * as fc from 'fast-check';
 import { runScrapingSession } from '../scheduler.js';
 import { setSql as setLoggerSql, resetSql as resetLoggerSql } from '../utils/logger.js';
 import { setSql as setAggregatorSql, resetSql as resetAggregatorSql } from '../aggregator.js';
-import { setSql as setAutoMapperSql, resetSql as resetAutoMapperSql } from '../autoMapper.js';
 import { setSql as setCatalogBuilderSql, resetSql as resetCatalogBuilderSql } from '../catalogBuilder.js';
 import { setSql as setSessionSql, resetSql as resetSessionSql } from '../../src/db/index.js';
 import { setFetch, resetFetchAndLoad, setRetryDelay, setSilent } from '../scrapers/baseScraper.js';
@@ -49,7 +48,6 @@ beforeEach(() => {
   logEntries.length = 0;
   setLoggerSql(makeLoggerSql());
   setAggregatorSql(makeAggregatorSql());
-  setAutoMapperSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
   setCatalogBuilderSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
   setSessionSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
   setRetryDelay(0);
@@ -69,7 +67,6 @@ beforeEach(() => {
 afterAll(() => {
   resetLoggerSql();
   resetAggregatorSql();
-  resetAutoMapperSql();
   resetCatalogBuilderSql();
   resetSessionSql();
   resetFetchAndLoad();

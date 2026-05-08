@@ -178,7 +178,7 @@ describe('POST /api/compatibility/validate — edge cases', () => {
     expect(body.total_tdp).toBe(0);
   });
 
-  test('returns 200 with socket_mismatch error for incompatible CPU + motherboard', async () => {
+  test('returns 400 for invalid build configuration (objects instead of IDs)', async () => {
     const res = await app.request('/api/compatibility/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -187,10 +187,9 @@ describe('POST /api/compatibility/validate — edge cases', () => {
         motherboard: { socket: 'LGA1700', supported_ram_types: ['DDR5'], max_ram_frequency: 6000, tdp: 15 },
       }),
     });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.compatible).toBe(false);
-    expect(body.errors[0].rule).toBe('socket_mismatch');
+    expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 });
 
