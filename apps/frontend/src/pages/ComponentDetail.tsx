@@ -146,9 +146,18 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
                 <span className={styles.heroPriceVal}>
                   {lowestPrice.toLocaleString('fr-MA')} MAD
                 </span>
-                {inStockPrices.length > 0 && (
-                  <span className={styles.inStockBadge}>{UI.detail.inStock}</span>
-                )}
+                {inStockPrices.length > 0 ? (
+                  <span className={styles.inStockBadge}>
+                    {UI.detail.inStock}
+                    {inStockPrices.length < prices.length && (
+                      <span className={styles.inStockRetailerCount}>
+                        {' '}· {inStockPrices.length}/{prices.length} revendeur{inStockPrices.length > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </span>
+                ) : prices.length > 0 ? (
+                  <span className={styles.outOfStockBadge}>{UI.detail.outOfStock}</span>
+                ) : null}
               </div>
             )}
 
@@ -209,8 +218,19 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
                 const inStock = prices.filter(p => p.in_stock);
                 const oos = prices.filter(p => !p.in_stock);
                 const visible = showOos ? prices : inStock;
+                // Staleness: warn if the most recent update is older than 24h
+                const mostRecent = prices.reduce((latest, p) =>
+                  new Date(p.last_updated) > new Date(latest) ? p.last_updated : latest,
+                  prices[0].last_updated
+                );
+                const ageHours = (Date.now() - new Date(mostRecent).getTime()) / 3_600_000;
                 return (
                   <>
+                    {ageHours > 24 && (
+                      <div className={styles.staleWarning}>
+                        ⚠️ Données mises à jour {formatRelativeTime(mostRecent)} — les disponibilités peuvent avoir changé.
+                      </div>
+                    )}
                     {inStock.length === 0 && oos.length > 0 && (
                       <p className={styles.allOosMsg}>
                         Aucune offre en stock.{' '}
@@ -245,7 +265,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
                                   {offer.in_stock ? UI.detail.inStockBadge : UI.detail.outOfStock}
                                 </span>
                               </td>
-                              <td className={styles.updated}>{new Date(offer.last_updated).toLocaleDateString('fr-MA')}</td>
+                              <td className={styles.updated}>{formatRelativeTime(offer.last_updated)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -273,6 +293,23 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Returns a human-readable relative time string.
+ * e.g. "il y a 6h", "il y a 2j", "il y a 3 min"
+ */
+function formatRelativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const minutes = Math.floor(diff / 60_000);
+  const hours = Math.floor(diff / 3_600_000);
+  const days = Math.floor(diff / 86_400_000);
+
+  if (minutes < 2) return 'à l\'instant';
+  if (minutes < 60) return `il y a ${minutes} min`;
+  if (hours < 24) return `il y a ${hours}h`;
+  if (days < 7) return `il y a ${days}j`;
+  return new Date(dateStr).toLocaleDateString('fr-MA');
+}
 
 const SPEC_KEY_LABELS: Record<string, string> = {
   socket: 'Socket',
