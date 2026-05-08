@@ -208,32 +208,26 @@ export async function aggregate(
       // but "Thermaltake Smart 700W – RGB" → don't split (prefix is the product name)
       const prefixIsCategory = prefixMatch && prefixMatch[1].trim().split(/\s+/).length <= 3 && CATEGORY_WORDS.has(prefixMatch[1].trim().toLowerCase());
       const nameForExtraction = (prefixMatch && prefixIsCategory) ? prefixMatch[2].trim() : scrapedName;
-      const category = p.manual_category || resolveCategory(scrapedName) || resolveCategory(nameForExtraction) || (p as any).sug_category;
 
-      // Dismiss known junk
-      if (!category && (
-        scrapedName.toLowerCase().includes('so-dimm') ||
-        scrapedName.toLowerCase().includes('sodimm') ||
-        scrapedName.toLowerCase().includes('tray') ||
-        scrapedName.toLowerCase().includes('bulk') ||
-        scrapedName.toLowerCase().includes('sans emballage')
-      )) {
-        dismissedListingsToUpdate.push({ retailer_id: p.retailer_id, product_url: p.product_url });
-        continue;
-      }
-
-      // Dismiss spec rows scraped as products (e.g. "32 Cœurs / 64 threads", "16 Go DDR5")
-      // These are UltraPC listing artifacts — spec text appearing as product cards
-      const lowerName = scrapedName.toLowerCase();
-      if (!category && (
-        /^\d+\s*(cœurs?|cores?|threads?)\s*[/\\]?\s*\d*/i.test(scrapedName) ||
+      // Dismiss known junk BEFORE category resolution — these should never become components
+      // regardless of any sug_category from previous suggestions
+      const lowerScraped = scrapedName.toLowerCase();
+      if (
+        lowerScraped.includes('so-dimm') ||
+        lowerScraped.includes('sodimm') ||
+        lowerScraped.includes('tray') ||
+        lowerScraped.includes('bulk') ||
+        lowerScraped.includes('sans emballage') ||
+        /^\d+\s*(cœurs?|cores?)\s*[/\\]?\s*\d*/i.test(scrapedName) ||
         /^\d+\s*(go|gb|to|tb)\s*(ddr[45])?$/i.test(scrapedName) ||
-        lowerName.includes('direct die') ||
-        (lowerName.includes('frame') && lowerName.includes('thermal'))
-      )) {
+        (lowerScraped.includes('direct die') && !lowerScraped.includes('ryzen')) ||
+        (lowerScraped.includes('frame') && lowerScraped.includes('thermal') && !lowerScraped.includes('thermaltake'))
+      ) {
         dismissedListingsToUpdate.push({ retailer_id: p.retailer_id, product_url: p.product_url });
         continue;
       }
+
+      const category = p.manual_category || resolveCategory(scrapedName) || resolveCategory(nameForExtraction) || (p as any).sug_category;
 
       if (!category) {
         unmatchedListingsToUpsert.push({
