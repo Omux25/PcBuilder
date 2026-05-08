@@ -86,6 +86,12 @@ interface UltraPcProduct {
   active: string;
   id_product?: number;
   description_short?: string;
+  /** PrestaShop product cover image with multiple resolutions */
+  cover?: {
+    bySize?: Record<string, { url: string; width: number; height: number }>;
+    medium?: { url: string };
+    small?: { url: string };
+  };
 }
 
 interface UltraPcResponse {
@@ -177,6 +183,14 @@ export class UltraPcScraper {
           const product_url = product.canonical_url || product.url;
           if (!product_url) continue;
 
+          // Extract best available product image from PrestaShop cover data.
+          // Prefer home_default (280x280) — good balance for thumbnails.
+          const image_url =
+            product.cover?.bySize?.home_default?.url ??
+            product.cover?.medium?.url ??
+            product.cover?.small?.url ??
+            undefined;
+
           prices.push({
             retailer_id,
             price,
@@ -184,6 +198,7 @@ export class UltraPcScraper {
             product_url,
             product_name: product.name,
             product_description: product.description_short || undefined,
+            image_url,
           });
         }
       }
