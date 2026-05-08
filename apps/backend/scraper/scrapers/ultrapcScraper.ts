@@ -30,6 +30,10 @@ const SITE_NAME = 'ultrapc.ma';
 
 const CATEGORY_URLS: string[] = [
   'https://www.ultrapc.ma/21-processeurs',
+  // HEDT CPU sub-categories not listed on the main CPU page
+  'https://www.ultrapc.ma/173-socket-amd-tr4',
+  'https://www.ultrapc.ma/255-socket-swrx8',
+  'https://www.ultrapc.ma/120-socket-2066',
   'https://www.ultrapc.ma/28-cartes-meres',
   'https://www.ultrapc.ma/39-cartes-graphiques',
   'https://www.ultrapc.ma/35-memoire-vive-pc',
