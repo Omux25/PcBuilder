@@ -12,10 +12,11 @@ The platform is functional and deployed. All 666 backend tests and 43 frontend t
 **What works:**
 - Price scraping from 3 Moroccan retailers (UltraPC, NextLevel PC, SetupGame)
 - UltraPC scraper: HTML card parsing (stock status from "Produit en stock" text, no extra HTTP calls)
+- UltraPC scraper now covers HEDT CPU sub-categories (socket-swrx8 Threadripper PRO, socket-amd-tr4, socket-2066) that were previously missing
 - Compatibility checking (8 rules: socket, RAM type, RAM frequency, GPU length, PSU wattage, form factor, cooler height, RAM slots)
-- Component catalog with ~4,000 components across 25 categories
+- Component catalog with ~4,000 components across 10 core categories
 - Motherboard specs: 665/665 boards have correct socket + DDR type (inferred from chipset naming)
-- CPU specs: 137/137 CPUs have correct socket (inferred from model series)
+- CPU specs: 138/138 CPUs have correct socket (inferred from model series)
 - Admin panel: dashboard, component CRUD, bulk import, unmatched listings queue, preset management
 - Frontend: configurator, category browse (681 motherboards, all sockets visible), component detail, price comparison, presets, market trends
 - Image extraction: UltraPC + NextLevel upgraded to large_default (800px) — 100% coverage
@@ -23,6 +24,23 @@ The platform is functional and deployed. All 666 backend tests and 43 frontend t
 - Price history: daily aggregation, 7j/30j/1an period toggle
 - Automatic data quality pass after every scrape (deduplication, name cleaning, category fixes)
 - smartSearch returns full catalog (1000 cap) — all 681 motherboards visible, not just 100
+- Backend audit fixes: OOS threshold guard (50%), transaction wrap for mappings+prices, GPU DNA token-based matching
+- DB permissions: `pc_builder_user` has full access to all tables including `unmatched_suggestions`
+
+---
+
+## Pending — Post-Presentation
+
+### Peripheral Categories (deferred)
+UltraPC and other retailers sell peripherals (mice, keyboards, monitors, headsets, etc.) that `inferCategory()` correctly identifies but the DB `components_category_check` constraint rejects. These currently go to `unmatched_listings` silently.
+
+**Decision needed:** Add peripheral categories to the DB schema and catalog, or keep the platform focused on PC build components only.
+
+If adding peripherals:
+- Add migration to expand `components_category_check` constraint
+- Add peripheral categories to `ComponentCategory` type
+- Add display/filtering support in frontend
+- Decide on compatibility rules (peripherals don't have build compatibility constraints)
 
 ---
 
