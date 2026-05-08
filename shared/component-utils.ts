@@ -95,8 +95,8 @@ export function inferCategory(name: string): Category | null {
   if (n.match(/\b(ak[- ]?\d{3}[a-z]*|hyper\s*\d{3}[a-z]*|hyper\s*622|assassin|dark\s*rock|shadow\s*rock|gammaxx|arctic\s*(freezer|alpine)|ag\d{3}|ets-t[456]\d|peerless\s*assassin|phantom\s*spirit|id-?cooling|corefrozr|coreliquid|castle\s*\d{3}|ml\s*(one|lcd|ultra)|ml-?(one|lcd|ultra)|mpg\s*velox|mag\s*velox|velox\s*\d+|a30\b|a500\b|a410\b|a620\b|mystique\s*\d{3}|masterliquid\s*[plm]*\s*\d{3}l?|masterair|th\d{3}|ux\d{3}|toughair|lc\d{3}|i70|i71c|t\d{3}\s*rgb|core\s*plus)\b/) &&
     !n.match(/\b(case|boitier|tower|chassis|boîtier|bracket|gpu|motherboard|psu)\b/)) return 'cooling';
 
-  // Cases — NZXT H-series
-  if (n.match(/\b(h210i?|h400i?|h440i?|h500i?|h510i?|h700i?|h710i?|h5\s*flow|h6\s*flow|h7\s*flow|h9\s*flow|h5\s*elite|h7\s*elite|h9\s*elite|h3\s*flow|h1\s*v2)\b/)) return 'case';
+  // Cases — NZXT H-series (and Thermaltake H590 which follows the same naming)
+  if (n.match(/\b(h210i?|h400i?|h440i?|h500i?|h510i?|h590\b|h700i?|h710i?|h5\s*flow|h6\s*flow|h7\s*flow|h9\s*flow|h5\s*elite|h7\s*elite|h9\s*elite|h3\s*flow|h1\s*v2)\b/)) return 'case';
   // Cases — Phanteks NV/Enthoo/Evolv series
   if (n.match(/\b(nv5|nv7|nv9|enthoo|evolv\s*[x]?)\b/)) return 'case';
   // Cases — named models from many brands
@@ -143,7 +143,9 @@ export function inferCategory(name: string): Category | null {
 
   if (n.match(/\b(carte\s*m[eè]re|motherboard|mobo|mb|zenith\s*[ivx]+)\b/) && !n.match(/\b(case|boitier|tower|psu|nvme|ssd)\b/)) return 'motherboard';
   if (n.match(/\b([abxhz]\d{3,4}[a-z0-9]*|trx\d{2}[a-z]?|wrx\d{2}[a-z]?|lga\d{4})\b/) &&
-    !n.match(/\b(rtx|gtx|rx\s*\d{3,4}|case|boitier|tower|chassis|nzxt|kingston|a400|ddr|ram|aio|cpu\s*cooler|ventirad|monitor|fan|mouse|keyboard|nvme|ssd|cardea|z440|z540|80plus|80\s*plus|gold|bronze|platinum|titanium|watt|\d{3,4}w|pcie5|modular)\b/)) return 'motherboard';
+    !n.match(/\b(rtx|gtx|rx\s*\d{3,4}|case|boitier|tower|chassis|nzxt|kingston|a400|ddr|ram|aio|cpu\s*cooler|ventirad|monitor|fan|mouse|keyboard|nvme|ssd|cardea|z440|z540|80plus|80\s*plus|gold|bronze|platinum|titanium|watt|\d{3,4}w|pcie5|modular)\b/) &&
+    // Exclude MSI MAG/MPG A-series PSUs: MAG A300N, MAG A500N, MAG A550BN, MPG A750GF, MPG A1000G, etc.
+    !n.match(/\b(mag|mpg)\s+a\d{3,4}[a-z]*/)) return 'motherboard';
 
   // Storage
   if (n.match(/\b(nvme|m\.?2|ssd|hdd|disque\s*(dur|ssd)|hard\s*drive|solid\s*state|firecuda|barracuda|ironwolf|skyhawk|exos|wd\s*(blue|black|red|gold|purple)|sn\d{3,4}|bx\d{3}|mx\d{3}|su\d{3}|p[235]\s*\d{1,3}|legend\s*\d{3}|a400|v-series|sa\d{3}|s270|t70[05]|ns100|cs900|cs1030|cs2130|cs2140|dc\d{3}m?|mp\d{3}|intenso|ultrastar|mg08|mg\s*series|wd\d{2}[a-z]{4}|a55|gx2|kc\d{4}|spatium|nq100|hiksemi|fanxiang|s101|s300|s300\s*pro|n300\s*nas|surveillance\s*3\.5|990\s*pro|980\s*pro|970\s*evo|870\s*evo|qvo|cardea|zero\s*z\d{3}|sata\s*iii|2\.5\s*tray|sata\s*2\.5|vi\d{3,4})\b/) &&
@@ -165,6 +167,9 @@ export function inferCategory(name: string): Category | null {
   if ((n.match(/\b\d{2,5}\s*w\b/) || n.match(/\b(ai\d{4}t|a\d{3,4}gs?|a\d{3,4}gls?|a\d{3,4}g|80plus|80\s*plus|mwe|smart|anima|elite|mag\s*a\d{3,4}|mpg\s*a\d{3,4}|p[567]50ss|pl\d{3}-d|px\d{3,4}-?[pg]|bn\d{3}|rm\d{3,4}[eix])\b/)) &&
     n.match(/\b(alimentation|psu|power\s*supply|gold|platinum|titanium|bronze|silver|white|ice|modular|80\s*plus|80plus|atx\s*3|semi.?mod|full.?mod|watt|\d{2,5}\s*w|ai\d{4}t|a\d{3,4}gs?|a\d{3,4}gls?|a\d{3,4}g|mwe|smart|anima|elite|rm\d{3,4}[eix]|pl\d{3}-d|px\d{3,4}-?[pg])\b/) &&
     !n.match(/\b(case|boitier|tower|motherboard|mb|socket|cpu\s*cooler|water\s*cooler|refroidissement|[abxhz]\d{3,4}|fan|gpu)\b/)) return 'psu';
+  // MSI MAG/MPG A-series PSUs: MAG A300N-H, MAG A500N-H, MAG A550BN, MPG A750GF, MPG A1000G, etc.
+  // These match the motherboard chipset regex but are clearly PSUs from the naming scheme.
+  if (n.match(/\b(mag|mpg)\s+a\d{3,4}[a-z]*/)) return 'psu';
 
   // Fans & Paste
   if (n.match(/\b(kryonaut|conductonaut|hydronaut|aeronaut|duronaut|carbonaut|kryosheet|polartherm|tm30|kryofuze|cryofuze|minus\s*pad|wipes|thermal\s*paste|pâte\s*thermique|pate\s*thermique|thermal\s*compound|thermal\s*grease|mx-[0-9]|mx[0-9])\b/) &&
@@ -313,15 +318,182 @@ export const extractStorageSpecs = (n: string) => ({
   interface_type: n.toLowerCase().includes('nvme') ? 'NVMe' : 'SATA'
 });
 
-export const extractMotherboardSpecs = (n: string) => {
-  const socketMatch = n.match(/\b(LGA\s*1700|AM[45]|LGA\s*1200|LGA\s*1151)\b/i);
-  const isDdr5 = n.toLowerCase().includes('ddr5');
-  return {
-    socket: socketMatch ? socketMatch[1].toUpperCase() : null,
-    supported_ram_types: [isDdr5 ? 'DDR5' : 'DDR4'],
-    max_ram_frequency: isDdr5 ? 6400 : 3600
-  };
+// ── Motherboard chipset → socket + DDR type lookup table ─────────────────────
+//
+// Rules:
+//   - DDR4_ONLY: chipset only ever shipped with DDR4 slots
+//   - DDR5_ONLY: chipset only ever shipped with DDR5 slots
+//   - BOTH: manufacturer sold DDR4 and DDR5 variants of the same board model.
+//     In this case we rely on the product name: if it contains "D4" or "DDR4"
+//     → DDR4; if it contains "D5" or "DDR5" → DDR5; otherwise → DDR5 (the
+//     default/newer variant that ships without a suffix).
+//
+// Sources: Intel ARK, AMD product pages, PCPartPicker chipset specs.
+
+type DdrPolicy = 'DDR4_ONLY' | 'DDR5_ONLY' | 'BOTH';
+
+interface ChipsetInfo {
+  socket: string;
+  ddr: DdrPolicy;
+  /** Default max XMP/EXPO frequency when we can't read it from the name */
+  defaultMaxMhz: number;
+}
+
+const CHIPSET_MAP: Record<string, ChipsetInfo> = {
+  // ── AMD AM4 (DDR4 only) ───────────────────────────────────────────────────
+  A320: { socket: 'AM4', ddr: 'DDR4_ONLY', defaultMaxMhz: 3200 },
+  A520: { socket: 'AM4', ddr: 'DDR4_ONLY', defaultMaxMhz: 4600 },
+  B350: { socket: 'AM4', ddr: 'DDR4_ONLY', defaultMaxMhz: 3200 },
+  B450: { socket: 'AM4', ddr: 'DDR4_ONLY', defaultMaxMhz: 4400 },
+  B550: { socket: 'AM4', ddr: 'DDR4_ONLY', defaultMaxMhz: 5100 },
+  X370: { socket: 'AM4', ddr: 'DDR4_ONLY', defaultMaxMhz: 3200 },
+  X470: { socket: 'AM4', ddr: 'DDR4_ONLY', defaultMaxMhz: 3600 },
+  X570: { socket: 'AM4', ddr: 'DDR4_ONLY', defaultMaxMhz: 5100 },
+  // ── AMD AM5 (DDR5 only) ───────────────────────────────────────────────────
+  A620: { socket: 'AM5', ddr: 'DDR5_ONLY', defaultMaxMhz: 6400 },
+  A850: { socket: 'AM5', ddr: 'DDR5_ONLY', defaultMaxMhz: 8000 },
+  B650: { socket: 'AM5', ddr: 'DDR5_ONLY', defaultMaxMhz: 6400 },
+  B650E: { socket: 'AM5', ddr: 'DDR5_ONLY', defaultMaxMhz: 6400 },
+  B840: { socket: 'AM5', ddr: 'DDR5_ONLY', defaultMaxMhz: 8000 },
+  B850: { socket: 'AM5', ddr: 'DDR5_ONLY', defaultMaxMhz: 8000 },
+  B860: { socket: 'AM5', ddr: 'DDR5_ONLY', defaultMaxMhz: 8000 },
+  X570S: { socket: 'AM4', ddr: 'DDR4_ONLY', defaultMaxMhz: 5100 }, // refresh of X570
+  X670: { socket: 'AM5', ddr: 'DDR5_ONLY', defaultMaxMhz: 6400 },
+  X670E: { socket: 'AM5', ddr: 'DDR5_ONLY', defaultMaxMhz: 6400 },
+  X870: { socket: 'AM5', ddr: 'DDR5_ONLY', defaultMaxMhz: 8000 },
+  X870E: { socket: 'AM5', ddr: 'DDR5_ONLY', defaultMaxMhz: 8000 },
+  // ── AMD Threadripper ─────────────────────────────────────────────────────
+  TRX40: { socket: 'sTRX4', ddr: 'DDR4_ONLY', defaultMaxMhz: 3200 },
+  TRX50: { socket: 'sTR5', ddr: 'DDR5_ONLY', defaultMaxMhz: 5600 },
+  WRX80: { socket: 'sWRX8', ddr: 'DDR4_ONLY', defaultMaxMhz: 3200 },
+  WRX90: { socket: 'sWRX9', ddr: 'DDR5_ONLY', defaultMaxMhz: 5600 },
+  X399: { socket: 'TR4', ddr: 'DDR4_ONLY', defaultMaxMhz: 3200 },
+  // ── Intel LGA1151 (8th/9th gen, DDR4 only) ───────────────────────────────
+  B360: { socket: 'LGA1151', ddr: 'DDR4_ONLY', defaultMaxMhz: 2666 },
+  B365: { socket: 'LGA1151', ddr: 'DDR4_ONLY', defaultMaxMhz: 2666 },
+  H310: { socket: 'LGA1151', ddr: 'DDR4_ONLY', defaultMaxMhz: 2400 },
+  H370: { socket: 'LGA1151', ddr: 'DDR4_ONLY', defaultMaxMhz: 2666 },
+  Z370: { socket: 'LGA1151', ddr: 'DDR4_ONLY', defaultMaxMhz: 4000 },
+  Z390: { socket: 'LGA1151', ddr: 'DDR4_ONLY', defaultMaxMhz: 4266 },
+  // ── Intel LGA1200 (10th/11th gen, DDR4 only) ─────────────────────────────
+  B460: { socket: 'LGA1200', ddr: 'DDR4_ONLY', defaultMaxMhz: 2933 },
+  B560: { socket: 'LGA1200', ddr: 'DDR4_ONLY', defaultMaxMhz: 4800 },
+  H410: { socket: 'LGA1200', ddr: 'DDR4_ONLY', defaultMaxMhz: 2933 },
+  H470: { socket: 'LGA1200', ddr: 'DDR4_ONLY', defaultMaxMhz: 2933 },
+  H510: { socket: 'LGA1200', ddr: 'DDR4_ONLY', defaultMaxMhz: 3200 },
+  H570: { socket: 'LGA1200', ddr: 'DDR4_ONLY', defaultMaxMhz: 3200 },
+  Z490: { socket: 'LGA1200', ddr: 'DDR4_ONLY', defaultMaxMhz: 4800 },
+  Z590: { socket: 'LGA1200', ddr: 'DDR4_ONLY', defaultMaxMhz: 5333 },
+  // ── Intel LGA1700 (12th/13th/14th gen — DDR4 and DDR5 variants exist) ────
+  B660: { socket: 'LGA1700', ddr: 'BOTH', defaultMaxMhz: 4800 },
+  B760: { socket: 'LGA1700', ddr: 'BOTH', defaultMaxMhz: 5600 },
+  H610: { socket: 'LGA1700', ddr: 'BOTH', defaultMaxMhz: 4800 },
+  H670: { socket: 'LGA1700', ddr: 'BOTH', defaultMaxMhz: 4800 },
+  H770: { socket: 'LGA1700', ddr: 'BOTH', defaultMaxMhz: 5600 },
+  Z690: { socket: 'LGA1700', ddr: 'BOTH', defaultMaxMhz: 6400 },
+  Z790: { socket: 'LGA1700', ddr: 'BOTH', defaultMaxMhz: 7200 },
+  // ── Intel LGA1851 (Core Ultra 200 series) — DDR5 only ────────────────────
+  H810: { socket: 'LGA1851', ddr: 'DDR5_ONLY', defaultMaxMhz: 6400 },
+  B860: { socket: 'LGA1851', ddr: 'DDR5_ONLY', defaultMaxMhz: 6400 },
+  Z890: { socket: 'LGA1851', ddr: 'DDR5_ONLY', defaultMaxMhz: 9200 },
 };
+
+/**
+ * Extract socket, supported_ram_types, and max_ram_frequency from a motherboard
+ * product name using a two-layer approach:
+ *
+ *   Layer 1 — Explicit DDR suffix in name (highest confidence):
+ *     "B760M DS3H DDR4" → DDR4,  "B760M DS3H DDR5" → DDR5
+ *
+ *   Layer 2 — Chipset lookup table:
+ *     B650 → AM5 + DDR5_ONLY,  Z790 → LGA1700 + BOTH
+ *     For BOTH chipsets: name contains "D4"/"DDR4" → DDR4, else → DDR5
+ *
+ * Returns null only if no chipset can be identified at all.
+ */
+export function inferMotherboardSpecs(name: string): {
+  socket: string | null;
+  supported_ram_types: string[];
+  max_ram_frequency: number;
+} | null {
+  const upper = name.toUpperCase();
+
+  // ── Layer 1: explicit DDR suffix anywhere in the name ────────────────────
+  const hasExplicitDdr4 = /\bDDR4\b/.test(upper) || /\bD4\b/.test(upper);
+  const hasExplicitDdr5 = /\bDDR5\b/.test(upper) || /\bD5\b/.test(upper);
+
+  // ── Extract chipset token ─────────────────────────────────────────────────
+  // Match patterns like: B650, B650E, B650M, X670E, Z790, H610M, X570S, TRX40, WRX80, X399
+  // The chipset is always the first [ABXZH]\d{3} or TRX/WRX token in the name.
+  // We strip trailing form-factor/variant letters to get the base chipset.
+  const chipsetMatch = upper.match(
+    /\b(TRX\d{2}|WRX\d{2}|X399|[ABXZH]\d{3}(?:[EIM]|S(?=\b))?)\b/
+  );
+  if (!chipsetMatch) {
+    // Named series fallback: ROG MAXIMUS XII/XIII → Z490/Z590, Zenith II → TRX40
+    if (/MAXIMUS\s+XII\b/.test(upper)) return inferMotherboardSpecs('Z490');
+    if (/MAXIMUS\s+XIII\b/.test(upper)) return inferMotherboardSpecs('Z590');
+    if (/ZENITH\s+II\b/.test(upper)) return inferMotherboardSpecs('TRX40');
+    // Biostar boards with non-standard suffixes: A520MH, A520MHP, B450MH, B760MX2-E, H310CM, H610MHP
+    // The chipset is the first [ABXZH]\d{3} token — strip all trailing letters/digits
+    const biostarMatch = upper.match(/\b([ABXZH]\d{3})/);
+    if (biostarMatch) return inferMotherboardSpecs(biostarMatch[1]);
+    // ASUS Pro WS WRX80E / WRX90E — workstation boards
+    if (/WRX80/.test(upper)) return inferMotherboardSpecs('WRX80');
+    if (/WRX90/.test(upper)) return inferMotherboardSpecs('WRX90');
+    return null;
+  }
+
+  const rawChipset = chipsetMatch[1]; // e.g. "B650E", "Z790", "H610M", "X570S"
+
+  // Look up in map — try exact match first, then strip trailing form-factor
+  // suffixes: E (enhanced), I (ITX), M (micro-ATX), S (silent/slim) are not
+  // always chipset identifiers — strip them if no exact match found
+  const info: ChipsetInfo | undefined =
+    CHIPSET_MAP[rawChipset] ??
+    CHIPSET_MAP[rawChipset.replace(/[EIM]$/, '')] ??
+    CHIPSET_MAP[rawChipset.replace(/[EIMS]{1,2}$/, '')];
+
+  if (!info) return null;
+
+  // ── Resolve DDR type ──────────────────────────────────────────────────────
+  let ramTypes: string[];
+  let maxMhz: number;
+
+  if (info.ddr === 'DDR4_ONLY') {
+    ramTypes = ['DDR4'];
+    maxMhz = info.defaultMaxMhz;
+  } else if (info.ddr === 'DDR5_ONLY') {
+    ramTypes = ['DDR5'];
+    maxMhz = info.defaultMaxMhz;
+  } else {
+    // BOTH — use explicit suffix if present, otherwise default to DDR5
+    if (hasExplicitDdr4) {
+      ramTypes = ['DDR4'];
+      maxMhz = info.defaultMaxMhz;
+    } else {
+      // DDR5 variant (either explicit DDR5 or no suffix = newer default)
+      ramTypes = ['DDR5'];
+      maxMhz = info.defaultMaxMhz;
+    }
+  }
+
+  // Layer 1 can override the chipset default for edge cases
+  // (e.g. a board name that explicitly says DDR4 on a normally DDR5 chipset)
+  if (hasExplicitDdr4 && ramTypes[0] !== 'DDR4') {
+    ramTypes = ['DDR4'];
+  } else if (hasExplicitDdr5 && ramTypes[0] !== 'DDR5') {
+    ramTypes = ['DDR5'];
+  }
+
+  return {
+    socket: info.socket,
+    supported_ram_types: ramTypes,
+    max_ram_frequency: maxMhz,
+  };
+}
+
+export const extractMotherboardSpecs = inferMotherboardSpecs;
 
 export const extractPsuSpecs = (n: string) => {
   const wMatch = n.match(/\b(\d{3,4})\s*W\b/i);
