@@ -3,8 +3,7 @@
  * Shows real-time progress so you're not waiting blindly.
  */
 import { sql } from 'bun';
-import { buildFromUnmatched } from '../scraper/catalogBuilder.js';
-import { autoMap } from '../scraper/autoMapper.js';
+import { reprocessUnmatched } from '../../scraper/aggregator.js';
 
 // ── Progress bar helper ───────────────────────────────────────────────────────
 
@@ -16,58 +15,19 @@ function progressBar(done: number, total: number, width = 30): string {
   return `[${bar}] ${percent}% (${done}/${total})`;
 }
 
-function printProgress(label: string, done: number, total: number) {
-  process.stdout.write(`\r  ${label}: ${progressBar(done, total)}`);
-}
+// ── Unified Pipeline ─────────────────────────────────────────────────────────
 
-// ── Step 1: autoMap ───────────────────────────────────────────────────────────
-
-const pending1 = await sql`
+const pendingCount = await sql`
   SELECT COUNT(*)::int AS cnt FROM unmatched_listings
   WHERE status = 'pending' AND scraped_name IS NOT NULL AND scraped_name != ''
 ` as { cnt: number }[];
-const total1 = pending1[0].cnt;
+const total = pendingCount[0].cnt;
 
-console.log(`\nStep 1/3 — autoMap: matching ${total1} pending listings against catalog...`);
-printProgress('Matching', 0, total1);
+console.log(`\nUnified Pipeline: processing ${total} pending listings...`);
 
-const { mapped, skipped: s1 } = await autoMap((done, total) => printProgress('Matching', done, total));
-process.stdout.write('\n');
-console.log(`  Done: ${mapped} mapped, ${s1} skipped`);
+const { updated, unmatched, errors } = await reprocessUnmatched();
 
-// ── Step 2: catalogBuilder ────────────────────────────────────────────────────
-
-const pending2 = await sql`
-  SELECT COUNT(*)::int AS cnt FROM unmatched_listings
-  WHERE status = 'pending' AND scraped_name IS NOT NULL AND scraped_name != ''
-` as { cnt: number }[];
-const total2 = pending2[0].cnt;
-
-console.log(`\nStep 2/3 — catalogBuilder: creating entries for ${total2} remaining listings...`);
-printProgress('Building', 0, total2);
-
-const { created, skipped } = await buildFromUnmatched((done, total) => printProgress('Building', done, total));
-process.stdout.write('\n');
-console.log(`  Done: ${created} created, ${skipped} skipped`);
-
-// ── Step 3: autoMap pass 2 ────────────────────────────────────────────────────
-
-if (created > 0) {
-  const pending3 = await sql`
-    SELECT COUNT(*)::int AS cnt FROM unmatched_listings
-    WHERE status = 'pending' AND scraped_name IS NOT NULL AND scraped_name != ''
-  ` as { cnt: number }[];
-  const total3 = pending3[0].cnt;
-
-  console.log(`\nStep 3/3 — autoMap pass 2: linking ${total3} listings to new entries...`);
-  printProgress('Linking', 0, total3);
-
-  const { mapped: mapped2, skipped: s2 } = await autoMap((done, total) => printProgress('Linking', done, total));
-  process.stdout.write('\n');
-  console.log(`  Done: ${mapped2} mapped, ${s2} skipped`);
-} else {
-  console.log('\nStep 3/3 — skipped (no new entries created)');
-}
+console.log(`\nDone: ${updated} processed (linked/created), ${unmatched} still unmatched, ${errors} errors`);
 
 // ── Final stats ───────────────────────────────────────────────────────────────
 

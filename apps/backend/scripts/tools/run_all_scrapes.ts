@@ -1,15 +1,20 @@
 /**
  * Runs price scrapes for all active retailers and populates the prices table.
- * 
+ *
  * Usage: bun scripts/tools/run_all_scrapes.ts
  */
 import { runScrapingSession } from '../../scraper/session.js';
 import { getSql } from '../../src/db/index.js';
 
-console.log('Starting full price scrape for all retailers...');
+console.log('🚀 Starting full price scrape for all retailers...\n');
+
+const startTime = Date.now();
 
 try {
   await runScrapingSession();
+
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+  console.log(`\n⏱️  Total time: ${elapsed}s\n`);
 
   const sql = getSql();
   const summary = await sql`
@@ -21,10 +26,25 @@ try {
     ORDER BY r.name
   ` as { name: string; price_count: string }[];
 
-  console.log('\n=== Final Price Counts ===');
+  console.log('📊 Final Price Counts:');
   for (const row of summary) {
-    console.log(`  ${row.name}: ${row.price_count} prices`);
+    console.log(`   ${row.name.padEnd(20)} ${row.price_count.padStart(6)} prices`);
   }
+
+  // Check image stats
+  const imageStats = await sql`
+    SELECT
+      COUNT(*) as total,
+      COUNT(image_url) as with_images
+    FROM components
+  ` as { total: string; with_images: string }[];
+
+  const total = parseInt(imageStats[0].total);
+  const withImages = parseInt(imageStats[0].with_images);
+  const percentage = Math.round((withImages / total) * 100);
+
+  console.log(`\n🖼️  Image Coverage: ${withImages}/${total} components (${percentage}%)`);
+  console.log('\n✅ Scrape complete!\n');
 } catch (err) {
   console.error('\n💥 Full scrape failed:');
   console.error(err);
