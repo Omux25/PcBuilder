@@ -218,6 +218,19 @@ export async function aggregate(
         continue;
       }
 
+      // Dismiss spec rows scraped as products (e.g. "32 Cœurs / 64 threads", "16 Go DDR5")
+      // These are UltraPC listing artifacts — spec text appearing as product cards
+      const lowerName = scrapedName.toLowerCase();
+      if (!category && (
+        /^\d+\s*(cœurs?|cores?|threads?)\s*[/\\]?\s*\d*/i.test(scrapedName) ||
+        /^\d+\s*(go|gb|to|tb)\s*(ddr[45])?$/i.test(scrapedName) ||
+        lowerName.includes('direct die') ||
+        (lowerName.includes('frame') && lowerName.includes('thermal'))
+      )) {
+        dismissedListingsToUpdate.push({ retailer_id: p.retailer_id, product_url: p.product_url });
+        continue;
+      }
+
       if (!category) {
         unmatchedListingsToUpsert.push({
           retailer_id: p.retailer_id,
