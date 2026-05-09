@@ -31,14 +31,17 @@
 
 .searchInput {
   width: 100%;
-  padding: 0.85rem 3rem 0.85rem 3.25rem;
-  background: var(--surface);
-  border: 2px solid var(--border);
+  padding: 0.85rem 3rem 0.85rem 3.25rem !important;
+  background: var(--surface) !important;
+  border: 2px solid var(--border) !important;
   border-radius: var(--radius-lg);
   color: var(--text);
   font-size: 1rem;
   transition: border-color 0.15s, box-shadow 0.15s;
   box-shadow: var(--shadow-md);
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .searchInput:focus {
