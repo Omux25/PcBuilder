@@ -49,12 +49,22 @@ export function CategoryBrowse() {
   const [components, setComponents] = useState<SmartComponent[]>([]);
   const [total, setTotal] = useState(0);
   const [inStockTotal, setInStockTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);   // true only on initial load (no data yet)
+  const [fetching, setFetching] = useState(false); // true on any in-flight request
   const [error, setError] = useState<string | null>(null);
   const [availableBrands, setAvailableBrands] = useState<string[]>([]);
   const [availableSockets, setAvailableSockets] = useState<string[]>([]);
 
   const abortRef = useRef<AbortController | null>(null);
+  const hasDataRef = useRef(false); // tracks if we've ever loaded data for this category
+
+  // Reset hasDataRef when category changes so initial load shows skeletons
+  useEffect(() => {
+    hasDataRef.current = false;
+    setLoading(true);
+    setComponents([]);
+    setTotal(0);
+  }, [cat]);
 
   // ── Build Context (for smartSearch compatibility) ─────────────────────────
   const buildContext = useMemo(() => {
@@ -78,7 +88,8 @@ export function CategoryBrowse() {
     if (abortRef.current) abortRef.current.abort();
     abortRef.current = new AbortController();
 
-    setLoading(true);
+    setFetching(true);
+    if (!hasDataRef.current) setLoading(true);
     setError(null);
 
     try {
@@ -96,6 +107,7 @@ export function CategoryBrowse() {
       setComponents(list);
       setTotal(t);
       setInStockTotal(ist);
+      hasDataRef.current = true;
 
       // Populate filter options from full result set (not just current page)
       if (!brandsPopulated.current) {
@@ -109,6 +121,7 @@ export function CategoryBrowse() {
       }
     } finally {
       setLoading(false);
+      setFetching(false);
     }
   }, [cat, buildContext]); // removed availableBrands.length — use ref instead
 
@@ -268,7 +281,7 @@ export function CategoryBrowse() {
           </div>
 
           <div className={styles.tableWrap}>
-            {!loading && total > 0 && (
+            {total > 0 && (
               <div className={styles.resultsCount}>
                 {total} composant{total > 1 ? 's' : ''}
                 {inStockTotal > 0 && ` · ${inStockTotal} en stock`}
@@ -284,7 +297,7 @@ export function CategoryBrowse() {
                   <th className={styles.actionCell}></th>
                 </tr>
               </thead>
-              <tbody className={loading && components.length > 0 ? styles.tbodyFading : undefined}>
+              <tbody className={fetching && components.length > 0 ? styles.tbodyFading : undefined}>
                 {loading && components.length === 0 ? (
                   Array.from({ length: 10 }).map((_, i) => (
                     <tr key={i} className={styles.skeletonRow}>
