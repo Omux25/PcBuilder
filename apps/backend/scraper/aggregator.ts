@@ -31,6 +31,7 @@ import { scoreDnaMatch, extractDna, type CatalogComponent } from '../src/utils/c
 import { loadAdminRules, matchesRule, type KeywordRule } from '../src/services/keywordRulesService.js';
 import { ComponentCategory } from '@shared/types';
 import { scoreImageQuality } from '@shared/image-utils';
+import { validateBrandAuthority } from '@shared/brand-authority';
 
 // Re-export DI helpers so tests can inject a mock SQL function.
 export { setSql, resetSql };
@@ -245,26 +246,38 @@ export async function aggregate(
       const prefixAsBrand = (prefixMatch && !CATEGORY_WORDS.has(prefixWord)) ? (extractBrand(prefixMatch[1].trim()) ?? null) : null;
       const brand = prefixAsBrand ?? extractBrand(nameForExtraction);
 
+      // Step 2b: Brand Authority validation
+      // - Remaps wrong brands (e.g. HyperX listed under Cooler Master → Kingston)
+      // - Detects bundles (CPU + GPU in same name → dismiss)
+      // - Corrects wrong categories (e.g. Thermal Grizzly in cpu → thermal_paste)
+      const authority = validateBrandAuthority(scrapedName, brand, category as any);
+      if (authority.dismiss) {
+        dismissedListingsToUpdate.push({ retailer_id: p.retailer_id, product_url: p.product_url });
+        continue;
+      }
+      const resolvedBrand = authority.brand ?? brand;
+      const resolvedCategory = (authority.categoryOverride ?? category) as ComponentCategory;
+
       // Step 3: DNA Match against existing components
-      const catComponents = componentsByCategory.get(category) || [];
+      const catComponents = componentsByCategory.get(resolvedCategory) || [];
       const dnaMatch = catComponents.find(c => {
-        const { score } = scoreDnaMatch(nameForExtraction, c.brand ? `${c.brand} ${c.name}` : c.name, category);
-        const threshold = SCRAPER_CONFIG.PARTIAL_MATCH_CATEGORIES.includes(category) ? SCRAPER_CONFIG.PARTIAL_THRESHOLD : SCRAPER_CONFIG.PERFECT_THRESHOLD;
+        const { score } = scoreDnaMatch(nameForExtraction, c.brand ? `${c.brand} ${c.name}` : c.name, resolvedCategory);
+        const threshold = SCRAPER_CONFIG.PARTIAL_MATCH_CATEGORIES.includes(resolvedCategory) ? SCRAPER_CONFIG.PARTIAL_THRESHOLD : SCRAPER_CONFIG.PERFECT_THRESHOLD;
         return score >= threshold;
       });
 
       if (dnaMatch) {
-        finalResolved.push({ ...p, component_id: dnaMatch.id, category });
+        finalResolved.push({ ...p, component_id: dnaMatch.id, category: resolvedCategory });
         autoMapped++;
         continue;
       }
 
       // Step 4: Slug match (catches duplicates within this batch)
-      const cleanedName = cleanName(nameForExtraction, brand);
-      const baseSlug = componentSlug(brand, cleanedName);
+      const cleanedName = cleanName(nameForExtraction, resolvedBrand);
+      const baseSlug = componentSlug(resolvedBrand, cleanedName);
       const existingBySlug = slugToComponent.get(baseSlug);
       if (existingBySlug) {
-        finalResolved.push({ ...p, component_id: existingBySlug.id, category });
+        finalResolved.push({ ...p, component_id: existingBySlug.id, category: resolvedCategory });
         autoMapped++;
         continue;
       }
@@ -272,7 +285,7 @@ export async function aggregate(
       // Step 5: Queue for creation — only for DB-supported categories.
       // Peripherals/accessories (mouse, keyboard, monitor, etc.) are not in the
       // components_category_check constraint — send them to unmatched instead.
-      if (!DB_CATEGORIES.has(category)) {
+      if (!DB_CATEGORIES.has(resolvedCategory)) {
         unmatchedListingsToUpsert.push({
           retailer_id: p.retailer_id,
           product_url: p.product_url,
@@ -290,7 +303,7 @@ export async function aggregate(
       } else {
         const slug = generateUniqueSlug(baseSlug, existingSlugs);
         existingSlugs.add(slug); // reserve immediately to prevent duplicates within this batch
-        toCreateBySlug.set(baseSlug, { slug, cleanedName, brand, category, nameForExtraction, prices: [p] });
+        toCreateBySlug.set(baseSlug, { slug, cleanedName, brand: resolvedBrand, category: resolvedCategory, nameForExtraction, prices: [p] });
       }
     } catch (err) {
       errors++;
