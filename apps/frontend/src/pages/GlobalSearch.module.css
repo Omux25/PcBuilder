@@ -23,13 +23,15 @@
 .searchIcon {
   position: absolute;
   left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--text-dim);
   pointer-events: none;
 }
 
 .searchInput {
   width: 100%;
-  padding: 0.85rem 3rem 0.85rem 3rem;
+  padding: 0.85rem 3rem 0.85rem 3.25rem;
   background: var(--surface);
   border: 2px solid var(--border);
   border-radius: var(--radius-lg);
@@ -58,7 +60,11 @@
   align-items: center;
   transition: all 0.15s;
 }
-.clearBtn:hover { color: var(--text); background: var(--surface-3); }
+
+.clearBtn:hover {
+  color: var(--text);
+  background: var(--surface-3);
+}
 
 .resultCount {
   font-size: 0.85rem;
@@ -153,7 +159,10 @@
   text-decoration: none;
   transition: color 0.15s;
 }
-.seeAll:hover { text-decoration: underline; }
+
+.seeAll:hover {
+  text-decoration: underline;
+}
 
 /* ── Component list ─────────────────────────────────────────────────────── */
 
@@ -242,6 +251,7 @@
   flex-shrink: 0;
   transition: all 0.15s;
 }
+
 .componentRow:hover .componentArrow {
   color: var(--accent);
   transform: translateX(2px);
@@ -303,6 +313,7 @@
   text-decoration: none;
   transition: all 0.15s;
 }
+
 .suggestLink:hover {
   color: var(--accent);
   border-color: var(--accent);
@@ -342,6 +353,7 @@
   text-decoration: none;
   transition: all 0.2s var(--ease-out);
 }
+
 .catCard:hover {
   border-color: var(--accent);
   background: var(--accent-glow);
