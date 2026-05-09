@@ -114,7 +114,9 @@ export function inferCategory(name: string): Category | null {
     !n.match(/\b(psu|alimentation|cpu\s*cooler|water\s*cooler|liquid|fan)\b/)) return 'case';
   // Cases — Mars Gaming, M.RED, HYBROK, SG, XTRMLAB, AZZA, NOX, setup game (all sell only cases)
   if (n.match(/^(mars\s*gaming|m\.red|hybrok|sg\b|xtrmlab|azza|nox\b|setup\s*game|raijintek|itek|spirit\s*of\s*gamer|havn|montech|kolink|cougar|aerocool|antec|icelil|apnx)\b/) &&
-    !n.match(/\b(fan\s+pack|argb\s+fan|rgb\s+fan|\d+\s*x\s*\d+mm|triple\s*pack|dual\s*pack|fan\s*controller|hub|paste|thermal|psu|alimentation|ram|ssd|gpu|cpu|motherboard|hl\d{3}|symphony|core\s*plus|ap1-v)\b/)) return 'case';
+    !n.match(/\b(fan\s+pack|argb\s+fan|rgb\s+fan|\d+\s*x\s*\d+mm|triple\s*pack|dual\s*pack|fan\s*controller|hub|paste|thermal|psu|alimentation|ram|ssd|gpu|cpu|motherboard|hl\d{3}|symphony|core\s*plus|ap1-v)\b/) &&
+    !n.match(/\b\d{3,4}\s*w\b/) &&
+    !n.match(/\b(80plus|80\s*plus|gold|bronze|platinum|modular|watt)\b/)) return 'case';
   // Cases — specific models for Aerocool/Antec (those that don't have 'case' in name)
   if (n.match(/\b(cs-107|streak|zauron|klaw|dp301m|dp502|draco|nx360|torque|cronus|cube\s*802f|obsidian\s*270|pyramid\s*804l|jx\d{3,4})\b/)) return 'case';
   // Cases — MSI MAG Vampiric, MEG Prospect (case lines)
