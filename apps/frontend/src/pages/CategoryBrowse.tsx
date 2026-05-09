@@ -57,6 +57,7 @@ export function CategoryBrowse() {
 
   const abortRef = useRef<AbortController | null>(null);
   const hasDataRef = useRef(false); // tracks if we've ever loaded data for this category
+  const tableRef = useRef<HTMLDivElement>(null); // for scroll-to-top on page change
 
   // Reset hasDataRef when category changes so initial load shows skeletons
   useEffect(() => {
@@ -166,6 +167,14 @@ export function CategoryBrowse() {
   const handleAdd = (c: SmartComponent) => {
     addToBuild(c, slotKey);
     navigate('/');
+  };
+
+  const changePage = (newPage: number) => {
+    setPage(newPage);
+    // Scroll to top of results table so user sees new results immediately
+    setTimeout(() => {
+      tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   };
 
   const clearFilters = () => {
@@ -280,12 +289,36 @@ export function CategoryBrowse() {
             </div>
           </div>
 
-          <div className={styles.tableWrap}>
+          <div className={styles.tableWrap} ref={tableRef}>
             {total > 0 && (
               <div className={styles.resultsCount}>
-                {total} composant{total > 1 ? 's' : ''}
-                {inStockTotal > 0 && ` · ${inStockTotal} en stock`}
-                {totalPages > 1 && ` · page ${page}/${totalPages}`}
+                <span>
+                  {total} composant{total > 1 ? 's' : ''}
+                  {inStockTotal > 0 && ` · ${inStockTotal} en stock`}
+                  {totalPages > 1 && ` · page ${page}/${totalPages}`}
+                </span>
+                {totalPages > 1 && (
+                  <div className={styles.paginationInline}>
+                    <button className={styles.pageBtn} disabled={page <= 1} onClick={() => changePage(page - 1)}>
+                      <ChevronLeft size={14} />
+                    </button>
+                    {Array.from({ length: totalPages }).map((_, i) => {
+                      const p = i + 1;
+                      if (p === 1 || p === totalPages || (p >= page - 1 && p <= page + 1)) {
+                        return (
+                          <button key={p} className={`${styles.pageNum} ${p === page ? styles.pageNumActive : ''}`} onClick={() => changePage(p)}>
+                            {p}
+                          </button>
+                        );
+                      }
+                      if (p === page - 2 || p === page + 2) return <span key={p} className={styles.pageDots}>…</span>;
+                      return null;
+                    })}
+                    <button className={styles.pageBtn} disabled={page >= totalPages} onClick={() => changePage(page + 1)}>
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             <table className={styles.table}>
@@ -369,7 +402,7 @@ export function CategoryBrowse() {
 
           {totalPages > 1 && (
             <div className={styles.pagination}>
-              <button className={styles.pageBtn} disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
+              <button className={styles.pageBtn} disabled={page <= 1} onClick={() => changePage(page - 1)}>
                 <ChevronLeft size={16} />
               </button>
               {Array.from({ length: totalPages }).map((_, i) => {
@@ -379,7 +412,7 @@ export function CategoryBrowse() {
                     <button
                       key={p}
                       className={`${styles.pageNum} ${p === page ? styles.pageNumActive : ''}`}
-                      onClick={() => setPage(p)}
+                      onClick={() => changePage(p)}
                     >
                       {p}
                     </button>
@@ -388,7 +421,7 @@ export function CategoryBrowse() {
                 if (p === page - 3 || p === page + 3) return <span key={p}>...</span>;
                 return null;
               })}
-              <button className={styles.pageBtn} disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
+              <button className={styles.pageBtn} disabled={page >= totalPages} onClick={() => changePage(page + 1)}>
                 <ChevronRight size={16} />
               </button>
             </div>
