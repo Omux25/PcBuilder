@@ -80,7 +80,7 @@ export function inferCategory(name: string): Category | null {
 
   // Cooling — air coolers & AIOs (generic keywords)
   // Cooling — air coolers & AIOs (generic keywords)
-  if (n.match(/\b(aio|liquid\s*cooler|watercooler|watercooling|refroidissement\s*liquide|liquid\s*freezer|ventirad|refroidissement|aircooler|air\s*cooler|cpu\s*cooler|water\s*cooler|hydro\s*x|h60i|h100i|h115i|h150i|h170i|h100x|h60x|kraken|ryujin|ryuo|galahad|lq\d{3}|light\s*loop|spartacus|lb\d{3}m*|proart\s*lc|mag\s*coreliquid|mpg\s*coreliquid|connect|chione|hydroshift|hydro\s*shift|thicc\s*q\d{2}|ice-?\d{3}|ml-ultra\d{3}|symphony\s*\d{3}|waterforce\s*[x]?\s*\d{3})\b/) &&
+  if (n.match(/\b(aio|liquid\s*cooler|watercooler|watercooling|refroidissement\s*liquide|liquid\s*freezer|ventirad|refroidissement|aircooler|air\s*cooler|cpu\s*cooler|water\s*cooler|hydro\s*x|h60i?|h100i?|h115i?|h150i?|h170i?|h100x|h60x|kraken|ryujin|ryuo|galahad|lq\d{3}|light\s*loop|spartacus|lb\d{3}m*|proart\s*lc|mag\s*coreliquid|mpg\s*coreliquid|connect|chione|hydroshift|hydro\s*shift|thicc\s*q\d{2}|ice-?\d{3}|ml-ultra\d{3}|symphony\s*\d{3}|waterforce\s*[x]?\s*\d{3})\b/) &&
     !n.match(/\b(case|boitier|tower|chassis|boîtier|bracket|mount)\b/)) return 'cooling';
   // Cooling — DeepCool AIO series: LD, LE, LM, LS, LT, LX + HYBROK HL-series (all AIOs)
   if (n.match(/\b(deepcool)\b/) &&
@@ -100,7 +100,7 @@ export function inferCategory(name: string): Category | null {
   // Cases — Phanteks NV/Enthoo/Evolv series
   if (n.match(/\b(nv5|nv7|nv9|enthoo|evolv\s*[x]?)\b/)) return 'case';
   // Cases — named models from many brands
-  if (n.match(/\b(o11|o11d|vision|vector|lancool|dynamic|pano|forge|gungnir|sekira|mag\s*pano|mpg\s*gungnir|mag\s*forge|mag\s*shield|m100a|120a|ap201|ap202|gt301|gt302|gt501|gt502|gr701|helios|hyperion|proart\s*pa\d*|gr701|tuf\s*gaming\s*gt|a21|a31|mc500|mc51|mc61|mca|mcmesh|mcorb|mc\d{2,3}|talos|aura\s*gc|gamdias|c8|c3|c5|c7|df800|cx300|ragnär|nightcity|biohazard|tooq|y40|y60|y70|y70\s*touch|corsair\s*air|montech\s*air|pop\s*(air|mini|silent)|define\s*(7|c|mini|r\d)|meshify\s*(2|c)|torrent|north|ridge|terra|mood|lancool|vision|morpheus|a3\b|cte\b|hummer|cmt\d+|fv150|fv235|mc-ultra|mc-custom|mcultra|light\s*base|qube\s*500|qube\s*540|masterframe|tomahawk\s*atx|tomahawk\s*itx|odyssey\s*x|t350m|465x|icue)\b/) &&
+  if (n.match(/\b(o11|o11d|vision|vector|lancool|dynamic|pano|forge|gungnir|sekira|mag\s*pano|mpg\s*gungnir|mag\s*forge|mag\s*shield|m100a|120a|ap201|ap202|gt301|gt302|gt501|gt502|gr701|helios|hyperion|proart\s*pa\d*|gr701|tuf\s*gaming\s*gt|a21|a31|mc500|mc51|mc61|mca|mcmesh|mcorb|mc\d{2,3}|talos|aura\s*gc|gamdias|c8|c3|c5|c7|df800|cx300|ragnär|nightcity|biohazard|tooq|y40|y60|y70|y70\s*touch|corsair\s*air|montech\s*air|pop\s*(air|mini|silent)|define\s*(7|c|mini|r\d)|meshify\s*(2|c)|torrent|north|ridge|terra|mood|lancool|vision|morpheus|a3\b|cte\b|cmt\d+|fv150|fv235|mc-ultra|mc-custom|mcultra|light\s*base|qube\s*500|qube\s*540|masterframe|tomahawk\s*atx|tomahawk\s*itx|odyssey\s*x|t350m|465x)\b/) &&
     !n.match(/\b(psu|alimentation|motherboard|mb|cpu\s*cooler|ventirad|water\s*cooler|liquid|monitor|mouse|keyboard|fan|halo|wing|light\s*wings)\b/)) return 'case';
   // Cases — Cooler Master (masterbox, mastercase, silencio, haf, td-series, masterfan excluded)
   if (n.match(/\b(masterbox|mastercase|silencio|haf\s*\d+|td\d{3}|cm\s*\d{4}[a-z]*|cmp\d{3}|elite\s*(310|330|340|350|370|430|500))\b/) &&
@@ -182,6 +182,10 @@ export function inferCategory(name: string): Category | null {
   // Also catches A850GLS MLG (no MAG/MPG prefix but same PSU line).
   if (n.match(/\b(mag|mpg)\s+a\d{3,4}[a-z]*/)) return 'psu';
   if (n.match(/\ba850gls\b/)) return 'psu';
+  // Nox Hummer PSUs — "Hummer" is also a case model name but Nox Hummer + wattage = PSU
+  if (n.match(/\b(nox)\b/) && n.match(/\bhummer\b/) && n.match(/\b\d{3,4}w\b/)) return 'psu';
+  // Connect brand PSUs — "Connect PSU 650W", "Connect 850W 80Plus Bronze"
+  if (n.match(/^connect\b/) && (n.match(/\b\d{3,4}w\b/) || n.match(/\bpsu\b/))) return 'psu';
 
   // Fans & Paste
   if (n.match(/\b(kryonaut|conductonaut|hydronaut|aeronaut|duronaut|carbonaut|kryosheet|polartherm|tm30|kryofuze|cryofuze|minus\s*pad|wipes|thermal\s*paste|pâte\s*thermique|pate\s*thermique|thermal\s*compound|thermal\s*grease|mx-[0-9]|mx[0-9])\b/) &&
