@@ -22,7 +22,7 @@
  * while \b word boundaries prevent "rx7900xt" from matching "rx7900xtx".
  */
 
-import { extractBrand } from '@shared/component-utils';
+import { extractBrand, CATEGORY_WORDS } from '@shared/component-utils';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -44,8 +44,18 @@ export interface CatalogComponent {
 /** Lowercase, strip punctuation, collapse whitespace. */
 function normalize(text: string): string {
   if (!text) return '';
-  return text
-    .toLowerCase()
+  let n = text.toLowerCase();
+
+  // Strip category keywords specifically to handle concatenated suffixes like "5600XTProcesseurs"
+  // We use a regex that matches the words in CATEGORY_WORDS
+  for (const word of CATEGORY_WORDS) {
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Match at end of string or before boundary, even if concatenated with letters
+    const regex = new RegExp(`${escaped}\\s*$`, 'gi');
+    n = n.replace(regex, '');
+  }
+
+  return n
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -123,15 +133,18 @@ function extractCpuDna(name: string): string[] {
     if (intelMatch) tokens.push(intelMatch[2].replace(/\s/g, ''));
   }
 
-  // Model number — allow up to 6 alphanumeric chars after digits (e.g. 7950x3d, 13700kf, 285k)
-  const modelMatch = n.match(/\b(\d{3,5}[a-z0-9]{0,4})\b/);
-  if (modelMatch) tokens.push(modelMatch[1].replace(/\s/g, ''));
+  // Model number — allow up to 8 alphanumeric chars after digits (e.g. 7950x3d, 13700kf, 285k, 5600xt)
+  // We use a global match to find all numbers, as products often have specs in name
+  const modelMatches = n.matchAll(/\b(\d{3,5}[a-z0-9]{0,6})\b/g);
+  for (const match of modelMatches) {
+    tokens.push(match[1]);
+  }
 
   // Threadripper / EPYC
   if (n.includes('threadripper')) tokens.push('threadripper');
   if (n.includes('epyc')) tokens.push('epyc');
 
-  return tokens.filter(Boolean);
+  return [...new Set(tokens.filter(Boolean))]; // Dedup
 }
 
 /**

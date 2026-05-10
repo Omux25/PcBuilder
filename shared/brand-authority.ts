@@ -168,17 +168,27 @@ const NAME_BRAND_OVERRIDES: Array<{ pattern: RegExp; brand: string }> = [
 // These should be dismissed — they are pre-built PCs, not individual components.
 
 const CPU_SIGNALS = [
-    /\bryzen\s+[3579]\s+\d{4}/i,
-    /\bcore\s+i[3579]\s*[-\s]\d{4,5}/i,
-    /\bcore\s+ultra\s+[579]\s+\d{3}/i,
+    /\bryzen/i,
+    /\bcore\s+i[3579]/i,
+    /\bcore\s+ultra\s+[579]/i,
     /\bthreadripper\b/i,
+    /\bxeon\b/i,
+    /\bi[3579]-\d/i,
+    /\b[ri][3579]\b/i,
 ];
 
 const GPU_SIGNALS = [
-    /\brtx\s*\d{4}/i,
-    /\bgtx\s*\d{4}/i,
-    /\brx\s*\d{4}/i,
-    /\barc\s*[ab]\d{3}/i,
+    /\brtx/i,
+    /\bgtx/i,
+    /\bradeon/i,
+    /\brx\s*\d/i,
+    /\bquadro\b/i,
+    /\bfirepro\b/i,
+    /\bpro\s*(6|5)000\b/i,
+    /\bvega\b/i,
+    /\biris\b/i,
+    /\buhd\s*graphics\b/i,
+    /\bgt\s*\d{3}/i,
 ];
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -210,11 +220,19 @@ export function validateBrandAuthority(
     const name = productName.trim();
 
     // ── 1. Bundle detection ───────────────────────────────────────────────────
-    // Check if name contains BOTH CPU and GPU signals → it's a pre-built PC bundle
+    // Check if name contains BOTH CPU and GPU signals → it's a pre-built PC bundle.
+    // Also dismiss if explicitly identified as a 'build' by the inference engine.
     const hasCpuSignal = CPU_SIGNALS.some(r => r.test(name));
     const hasGpuSignal = GPU_SIGNALS.some(r => r.test(name));
-    if (hasCpuSignal && hasGpuSignal) {
-        return { brand: inferredBrand, dismiss: true, dismissReason: 'bundle: contains both CPU and GPU signals' };
+    const isWorkstation = /\b(workstation|station\s*de\s*travail|pc\s*professionnel)\b/i.test(name) && hasCpuSignal;
+    if (hasCpuSignal && hasGpuSignal || inferredCategory === 'build' || inferredCategory === 'bundle' || isWorkstation) {
+        return { 
+            brand: inferredBrand, 
+            dismiss: true, 
+            dismissReason: inferredCategory === 'build' ? 'explicit build detection' : 
+                          inferredCategory === 'bundle' ? 'explicit bundle detection' :
+                          (isWorkstation ? 'workstation detection' : 'bundle: contains both CPU and GPU signals') 
+        };
     }
 
     // ── 2. Name-based brand override ─────────────────────────────────────────
@@ -267,5 +285,5 @@ export function validateBrandAuthority(
 export function isBundle(productName: string): boolean {
     const hasCpu = CPU_SIGNALS.some(r => r.test(productName));
     const hasGpu = GPU_SIGNALS.some(r => r.test(productName));
-    return hasCpu && hasGpu;
+    return (hasCpu && hasGpu) || productName.toLowerCase().includes('workstation');
 }
