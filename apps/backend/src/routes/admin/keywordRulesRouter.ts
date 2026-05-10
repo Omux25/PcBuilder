@@ -14,7 +14,6 @@ import { getSql } from '../../db/index.js';
 import { authMiddleware } from '../../middleware/auth.js';
 import { matchesRule, clearRegexCache, type KeywordRule } from '../../services/keywordRulesService.js';
 import { runSuggestionPreprocessing } from '../../services/suggestionPreprocessor.js';
-import { reprocessUnmatched } from '../../../scraper/aggregator.js';
 import { logActivity } from '../../services/adminService.js';
 import type { AdminEnv } from './types.js';
 import { parseId } from './types.js';
@@ -24,15 +23,17 @@ const keywordRulesRouter = new Hono<AdminEnv>();
 keywordRulesRouter.use('/*', authMiddleware);
 
 /**
- * Runs the full auto-processing pipeline after a keyword rule change:
- * 1. Re-compute suggestions (now with the new rule)
- * 2. Run catalogBuilder — auto-creates components for items that now have a category
+ * Runs suggestion preprocessing after a keyword rule change so that
+ * existing unmatched listings get re-scored with the updated rules.
+ *
+ * Does NOT call reprocessUnmatched() — that is a heavy full-pipeline
+ * operation reserved for the manual "Retraiter" button. Suggestion
+ * preprocessing alone is sufficient for rule changes.
  *
  * Fire-and-forget — errors are logged but not surfaced to the caller.
  */
 async function runAutoProcessingPipeline(): Promise<void> {
     try {
-        await reprocessUnmatched();
         await runSuggestionPreprocessing(true); // force=true: new rule must apply to all existing listings
     } catch (err) {
         console.error('[KEYWORD-RULES] Auto-processing pipeline failed:', err);

@@ -216,6 +216,7 @@ export interface CanonicalGroupListing {
   scraped_price: number | null;
   product_url: string;
   scraped_at: string;
+  confidence: 'high' | 'medium' | 'low' | 'unknown';
 }
 
 export interface CanonicalGroup {
@@ -280,6 +281,64 @@ export const createAndLinkComponent = (payload: CreateAndLinkPayload) =>
   request<CreateAndLinkResponse>('/admin/unmatched-listings/create-and-link', {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+
+// ── Unmatched accordion (new category-accordion UI) ───────────────────────────
+
+export interface CategorySummaryEntry {
+  category: string | null;
+  group_count: number;
+  high_confidence_linkable_count: number;
+}
+
+export interface CategorySummaryResponse {
+  categories: CategorySummaryEntry[];
+}
+
+export interface BulkAssociateSuccess {
+  canonical_name: string;
+  linked_count: number;
+  component_id: number;
+}
+
+export interface BulkAssociateFailed {
+  canonical_name: string;
+  error: string;
+}
+
+export interface BulkAssociateResponse {
+  successful: BulkAssociateSuccess[];
+  failed: BulkAssociateFailed[];
+}
+
+export interface ToastState {
+  message: string;
+  type: 'success' | 'error';
+  failures?: Array<{ canonical_name: string; error: string }>;
+}
+
+export interface CategoryState {
+  groups: CanonicalGroup[];
+  offset: number;
+  hasMore: boolean;
+  loading: boolean;
+  error: string | null;
+  expandedGroups: Set<string>;
+}
+
+export const getCategoryUnmatchedSummary = () =>
+  request<CategorySummaryResponse>('/admin/unmatched-listings/by-category');
+
+export const rejectUnmatchedListings = (listingIds: number[]) =>
+  request<{ rejected: number }>('/admin/unmatched-listings/reject', {
+    method: 'POST',
+    body: JSON.stringify({ listing_ids: listingIds }),
+  });
+
+export const bulkAssociateUnmatched = (canonicalNames: string[]) =>
+  request<BulkAssociateResponse>('/admin/unmatched-listings/bulk-associate', {
+    method: 'POST',
+    body: JSON.stringify({ canonical_names: canonicalNames }),
   });
 
 // ── Presets ───────────────────────────────────────────────────────────────────

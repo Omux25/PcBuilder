@@ -1,377 +1,290 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { Link2, X, ChevronLeft, ChevronRight, Search, Layers, List, RefreshCw } from 'lucide-react';
-import {
-  getUnmatchedListings, linkUnmatched, dismissUnmatched, searchComponents, getAdminRetailers,
-  getGroupedUnmatched, bulkDismissUnmatched, reprocessSuggestions, getErrorMessage, updateUnmatchedCategory
+/**
+ * Unmatched — category-accordion view for pending unmatched listings.
+ *
+ * Replaces the old grouped/flat toggle entirely.
+ *
+ * Layout:
+ *   - Global search bar (overrides accordions when active)
+ *   - One CategoryAccordion per category (collapsed by default, lazy-loaded)
+ *   - UnknownSection at the bottom (listings with no suggestion)
+ *
+ * State:
+ *   - categorySummary: lightweight counts from /by-category
+ *   - categoryState: Map<category, CategoryState> — per-category lazy-load cache
+ *   - accordionOpen: Map<category, boolean> — preserved across search override
+ *
+ * Toast: last-write-wins — new toast replaces previous immediately.
+ *
+ * Known limitation: concurrent admin sessions may cause offset drift on "Load More"
+ * if another admin dismisses items between fetches. Acceptable for internal tool.
+ *
+ * Requirements: 1.1–1.6, 5.6–5.8, 6.1–6.5, 8.1, 10.1–10.6, 11.1–11.4
+ */
+
+import { useEffect, useRef, useState } from 'react';
+import { RefreshCw, Search, X } from 'lucide-react';
+import { CategoryAccordion } from '../components/CategoryAccordion';
+import { UnknownSection } from '../components/UnknownSection';
+import { SearchOverrideView } from '../components/SearchOverrideView';
+import type {
+  CategorySummaryEntry,
+  CategoryState,
+  CanonicalGroup,
+  ToastState,
 } from '../api';
-import type { UnmatchedListing, AdminComponent, AdminRetailer, CanonicalGroup } from '../api';
-import { Modal } from '../components/Modal';
-import { ConfirmDialog } from '../components/ConfirmDialog';
-import { ConfidenceBadge } from '../components/ConfidenceBadge';
-import { CreateAndLinkModal } from '../components/CreateAndLinkModal';
-import type { CreateAndLinkResult } from '../components/CreateAndLinkModal';
-import { CATEGORY_ORDER, CATEGORY_LABELS } from '@shared/types';
-import styles from './Unmatched.module.css';
-
-const PAGE_SIZE = 50;
-
-type ViewMode = 'grouped' | 'flat';
+import {
+  getCategoryUnmatchedSummary,
+  bulkAssociateUnmatched,
+  reprocessSuggestions,
+  getErrorMessage,
+} from '../api';
+import { CATEGORY_ORDER } from '@shared/types';
 
 export function Unmatched() {
-  // ── View mode ──────────────────────────────────────────────────────────────
-  const [viewMode, setViewMode] = useState<ViewMode>('grouped');
+  // ── Summary (lightweight initial load) ───────────────────────────────────
+  const [categorySummary, setCategorySummary] = useState<CategorySummaryEntry[]>([]);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
 
-  // ── Flat view state (existing, unchanged) ─────────────────────────────────
-  const [listings, setListings] = useState<UnmatchedListing[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [mutationError, setMutationError] = useState<string | null>(null);
-  const [retailers, setRetailers] = useState<AdminRetailer[]>([]);
-  const [search, setSearch] = useState('');
-  const [retailerFilter, setRetailerFilter] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [linkTarget, setLinkTarget] = useState<UnmatchedListing | null>(null);
-  const [componentSearch, setComponentSearch] = useState('');
-  const [searchResults, setSearchResults] = useState<AdminComponent[]>([]);
+  // ── Per-category lazy-load cache ──────────────────────────────────────────
+  const [categoryState, setCategoryState] = useState<Map<string, CategoryState>>(new Map());
 
-  // ── Grouped view state ─────────────────────────────────────────────────────
-  const [groups, setGroups] = useState<CanonicalGroup[]>([]);
-  const [totalGroups, setTotalGroups] = useState(0);
-  const [totalListings, setTotalListings] = useState(0);
-  const [groupsLoading, setGroupsLoading] = useState(false);
-  const [groupsError, setGroupsError] = useState<string | null>(null);
-  const [groupPage, setGroupPage] = useState(1);
-  const GROUP_PAGE_SIZE = 50;
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
-  const [createLinkTarget, setCreateLinkTarget] = useState<CanonicalGroup | null>(null);
-  const [successToast, setSuccessToast] = useState<string | null>(null);
-  const [confirmDismiss, setConfirmDismiss] = useState(false);
+  // ── Accordion open/closed state (preserved across search) ────────────────
+  const [accordionOpen, setAccordionOpen] = useState<Map<string, boolean>>(new Map());
+
+  // ── Global search ─────────────────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // ── Toast (last-write-wins) ───────────────────────────────────────────────
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const [toastExpanded, setToastExpanded] = useState(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Reprocess ─────────────────────────────────────────────────────────────
   const [reprocessing, setReprocessing] = useState(false);
 
-  const filtersRef = useRef({ page, retailerFilter, categoryFilter, search });
-  filtersRef.current = { page, retailerFilter, categoryFilter, search };
+  // ── Unknown section refresh trigger ──────────────────────────────────────
+  const [unknownRefresh, setUnknownRefresh] = useState(0);
 
-  // ── Flat view load (existing logic, unchanged) ────────────────────────────
-  const load = useCallback((p: number, rid: string, cat: string, s: string) => {
-    setLoading(true);
-    const params: Record<string, string> = {
-      status: 'pending',
-      page: String(p),
-      limit: String(PAGE_SIZE),
-    };
-    if (rid) params.retailer_id = rid;
-    if (cat) params.category = cat;
-    if (s) params.search = s;
-
-    getUnmatchedListings(params)
-      .then((data) => {
-        setListings(data.listings ?? []);
-        setTotal(data.total ?? 0);
-      })
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
+  // ── Load category summary on mount ───────────────────────────────────────
+  useEffect(() => {
+    loadSummary();
   }, []);
 
-  // ── Grouped view load ─────────────────────────────────────────────────────
-  const loadGroups = useCallback((s: string, rid: string, cat: string, gp = 1) => {
-    setGroupsLoading(true);
-    setGroupsError(null);
-    const params: Record<string, string> = { page: String(gp), limit: String(GROUP_PAGE_SIZE) };
-    if (s) params.search = s;
-    if (rid) params.retailer_id = rid;
-    if (cat) params.category = cat;
-
-    getGroupedUnmatched(params)
-      .then((data) => {
-        setGroups(data.groups ?? []);
-        setTotalGroups(data.total_groups ?? 0);
-        setTotalListings(data.total_listings ?? 0);
-      })
-      .catch((e: Error) => setGroupsError(e.message))
-      .finally(() => setGroupsLoading(false));
-  }, []);
-
-  useEffect(() => {
-    getAdminRetailers().then(d => setRetailers(d.retailers ?? []));
-  }, []);
-
-  // Initial load
-  useEffect(() => {
-    load(page, retailerFilter, categoryFilter, search);
-    loadGroups(search, retailerFilter, categoryFilter, 1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    load(page, retailerFilter, categoryFilter, search);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, retailerFilter, categoryFilter]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setPage(1);
-      setGroupPage(1);
-      load(1, filtersRef.current.retailerFilter, filtersRef.current.categoryFilter, search);
-      loadGroups(search, filtersRef.current.retailerFilter, filtersRef.current.categoryFilter, 1);
-    }, 400);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
-
-  useEffect(() => {
-    if (viewMode === 'grouped') {
-      loadGroups(search, retailerFilter, categoryFilter, groupPage);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewMode, retailerFilter, categoryFilter, groupPage]);
-
-  function handleRetailerFilter(rid: string) {
-    setRetailerFilter(rid);
-    setPage(1);
-    setGroupPage(1);
-  }
-
-  function handleSearchSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setGroupPage(1);
-    load(1, retailerFilter, categoryFilter, search);
-    loadGroups(search, retailerFilter, categoryFilter, 1);
-  }
-
-  // ── Flat view handlers (existing, unchanged) ──────────────────────────────
-  async function handleComponentSearch() {
-    if (!componentSearch.trim()) return;
-    setMutationError(null);
+  async function loadSummary() {
+    setSummaryLoading(true);
+    setSummaryError(null);
     try {
-      const data = await searchComponents(componentSearch);
-      setSearchResults(data.components ?? []);
-    } catch (err: unknown) {
-      setMutationError(err instanceof Error ? err.message : 'Erreur lors de la recherche.');
+      const data = await getCategoryUnmatchedSummary();
+      // Sort by CATEGORY_ORDER; null (Unknown) always last
+      const sorted = [...(data.categories ?? [])].sort((a, b) => {
+        if (a.category === null) return 1;
+        if (b.category === null) return -1;
+        const ai = CATEGORY_ORDER.indexOf(a.category as any);
+        const bi = CATEGORY_ORDER.indexOf(b.category as any);
+        return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+      });
+      setCategorySummary(sorted);
+    } catch (err) {
+      setSummaryError(getErrorMessage(err));
+    } finally {
+      setSummaryLoading(false);
     }
   }
 
-  async function handleLink(componentId: number) {
-    if (!linkTarget) return;
-    setMutationError(null);
-    try {
-      await linkUnmatched(linkTarget.id, componentId);
-      setLinkTarget(null);
-      setComponentSearch('');
-      setSearchResults([]);
-      load(page, retailerFilter, categoryFilter, search);
-    } catch (err: unknown) {
-      setMutationError(getErrorMessage(err));
-    }
+  // ── Toast helper (last-write-wins) ────────────────────────────────────────
+  function showToast(t: ToastState) {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast(t);
+    setToastExpanded(false);
+    toastTimerRef.current = setTimeout(() => setToast(null), 8000);
   }
 
-  async function handleDismiss(id: number) {
-    setMutationError(null);
-    try {
-      await dismissUnmatched(id);
-      load(page, retailerFilter, categoryFilter, search);
-    } catch (err: unknown) {
-      setMutationError(getErrorMessage(err));
-    }
-  }
-
-  function closeLinkModal() {
-    setLinkTarget(null);
-    setSearchResults([]);
-    setComponentSearch('');
-  }
-
-  // ── Grouped view handlers ─────────────────────────────────────────────────
-  function toggleGroup(canonicalName: string) {
-    setExpandedGroups(prev => {
-      const next = new Set(prev);
-      if (next.has(canonicalName)) next.delete(canonicalName);
-      else next.add(canonicalName);
+  // ── Per-category state helpers ────────────────────────────────────────────
+  function patchCategoryState(category: string, patch: Partial<CategoryState>) {
+    setCategoryState((prev) => {
+      const next = new Map(prev);
+      const existing = next.get(category) ?? {
+        groups: [],
+        offset: 0,
+        hasMore: false,
+        loading: false,
+        error: null,
+        expandedGroups: new Set<string>(),
+      };
+      next.set(category, { ...existing, ...patch });
       return next;
     });
   }
 
-  function toggleSelectGroup(canonicalName: string) {
-    setSelectedGroups(prev => {
-      const next = new Set(prev);
-      if (next.has(canonicalName)) next.delete(canonicalName);
-      else next.add(canonicalName);
+  function toggleAccordion(category: string) {
+    setAccordionOpen((prev) => {
+      const next = new Map(prev);
+      next.set(category, !prev.get(category));
       return next;
     });
   }
 
-  function toggleSelectAll() {
-    if (selectedGroups.size === groups.length) {
-      setSelectedGroups(new Set());
-    } else {
-      setSelectedGroups(new Set(groups.map(g => g.canonical_name)));
-    }
-  }
-
-  async function handleBulkDismiss() {
-    const ids = groups
-      .filter(g => selectedGroups.has(g.canonical_name))
-      .flatMap(g => g.listings.map(l => l.id));
+  // ── "Associer tout" handler ───────────────────────────────────────────────
+  async function handleAssociateTout(canonicalNames: string[]) {
     try {
-      const result = await bulkDismissUnmatched(ids);
-      setSuccessToast(`${result.dismissed} listing${result.dismissed !== 1 ? 's' : ''} ignoré${result.dismissed !== 1 ? 's' : ''}.`);
-      setSelectedGroups(new Set());
-      setConfirmDismiss(false);
-      loadGroups(search, retailerFilter, categoryFilter, groupPage);
-    } catch (err: unknown) {
-      setGroupsError(getErrorMessage(err));
+      const result = await bulkAssociateUnmatched(canonicalNames);
+      const n = result.successful.length;
+      const m = result.failed.length;
+      showToast({
+        message: `${n} associé${n !== 1 ? 's' : ''} · ${m} erreur${m !== 1 ? 's' : ''}`,
+        type: m > 0 ? 'error' : 'success',
+        failures: m > 0 ? result.failed : undefined,
+      });
+      // Remove successfully linked groups from their category state
+      if (result.successful.length > 0) {
+        const linkedNames = new Set(result.successful.map((s) => s.canonical_name));
+        setCategoryState((prev) => {
+          const next = new Map(prev);
+          for (const [cat, state] of next) {
+            const filtered = state.groups.filter((g) => !linkedNames.has(g.canonical_name));
+            if (filtered.length !== state.groups.length) {
+              next.set(cat, { ...state, groups: filtered });
+            }
+          }
+          return next;
+        });
+        // Refresh summary counts
+        loadSummary();
+      }
+    } catch (err) {
+      showToast({ message: getErrorMessage(err), type: 'error' });
     }
   }
 
+  // ── Group removed (reject or associate) ──────────────────────────────────
+  function handleGroupRemoved(canonicalName: string) {
+    // Remove from all category states (it could be in any)
+    setCategoryState((prev) => {
+      const next = new Map(prev);
+      for (const [cat, state] of next) {
+        const filtered = state.groups.filter((g) => g.canonical_name !== canonicalName);
+        if (filtered.length !== state.groups.length) {
+          next.set(cat, { ...state, groups: filtered });
+        }
+      }
+      return next;
+    });
+  }
 
+  // ── Category assigned from Unknown section ────────────────────────────────
+  function handleCategoryAssigned(listingId: number, category: string) {
+    // Invalidate that category's state so it re-fetches on next open
+    setCategoryState((prev) => {
+      const next = new Map(prev);
+      next.delete(category);
+      return next;
+    });
+    // Also close the accordion so it re-fetches fresh data on next open
+    setAccordionOpen((prev) => {
+      const next = new Map(prev);
+      next.set(category, false);
+      return next;
+    });
+    // Refresh summary
+    loadSummary();
+  }
+
+  // ── Reprocess ─────────────────────────────────────────────────────────────
   async function handleReprocess() {
+    if (reprocessing) return;
     setReprocessing(true);
-    setGroupsError(null);
     try {
       await reprocessSuggestions();
-      setSuccessToast('✓ Recalcul et création automatique lancés. La liste se mettra à jour dans ~15 secondes.');
-      setTimeout(() => setSuccessToast(null), 15000);
+      showToast({ message: '✓ Recalcul lancé. La liste se mettra à jour dans ~15 secondes.', type: 'success' });
       setTimeout(() => {
-        load(page, retailerFilter, categoryFilter, search);
-        loadGroups(search, retailerFilter, categoryFilter, groupPage);
+        loadSummary();
+        setUnknownRefresh((n) => n + 1);
+        // Invalidate all category states to force re-fetch on next open
+        setCategoryState(new Map());
+        setAccordionOpen(new Map());
       }, 15000);
-    } catch (err: unknown) {
-      setGroupsError(getErrorMessage(err));
+    } catch (err) {
+      showToast({ message: getErrorMessage(err), type: 'error' });
     } finally {
       setReprocessing(false);
     }
   }
 
-  async function handleManualCategoryChange(listingId: number, category: string | null) {
-    try {
-      await updateUnmatchedCategory(listingId, category);
-      // Update local state for immediate feedback
-      setListings(prev => prev.map(l => l.id === listingId ? { ...l, manual_category: category } : l));
-      setGroups(prev => prev.map(g => ({
-        ...g,
-        listings: g.listings.map(l => l.id === listingId ? { ...l, manual_category: category } : l)
-      })));
-    } catch (err: unknown) {
-      setMutationError(getErrorMessage(err));
-    }
-  }
+  // ── Render ────────────────────────────────────────────────────────────────
 
-  async function handleGroupManualCategoryChange(group: CanonicalGroup, category: string | null) {
-    try {
-      await Promise.all(group.listings.map(l => updateUnmatchedCategory(l.id, category)));
-      setSuccessToast(`✓ Catégorie mise à jour pour ${group.listings.length} listings.`);
-      loadGroups(search, retailerFilter, categoryFilter, groupPage);
-      load(page, retailerFilter, categoryFilter, search);
-      setTimeout(() => setSuccessToast(null), 5000);
-    } catch (err: unknown) {
-      setGroupsError(getErrorMessage(err));
-    }
-  }
+  // Known categories (non-null) sorted by CATEGORY_ORDER
+  const knownCategories = categorySummary.filter((e) => e.category !== null);
+  // Unknown entry (null category)
+  const unknownEntry = categorySummary.find((e) => e.category === null);
 
-  function handleCreateLinkSuccess(result: CreateAndLinkResult) {
-    setCreateLinkTarget(null);
-    setSuccessToast(`✓ ${result.linked_count} listing${result.linked_count !== 1 ? 's' : ''} associé${result.linked_count !== 1 ? 's' : ''} à "${result.component_name}".`);
-    loadGroups(search, retailerFilter, categoryFilter, groupPage);
-    setTimeout(() => setSuccessToast(null), 5000);
-  }
-
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const totalGroups = categorySummary.reduce((sum, e) => sum + e.group_count, 0);
+  const totalListings = 0; // not tracked at summary level
 
   return (
-    <div className={styles.page}>
-      <div className={styles.header}>
+    <div className="admin-page">
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 className={styles.title}>Produits non associés</h1>
-          <p className={styles.subtitle}>
-            {viewMode === 'grouped'
-              ? `${totalGroups} groupe${totalGroups !== 1 ? 's' : ''} — ${totalListings} listing${totalListings !== 1 ? 's' : ''} en attente.`
-              : `${total} produit${total !== 1 ? 's' : ''} en attente d'association manuelle.`
-            }
+          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>Produits non associés</h1>
+          <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '13px' }}>
+            {summaryLoading
+              ? 'Chargement...'
+              : `${totalGroups} groupe${totalGroups !== 1 ? 's' : ''} en attente`}
           </p>
         </div>
 
-        <div className={styles.filters}>
-          {/* View toggle */}
-          <div style={{ display: 'flex', gap: '4px', background: 'var(--surface-2)', borderRadius: 'var(--radius)', padding: '3px', border: '1px solid var(--border-2)' }}>
-            <button
-              onClick={() => { setViewMode('grouped'); setGroupPage(1); }}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Global search bar */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Search size={14} style={{ position: 'absolute', left: '8px', color: 'var(--text-dim)', pointerEvents: 'none' }} />
+            <input
+              ref={searchRef}
+              type="search"
+              placeholder="Rechercher..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               style={{
-                background: viewMode === 'grouped' ? 'var(--accent)' : 'transparent',
-                color: viewMode === 'grouped' ? '#fff' : 'var(--text-muted)',
-                padding: '5px 12px',
-                fontSize: '12px',
-                borderRadius: 'calc(var(--radius) - 2px)',
-                fontWeight: viewMode === 'grouped' ? 600 : 400
+                paddingLeft: '28px',
+                paddingRight: searchQuery ? '28px' : '8px',
+                paddingTop: '6px',
+                paddingBottom: '6px',
+                fontSize: '13px',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)',
+                background: 'var(--surface-2)',
+                color: 'var(--text)',
+                width: '200px',
               }}
-              title="Vue groupée par IA"
-            >
-              <Layers size={13} /> Groupé
-            </button>
-            <button
-              onClick={() => { setViewMode('flat'); setPage(1); }}
-              style={{
-                background: viewMode === 'flat' ? 'var(--accent)' : 'transparent',
-                color: viewMode === 'flat' ? '#fff' : 'var(--text-muted)',
-                padding: '5px 12px',
-                fontSize: '12px',
-                borderRadius: 'calc(var(--radius) - 2px)',
-                fontWeight: viewMode === 'flat' ? 600 : 400
-              }}
-              title="Liste à plat"
-            >
-              <List size={13} /> Liste
-            </button>
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                style={{ position: 'absolute', right: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={13} />
+              </button>
+            )}
           </div>
 
-          <form onSubmit={handleSearchSubmit} className={styles.searchForm}>
-            <div className={styles.searchInputWrapper}>
-              <Search size={16} className={styles.searchIcon} />
-              <input
-                type="text"
-                placeholder="Rechercher par nom..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className={styles.searchInput}
-              />
-            </div>
-          </form>
-
-          <select
-            value={retailerFilter}
-            onChange={e => handleRetailerFilter(e.target.value)}
-            className={styles.retailerFilter}
-          >
-            <option value="">Tous les revendeurs</option>
-            {retailers.filter(r => r.is_active).map(r => (
-              <option key={r.id} value={String(r.id)}>{r.name}</option>
-            ))}
-          </select>
-
-          <select
-            value={categoryFilter}
-            onChange={e => { setCategoryFilter(e.target.value); setPage(1); setGroupPage(1); }}
-            className={styles.retailerFilter}
-            style={{ width: '170px' }}
-          >
-            <option value="">Toutes catégories</option>
-            <option value="none">⚠️ Inconnu / Non-PC</option>
-            {CATEGORY_ORDER.map(cat => (
-              <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
-            ))}
-          </select>
-
+          {/* Reprocess button */}
           <button
             onClick={handleReprocess}
             disabled={reprocessing}
-            className="btn-primary"
-            title="Recalculer les catégories et créer automatiquement les composants reconnus"
+            title="Recalculer les suggestions et créer automatiquement les composants reconnus"
             style={{
-              display: 'flex', alignItems: 'center', gap: '5px',
-              padding: '6px 12px', fontSize: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '6px 12px',
+              fontSize: '12px',
               cursor: reprocessing ? 'not-allowed' : 'pointer',
               opacity: reprocessing ? 0.6 : 1,
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              color: 'var(--text-muted)',
             }}
           >
             <RefreshCw size={13} style={{ animation: reprocessing ? 'spin 1s linear infinite' : 'none' }} />
@@ -380,407 +293,98 @@ export function Unmatched() {
         </div>
       </div>
 
-      {/* Success toast */}
-      {
-        successToast && (
-          <div style={{
-            background: 'var(--success)',
-            color: '#0f1117',
-            padding: '10px 16px',
-            borderRadius: 'var(--radius)',
-            marginBottom: '12px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: '13px',
-            fontWeight: 500,
-          }}>
-            {successToast}
-            <button onClick={() => setSuccessToast(null)} style={{ background: 'none', color: '#0f1117', padding: '0 4px' }}>
-              <X size={14} />
-            </button>
+      {/* ── Toast (last-write-wins) ──────────────────────────────────────── */}
+      {toast && (
+        <div style={{
+          background: toast.type === 'success' ? 'var(--success)' : 'var(--surface)',
+          color: toast.type === 'success' ? '#0f1117' : 'var(--text)',
+          border: toast.type === 'error' ? '1px solid var(--danger, #e05252)' : 'none',
+          padding: '10px 16px',
+          borderRadius: 'var(--radius)',
+          marginBottom: '12px',
+          fontSize: '13px',
+          fontWeight: 500,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>{toast.message}</span>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {toast.failures && toast.failures.length > 0 && (
+                <button
+                  onClick={() => setToastExpanded((v) => !v)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: 'inherit', textDecoration: 'underline' }}
+                >
+                  {toastExpanded ? 'Masquer' : 'Voir les erreurs'}
+                </button>
+              )}
+              <button
+                onClick={() => setToast(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={14} />
+              </button>
+            </div>
           </div>
-        )
-      }
-
-      {/* ── TOP PAGINATION ── */}
-      <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem' }}>
-        {viewMode === 'grouped' && Math.ceil(totalGroups / GROUP_PAGE_SIZE) > 1 && (
-          <div className="admin-pagination" style={{ margin: 0 }}>
-            <button disabled={groupPage <= 1} onClick={() => setGroupPage(groupPage - 1)} aria-label="Page précédente">
-              <ChevronLeft size={14} />
-            </button>
-            <span>Page {groupPage} / {Math.ceil(totalGroups / GROUP_PAGE_SIZE)}</span>
-            <button disabled={groupPage >= Math.ceil(totalGroups / GROUP_PAGE_SIZE)} onClick={() => setGroupPage(groupPage + 1)} aria-label="Page suivante">
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        )}
-        {viewMode === 'flat' && totalPages > 1 && (
-          <div className="admin-pagination" style={{ margin: 0 }}>
-            <button disabled={page <= 1} onClick={() => setPage(page - 1)} aria-label="Page précédente">
-              <ChevronLeft size={14} />
-            </button>
-            <span>Page {page} / {totalPages}</span>
-            <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} aria-label="Page suivante">
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {error && <p className="admin-error">{error}</p>}
-      {mutationError && <p className="admin-error">{mutationError}</p>}
-      {groupsError && <p className="admin-error">{groupsError}</p>}
-
-      {/* ── GROUPED VIEW ── */}
-      {
-        viewMode === 'grouped' && (
-          <>
-            {/* Bulk action bar */}
-            {selectedGroups.size > 0 && (
-              <div style={{
-                display: 'flex',
-                gap: '8px',
-                alignItems: 'center',
-                padding: '8px 12px',
-                background: 'var(--surface-2)',
-                borderRadius: 'var(--radius)',
-                marginBottom: '12px',
-                flexWrap: 'wrap',
-              }}>
-                {selectedGroups.size > 0 && (
-                  <button
-                    onClick={() => setConfirmDismiss(true)}
-                    style={{ background: 'var(--danger)', color: '#fff', padding: '6px 12px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                  >
-                    <X size={13} /> Ignorer {selectedGroups.size} groupe{selectedGroups.size !== 1 ? 's' : ''}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {groupsLoading ? (
-              <p className="admin-loading">Chargement...</p>
-            ) : groups.length === 0 ? (
-              <p className="admin-empty">Aucun listing en attente{retailerFilter ? ' pour ce revendeur' : ''}.</p>
-            ) : (
-              <table>
-                <thead>
-                  <tr>
-                    <th style={{ width: '32px' }}>
-                      <input
-                        type="checkbox"
-                        checked={selectedGroups.size === groups.length && groups.length > 0}
-                        onChange={toggleSelectAll}
-                        aria-label="Tout sélectionner"
-                        style={{ cursor: 'pointer' }}
-                      />
-                    </th>
-                    <th>Nom canonique</th>
-                    <th>Catégorie</th>
-                    <th>Revendeurs</th>
-                    <th>Prix</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {groups.map((group) => (
-                    <>
-                      <tr
-                        key={group.canonical_name}
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => toggleGroup(group.canonical_name)}
-                      >
-                        <td onClick={e => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={selectedGroups.has(group.canonical_name)}
-                            onChange={() => toggleSelectGroup(group.canonical_name)}
-                            aria-label={`Sélectionner ${group.canonical_name}`}
-                            style={{ cursor: 'pointer' }}
-                          />
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
-                              {expandedGroups.has(group.canonical_name) ? '▼' : '▶'}
-                            </span>
-                            <strong>{group.canonical_name}</strong>
-                            {group.brand && <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{group.brand}</span>}
-                            <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>
-                              ({group.listing_count})
-                            </span>
-                          </div>
-                        </td>
-                        <td onClick={e => e.stopPropagation()}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <ConfidenceBadge
-                              confidence={group.confidence as 'high' | 'medium' | 'low' | 'unknown'}
-                              category={group.category}
-                            />
-                            <select
-                              value={group.category || ''}
-                              onChange={(e) => handleGroupManualCategoryChange(group, e.target.value || null)}
-                              className={styles.rowSelect}
-                              style={{ padding: '2px 4px', fontSize: '11px', height: '24px', width: '120px' }}
-                            >
-                              <option value="">Modifier...</option>
-                              {CATEGORY_ORDER.map(cat => (
-                                <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
-                              ))}
-                            </select>
-                          </div>
-                        </td>
-                        <td>{group.retailer_count}</td>
-                        <td>
-                          {group.price_min !== null && group.price_max !== null
-                            ? group.price_min === group.price_max
-                              ? `${group.price_min.toLocaleString('fr-MA')} MAD`
-                              : `${group.price_min.toLocaleString('fr-MA')} – ${group.price_max.toLocaleString('fr-MA')} MAD`
-                            : '—'}
-                        </td>
-                        <td onClick={e => e.stopPropagation()}>
-                          <div className={styles.actions}>
-                            <button
-                              className={styles.linkBtn}
-                              onClick={() => setCreateLinkTarget(group)}
-                              title={group.existing_component_id ? 'Associer à l\'existant' : 'Créer et associer'}
-                              aria-label={`Associer ${group.canonical_name}`}
-                            >
-                              <Link2 size={15} />
-                              {group.existing_component_id ? 'Associer' : 'Créer'}
-                            </button>
-                            <button
-                              className={styles.dismissBtn}
-                              onClick={() => {
-                                setSelectedGroups(new Set([group.canonical_name]));
-                                setConfirmDismiss(true);
-                              }}
-                              title="Ignorer"
-                              aria-label={`Ignorer ${group.canonical_name}`}
-                            >
-                              <X size={15} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-
-                      {/* Expanded: individual listings */}
-                      {expandedGroups.has(group.canonical_name) && group.listings.map(listing => (
-                        <tr key={listing.id} style={{ background: 'var(--surface-2)', fontSize: '13px' }}>
-                          <td />
-                          <td style={{ paddingLeft: '32px' }}>
-                            <a
-                              href={listing.product_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={styles.productLink}
-                            >
-                              {listing.scraped_name}
-                            </a>
-                          </td>
-                          <td style={{ color: 'var(--text-muted)' }}>{listing.retailer_name}</td>
-                          <td>{listing.scraped_price ? `${Number(listing.scraped_price).toLocaleString('fr-MA')} MAD` : '—'}</td>
-                          <td>
-                            <select
-                              value={(listing as any).manual_category || ''}
-                              onChange={(e) => handleManualCategoryChange(listing.id, e.target.value || null)}
-                              className={styles.rowSelect}
-                              style={{ padding: '2px 4px', fontSize: '11px', height: '22px' }}
-                            >
-                              <option value="">Aucune</option>
-                              {CATEGORY_ORDER.map(cat => (
-                                <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className={styles.date}>{new Date(listing.scraped_at).toLocaleDateString('fr-MA')}</td>
-                          <td />
-                        </tr>
-                      ))}
-                    </>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </>
-        )
-      }
-
-      {/* ── GROUPED VIEW PAGINATION (BOTTOM) ── */}
-      {viewMode === 'grouped' && Math.ceil(totalGroups / GROUP_PAGE_SIZE) > 1 && (
-        <div className="admin-pagination">
-          <button disabled={groupPage <= 1} onClick={() => setGroupPage(groupPage - 1)} aria-label="Page précédente">
-            <ChevronLeft size={14} />
-          </button>
-          <span>{groupPage} / {Math.ceil(totalGroups / GROUP_PAGE_SIZE)} ({totalGroups} groupes)</span>
-          <button disabled={groupPage >= Math.ceil(totalGroups / GROUP_PAGE_SIZE)} onClick={() => setGroupPage(groupPage + 1)} aria-label="Page suivante">
-            <ChevronRight size={14} />
-          </button>
+          {toastExpanded && toast.failures && (
+            <ul style={{ margin: '8px 0 0', paddingLeft: '16px', fontSize: '12px' }}>
+              {toast.failures.map((f) => (
+                <li key={f.canonical_name}>
+                  <strong>{f.canonical_name}</strong>: {f.error}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
-      {/* ── FLAT VIEW (existing, unchanged) ── */}
-      {
-        viewMode === 'flat' && (
-          <>
-            {loading ? <p className="admin-loading">Chargement...</p> : (
-              listings.length === 0 ? (
-                <p className="admin-empty">Aucun listing en attente{retailerFilter ? ' pour ce revendeur' : ''}.</p>
-              ) : (
-                <>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Revendeur</th>
-                        <th>Nom scrappé</th>
-                        <th>Prix</th>
-                        <th style={{ width: '140px' }}>Catégorie</th>
-                        <th>Date</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {listings.map((l) => (
-                        <tr key={l.id}>
-                          <td>{l.retailer_name}</td>
-                          <td>
-                            <a href={l.product_url} target="_blank" rel="noopener noreferrer" className={styles.productLink}>
-                              {l.scraped_name}
-                            </a>
-                          </td>
-                          <td>{l.scraped_price ? `${Number(l.scraped_price).toLocaleString('fr-MA')} MAD` : '—'}</td>
-                          <td>
-                            <select
-                              value={l.manual_category || ''}
-                              onChange={(e) => handleManualCategoryChange(l.id, e.target.value || null)}
-                              className={styles.rowSelect}
-                              style={{ padding: '4px 8px', fontSize: '12px', height: '30px', width: '100%' }}
-                            >
-                              <option value="">Auto-détecter</option>
-                              {CATEGORY_ORDER.map(cat => (
-                                <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className={styles.date}>{new Date(l.scraped_at).toLocaleDateString('fr-MA')}</td>
-                          <td>
-                            <div className={styles.actions}>
-                              <button
-                                className={styles.linkBtn}
-                                onClick={() => setLinkTarget(l)}
-                                title="Associer"
-                                aria-label={`Associer ${l.scraped_name}`}
-                              >
-                                <Link2 size={15} /> Associer
-                              </button>
-                              <button
-                                className={styles.dismissBtn}
-                                onClick={() => handleDismiss(l.id)}
-                                title="Ignorer"
-                                aria-label={`Ignorer ${l.scraped_name}`}
-                              >
-                                <X size={15} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+      {/* ── Error banner ────────────────────────────────────────────────── */}
+      {summaryError && (
+        <p className="admin-error">{summaryError}</p>
+      )}
 
-                  {totalPages > 1 && (
-                    <div className="admin-pagination">
-                      <button disabled={page <= 1} onClick={() => setPage(page - 1)} aria-label="Page précédente">
-                        <ChevronLeft size={14} />
-                      </button>
-                      <span>{page} / {totalPages} ({total} total)</span>
-                      <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} aria-label="Page suivante">
-                        <ChevronRight size={14} />
-                      </button>
-                    </div>
-                  )}
-                </>
-              )
-            )}
-          </>
-        )
-      }
+      {/* ── Search override ──────────────────────────────────────────────── */}
+      {searchQuery ? (
+        <SearchOverrideView
+          query={searchQuery}
+          onGroupRemoved={(canonicalName, category) => {
+            handleGroupRemoved(canonicalName);
+          }}
+          onToast={showToast}
+        />
+      ) : summaryLoading ? (
+        <p className="admin-loading">Chargement...</p>
+      ) : categorySummary.length === 0 ? (
+        /* ── Empty state ──────────────────────────────────────────────── */
+        <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: '48px', marginBottom: '12px' }}>🎉</div>
+          <p style={{ fontSize: '16px', fontWeight: 600, margin: '0 0 8px' }}>Tout est à jour</p>
+          <p style={{ fontSize: '13px', margin: 0 }}>Aucun produit en attente d'association.</p>
+        </div>
+      ) : (
+        /* ── Accordion layout ─────────────────────────────────────────── */
+        <>
+          {knownCategories.map((entry) => (
+            <CategoryAccordion
+              key={entry.category!}
+              category={entry.category!}
+              summary={entry}
+              state={categoryState.get(entry.category!)}
+              isOpen={accordionOpen.get(entry.category!) ?? false}
+              onToggle={() => toggleAccordion(entry.category!)}
+              onStateChange={(patch) => patchCategoryState(entry.category!, patch)}
+              onAssociateTout={handleAssociateTout}
+              onGroupRemoved={handleGroupRemoved}
+              onToast={showToast}
+            />
+          ))}
 
-      {/* ── Flat view link modal (existing, unchanged) ── */}
-      <Modal
-        title="Associer à un composant"
-        isOpen={linkTarget !== null}
-        onClose={closeLinkModal}
-      >
-        {linkTarget && (
-          <div className={styles.linkModalBody}>
-            <p className={styles.targetName}>{linkTarget.scraped_name}</p>
-            <p className={styles.targetUrl}>
-              <a href={linkTarget.product_url} target="_blank" rel="noopener noreferrer">
-                {linkTarget.product_url}
-              </a>
-            </p>
-            <div className={styles.searchRow}>
-              <input
-                type="text"
-                placeholder="Rechercher un composant..."
-                value={componentSearch}
-                onChange={(e) => setComponentSearch(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleComponentSearch()}
-                autoFocus
-              />
-              <button className={styles.searchBtn} onClick={handleComponentSearch}>
-                Rechercher
-              </button>
-            </div>
-            {searchResults.length > 0 && (
-              <ul className={styles.resultList}>
-                {searchResults.map((c) => (
-                  <li
-                    key={c.id}
-                    className={styles.resultItem}
-                    onClick={() => handleLink(c.id)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && handleLink(c.id)}
-                  >
-                    <span className={styles.resultName}>{c.brand ? `${c.brand} ` : ''}{c.name}</span>
-                    <span className="badge badge-accent">{c.category}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {searchResults.length === 0 && componentSearch && (
-              <p className="admin-empty">Aucun résultat pour "{componentSearch}".</p>
-            )}
-          </div>
-        )}
-      </Modal>
-
-      {/* ── Grouped view: Create & Link modal ── */}
-      <CreateAndLinkModal
-        group={createLinkTarget}
-        isOpen={createLinkTarget !== null}
-        onClose={() => setCreateLinkTarget(null)}
-        onSuccess={handleCreateLinkSuccess}
-      />
-
-      {/* ── Confirm bulk dismiss ── */}
-      {
-        confirmDismiss && (
-          <ConfirmDialog
-            title="Ignorer les listings"
-            message={`Ignorer ${selectedGroups.size} groupe${selectedGroups.size !== 1 ? 's' : ''} (${groups.filter(g => selectedGroups.has(g.canonical_name)).reduce((s, g) => s + g.listing_count, 0)} listings) ?`}
-            confirmLabel="Ignorer"
-            danger
-            onConfirm={handleBulkDismiss}
-            onCancel={() => setConfirmDismiss(false)}
+          {/* Unknown section always at bottom */}
+          <UnknownSection
+            onCategoryAssigned={handleCategoryAssigned}
+            onToast={showToast}
+            refreshTrigger={unknownRefresh}
           />
-        )
-      }
-
-    </div >
+        </>
+      )}
+    </div>
   );
 }
