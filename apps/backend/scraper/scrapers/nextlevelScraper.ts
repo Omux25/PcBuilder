@@ -1,176 +1,187 @@
 /**
  * NextLevel PC Scraper — scrapes PC component prices from nextlevelpc.ma
  *
- * Strategy (based on HTML inspection):
- * - JSON-LD ItemList provides product names and URLs (20 per page)
- * - span.price provides prices in order matching the JSON-LD list
- * - Stock status: badge text ".badge-name-text" — "EN STOCK" = in stock
+ * nextlevelpc.ma is a PrestaShop store. The HTML category pages are slow
+ * (multiple pages, 200ms delays between each). The PrestaShop AJAX endpoint
+ * returns all products in a single JSON response:
  *
- * Pagination: ?page=N (confirmed working, /page/N returns 404)
+ *   GET /<category-slug>?ajax=1&action=updateProductList&resultsPerPage=1000
  *
- * Race condition fix: the old code stored total pages in an instance variable
- * (lastTotalPages) which was overwritten by parallel category scrapes.
- * Now scrapeCategory() calls fetchAndParse() once for page 1, extracts both
- * products AND total pages from the same Cheerio object — no shared state.
+ * Response fields used:
+ *   products[].name          — product name
+ *   products[].price_amount  — price in MAD (already numeric)
+ *   products[].url           — product URL
+ *   products[].add_to_cart_url — absent for OOS products
+ *   products[].cover.bySize.large_default.url — product image
+ *   pagination.pages_count   — always 1 with resultsPerPage=1000
+ *
+ * TTFB: ~5-9s per category (vs ~200ms × N pages with HTML scraping).
+ * All 8 categories run in parallel → total ~10s instead of ~2min.
  *
  * Requirements: 6.1, 6.2, 6.3
  */
 
-import { BaseScraper, type ScrapedPrice, getRetryDelay } from './baseScraper.js';
-import type { CheerioAPI } from 'cheerio';
+import { fetch } from 'undici';
+import type { ScrapedPrice } from './baseScraper.js';
+import { getRetryDelay } from './baseScraper.js';
 
 const SITE_NAME = 'nextlevelpc.ma';
+const BASE_URL = 'https://nextlevelpc.ma';
 
-const CATEGORY_URLS: string[] = [
-  'https://nextlevelpc.ma/165-processeur',
-  'https://nextlevelpc.ma/144-carte-graphique-video-gpu',
-  'https://nextlevelpc.ma/169-carte-mere',
-  'https://nextlevelpc.ma/181-memoire-ram',
-  'https://nextlevelpc.ma/250-disques-durs',
-  'https://nextlevelpc.ma/179-alimentation-pc-psu',
-  'https://nextlevelpc.ma/253-boitier-gamer',
-  'https://nextlevelpc.ma/269-cpu-cooler',
+const CATEGORY_PATHS: string[] = [
+  '165-processeur',
+  '144-carte-graphique-video-gpu',
+  '169-carte-mere',
+  '181-memoire-ram',
+  '250-disques-durs',
+  '179-alimentation-pc-psu',
+  '253-boitier-gamer',
+  '269-cpu-cooler',
 ];
 
-export class NextLevelScraper extends BaseScraper {
-  private _retailerId: number = 0;
+const HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
+  'Accept': 'application/json, text/javascript, */*; q=0.01',
+  'Accept-Language': 'fr-MA,fr;q=0.8,en-US;q=0.5,en;q=0.3',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'X-Requested-With': 'XMLHttpRequest',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'Connection': 'keep-alive',
+};
 
-  constructor() {
-    super(SITE_NAME);
-  }
+interface PsProduct {
+  id_product: number;
+  name: string;
+  price_amount: number;
+  add_to_cart_url?: string;
+  url: string;
+  cover?: {
+    bySize?: {
+      large_default?: { url: string };
+      home_default?: { url: string };
+    };
+  };
+}
+
+interface PsResponse {
+  products: PsProduct[];
+  pagination: { pages_count: number; current_page: number; total_items: number };
+}
+
+// ── Dependency injection ──────────────────────────────────────────────────────
+
+type FetchFn = (url: string, init?: any) => Promise<{ ok: boolean; status: number; text: () => Promise<string> }>;
+let _fetch: FetchFn = fetch as unknown as FetchFn;
+
+export function setNextLevelFetch(mockFetch: FetchFn): void {
+  _fetch = mockFetch;
+}
+
+export function resetNextLevelFetch(): void {
+  _fetch = fetch as unknown as FetchFn;
+}
+
+// ── Scraper ───────────────────────────────────────────────────────────────────
+
+export class NextLevelScraper {
+  private retailerId: number = 0;
+  private seenIds = new Set<number>();
 
   async scrapeAllCategories(retailer_id: number): Promise<ScrapedPrice[]> {
-    this._retailerId = retailer_id;
+    this.retailerId = retailer_id;
+    this.seenIds.clear();
 
-    // Scrape categories sequentially to avoid triggering rate limiting (503s).
-    // Parallel scraping hammers the server and gets blocked on later pages.
+    // Parallel — each category is a single AJAX request (~5-9s TTFB).
+    // NextLevel handles concurrent requests fine (no aggressive rate limiting).
+    const results = await Promise.allSettled(
+      CATEGORY_PATHS.map(path => this.scrapeCategory(path))
+    );
+
     const allPrices: ScrapedPrice[] = [];
-    for (const url of CATEGORY_URLS) {
-      try {
-        const prices = await this.scrapeCategory(url, retailer_id);
-        allPrices.push(...prices);
-      } catch (err) {
-        console.error(`[${SITE_NAME}] Category failed: ${err}`);
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        allPrices.push(...result.value);
+      } else {
+        console.error(`[${SITE_NAME}] Category failed: ${result.reason}`);
       }
-      // Balanced pause between categories - 500ms to avoid 503 errors
-      const categoryDelay = getRetryDelay(500);
-      if (categoryDelay > 0) await new Promise(resolve => setTimeout(resolve, categoryDelay));
     }
     return allPrices;
   }
 
-  private async scrapeCategory(baseUrl: string, retailer_id: number): Promise<ScrapedPrice[]> {
-    const allPrices: ScrapedPrice[] = [];
-    let page = 1;
-    let totalPages = 1;
-
-    do {
-      const url = page === 1 ? baseUrl : `${baseUrl}?page=${page}`;
-      try {
-        const $ = await this.fetchAndParse(url);
-        const pagePrices = this.extractPrices($);
-        if (pagePrices.length === 0) break;
-
-        allPrices.push(...pagePrices);
-
-        if (page === 1) {
-          totalPages = this.parseTotalPages($);
-        }
-
-        page++;
-
-        // Balanced delay between pages - 200ms to avoid 503 errors
-        if (page <= totalPages) {
-          const pageDelay = getRetryDelay(200);
-          if (pageDelay > 0) await new Promise(resolve => setTimeout(resolve, pageDelay));
-        }
-      } catch (err) {
-        console.error(`[${SITE_NAME}] Failed to fetch page ${page} of ${baseUrl}: ${err}`);
-        break;
-      }
-    } while (page <= totalPages);
-
-    return allPrices;
-  }
-
-  /**
-   * Extracts the total number of pages from pagination links.
-   * Returns 1 if no pagination is found (single-page category).
-   */
-  private parseTotalPages($: CheerioAPI): number {
-    const pageNums: number[] = [];
-    $('a[href*="page="]').each((_i, el) => {
-      const href = $(el).attr('href') ?? '';
-      const m = href.match(/[?&]page=(\d+)/);
-      if (m) pageNums.push(parseInt(m[1]));
-    });
-    return pageNums.length > 0 ? Math.max(...pageNums) : 1;
-  }
-
-  protected extractPrices($: CheerioAPI): ScrapedPrice[] {
+  private async scrapeCategory(path: string): Promise<ScrapedPrice[]> {
     const prices: ScrapedPrice[] = [];
+    let page = 1;
 
-    // Strategy: extract price, URL, name, and stock directly from each product card.
-    // This is more reliable than pairing JSON-LD products with span.price by index,
-    // because bundle products (containing "+") appear in the card list but are skipped
-    // in JSON-LD, causing index drift and wrong price assignments.
-    $('article.product-miniature').each((_i, card) => {
-      const url = $(card).find('a[itemprop="url"], a.product-thumbnail').first().attr('href') ?? '';
-      if (!url) return;
+    while (true) {
+      const url = `${BASE_URL}/${path}?ajax=1&action=updateProductList&resultsPerPage=1000${page > 1 ? `&page=${page}` : ''}`;
+      const data = await this.fetchPage(url, path);
 
-      // Product name — from itemprop or title element
-      const name = $(card).find('[itemprop="name"]').first().text().trim() ||
-        $(card).find('.product-title a').first().text().trim() ||
-        $(card).find('h2 a, h3 a').first().text().trim();
+      if (!data.products?.length) break;
 
-      // Skip bundle products (contain "+")
-      if (name.includes('+')) return;
+      for (const p of data.products) {
+        if (this.seenIds.has(p.id_product)) continue;
+        this.seenIds.add(p.id_product);
 
-      // Price — first span.price inside this card
-      const rawPrice = $(card).find('span.price').first().text().trim();
-      if (!rawPrice) return;
+        if (!p.price_amount || p.price_amount <= 0) continue;
 
-      const price = parseFloat(
-        rawPrice
-          .replace(/\s/g, '')
-          .replace(/[^\d,]/g, '')
-          .replace(',', '.')
-      );
-      if (isNaN(price) || price <= 0) return;
+        // Skip bundles
+        if (p.name.includes('+')) continue;
 
-      // Stock status from badge
-      const badgeText = $(card).find('.badge-name-text').first().text().trim().toUpperCase();
-      const in_stock = badgeText === 'EN STOCK';
+        const in_stock = !!p.add_to_cart_url;
 
-      // Product description — extract spec features from the hidden specs block
-      // (.product-features li contains lines like "Quantité mémoire : 8GB GDDR6")
-      // Used as fallback for variant extraction when VRAM isn't in the product name.
-      const featureLines = $(card).find('.product-features li')
-        .map((_j, li) => $(li).text().trim())
-        .get()
-        .filter(Boolean);
-      const product_description = featureLines.length > 0 ? featureLines.join(' | ') : undefined;
+        const image_url =
+          p.cover?.bySize?.large_default?.url ??
+          p.cover?.bySize?.home_default?.url ??
+          undefined;
 
-      // Extract product image URL from the thumbnail
-      // Upgrade NextLevel image size: home_default (250px) → large_default (800px)
-      const rawImageUrl = $(card).find('img[itemprop="image"], img.product-thumbnail, .product-thumbnail img')
-        .first()
-        .attr('src') || undefined;
-      const image_url = rawImageUrl
-        ? rawImageUrl.replace(/-home_default\//, '-large_default/')
-        : undefined;
+        prices.push({
+          retailer_id: this.retailerId,
+          price: p.price_amount,
+          in_stock,
+          product_url: p.url,
+          product_name: p.name,
+          image_url,
+        });
+      }
 
-      prices.push({
-        retailer_id: this._retailerId,
-        price,
-        in_stock,
-        product_url: url,
-        product_name: name,
-        product_description,
-        image_url,
-      });
-    });
+      const totalPages = data.pagination?.pages_count ?? 1;
+      if (page >= totalPages) break;
+      page++;
+
+      const delay = getRetryDelay(200);
+      if (delay > 0) await new Promise(r => setTimeout(r, delay));
+    }
 
     return prices;
+  }
+
+  private async fetchPage(url: string, refererPath: string): Promise<PsResponse> {
+    const MAX_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+      try {
+        const res = await _fetch(url, {
+          signal: controller.signal,
+          headers: {
+            ...HEADERS,
+            'Referer': `${BASE_URL}/${refererPath}`,
+          },
+        });
+        clearTimeout(timeout);
+        if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
+        const text = await res.text();
+        return JSON.parse(text) as PsResponse;
+      } catch (err) {
+        clearTimeout(timeout);
+        const isHttp = err instanceof Error && err.message.startsWith('HTTP ');
+        if (isHttp || attempt === MAX_RETRIES) throw err;
+        const delay = getRetryDelay(Math.pow(2, attempt) * 1000);
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+    throw new Error('Unreachable');
   }
 }

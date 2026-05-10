@@ -9,6 +9,7 @@ import { setFetch, resetFetchAndLoad, setRetryDelay, setSilent } from '../scrape
 import { setUltraPcFetch, resetUltraPcFetch } from '../scrapers/ultrapcScraper.js';
 import { setSetupGameFetch, resetSetupGameFetch } from '../scrapers/setupgameScraper.js';
 import { setPcGamerCasaFetch, resetPcGamerCasaFetch } from '../scrapers/pcgamercasaScraper.js';
+import { setNextLevelFetch, resetNextLevelFetch } from '../scrapers/nextlevelScraper.js';
 
 // ── Captured state ────────────────────────────────────────────────────────────
 
@@ -97,6 +98,11 @@ beforeEach(() => {
   });
   setFetch(makeEmptyPageFetch());
   setUltraPcFetch(makeEmptyUltraPcFetch());
+  setNextLevelFetch((_url: string) => Promise.resolve({
+    ok: true,
+    status: 200,
+    text: () => Promise.resolve(JSON.stringify({ products: [], pagination: { pages_count: 1, current_page: 1, total_items: 0 } })),
+  }));
   setSetupGameFetch((_url: string) => Promise.resolve({
     ok: true,
     status: 200,
@@ -118,6 +124,7 @@ afterAll(() => {
   resetSessionSql();
   resetFetchAndLoad();
   resetUltraPcFetch();
+  resetNextLevelFetch();
   resetSetupGameFetch();
   resetPcGamerCasaFetch();
 });
