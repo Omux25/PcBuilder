@@ -40,7 +40,11 @@ unmatchedSuggestionsRouter.get('/grouped', async (c) => {
     const category = c.req.query('category')?.trim() ?? '';
     const page = Math.max(1, Number(c.req.query('page') ?? 1) || 1);
     const limit = Math.min(100, Math.max(1, Number(c.req.query('limit') ?? 50) || 50));
-    const offset = (page - 1) * limit;
+    // offset param takes precedence over page when provided (used by accordion Load More)
+    const offsetParam = c.req.query('offset');
+    const offset = offsetParam !== undefined
+        ? Math.max(0, Number(offsetParam) || 0)
+        : (page - 1) * limit;
 
     // Fetch all pending listings with their suggestion data (left join)
     const rows = (await sql`
@@ -162,6 +166,7 @@ unmatchedSuggestionsRouter.get('/grouped', async (c) => {
             scraped_price: l.scraped_price ? Number(l.scraped_price) : null,
             product_url: l.product_url,
             scraped_at: l.scraped_at,
+            confidence: l.confidence,
         })),
     }));
 

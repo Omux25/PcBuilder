@@ -23,6 +23,7 @@ import { adminRetailersRouter } from './routes/admin/retailers.js';
 import { adminScrapersRouter } from './routes/admin/scrapers.js';
 import { adminUnmatchedRouter } from './routes/admin/unmatched.js';
 import { unmatchedSuggestionsRouter } from './routes/admin/unmatchedSuggestions.js';
+import { unmatchedAccordionRouter } from './routes/admin/unmatchedAccordion.js';
 import { adminPresetsRouter } from './routes/admin/presets.js';
 import { scraperUrlsRouter } from './routes/admin/scraperUrls.js';
 import { keywordRulesRouter } from './routes/admin/keywordRulesRouter.js';
@@ -85,6 +86,8 @@ app.route('/api/admin/scrapers', scraperUrlsRouter);
 app.route('/api/admin/unmatched-listings', adminUnmatchedRouter);
 // unmatchedSuggestionsRouter adds /grouped, /reprocess, /bulk-* — no conflict with adminUnmatchedRouter
 app.route('/api/admin/unmatched-listings', unmatchedSuggestionsRouter);
+// unmatchedAccordionRouter adds /by-category, /reject, /bulk-associate — no conflict with above
+app.route('/api/admin/unmatched-listings', unmatchedAccordionRouter);
 app.route('/api/admin/presets', adminPresetsRouter);
 app.route('/api/admin/keyword-rules', keywordRulesRouter);
 
