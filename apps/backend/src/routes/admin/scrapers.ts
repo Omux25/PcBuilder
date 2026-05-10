@@ -69,10 +69,9 @@ adminScrapersRouter.post('/:retailerId/run', async (c) => {
     return c.json({ error: { code: 'VALIDATION_ERROR', message: 'retailerId must be a positive integer' } }, 400);
   }
 
-  // Block targeted scrape if a full session is already running
-  if (fullSessionRunning) {
-    return c.json({ error: { code: 'CONFLICT', message: 'A full scraping session is already running' } }, 409);
-  }
+  // Note: we intentionally allow targeted scrapes to run alongside a full session.
+  // The full session already tracks per-retailer state via runningJobs.
+  // Only block if this specific retailer is already running.
 
   try {
     await getRetailerById(retailerId);

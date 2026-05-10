@@ -152,7 +152,7 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
   }
 
   const allPrices: ScrapedPrice[] = [];
-  const queue = new PQueue({ concurrency: 2 });
+  const queue = new PQueue({ concurrency: 4 }); // one slot per retailer — all run in parallel
 
   const scrapersToRun = targetRetailerId
     ? resolvedScrapers.filter(s => s.retailer_id === targetRetailerId)

@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Play, PlayCircle, RefreshCw, Download, Trash2 } from 'lucide-react';
 import {
   getAdminRetailers, getAdminLogs, runScraper, runAllScrapers,
-  getScraperStatus, updateAdminRetailer, clearAdminLogs, getErrorMessage} from '../api';
+  getScraperStatus, updateAdminRetailer, clearAdminLogs, getErrorMessage
+} from '../api';
 import type { AdminRetailer } from '../api';
 import type { LogEntry } from '@shared/types';
 import styles from './Scrapers.module.css';
@@ -55,6 +56,7 @@ export function Scrapers() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [runningJobs, setRunningJobs] = useState<Set<number>>(new Set());
   const [logLevel, setLogLevel] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
@@ -82,6 +84,7 @@ export function Scrapers() {
     try {
       const status = await getScraperStatus();
       setRunning(status.running);
+      setRunningJobs(new Set(status.running_jobs ?? []));
       return status.running;
     } catch {
       return false;
@@ -129,6 +132,7 @@ export function Scrapers() {
   async function handleRunOne(retailerId: number) {
     setMutationError(null);
     setRunning(true);
+    setRunningJobs(prev => new Set([...prev, retailerId]));
     try {
       await runScraper(retailerId);
       startPolling();
@@ -304,12 +308,12 @@ export function Scrapers() {
                   <button
                     className={styles.runBtn}
                     onClick={() => handleRunOne(r.id)}
-                    disabled={running || !r.is_active}
-                    title={!r.is_active ? 'Revendeur inactif' : 'Lancer maintenant'}
+                    disabled={runningJobs.has(r.id) || !r.is_active}
+                    title={!r.is_active ? 'Revendeur inactif' : runningJobs.has(r.id) ? 'Scraping en cours...' : 'Lancer maintenant'}
                     aria-label={`Lancer le scraper pour ${r.name}`}
                   >
                     <Play size={14} />
-                    {running ? 'En cours...' : 'Lancer'}
+                    {runningJobs.has(r.id) ? 'En cours...' : 'Lancer'}
                   </button>
                 </td>
               </tr>
