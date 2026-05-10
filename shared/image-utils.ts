@@ -22,6 +22,23 @@ export function scoreImageQuality(imageUrl: string, productName: string): number
     const urlLower = imageUrl.toLowerCase();
     const nameLower = productName.toLowerCase();
 
+    // Hard reject: PC build / bundle images from SetupGame and PC Gamer Casa.
+    // These retailers name their images after complete PC builds, not individual components.
+    // e.g. "700R-–-AMD-RYZEN-9-9950X3D-RTX-PRO-6000-Blackwell-96Go.webp"
+    //      "Pc-Gamer-R5-5500GT-SG-BLADER-Setup-Game-Maroc.jpg"
+    //      "COMET-R5-PRO-5655G-VEGA-7-Setup-Game.webp"
+    const filename = urlLower.split('/').pop() ?? '';
+    if (
+        filename.includes('pc-gamer') ||
+        filename.includes('pc_gamer') ||
+        filename.includes('setup-game') ||
+        filename.includes('setup_game') ||
+        // Filename contains both a CPU and GPU model — it's a build photo
+        (/ryzen|core.i[3579]|core.ultra/.test(filename) && /rtx|gtx|radeon|rx.?\d{4}/.test(filename))
+    ) {
+        return -500; // Hard reject — never use build photos as component images
+    }
+
     // Penalize MPK/Bundle images — prefer clean product shots when alternatives exist
     // But don't make score negative — if this is the only image, it's better than nothing
     if (urlLower.includes('mpk') || urlLower.includes('bundle')) {
