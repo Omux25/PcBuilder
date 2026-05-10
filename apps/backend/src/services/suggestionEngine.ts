@@ -346,11 +346,16 @@ function buildSpecsHint(scrapedName: string, category: SuggestionCategory): Reco
         switch (category) {
             case 'cpu': {
                 const specs = extractCpuSpecs(scrapedName);
-                return specs ? { socket: specs.socket, tdp: specs.tdp } : {};
+                return specs ? {
+                    socket: specs.socket,
+                    tdp: specs.tdp,
+                    core_count: specs.core_count,
+                    thread_count: specs.thread_count,
+                } : {};
             }
             case 'gpu': {
                 const specs = extractGpuSpecs(scrapedName);
-                return specs ? { length_mm: specs.length_mm, tdp: specs.tdp } : {};
+                return specs ? { length_mm: specs.length_mm, tdp: specs.tdp, vram_gb: specs.vram_gb } : {};
             }
             case 'ram': {
                 const specs = extractRamSpecs(scrapedName);
@@ -358,7 +363,7 @@ function buildSpecsHint(scrapedName: string, category: SuggestionCategory): Reco
             }
             case 'storage': {
                 const specs = extractStorageSpecs(scrapedName);
-                return specs ? { interface_type: specs.interface_type } : {};
+                return specs ? { interface_type: specs.interface_type, capacity_gb: specs.capacity_gb } : {};
             }
             case 'motherboard': {
                 const specs = extractMotherboardSpecs(scrapedName);
@@ -366,6 +371,8 @@ function buildSpecsHint(scrapedName: string, category: SuggestionCategory): Reco
                     socket: specs.socket,
                     supported_ram_types: specs.supported_ram_types,
                     max_ram_frequency: specs.max_ram_frequency,
+                    form_factor: specs.form_factor,
+                    ram_slots: specs.ram_slots,
                 } : {};
             }
             case 'psu': {
@@ -436,6 +443,19 @@ export function suggestForListing(
 
     // Step 1.5: Infer category FIRST to avoid cross-pollination
     const inferredCategory = resolveCategory(name) ?? resolveCategory(canonical_name);
+
+    // If it's a build, stop here and return null category
+    if (inferredCategory === 'build') {
+        return {
+            category: null,
+            confidence: 'high',
+            canonical_name,
+            brand,
+            existing_component_id: null,
+            specs_hint: {},
+        };
+    }
+
     const { category: kwCategory, confidence: kwConfidence } = keywordScore(name);
     const category = inferredCategory || kwCategory;
 
