@@ -8,6 +8,7 @@ import { setSql as setSessionSql, resetSql as resetSessionSql } from '../../src/
 import { setFetch, resetFetchAndLoad, setRetryDelay, setSilent } from '../scrapers/baseScraper.js';
 import { setUltraPcFetch, resetUltraPcFetch } from '../scrapers/ultrapcScraper.js';
 import { setSetupGameFetch, resetSetupGameFetch } from '../scrapers/setupgameScraper.js';
+import { setPcGamerCasaFetch, resetPcGamerCasaFetch } from '../scrapers/pcgamercasaScraper.js';
 
 // ── Captured state ────────────────────────────────────────────────────────────
 
@@ -89,6 +90,7 @@ beforeEach(() => {
         { id: 10, base_url: 'https://www.ultrapc.ma' },
         { id: 11, base_url: 'https://nextlevelpc.ma' },
         { id: 13, base_url: 'https://setupgame.ma' },
+        { id: 14, base_url: 'https://www.pcgamercasa.ma' },
       ]);
     }
     return Promise.resolve([]);
@@ -99,6 +101,11 @@ beforeEach(() => {
     ok: true,
     status: 200,
     json: () => Promise.resolve([]),
+  }));
+  setPcGamerCasaFetch((_url: string) => Promise.resolve({
+    ok: true,
+    status: 200,
+    text: () => Promise.resolve(JSON.stringify({ products: [], pagination: { pages_count: 1, current_page: 1, total_items: 0 }, rendered_products: '' })),
   }));
   setRetryDelay(0);
   setSilent(true);
@@ -112,6 +119,7 @@ afterAll(() => {
   resetFetchAndLoad();
   resetUltraPcFetch();
   resetSetupGameFetch();
+  resetPcGamerCasaFetch();
 });
 
 // ── Session lifecycle ─────────────────────────────────────────────────────────
