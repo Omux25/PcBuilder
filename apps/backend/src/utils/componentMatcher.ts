@@ -43,6 +43,7 @@ export interface CatalogComponent {
 
 /** Lowercase, strip punctuation, collapse whitespace. */
 function normalize(text: string): string {
+  if (!text) return '';
   return text
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, ' ')
@@ -471,6 +472,7 @@ export function scoreDnaMatch(productName: string, catalogName: string, category
   score: number;
   dnaTokens: string[];
 } {
+  if (!productName || !catalogName) return { score: 0, dnaTokens: [] };
   if (!skipBrandCheck) {
     const pBrand = extractBrand(productName);
     const cBrand = extractBrand(catalogName);

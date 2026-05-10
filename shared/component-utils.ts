@@ -146,6 +146,13 @@ export function inferCategory(name: string): Category | null {
   if (n.match(/\b(carte\s*m[eè]re|motherboard|mobo|mb|zenith\s*[ivx]+)\b/) && !n.match(/\b(case|boitier|tower|psu|nvme|ssd)\b/)) return 'motherboard';
   if (n.match(/\b([abxhz]\d{3,4}[a-z0-9]*|trx\d{2}[a-z]?|wrx\d{2}[a-z]?|lga\d{4})\b/) &&
     !n.match(/\b(rtx|gtx|rx\s*\d{3,4}|case|boitier|tower|chassis|nzxt|kingston|a400|ddr|ram|aio|cpu\s*cooler|ventirad|monitor|fan|mouse|keyboard|nvme|ssd|cardea|z440|z540|80plus|80\s*plus|gold|bronze|platinum|titanium|watt|\d{3,4}w|pcie5|modular)\b/) &&
+    // Exclude Corsair/NZXT AIOs: H60, H100, H115, H150, H170 — these are coolers not motherboards
+    !n.match(/\b(corsair|nzxt)\b.*\bh\d{2,3}i?\b/) &&
+    !n.match(/\bh\d{2,3}i?\s*(rgb|elite|white|black|aio|liquid|360mm|240mm|280mm)\b/) &&
+    // Exclude EMTEC storage (X150, X300, etc.)
+    !n.match(/\bemtec\b/) &&
+    // Exclude Cooler Master upgrade kits
+    !n.match(/\b(upgrade\s*kit|socket\s*kit|mounting\s*kit)\b/) &&
     // Exclude MSI MAG/MPG A-series PSUs: MAG A300N, MAG A500N, MAG A550BN, MPG A750GF, MPG A1000G, etc.
     !n.match(/\b(mag|mpg)\s+a\d{3,4}[a-z]*/) &&
     !n.match(/\ba850gls\b/)) return 'motherboard';
@@ -296,6 +303,10 @@ export function cleanName(rawName: string, brand: string): string {
   // Pattern: trailing " DDR4", " DDR5", " D4", " D5" (case-insensitive)
   name = name.replace(/\s+DDR[45]\s*$/i, '');
   name = name.replace(/\s+D[45]\s*$/i, '');
+
+  // Strip socket suffix leaked from retailer names: "Ryzen 5 5600Socket AM4", "Core Ultra 5 225FSocket 1851"
+  name = name.replace(/\s*Socket\s*(AM[45]|LGA\s*\d{4}|\d{4})\s*$/i, '');
+  name = name.replace(/\s*(AM[45]|LGA\d{4})\s*$/i, '');
 
   // Normalize all-caps names: "RYZEN 3 3300X" → "Ryzen 3 3300X"
   // Only apply if the name is mostly uppercase (>60% uppercase letters)

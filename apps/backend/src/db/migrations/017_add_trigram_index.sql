@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 ALTER TABLE components ADD COLUMN IF NOT EXISTS search_text TEXT;
 
 -- Update existing rows
-UPDATE components 
+UPDATE components
 SET search_text = LOWER(
     REGEXP_REPLACE(
         COALESCE(brand, '') || ' ' || name,
@@ -17,6 +17,9 @@ SET search_text = LOWER(
 
 -- Create a GIN trigram index for fast LIKE '%term%' searches
 CREATE INDEX IF NOT EXISTS idx_components_search_text_trgm ON components USING gin (search_text gin_trgm_ops);
+
+-- Drop existing function if owned by another role (happens after a hard reset)
+DROP FUNCTION IF EXISTS sync_component_search_text() CASCADE;
 
 -- Create a trigger function to keep search_text in sync
 CREATE OR REPLACE FUNCTION sync_component_search_text() RETURNS trigger AS $$
