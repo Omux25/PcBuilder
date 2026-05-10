@@ -19,6 +19,8 @@ const baseSchema = z.object({
 export const cpuSchema = baseSchema.extend({
   socket: z.string().min(1),
   tdp: z.number().optional(),
+  core_count: z.number().int().positive().optional(),
+  thread_count: z.number().int().positive().optional(),
 });
 
 export const motherboardSchema = baseSchema.extend({
@@ -36,6 +38,7 @@ export const motherboardSchema = baseSchema.extend({
 export const gpuSchema = baseSchema.extend({
   length_mm: z.number(),
   tdp: z.number().optional(),
+  vram_gb: z.number().int().positive().optional(),
 });
 
 export const ramSchema = baseSchema.extend({
@@ -47,6 +50,7 @@ export const ramSchema = baseSchema.extend({
 export const storageSchema = baseSchema.extend({
   interface: z.string().optional(),
   tdp: z.number().optional(),
+  capacity_gb: z.number().int().positive().optional(),
 });
 
 export const psuSchema = baseSchema.extend({

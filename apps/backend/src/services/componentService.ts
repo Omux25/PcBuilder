@@ -78,7 +78,7 @@ async function getComponents(
         AND (${is_active ?? null}::boolean IS NULL OR c.is_active = ${is_active ?? null})
         AND (${category ?? null}::text IS NULL OR c.category = ${category ?? null})
         AND (${socket ?? null}::text IS NULL OR c.socket = ${socket ?? null})
-        AND (${ram_type ?? null}::text IS NULL OR c.ram_type = ${ram_type ?? null})
+        AND (${ram_type ?? null}::text IS NULL OR c.ram_type = ${ram_type ?? null} OR ${ram_type ?? null} = ANY(c.supported_ram_types))
         AND (${brand ?? null}::text IS NULL OR LOWER(c.brand) = LOWER(${brand ?? null}))
         AND (
           ${in_stock ?? null}::boolean IS NULL OR
@@ -142,7 +142,7 @@ async function getComponents(
           AND (${is_active ?? null}::boolean IS NULL OR c.is_active = ${is_active ?? null})
           AND (${category ?? null}::text IS NULL OR c.category = ${category ?? null})
           AND (${socket ?? null}::text IS NULL OR c.socket = ${socket ?? null})
-          AND (${ram_type ?? null}::text IS NULL OR c.ram_type = ${ram_type ?? null})
+          AND (${ram_type ?? null}::text IS NULL OR c.ram_type = ${ram_type ?? null} OR ${ram_type ?? null} = ANY(c.supported_ram_types))
           AND (${brand ?? null}::text IS NULL OR LOWER(c.brand) = LOWER(${brand ?? null}))
           AND (
             ${in_stock ?? null}::boolean IS NULL OR
@@ -291,6 +291,11 @@ function extractComponentFields(data: ComponentInput) {
     ram_slots: d.ram_slots as number | undefined,
     m2_slots: d.m2_slots as number | undefined,
     sata_ports: d.sata_ports as number | undefined,
+    // New detailed spec columns (migration 032)
+    core_count: d.core_count as number | undefined,
+    thread_count: d.thread_count as number | undefined,
+    vram_gb: d.vram_gb as number | undefined,
+    capacity_gb: d.capacity_gb as number | undefined,
   };
 }
 
@@ -308,6 +313,7 @@ async function createComponent(data: ComponentInput): Promise<Component> {
     frequency_mhz, length_mm, max_gpu_length_mm,
     supported_motherboards, max_cooler_height_mm, form_factor, height_mm,
     wattage, tdp, ram_slots, m2_slots, sata_ports,
+    core_count, thread_count, vram_gb, capacity_gb,
   } = extractComponentFields(data);
 
   const slug = await getUniqueSlug(brand ?? null, name);
@@ -319,6 +325,7 @@ async function createComponent(data: ComponentInput): Promise<Component> {
       frequency_mhz, length_mm, max_gpu_length_mm,
       supported_motherboards, max_cooler_height_mm, form_factor, height_mm,
       wattage, tdp, ram_slots, m2_slots, sata_ports,
+      core_count, thread_count, vram_gb, capacity_gb,
       is_active
     ) VALUES (
       ${slug},
@@ -345,6 +352,10 @@ async function createComponent(data: ComponentInput): Promise<Component> {
       ${ram_slots ?? null},
       ${m2_slots ?? null},
       ${sata_ports ?? null},
+      ${core_count ?? null},
+      ${thread_count ?? null},
+      ${vram_gb ?? null},
+      ${capacity_gb ?? null},
       true
     )
     RETURNING *
@@ -369,6 +380,7 @@ async function updateComponent(id: number, data: ComponentInput): Promise<Compon
     frequency_mhz, length_mm, max_gpu_length_mm,
     supported_motherboards, max_cooler_height_mm, form_factor, height_mm,
     wattage, tdp, ram_slots, m2_slots, sata_ports,
+    core_count, thread_count, vram_gb, capacity_gb,
   } = extractComponentFields(data);
 
   const slug = await getUniqueSlug(brand ?? null, name, id);
@@ -399,6 +411,10 @@ async function updateComponent(id: number, data: ComponentInput): Promise<Compon
       ram_slots             = ${ram_slots ?? null},
       m2_slots              = ${m2_slots ?? null},
       sata_ports            = ${sata_ports ?? null},
+      core_count            = ${core_count ?? null},
+      thread_count          = ${thread_count ?? null},
+      vram_gb               = ${vram_gb ?? null},
+      capacity_gb           = ${capacity_gb ?? null},
       updated_at            = NOW()
     WHERE id = ${id}
     RETURNING *

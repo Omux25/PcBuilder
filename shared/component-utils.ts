@@ -28,21 +28,33 @@ export type Category =
   | 'external_storage'
   | 'optical_drive'
   | 'ups'
-  | 'accessory';
+  | 'accessory'
+  | 'build';
 
 /**
  * Heuristic-based category inference from product names.
  */
 export function inferCategory(name: string): Category | null {
   const n = name.toLowerCase();
+  // 0. Bundles (High priority to avoid category bleed)
+  if (n.match(/\b(hydro\s*x|pacific\s*c\d{3}|pacific\s*cl\d{3}|liquid\s*freezer\s*[ivx]+\s*pro)\b/) || 
+    (n.match(/\bkit\b/) && n.match(/\b(watercooling|refroidissement\s*liquide|aio)\b/) && n.match(/\b(thermaltake|lian\s*li|corsair|arctic|cooler\s*master|msi|asus|nzxt)\b/)) ||
+    ((n.match(/\b(with|incl|inclus|bundle|pack)\b/) || (n.match(/\+/) && !n.match(/80\+/)) || (n.match(/\s\+\s/) && n.match(/\bpsu\b/))) && n.match(/\b(fan|psu|gpu|cpu|case)\b/) && (n.match(/\b(bundle|pack)\b/) || n.match(/\+/)))) return 'bundle';
 
   // 1. Operating Systems
   if (n.match(/\b(windows|microsoft\s*office|win\s*(10|11))\b/)) return 'os';
 
   // Early exits — products that should never be categorized as PC components
-  // Bundle/kit detection: "PC Gamer AMD Ryzen 5 + RTX 4070" → null
-  if (n.match(/\b(pack|bundle|kit\s*(pc|gaming)|pc\s*(gamer|gaming|complet))\b/) &&
-    !n.match(/\b(case\s*bundle|boitier|hyte|fan|ventilateur|pack\s*(rgb|argb|led)|(rs|ll|ql|af|sp)\d{2,3}|f\d{2,3}|triple\s*pack|dual\s*pack|light\s*wings)\b/)) return null;
+  // Bundle/kit detection: "PC Gamer AMD Ryzen 5 + RTX 4070" → 'build'
+  if (n.match(/\b(pack|bundle|kit\s*(pc|gaming)|pc\s*(gamer|gaming|complet|monté))\b/) &&
+    !n.match(/\b(case\s*bundle|boitier|boîtier|boitiers|boîtiers|hyte|fan|ventilateur|ventilateurs|pack\s*(de\s*\d+|\d+|rgb|argb|led)|(rs|ll|ql|af|sp)\d{2,3}|f\d{2,3}|triple\s*pack|dual\s*pack|light\s*wings|ram|memory|ddr\d|ssd|hdd|cpu|gpu|psu|motherboard|carte mère)\b/)) return 'build';
+  // Explicitly catch combinations that imply a full build (e.g. "Ryzen 7 + RTX 4070 + 32GB")
+  const cpuSignals = [/\bryzen/i, /\bcore\s+i/i, /\bcore\s+ultra/i, /\bthreadripper/i, /\bxeon\b/i, /\bi[3579]-\d/i, /\b[ri][3579]\b/i];
+  const gpuSignals = [/\brtx/i, /\bgtx/i, /\bradeon/i, /\brx\s*\d/i, /\bquadro\b/i, /\bfirepro\b/i, /\bpro\s*(6|5)000\b/i, /\bvega\b/i, /\biris\b/i, /\buhd\s*graphics\b/i];
+  if (cpuSignals.some(r => r.test(n)) && gpuSignals.some(r => r.test(n))) return 'build';
+  if (n.match(/\b(workstation|station\s*de\s*travail|pc\s*professionnel)\b/) && cpuSignals.some(r => r.test(n))) return 'build';
+
+  if (n.match(/\bryzen\b/i) && n.match(/\brtx\b/i) && n.match(/\b(gb|go)\b/i) && !n.match(/\b(motherboard|carte mère|gpu|ram|ssd|hdd)\b/i)) return 'build';
   // Laptop RAM — SO-DIMM is not compatible with desktop builds
   if (n.match(/\b(so-dimm|sodimm)\b/)) return null;
   // Generic Noise / Partial Names
@@ -62,7 +74,7 @@ export function inferCategory(name: string): Category | null {
   // e.g. "MSI MAG B650 TOMAHAWK WIFI" should be motherboard, not wireless_network_adapter
   // e.g. "Razer Viper Wireless" should be mouse, not wireless_network_adapter
   if (n.match(/\b(wifi|wireless|bluetooth|pci-e\s*wifi|usb\s*wifi|antenne|antenna)\b/) &&
-    !n.match(/\b([abxhz]\d{3,4}[eimdpqrsv]?|trx\d{2}[a-z]?|wrx\d{2}[a-z]?|souris|mouse|clavier|keyboard|casque|headset|headphones|webcam|monitor)\b/)) return 'wireless_network_adapter';
+    !n.match(/\b([abxhz]\d{3,4}[eimdpqrsv]?|trx\d{2}[a-z]?|wrx\d{2}[a-z]?|souris|mouse|clavier|keyboard|casque|headset|headphones|webcam|monitor|fan|ventilateur|case|boitier)\b/)) return 'wireless_network_adapter';
   if (n.match(/\b(ethernet|rj45|pci-e\s*lan|gigabit\s*lan|network\s*card)\b/)) return 'wired_network_adapter';
 
   // 4. Accessories & Other
@@ -80,8 +92,9 @@ export function inferCategory(name: string): Category | null {
 
   // Cooling — air coolers & AIOs (generic keywords)
   // Cooling — air coolers & AIOs (generic keywords)
-  if (n.match(/\b(aio|liquid\s*cooler|watercooler|watercooling|refroidissement\s*liquide|liquid\s*freezer|ventirad|refroidissement|aircooler|air\s*cooler|cpu\s*cooler|water\s*cooler|hydro\s*x|h60i?|h100i?|h115i?|h150i?|h170i?|h100x|h60x|kraken|ryujin|ryuo|galahad|lq\d{3}|light\s*loop|spartacus|lb\d{3}m*|proart\s*lc|mag\s*coreliquid|mpg\s*coreliquid|connect|chione|hydroshift|hydro\s*shift|thicc\s*q\d{2}|ice-?\d{3}|ml-ultra\d{3}|symphony\s*\d{3}|waterforce\s*[x]?\s*\d{3})\b/) &&
-    !n.match(/\b(case|boitier|tower|chassis|boîtier|bracket|mount)\b/)) return 'cooling';
+  if ((n.match(/\b(aio|liquid\s*cooler|watercooler|watercooling|refroidissement\s*liquide|liquid\s*freezer|ventirad|refroidissement|aircooler|air\s*cooler|cpu\s*cooler|water\s*cooler|h60i?|h100i?|h115i?|h150i?|h170i?|h100x|h60x|kraken|ryujin|ryuo|galahad|lq\d{3}|light\s*loop|spartacus|lb\d{3}m*|proart\s*lc|mag\s*coreliquid|mpg\s*coreliquid|chione|hydroshift|hydro\s*shift|thicc\s*q\d{2}|ice-?\d{3}|ml-ultra\d{3}|symphony\s*\d{3}|waterforce\s*[x]?\s*\d{3})\b/) || 
+    (n.match(/\bconnect\b/) && !n.match(/\bpsu\b/))) &&
+    !n.match(/\b(case|boitier|tower|chassis|boîtier|bracket|mount|wings|bolt|airboost|panoglass|stealth|base|psu|alimentation|\d{3,4}w|flow)\b/)) return 'cooling';
   // Cooling — DeepCool AIO series: LD, LE, LM, LS, LT, LX + HYBROK HL-series (all AIOs)
   if (n.match(/\b(deepcool)\b/) &&
     n.match(/\b(ld|le|lm|ls|lt|lx)\d{3}\b/) &&
@@ -89,19 +102,28 @@ export function inferCategory(name: string): Category | null {
   if (n.match(/\b(hybrok)\b/) &&
     n.match(/\b(hl\d{3}|ld|le|lm)\d{0,3}\b/) &&
     !n.match(/\b(case|boitier|tower|chassis)\b/)) return 'cooling';
+  // Bundles — Custom cooling kits (Hydro X, Pacific Kit, etc)
+  if (n.match(/\b(hydro\s*x|pacific\s*c\d{3}|pacific\s*cl\d{3}|liquid\s*freezer\s*[ivx]+\s*pro)\b/) || 
+    (n.match(/\bkit\b/) && n.match(/\b(watercooling|refroidissement\s*liquide|aio)\b/) && n.match(/\b(thermaltake|lian\s*li|corsair|arctic|cooler\s*master|msi|asus|nzxt)\b/)) ||
+    (n.match(/\b(bundle|pack)\b/) && n.match(/\b(with|incl|inclus|\+)\b/) && n.match(/\b(fan|psu|gpu|cpu)\b/))) return 'bundle';
+
   // Cooling — Corsair Titan RX series (AIO, not a case)
   if (n.match(/\b(corsair)\b/) && n.match(/\b(titan\s*\d{3}\s*rx|hydro\s*h\d{2,3}i?)\b/)) return 'cooling';
   // Cooling — model-based: AK-series, Hyper-series, Assassin, Dark Rock, Gammaxx, VELOX, etc.
-  if (n.match(/\b(ak[- ]?\d{3}[a-z]*|hyper\s*\d{3}[a-z]*|hyper\s*622|assassin|dark\s*rock|shadow\s*rock|gammaxx|arctic\s*(freezer|alpine)|ag\d{3}|ets-t[456]\d|peerless\s*assassin|phantom\s*spirit|id-?cooling|corefrozr|coreliquid|castle\s*\d{3}|ml\s*(one|lcd|ultra)|ml-?(one|lcd|ultra)|mpg\s*velox|mag\s*velox|velox\s*\d+|a30\b|a500\b|a410\b|a620\b|mystique\s*\d{3}|masterliquid\s*[plm]*\s*\d{3}l?|masterair|th\d{3}|ux\d{3}|toughair|lc\d{3}|i70|i71c|t\d{3}\s*rgb|core\s*plus)\b/) &&
-    !n.match(/\b(case|boitier|tower|chassis|boîtier|bracket|gpu|motherboard|psu)\b/)) return 'cooling';
+  if (n.match(/\b(ak[- ]?\d{3}[a-z]*|hyper\s*\d{3}[a-z]*|hyper\s*622|assassin|dark\s*rock|shadow\s*rock|gammaxx|arctic\s*(freezer|alpine)|ag\d{3}|ets-t[456]\d|peerless\s*assassin|phantom\s*spirit|id-?cooling|corefrozr|coreliquid|castle\s*\d{3}|ml\s*(one|lcd|ultra)|ml-?(one|lcd|ultra)|a30\b|a500\b|a410\b|a620\b|mystique\s*\d{3}|masterliquid\s*[plm]*\s*\d{3}l?|masterair|th\d{3}|ux\d{3}|toughair|lc\d{3}|i70|i71c|t\d{3}\s*rgb|core\s*plus)\b/) &&
+    !n.match(/\b(case|boitier|tower|chassis|boîtier|bracket|gpu|motherboard|psu|velox)\b/)) return 'cooling';
 
   // Cases — NZXT H-series (and Thermaltake H590 which follows the same naming)
   if (n.match(/\b(h210i?|h400i?|h440i?|h500i?|h510i?|h590\b|h700i?|h710i?|h5\s*flow|h6\s*flow|h7\s*flow|h9\s*flow|h5\s*elite|h7\s*elite|h9\s*elite|h3\s*flow|h1\s*v2)\b/)) return 'case';
   // Cases — Phanteks NV/Enthoo/Evolv series
   if (n.match(/\b(nv5|nv7|nv9|enthoo|evolv\s*[x]?)\b/)) return 'case';
   // Cases — named models from many brands
-  if (n.match(/\b(o11|o11d|vision|vector|lancool|dynamic|pano|forge|gungnir|sekira|mag\s*pano|mpg\s*gungnir|mag\s*forge|mag\s*shield|m100a|120a|ap201|ap202|gt301|gt302|gt501|gt502|gr701|helios|hyperion|proart\s*pa\d*|gr701|tuf\s*gaming\s*gt|a21|a31|mc500|mc51|mc61|mca|mcmesh|mcorb|mc\d{2,3}|talos|aura\s*gc|gamdias|c8|c3|c5|c7|df800|cx300|ragnär|nightcity|biohazard|tooq|y40|y60|y70|y70\s*touch|corsair\s*air|montech\s*air|pop\s*(air|mini|silent)|define\s*(7|c|mini|r\d)|meshify\s*(2|c)|torrent|north|ridge|terra|mood|lancool|vision|morpheus|a3\b|cte\b|cmt\d+|fv150|fv235|mc-ultra|mc-custom|mcultra|light\s*base|qube\s*500|qube\s*540|masterframe|tomahawk\s*atx|tomahawk\s*itx|odyssey\s*x|t350m|465x)\b/) &&
-    !n.match(/\b(psu|alimentation|motherboard|mb|cpu\s*cooler|ventirad|water\s*cooler|liquid|monitor|mouse|keyboard|fan|halo|wing|light\s*wings)\b/)) return 'case';
+  if (n.match(/\b(o11|o11d|vision|vector|lancool|dynamic|pano|forge|gungnir|sekira|mag\s*pano|mpg\s*gungnir|mag\s*forge|mag\s*shield|m100a|120a|ap201|ap202|gt301|gt302|gt501|gt502|gr701|helios|hyperion|proart\s*pa\d*|gr701|tuf\s*gaming\s*gt|a21|a31|mc500|mc51|mc61|mca|mcmesh|mcorb|mc\d{2,3}|talos|aura\s*gc|gamdias|c8|c3|c5|c7|df800|cx300|ragnär|nightcity|biohazard|tooq|y40|y60|y70|y70\s*touch|corsair\s*air|montech\s*air|pop\s*(air|mini|silent)|define\s*(7|c|mini|r\d)|meshify\s*(2|c)|torrent|north|ridge|terra|mood|lancool|vision|morpheus|a3\b|cte\b|cmt\d+|fv150|fv235|mc-ultra|mc-custom|mcultra|light\s*base|dark\s*base|pure\s*base|silent\s*base|qube\s*500|qube\s*540|masterframe|tomahawk\s*atx|tomahawk\s*itx|odyssey\s*x|t350m|465x|airface|blader|hadron|k20|z1|velox|panoglass|airboost|stealth|bolt)\b/) &&
+    (!n.match(/\b(psu|alimentation)\b/) || n.match(/(\+|with|incl|bundle)/)) &&
+    !n.match(/\b(motherboard|mb|cpu\s*cooler|ventirad|water\s*cooler|liquid|monitor|mouse|keyboard|fan|halo|wing|light\s*wings)\b/)) {
+      if (n.match(/\b(\+|\-|with|incl|bundle)\b/) && n.match(/\bpsu\b/)) return 'bundle';
+      return 'case';
+    }
   // Cases — Cooler Master (masterbox, mastercase, silencio, haf, td-series, masterfan excluded)
   if (n.match(/\b(masterbox|mastercase|silencio|haf\s*\d+|td\d{3}|cm\s*\d{4}[a-z]*|cmp\d{3}|elite\s*(310|330|340|350|370|430|500))\b/) &&
     !n.match(/\b(psu|alimentation|motherboard|cpu\s*cooler|ventirad|water\s*cooler|liquid|masterfan|masterliquid|fan)\b/)) return 'case';
@@ -114,7 +136,7 @@ export function inferCategory(name: string): Category | null {
     !n.match(/\b(psu|alimentation|cpu\s*cooler|water\s*cooler|liquid|fan)\b/)) return 'case';
   // Cases — Mars Gaming, M.RED, HYBROK, SG, XTRMLAB, AZZA, NOX, setup game (all sell only cases)
   if (n.match(/^(mars\s*gaming|m\.red|hybrok|sg\b|xtrmlab|azza|nox\b|setup\s*game|raijintek|itek|spirit\s*of\s*gamer|havn|montech|kolink|cougar|aerocool|antec|icelil|apnx)\b/) &&
-    !n.match(/\b(fan\s+pack|argb\s+fan|rgb\s+fan|\d+\s*x\s*\d+mm|triple\s*pack|dual\s*pack|fan\s*controller|hub|paste|thermal|psu|alimentation|ram|ssd|gpu|cpu|motherboard|hl\d{3}|symphony|core\s*plus|ap1-v)\b/) &&
+    !n.match(/\b(fan\s+pack|argb\s+fan|rgb\s+fan|\d+\s*x\s*\d+mm|triple\s*pack|dual\s*pack|pack\s*(de\s*\d+|\d+)|fan\s*controller|hub|paste|thermal|psu|alimentation|ram|ssd|gpu|cpu|motherboard|hl\d{3}|symphony|core\s*plus|ap1-v)\b/) &&
     !n.match(/\b\d{3,4}\s*w\b/) &&
     !n.match(/\b(80plus|80\s*plus|gold|bronze|platinum|modular|watt)\b/)) return 'case';
   // Cases — specific models for Aerocool/Antec (those that don't have 'case' in name)
@@ -140,8 +162,8 @@ export function inferCategory(name: string): Category | null {
   if (n.match(/\b(ryzen|core\s*i[3579]|core\s*ultra|threadripper|xeon|athlon|pentium|celeron|processeur|processor)\b/) &&
     !n.match(/\b(paste|compound|grease|pate|pâte|cooler|refroidissement|ventirad|fan|ventilateur|case|boitier|tower|frame|bracket|monitor)\b/)) return 'cpu';
 
-  if (n.match(/\b(rtx|gtx|radeon|rx\s*\d{3,4}|arc\s*[ab]\d{3}|geforce|quadro|firepro)\b/) &&
-    !n.match(/\b(boitier|boîtier|case|tower|mid.?tower|chassis|riser|mount|holder|kit|monitor)\b/)) return 'gpu';
+  if (n.match(/\b(rtx|gtx|radeon|rx\s*\d{3,4}|arc\s*[ab]\d{3}|geforce|quadro|firepro|gt\s*\d{3}|t\d{3,4})\b/) &&
+    !n.match(/\b(boitier|boîtier|case|tower|mid.?tower|chassis|riser|mount|holder|kit|monitor|ssd|nvme|m\.2|fan|cooler)\b/)) return 'gpu';
 
   if (n.match(/\b(carte\s*m[eè]re|motherboard|mobo|mb|zenith\s*[ivx]+)\b/) && !n.match(/\b(case|boitier|tower|psu|nvme|ssd)\b/)) return 'motherboard';
   if (n.match(/\b([abxhz]\d{3,4}[a-z0-9]*|trx\d{2}[a-z]?|wrx\d{2}[a-z]?|lga\d{4})\b/) &&
@@ -164,7 +186,7 @@ export function inferCategory(name: string): Category | null {
   // Storage — common SSD brands that often lack 'ssd' keyword
   if (n.match(/\b(sandisk|netac|kingspec|timetec|twinmos|hiksemi|fanxiang)\b/) &&
     n.match(/\b(\d+(go|gb|tb|to))\b/) &&
-    !n.match(/\b(ram|memoire|motherboard|case|psu)\b/)) return 'storage';
+    !n.match(/\b(ram|memoire|mémoire|ddr\d|mhz|motherboard|case|psu)\b/)) return 'storage';
   // Storage — Toshiba NAS/surveillance/enterprise drives (explicit brand+type)
   if (n.match(/\b(toshiba)\b/) &&
     n.match(/\b(s300|n300|mg0[0-9]|p300|surveillance|enterprise|capacity|nas|\d+\s*tb|\d+\s*to)\b/)) return 'storage';
@@ -174,8 +196,8 @@ export function inferCategory(name: string): Category | null {
     !n.match(/\b(case|cooler|fan|psu|motherboard)\b/)) return 'storage';
 
   // PSU
-  if ((n.match(/\b\d{2,5}\s*w\b/) || n.match(/\b(ai\d{4}t|a\d{3,4}gs?|a\d{3,4}gls?|a\d{3,4}g|80plus|80\s*plus|mwe|smart|anima|elite|mag\s*a\d{3,4}|mpg\s*a\d{3,4}|p[567]50ss|pl\d{3}-d|px\d{3,4}-?[pg]|bn\d{3}|rm\d{3,4}[eix])\b/)) &&
-    n.match(/\b(alimentation|psu|power\s*supply|gold|platinum|titanium|bronze|silver|white|ice|modular|80\s*plus|80plus|atx\s*3|semi.?mod|full.?mod|watt|\d{2,5}\s*w|ai\d{4}t|a\d{3,4}gs?|a\d{3,4}gls?|a\d{3,4}g|mwe|smart|anima|elite|rm\d{3,4}[eix]|pl\d{3}-d|px\d{3,4}-?[pg])\b/) &&
+  if ((n.match(/\b\d{2,5}\s*w\b/) || n.match(/\b(ai\d{4}t|a\d{3,4}gs?|a\d{3,4}gls?|a\d{3,4}g|80plus|80\s*plus|mwe|smart|anima|mag\s*a\d{3,4}|mpg\s*a\d{3,4}|p[567]50ss|pl\d{3}-d|px\d{3,4}-?[pg]|bn\d{3}|rm\d{3,4}[eix])\b/)) &&
+    n.match(/\b(alimentation|psu|power\s*supply|gold|platinum|titanium|bronze|silver|white|ice|modular|80\s*plus|80plus|atx\s*3|semi.?mod|full.?mod|watt|\d{2,5}\s*w|ai\d{4}t|a\d{3,4}gs?|a\d{3,4}gls?|a\d{3,4}g|mwe|smart|anima|rm\d{3,4}[eix]|pl\d{3}-d|px\d{3,4}-?[pg])\b/) &&
     !n.match(/\b(case|boitier|tower|motherboard|mb|socket|cpu\s*cooler|water\s*cooler|refroidissement|[abxhz]\d{3,4}|fan|gpu)\b/)) return 'psu';
   // MSI MAG/MPG A-series PSUs: MAG A300N-H, MAG A500N-H, MAG A550BN, MPG A750GF, MPG A1000G, etc.
   // These match the motherboard chipset regex but are clearly PSUs from the naming scheme.
@@ -188,21 +210,21 @@ export function inferCategory(name: string): Category | null {
   if (n.match(/^connect\b/) && (n.match(/\b\d{3,4}w\b/) || n.match(/\bpsu\b/))) return 'psu';
 
   // Fans & Paste
-  if (n.match(/\b(kryonaut|conductonaut|hydronaut|aeronaut|duronaut|carbonaut|kryosheet|polartherm|tm30|kryofuze|cryofuze|minus\s*pad|wipes|thermal\s*paste|pâte\s*thermique|pate\s*thermique|thermal\s*compound|thermal\s*grease|mx-[0-9]|mx[0-9])\b/) &&
+  if (n.match(/\b(kryonaut|conductonaut|hydronaut|aeronaut|duronaut|carbonaut|kryosheet|polartherm|tm30|kryofuze|cryofuze|minus\s*pad|wipes|thermal\s*paste|pâte\s*thermique|pate\s*thermique|thermal\s*compound|thermal\s*grease|mx-[0-9]|mx[0-9]|liquid\s*metal|m\u00e9tal\s*liquide|métal\s*liquide|liquid\s*compound)\b/) &&
     !n.match(/\b(cpu|gpu|ram|ssd|nvme|psu|case|boitier|tower|fan)\b/)) return 'thermal_paste';
 
-  if (n.match(/\b(f120|f140|ll\d{3}|ql\d{3}|fd12|fd14|fk120|sickleflow|sicklefan|tl-c12|tl-c14|af\d{3}|sp\d{3}|rs\d{3}|ar\d{3}|ml\d{3}|rs140|rs120|ar120|ar140|f360|f420|fd14|xlf120|xt120|kunai|p12|p14|fl12r|fl12\b|fl14\b|masterfan|halo|light\s*wings|silent\s*wings|f\d{3}p|f\d{3}q|f\d{3}rgb|p\d{2}\s*max|rgb\s*core|twin\s*pack|triple\s*pack|dual\s*pack|lx\d{2,3})\b/) &&
-    !n.match(/\b(aio|liquid|radiator|cpu\s*cooler|water\s*cooler|ventirad|case|boitier|tower|motherboard|mb|socket|gpu)\b/)) return 'fan';
+  if (n.match(/\b(f120|f140|ll\d{3}|ql\d{3}|fd12|fd14|fk120|sickleflow|sicklefan|tl-c12|tl-c14|af\d{3}|sp\d{3}|rs\d{3}|ar\d{3}|ml\d{3}|rs140|rs120|ar120|ar140|f360|f420|fd14|xlf120|xt120|kunai|p12|p14|fl12r|fl12\b|fl14\b|masterfan|halo|light\s*wings|silent\s*wings|pure\s*wings|shadow\s*wings|f\d{3}p|f\d{3}q|f\d{3}rgb|p\d{2}\s*max|rgb\s*core|twin\s*pack|triple\s*pack|dual\s*pack|lx\d{2,3}|flow)\b/) ||
+    (n.match(/\b(ventilateur|ventilateurs)\b/) && !n.match(/\b(boîtier|boitier|case|tower|gpu|cpu|psu)\b/))) return 'fan';
 
   // 6. RAM
   if (n.match(/\b(dimm|ddr[2-5]|sdram|lpx|vengeance|dominator|trident|ripjaws|fury|beast|renegade|vengance|t-force|t-create|delta\s*rgb|vulcan|zeus|expert|flare\s*x|elite\s*plus|elite\s*ii|gaming\s*ram|memory\s*module|m\u00e9moire\s*ram|mémoire\s*ram)\b/) &&
-    !n.match(/\b(motherboard|psu|case|boitier|tower|cpu|gpu|storage|ssd|nvme|hdd|fan|cooler)\b/) &&
+    !n.match(/\b(motherboard|psu|case|boitier|tower|cpu|gpu|storage|ssd|nvme|hdd|fan|cooler|1tb|2tb|4tb|500gb|960gb|1to|2to|4to|500go|960go)\b/) &&
     !n.match(/\b[abxhz]\d{3,4}[eimdpqrsv]?\b/)) return 'ram';
 
   // 7. Secondary Cooling Models — brand + cooler model keyword
   if (n.match(/\b(noctua|deepcool|arctic|thermalright|scythe|id.?cooling|be\s*quiet|asus|msi|gigabyte|nzxt|fractal|lian\s*li|phanteks|corsair|cooler\s*master|xtrmlab)\b/) &&
     n.match(/\b(nh|ak|lc|le|se|sl|bk|dk|sk|ld|ls|lm|lf|lp|lx|pure|shadow|dark|silent|freezer|liquid|frozen|peerless|phantom|spirit|assassin|burst|notus|frost|maelstrom|ryujin|ryuo|kraken|galahad|lq\d{3}|nautilus|coreliquid|hyper\s*\d{3}|hyper\s*212|gammaxx|castle|arctic|v4\s*alpha|ml\d{3}[a-z]*|nex\s*\d{3}|helix|galax)\b/) &&
-    !n.match(/\b(case|boitier|tower|chassis|boîtier|gpu|motherboard|mb|socket|psu|fan|halo|masterfan|3000d|4000d|5000d|6500d|carbide|obsidian|kryofuze)\b/)) return 'cooling';
+    !n.match(/\b(case|boitier|tower|chassis|boîtier|gpu|motherboard|mb|socket|psu|fan|halo|masterfan|3000d|4000d|5000d|6500d|carbide|obsidian|kryofuze|wings|base|metal)\b/)) return 'cooling';
 
   return null;
 }
@@ -514,16 +536,43 @@ export const extractCpuSpecs = (n: string) => {
     else if (lower.match(/threadripper\s+[34]\d{3}/)) socket = 'sTRX4';
   }
 
+  let supported_ram_types: string[] | null = null;
+  if (socket === 'AM4' || socket === 'LGA1200' || socket === 'LGA1151' || socket === 'sWRX8' || socket === 'sTRX4') {
+    supported_ram_types = ['DDR4'];
+  } else if (socket === 'AM5' || socket === 'LGA1851' || socket === 'sTR5') {
+    supported_ram_types = ['DDR5'];
+  } else if (socket === 'LGA1700') {
+    supported_ram_types = ['DDR4', 'DDR5'];
+  }
+
+  const coreMatch = n.match(/\b(\d+)\s*(?:cores|coeurs)\b/i) || n.match(/([3579])\d{3}/);
+  let core_count: number | null = coreMatch ? parseInt(coreMatch[1]) : null;
+  
+  // Core count mapping for common Ryzen/Core models if not explicit
+  if (!core_count) {
+    if (n.includes('5950') || n.includes('3950') || n.includes('7950') || n.includes('9950')) core_count = 16;
+    else if (n.includes('5900') || n.includes('3900') || n.includes('7900') || n.includes('9900')) core_count = 12;
+    else if (n.includes('5800') || n.includes('3800') || n.includes('7700') || n.includes('9700') || n.includes('5700')) core_count = 8;
+    else if (n.includes('5600') || n.includes('3600') || n.includes('7600') || n.includes('9600') || n.includes('5500') || n.includes('4500')) core_count = 6;
+    else if (n.includes('12900') || n.includes('13900') || n.includes('14900')) core_count = 24;
+    else if (n.includes('12700') || n.includes('13700') || n.includes('14700')) core_count = 16;
+  }
+
   return {
     socket,
+    supported_ram_types,
+    core_count,
+    thread_count: core_count ? core_count * 2 : null,
     tdp: tdpMatch ? parseInt(tdpMatch[1]) : null
   };
 };
 
 export const extractGpuSpecs = (n: string) => {
   const lengthMatch = n.match(/\b(\d{3})\s*mm\b/i);
+  const vramMatch = n.match(/\b(\d+)\s*(?:gb|go|go)\b/i);
   return {
-    length_mm: lengthMatch ? parseInt(lengthMatch[1]) : 300, // default if missing
+    length_mm: lengthMatch ? parseInt(lengthMatch[1]) : 300,
+    vram_gb: vramMatch ? parseInt(vramMatch[1]) : null,
     tdp: n.includes('4090') ? 450 : n.includes('4080') ? 320 : 200
   };
 };
@@ -537,9 +586,18 @@ export const extractRamSpecs = (n: string) => {
   };
 };
 
-export const extractStorageSpecs = (n: string) => ({
-  interface_type: n.toLowerCase().includes('nvme') ? 'NVMe' : 'SATA'
-});
+export const extractStorageSpecs = (n: string) => {
+  const capMatch = n.match(/\b(\d+)\s*(?:gb|go|tb|to)\b/i);
+  let capacity_gb: number | null = null;
+  if (capMatch) {
+    const val = parseInt(capMatch[1]);
+    capacity_gb = capMatch[0].toLowerCase().includes('t') ? val * 1000 : val;
+  }
+  return {
+    capacity_gb,
+    interface_type: n.toLowerCase().includes('nvme') ? 'NVMe' : 'SATA'
+  };
+};
 
 // ── Motherboard chipset → socket + DDR type lookup table ─────────────────────
 //
@@ -637,6 +695,8 @@ export function inferMotherboardSpecs(name: string): {
   socket: string | null;
   supported_ram_types: string[];
   max_ram_frequency: number;
+  form_factor: string;
+  ram_slots: number;
 } | null {
   const upper = name.toUpperCase();
 
@@ -708,10 +768,31 @@ export function inferMotherboardSpecs(name: string): {
     ramTypes = ['DDR5'];
   }
 
+  // ── Resolve Form Factor & Slots ─────────────────────────────────────────
+  let form_factor = 'ATX';
+  if (upper.match(/\b(ITX|MINI-ITX)\b/) || upper.match(/[ABXZH]\d{3}I/)) {
+    form_factor = 'ITX';
+  } else if (upper.match(/\b(MATX|MICRO-ATX|M-ATX)\b/) || upper.match(/[ABXZH]\d{3}M/)) {
+    form_factor = 'mATX';
+  } else if (upper.match(/\b(EATX|E-ATX)\b/)) {
+    form_factor = 'E-ATX';
+  }
+
+  let ram_slots = 4;
+  if (form_factor === 'ITX') {
+    ram_slots = 2;
+  } else if (upper.match(/\b(M-K|M-H|M-V|M-R|M-E|PRO-V?H|DS2H|DS2V)\b/)) {
+    ram_slots = 2; // Common budget variants with 2 slots
+  } else if (info.socket === 'sTR5' || info.socket === 'sWRX8' || info.socket === 'sWRX9' || info.socket === 'TR4' || info.socket === 'sTRX4') {
+    ram_slots = 8;
+  }
+
   return {
     socket: info.socket,
     supported_ram_types: ramTypes,
     max_ram_frequency: maxMhz,
+    form_factor,
+    ram_slots,
   };
 }
 
