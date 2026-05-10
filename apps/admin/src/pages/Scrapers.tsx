@@ -56,6 +56,7 @@ export function Scrapers() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [fullSessionRunning, setFullSessionRunning] = useState(false);
   const [runningJobs, setRunningJobs] = useState<Set<number>>(new Set());
   const [logLevel, setLogLevel] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +85,7 @@ export function Scrapers() {
     try {
       const status = await getScraperStatus();
       setRunning(status.running);
+      setFullSessionRunning(status.full_session_running ?? false);
       setRunningJobs(new Set(status.running_jobs ?? []));
       return status.running;
     } catch {
@@ -308,12 +310,12 @@ export function Scrapers() {
                   <button
                     className={styles.runBtn}
                     onClick={() => handleRunOne(r.id)}
-                    disabled={runningJobs.has(r.id) || !r.is_active}
-                    title={!r.is_active ? 'Revendeur inactif' : runningJobs.has(r.id) ? 'Scraping en cours...' : 'Lancer maintenant'}
+                    disabled={fullSessionRunning || runningJobs.has(r.id) || !r.is_active}
+                    title={!r.is_active ? 'Revendeur inactif' : fullSessionRunning ? 'Session complète en cours' : runningJobs.has(r.id) ? 'Scraping en cours...' : 'Lancer maintenant'}
                     aria-label={`Lancer le scraper pour ${r.name}`}
                   >
                     <Play size={14} />
-                    {runningJobs.has(r.id) ? 'En cours...' : 'Lancer'}
+                    {(fullSessionRunning || runningJobs.has(r.id)) ? 'En cours...' : 'Lancer'}
                   </button>
                 </td>
               </tr>

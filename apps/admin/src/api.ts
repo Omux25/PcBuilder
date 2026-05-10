@@ -154,7 +154,7 @@ export const hardDeleteRetailer = (id: number) =>
 // ── Scrapers ──────────────────────────────────────────────────────────────────
 
 export const getScraperStatus = () =>
-  request<{ running: boolean; running_jobs: number[] }>('/admin/scrapers/status');
+  request<{ running: boolean; full_session_running: boolean; running_jobs: number[] }>('/admin/scrapers/status');
 
 export const runAllScrapers = () =>
   request<{ message: string; status: string }>('/admin/scrapers/run-all', { method: 'POST' });
