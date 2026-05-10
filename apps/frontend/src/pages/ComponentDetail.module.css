@@ -48,7 +48,7 @@
   height: 160px;
   object-fit: contain;
   border-radius: var(--radius-lg);
-  background: var(--surface-2);
+  background: #fff;
   border: 1px solid var(--border);
   padding: 0.75rem;
 }
