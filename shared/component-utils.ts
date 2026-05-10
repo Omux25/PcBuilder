@@ -332,8 +332,8 @@ export function cleanName(rawName: string, brand: string): string {
     .replace(/\s*\(\d+\.?\d*\s*GHz[^)]*\)\s*/gi, '') // (3.7 GHz Max)
     .replace(/\s*\(\d+\.?\d*\s*GHz[^)]*\.{3}?\s*/gi, '') // (3.7 GHz /... truncated — no closing paren
     .replace(/\s*\(\d+\.?\d*\s*GHz[^)]*$/, '') // (3.7 GHz... at end of string with no closing paren
-    .replace(/\s+\d+\.?\d*\s*GHz\s*\/\s*\d+\.?\d*\s*GHz\s*/gi, ' ') // 3.7 GHz / 4.6 GHz
-    .replace(/\s+\d+\s*(MHZ|GHZ|mhz|ghz)\s*$/i, '') // Trailing MHz/GHz
+    .replace(/\s+\d+\.?\d*\s*GHz\s*\/\s*\d+\.?\d*\s*GHz\s*/gi, ' ') // 3.7 GHz / 4.6 GHz — CPU boost range
+    .replace(/\s+\d+\.?\d*\s*GHz\s*$/i, '') // Trailing GHz — CPU boost speed only (not RAM MHz)
     .replace(/\s*-\s*ed\s*$/i, '') // "- ed" suffix
     // Strip trailing ellipsis from truncated scraper names
     .replace(/\s*\.{2,}\s*$/, '')
@@ -355,23 +355,120 @@ export function cleanName(rawName: string, brand: string): string {
   name = name.replace(/^(i\d)\s+(\d)/i, 'Core $1 $2');
   name = name.replace(/^(I\d)-(\d)/i, 'Core $1 $2');
 
-  // Strip DDR4/DDR5 suffix from motherboard names — redundant since RAM type
-  // is shown as a separate spec. Keep only if it's the only differentiator
-  // between two otherwise identical names (handled by dedup logic).
-  // Pattern: trailing " DDR4", " DDR5", " D4", " D5" (case-insensitive)
-  name = name.replace(/\s+DDR[45]\s*$/i, '');
-  name = name.replace(/\s+D[45]\s*$/i, '');
+  // Strip DDR4/DDR5 suffix from motherboard names only — redundant since RAM type
+  // is shown as a separate spec. Only strip when the name contains a chipset code
+  // (e.g. "B650M DS3H DDR4" → "B650M DS3H") but NOT from RAM names.
+  if (/\b[ABXZH]\d{3,4}[A-Z]?\b/.test(name)) {
+    name = name.replace(/\s+DDR[45]\s*$/i, '');
+    name = name.replace(/\s+D[45]\s*$/i, '');
+  }
 
   // Strip socket suffix leaked from retailer names: "Ryzen 5 5600Socket AM4", "Core Ultra 5 225FSocket 1851"
   name = name.replace(/\s*Socket\s*(AM[45]|LGA\s*\d{4}|\d{4})\s*$/i, '');
   name = name.replace(/\s*(AM[45]|LGA\d{4})\s*$/i, '');
 
-  // Normalize all-caps names: "RYZEN 3 3300X" → "Ryzen 3 3300X"
-  // Only apply if the name is mostly uppercase (>60% uppercase letters)
-  const letters = name.replace(/[^a-zA-Z]/g, '');
-  const upperCount = (name.match(/[A-Z]/g) || []).length;
-  if (letters.length > 3 && upperCount / letters.length > 0.6) {
-    name = name.toLowerCase().replace(/\b(\w)/g, (c) => c.toUpperCase());
+  // Normalize capitalization — apply title case uniformly, then restore known acronyms.
+  // This fixes both all-lowercase ("amd radeon rx 6600") and all-caps ("RYZEN 3 3300X").
+  // We always normalize so names from different retailers are consistent.
+  {
+    // Known acronyms/tokens that must stay in a specific case
+    const ACRONYMS: Record<string, string> = {
+      // GPU chipsets
+      'rtx': 'RTX', 'gtx': 'GTX', 'rx': 'RX',
+      // Memory types
+      'ddr4': 'DDR4', 'ddr5': 'DDR5',
+      'gddr5': 'GDDR5', 'gddr6': 'GDDR6', 'gddr6x': 'GDDR6X', 'gddr7': 'GDDR7',
+      'lpddr5': 'LPDDR5', 'lpddr4': 'LPDDR4',
+      // Capacity units
+      'gb': 'GB', 'go': 'Go', 'tb': 'TB', 'to': 'To', 'mb': 'MB', 'mo': 'Mo',
+      // Frequency
+      'mhz': 'MHz', 'ghz': 'GHz',
+      // Latency
+      'cl16': 'CL16', 'cl18': 'CL18', 'cl30': 'CL30', 'cl32': 'CL32',
+      'cl34': 'CL34', 'cl36': 'CL36', 'cl38': 'CL38', 'cl40': 'CL40',
+      'cl42': 'CL42', 'cl46': 'CL46',
+      // Interfaces
+      'nvme': 'NVMe', 'm.2': 'M.2', 'pcie': 'PCIe', 'sata': 'SATA',
+      'usb': 'USB', 'hdmi': 'HDMI',
+      // Form factors
+      'atx': 'ATX', 'matx': 'mATX', 'itx': 'ITX', 'eatx': 'E-ATX',
+      // Drive types
+      'ssd': 'SSD', 'hdd': 'HDD',
+      // Lighting
+      'rgb': 'RGB', 'argb': 'ARGB',
+      // Cooling
+      'aio': 'AIO', 'tdp': 'TDP',
+      // Brands/sub-brands
+      'amd': 'AMD', 'nvidia': 'NVIDIA',
+      'tuf': 'TUF', 'rog': 'ROG', 'meg': 'MEG', 'mag': 'MAG', 'mpg': 'MPG',
+      'aorus': 'AORUS', 'xlr8': 'XLR8',
+      // Sockets
+      'lga1700': 'LGA1700', 'lga1851': 'LGA1851', 'lga1200': 'LGA1200', 'lga1151': 'LGA1151',
+      'am4': 'AM4', 'am5': 'AM5',
+      // Connectivity
+      'wifi': 'WiFi', 'dp': 'DP',
+      // Performance markers
+      'oc': 'OC', 'soc': 'SOC', 'lhr': 'LHR',
+      'xmp': 'XMP', 'expo': 'EXPO',
+      // CPU components
+      'cpu': 'CPU', 'gpu': 'GPU', 'psu': 'PSU', 'ram': 'RAM',
+    };
+
+    // Apply title case
+    name = name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+    // Also capitalize letters immediately following digits (e.g. "8gb" → "8Gb", "3200mhz" → "3200Mhz")
+    // \b doesn't create a boundary between digit and letter in JS regex
+    // Exception: "x" as a multiplier (e.g. "2x16Go") stays lowercase
+    name = name.replace(/(\d)([a-wyz])/g, (_, d, l) => d + l.toUpperCase()); // skip 'x'
+
+    // Fix capacity/frequency units that follow numbers BEFORE acronym loop
+    // (word boundary doesn't exist between digit and letter, so \b won't match)
+    name = name.replace(/(\d)(Gb)\b/g, '$1GB');
+    name = name.replace(/(\d)(Go)\b/g, '$1Go'); // French GB — keep as Go
+    name = name.replace(/(\d)(Tb)\b/g, '$1TB');
+    name = name.replace(/(\d)(To)\b/g, '$1To'); // French TB — keep as To
+    name = name.replace(/(\d)(Mb)\b/g, '$1MB');
+    name = name.replace(/(\d)(Mo)\b/g, '$1Mo'); // French MB
+    name = name.replace(/(\d)(Mhz)\b/g, '$1MHz');
+    name = name.replace(/(\d)(Ghz)\b/g, '$1GHz');
+    name = name.replace(/(\d)(W)\b/g, '$1W');
+    name = name.replace(/(\d)(Mm)\b/g, '$1mm');
+
+    // Restore acronyms — word-boundary aware, case-insensitive match
+    for (const [lower, correct] of Object.entries(ACRONYMS)) {
+      // Skip m.2 — handle separately (dot is special in regex)
+      if (lower === 'm.2') continue;
+      name = name.replace(new RegExp(`\\b${lower}\\b`, 'gi'), correct);
+    }
+    // M.2 — literal dot match
+    name = name.replace(/\bM\.2\b/gi, 'M.2');
+
+    // Special: "Geforce" → "GeForce"
+    name = name.replace(/\bGeforce\b/gi, 'GeForce');
+    // Intel iX series: "I5", "I7", "I9" → "i5", "i7", "i9"
+    name = name.replace(/\bI([3579])\b/g, 'i$1');
+    // "Core I5" → "Core i5"
+    name = name.replace(/\bCore\s+I([3579])\b/g, 'Core i$1');
+    // Model suffixes: "5600xt" → "5600XT", "9950x3d" → "9950X3D"
+    // Uppercase letter suffixes after model numbers: K, F, KF, KS, XT, XTX, GRE, X3D etc.
+    // Exception: "x" followed by a digit is a dimension multiplier (e.g. "120x20") — keep lowercase
+    name = name.replace(/\b(\d{3,5})([a-zA-Z][a-zA-Z0-9]*)\b/g, (match, num, suffix) => {
+      const suffixLower = suffix.toLowerCase();
+      const units = new Set(['gb', 'go', 'tb', 'to', 'mb', 'mo', 'mhz', 'ghz', 'w', 'mm', 'nm']);
+      if (units.has(suffixLower)) return match;
+      // "x" as dimension multiplier: "120x20" — the full match would be "120x20" but our regex
+      // stops at word boundary, so "120x" won't match if followed by digit (no \b after digit)
+      // Actually \b(\d{3,5})([a-zA-Z][a-zA-Z0-9]*)\b — the \b at end requires non-word after suffix
+      // "120x20" — "x20" is the suffix, "20" is alphanumeric so \b is after "0" → matches "120x20"
+      // We want to keep "120x20" as-is. Check: if suffix starts with x and rest is digits → dimension
+      if (/^x\d+$/i.test(suffixLower)) return match; // "x20", "x32" etc. are dimensions
+      return `${num}${suffix.toUpperCase()}`;
+    });
+    // "x" as multiplier in kit notation: "(2 X 16Go)" → "(2x16Go)"
+    name = name.replace(/\((\d+)\s+X\s+(\d+)/g, '($1x$2');
+    // Lowercase "x" standalone multiplier for small numbers only: "2X" → "2x" (not "9700X")
+    // Only apply to 1-2 digit numbers to avoid converting model suffixes like 9700X, 5600X
+    name = name.replace(/\b([1-9][0-9]?)X\b(?!\s*[A-Z]{2})/g, '$1x');
   }
 
   // If after stripping everything it's empty, use the original (fallback)
