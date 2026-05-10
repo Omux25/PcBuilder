@@ -106,7 +106,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
     const category = (listing.suggestion_category as ComponentCategory | null)
       ?? resolveCategory(scrapedName)
       ?? resolveCategory(nameForExtraction);
-    if (!category) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
+    if (!category || category === 'build' as any) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
 
     const brand = prefixAsBrand ?? extractBrand(nameForExtraction);
     const cleanedName = cleanName(nameForExtraction, brand);
