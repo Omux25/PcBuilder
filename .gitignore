@@ -37,6 +37,18 @@ notes/.obsidian/
 *.log
 npm-debug.log*
 
+# Generated audit/export artifacts
+apps/backend/audit_report.json
+apps/backend/audit_report.md
+apps/backend/catalog_full_dump.md
+notes/frontend_audit_report.md
+
+# Scratch files
+apps/backend/scratch/
+
+# Kiro specs (local only)
+.kiro/specs/
+
 # PlantUML jar (build tool binary — not for Git)
 plantuml.jar
 
