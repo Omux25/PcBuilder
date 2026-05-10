@@ -21,7 +21,7 @@ import { getSql, setSql, resetSql } from '../src/db/index.js';
 import { logger } from './utils/logger.js';
 import { SCRAPER_CONFIG } from '@shared/scraper-config';
 import {
-  decodeHtml, inferCategory, extractBrand, cleanName,
+  decodeHtml, inferCategory, extractBrand, cleanName, CATEGORY_WORDS,
   extractCpuSpecs, extractGpuSpecs, extractRamSpecs, extractStorageSpecs,
   extractMotherboardSpecs, extractPsuSpecs, extractCoolingSpecs, extractCaseSpecs,
   extractFanSpecs, extractThermalPasteSpecs
@@ -179,7 +179,6 @@ export async function aggregate(
   };
   const toCreateBySlug = new Map<string, PendingCreate>();
 
-  const CATEGORY_WORDS = new Set(['boitier', 'boîtier', 'watercooler', 'watercooling', 'processeur', 'carte graphique', 'alimentation', 'stockage', 'memoire', 'mémoire', 'aircooler', 'air cooler', 'carte mère', 'carte mere', 'disque']);
 
   // Categories the DB components table accepts (matches components_category_check constraint).
   // Peripherals and accessories inferred by inferCategory() are intentionally excluded —
@@ -213,10 +212,21 @@ export async function aggregate(
       // Dismiss known junk BEFORE category resolution — these should never become components
       // regardless of any sug_category from previous suggestions
       const lowerScraped = scrapedName.toLowerCase();
+
+      // "Tray" means OEM CPU/GPU without retail box — legitimate product in Morocco.
+      // Only dismiss "tray" when it appears in a RAM/memory context (bulk RAM trays = junk).
+      const isTrayRam = lowerScraped.includes('tray') && (
+        lowerScraped.includes('ddr') ||
+        lowerScraped.includes('dimm') ||
+        lowerScraped.includes('ram') ||
+        lowerScraped.includes('mémoire') ||
+        lowerScraped.includes('memoire')
+      );
+
       if (
         lowerScraped.includes('so-dimm') ||
         lowerScraped.includes('sodimm') ||
-        lowerScraped.includes('tray') ||
+        isTrayRam ||
         lowerScraped.includes('bulk') ||
         lowerScraped.includes('sans emballage') ||
         /^\d+\s*(cœurs?|cores?)\s*[/\\]?\s*\d*/i.test(scrapedName) ||
@@ -267,6 +277,38 @@ export async function aggregate(
       });
 
       if (dnaMatch) {
+        // Step 3b: Bundle detection (Safety Guard)
+        // If the product matches 2+ major categories, it's a bundle/PC build.
+        // e.g. "PC Gamer Ryzen 5 7600X RTX 4070" matches both CPU and GPU.
+        // We only check major categories (cpu, gpu, motherboard) to avoid false positives.
+        const MAJOR_CATEGORIES = new Set(['cpu', 'gpu', 'motherboard']);
+        if (MAJOR_CATEGORIES.has(resolvedCategory)) {
+          let otherCategoryMatch = false;
+          for (const otherCat of MAJOR_CATEGORIES) {
+            if (otherCat === resolvedCategory) continue;
+            const otherCatComponents = componentsByCategory.get(otherCat) || [];
+            const hasMatchInOtherCat = otherCatComponents.some(oc => {
+              const { score } = scoreDnaMatch(nameForExtraction, oc.brand ? `${oc.brand} ${oc.name}` : oc.name, otherCat, true /* skipBrandCheck for bundles */);
+              return score >= 1.0;
+            });
+            if (hasMatchInOtherCat) {
+              otherCategoryMatch = true;
+              break;
+            }
+          }
+          if (otherCategoryMatch) {
+            unmatchedListingsToUpsert.push({
+              retailer_id: p.retailer_id,
+              product_url: p.product_url,
+              scraped_name: scrapedName,
+              scraped_price: p.price,
+              image_url: p.image_url ?? null
+            });
+            unmatched++;
+            continue;
+          }
+        }
+
         finalResolved.push({ ...p, component_id: dnaMatch.id, category: resolvedCategory });
         autoMapped++;
         continue;
