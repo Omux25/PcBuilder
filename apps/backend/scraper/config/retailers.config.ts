@@ -16,6 +16,7 @@
 import { UltraPcScraper } from '../scrapers/ultrapcScraper.js';
 import { NextLevelScraper } from '../scrapers/nextlevelScraper.js';
 import { SetupGameScraper } from '../scrapers/setupgameScraper.js';
+import { PcGamerCasaScraper } from '../scrapers/pcgamercasaScraper.js';
 import type { ScrapedPrice } from '../scrapers/baseScraper.js';
 
 export interface RetailerScraperConfig {
@@ -55,5 +56,10 @@ export const RETAILER_SCRAPERS: RetailerScraperConfig[] = [
         baseUrl: 'https://setupgame.ma',
         name: 'SetupGame',
         run: (retailer_id: number) => new SetupGameScraper().scrapeAllCategories(retailer_id),
+    },
+    {
+        baseUrl: 'https://www.pcgamercasa.ma',
+        name: 'PC Gamer Casa',
+        run: (retailer_id: number) => new PcGamerCasaScraper().scrapeAllCategories(retailer_id),
     },
 ];

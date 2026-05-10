@@ -49,13 +49,22 @@ describe('Bug Condition: Scraper registry IDs match actual retailer IDs', () => 
     expect(src).toMatch(/name:\s*['"]SetupGame['"]/);
   });
 
-  test('RETAILER_SCRAPERS contains exactly 3 production scrapers', async () => {
+  test('PC Gamer Casa is registered with retailerName (dynamic ID resolution)', async () => {
+    const src = await readFile(
+      join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
+      'utf-8'
+    );
+    expect(src).toMatch(/baseUrl:\s*['"]https:\/\/www\.pcgamercasa\.ma['"]/);
+    expect(src).toMatch(/name:\s*['"]PC Gamer Casa['"]/);
+  });
+
+  test('RETAILER_SCRAPERS contains exactly 4 production scrapers', async () => {
     const src = await readFile(
       join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
       'utf-8'
     );
     const matches = src.match(/baseUrl:\s*['"][^'"]+['"]/g) ?? [];
-    expect(matches.length).toBe(3);
+    expect(matches.length).toBe(4);
   });
 });
 
