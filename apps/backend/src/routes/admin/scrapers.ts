@@ -40,6 +40,7 @@ export function isScraperRunning(): boolean {
 adminScrapersRouter.get('/status', (c) => {
   return c.json({
     running: fullSessionRunning || runningJobs.size > 0,
+    full_session_running: fullSessionRunning,
     running_jobs: [...runningJobs],
   });
 });
