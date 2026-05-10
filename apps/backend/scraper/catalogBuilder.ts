@@ -16,7 +16,7 @@ import { scoreDnaMatch, type CatalogComponent } from '../src/utils/componentMatc
 import { logger } from './utils/logger.js';
 import { getSql, setSql, resetSql } from '../src/db/index.js';
 import {
-  decodeHtml, inferCategory, extractBrand, cleanName,
+  decodeHtml, inferCategory, extractBrand, cleanName, CATEGORY_WORDS,
   extractCpuSpecs, extractGpuSpecs, extractRamSpecs,
   extractMotherboardSpecs, extractPsuSpecs, extractCoolingSpecs, extractCaseSpecs,
   extractFanSpecs, extractThermalPasteSpecs
@@ -96,7 +96,6 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
     const prefixMatch = scrapedName.match(/^([^–\-]+)[–\-]\s+(.+)$/);
     const nameForExtraction = prefixMatch ? prefixMatch[2].trim() : scrapedName;
     // Use prefix as brand only if it's a known brand, not a category word like "Boitier" or "Watercooler"
-    const CATEGORY_WORDS = new Set(['boitier', 'boîtier', 'watercooler', 'watercooling', 'processeur', 'carte graphique', 'alimentation', 'stockage', 'memoire', 'mémoire', 'aircooler', 'air cooler', 'carte mère', 'carte mere', 'disque']);
     const prefixWord = prefixMatch ? prefixMatch[1].trim().toLowerCase() : '';
     const prefixAsBrand = (prefixMatch && !CATEGORY_WORDS.has(prefixWord))
       ? (extractBrand(prefixMatch[1].trim()) ?? null)
@@ -111,6 +110,15 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
 
     const brand = prefixAsBrand ?? extractBrand(nameForExtraction);
     const cleanedName = cleanName(nameForExtraction, brand);
+
+    // Reject brand-only names — if the cleaned name equals the brand (case-insensitive),
+    // the product has no model identifier and is useless in the catalog.
+    // e.g. scraped "XTRMLAB" → cleanedName="Xtrmlab", brand="XTRMLAB" → skip
+    if (cleanedName.toLowerCase() === brand.toLowerCase() || cleanedName.length < 3) {
+      skipped++;
+      onProgress?.(created + skipped, pending.length);
+      continue;
+    }
     const dnaMatch = existingComponents.find(c => {
       if (c.category !== category) return false;
       const { score } = scoreDnaMatch(nameForExtraction, `${c.brand ?? ''} ${c.name}`, category);
@@ -118,6 +126,37 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
     });
 
     if (dnaMatch) {
+      // Step 3b: Bundle detection (Safety Guard)
+      const MAJOR_CATEGORIES = new Set(['cpu', 'gpu', 'motherboard']);
+      if (MAJOR_CATEGORIES.has(category)) {
+        let otherCategoryMatch = false;
+        // Group components by category for bundle check if not already grouped
+        const compByCat = new Map<string, CatalogComponent[]>();
+        for (const c of existingComponents) {
+          const list = compByCat.get(c.category) || [];
+          list.push(c);
+          compByCat.set(c.category, list);
+        }
+
+        for (const otherCat of MAJOR_CATEGORIES) {
+          if (otherCat === category) continue;
+          const otherCatComponents = compByCat.get(otherCat) || [];
+          const hasMatchInOtherCat = otherCatComponents.some(oc => {
+            const { score } = scoreDnaMatch(nameForExtraction, oc.brand ? `${oc.brand} ${oc.name}` : oc.name, otherCat, true);
+            return score >= 1.0;
+          });
+          if (hasMatchInOtherCat) {
+            otherCategoryMatch = true;
+            break;
+          }
+        }
+        if (otherCategoryMatch) {
+          skipped++;
+          onProgress?.(created + skipped, pending.length);
+          continue;
+        }
+      }
+
       try {
         await sql`
           INSERT INTO scraper_mappings (component_id, retailer_id, product_url, product_identifier)

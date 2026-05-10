@@ -237,8 +237,8 @@ export function extractBrand(name: string): string {
     if (regex.test(lower)) return brand;
   }
 
-  // Fallback to first word
-  return n.split(/\s+/)[0];
+  // No brand found
+  return '';
 }
 
 /**
@@ -271,6 +271,14 @@ export function cleanName(rawName: string, brand: string): string {
     .replace(/la\s+carte\s*m[eè]re\s+/gi, '')
     .replace(/les\s+cartes\s*m[eè]re\s+/gi, '')
     .replace(/carte\s*m[eè]re\s+/gi, '');
+
+  // Strip leading em-dash prefix (retailer category prefix artifact)
+  // e.g. "– Matrexx 55 V3" → "Matrexx 55 V3"
+  name = name.replace(/^[–\-]\s+/, '');
+
+  // Strip SKU codes appended after pipe
+  // e.g. "AddGame Spider S5 16GB ... | AG16GB56C40S5UB" → "AddGame Spider S5 16GB ..."
+  name = name.replace(/\s*\|.*$/, '').trim();
 
   // Strip category prefix patterns (handle both "Category - Name" and "Category Name")
   name = name
@@ -306,10 +314,12 @@ export function cleanName(rawName: string, brand: string): string {
   name = name.replace(/\s*\((Livraison\s*Gratuite|Promo|Solde|New|Nouveau|Gratuit)[^)]*\)\s*/gi, ' ');
 
   // Remove brand if present (handles double-brand like "AMD AMD Ryzen")
-  const bRegex = new RegExp(`\\b(${brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|processeur)\\b`, 'gi');
-  name = name.replace(bRegex, '');
-  // Run twice to catch double-brand (e.g. "AMD AMD Ryzen" → " AMD Ryzen" → " Ryzen")
-  name = name.replace(bRegex, '');
+  if (brand) {
+    const bRegex = new RegExp(`\\b(${brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|processeur)\\b`, 'gi');
+    name = name.replace(bRegex, '');
+    // Run twice to catch double-brand (e.g. "AMD AMD Ryzen" → " AMD Ryzen" → " Ryzen")
+    name = name.replace(bRegex, '');
+  }
 
   // Remove retail noise + Colors + Technical specs
   name = name
@@ -468,7 +478,6 @@ const CHIPSET_MAP: Record<string, ChipsetInfo> = {
   B650E: { socket: 'AM5', ddr: 'DDR5_ONLY', defaultMaxMhz: 6400 },
   B840: { socket: 'AM5', ddr: 'DDR5_ONLY', defaultMaxMhz: 8000 },
   B850: { socket: 'AM5', ddr: 'DDR5_ONLY', defaultMaxMhz: 8000 },
-  B860: { socket: 'AM5', ddr: 'DDR5_ONLY', defaultMaxMhz: 8000 },
   X570S: { socket: 'AM4', ddr: 'DDR4_ONLY', defaultMaxMhz: 5100 }, // refresh of X570
   X670: { socket: 'AM5', ddr: 'DDR5_ONLY', defaultMaxMhz: 6400 },
   X670E: { socket: 'AM5', ddr: 'DDR5_ONLY', defaultMaxMhz: 6400 },
