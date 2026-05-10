@@ -241,6 +241,23 @@ export function extractBrand(name: string): string {
   return n.split(/\s+/)[0];
 }
 
+/**
+ * Standard category keywords used for stripping prefixes/suffixes.
+ */
+export const CATEGORY_WORDS = new Set([
+  'boitier', 'boîtier', 'boitiers', 'boîtiers',
+  'watercooler', 'watercooling',
+  'processeur', 'processeurs',
+  'carte graphique', 'cartes graphiques',
+  'alimentation', 'alimentations',
+  'stockage',
+  'memoire', 'mémoire', 'memoires', 'mémoires',
+  'aircooler', 'air cooler',
+  'carte mère', 'carte mere', 'cartes mères', 'cartes meres',
+  'disque', 'disques',
+  'pate thermique', 'pâte thermique'
+]);
+
 export function cleanName(rawName: string, brand: string): string {
   let name = decodeHtml(rawName);
 
@@ -248,8 +265,39 @@ export function cleanName(rawName: string, brand: string): string {
   name = name
     .replace(/l['\u2019]alimentation\s+/gi, '')
     .replace(/le\s+processeur\s+/gi, '')
+    .replace(/les\s+processeurs\s+/gi, '')
     .replace(/la\s+carte\s+graphique\s+/gi, '')
+    .replace(/les\s+cartes\s+graphiques\s+/gi, '')
+    .replace(/la\s+carte\s*m[eè]re\s+/gi, '')
+    .replace(/les\s+cartes\s*m[eè]re\s+/gi, '')
     .replace(/carte\s*m[eè]re\s+/gi, '');
+
+  // Strip category prefix patterns (handle both "Category - Name" and "Category Name")
+  name = name
+    .replace(/^(processeurs?|cartes?\s*graphiques?|cartes?\s*m[eè]res?|m[eé]moires?\s*vives?|disques?\s*durs?|alimentations?|[Bb]oîtiers?|refroidissement|ventilateurs?\s*boîtier|p[âa]tes?\s*thermique)\s*[\-–]\s+/gi, '')
+    .replace(/^(processeurs?|cartes?\s*graphiques?|cartes?\s*m[eè]res?|m[eé]moires?\s*vives?|disques?\s*durs?|alimentations?|[Bb]oîtiers?|refroidissement|ventilateurs?\s*boîtier|p[âa]tes?\s*thermique)\s+/gi, '');
+
+  // Strip category breadcrumb suffixes appended by retailers (UltraPC, NextLevel, etc.)
+  // e.g. "Ryzen 5 5600XTProcesseurs" → "Ryzen 5 5600XT"
+  //      "GeForce RTX 4090 GAMING OC 24GB GDDR6X Cartes graphiques" → "GeForce RTX 4090 GAMING OC 24GB GDDR6X"
+  //      "FURY Beast 32Go DDR5 Mémoire vive" → "FURY Beast 32Go DDR5"
+  //      "Barracuda 1 To Disques durs et SSD" → "Barracuda 1 To"
+  name = name
+    .replace(/Processeurs?\s*$/gi, '')
+    .replace(/Cartes?\s*[Gg]raphiques?\s*$/gi, '')
+    .replace(/Cartes?\s*[Mm][eè]res?\s*$/gi, '')
+    .replace(/M[eé]moire\s*[Vv]ive\s*(PC|DDR[45])?\s*\w*\s*$/gi, '')
+    .replace(/Disques?\s*(durs?\s*(et\s*SSD)?|SSD)\s*\w*\s*$/gi, '')
+    .replace(/Alimentations?\s*(PC)?\s*\w*\s*$/gi, '')
+    .replace(/[Bb]oîtiers?\s*(PC|[Gg]amer)?\s*\w*\s*$/gi, '')
+    .replace(/Refroidissement\s*$/gi, '')
+    .replace(/Ventilateurs?\s*[Bb]oîtier\s*\w*\s*$/gi, '')
+    .replace(/P[âa]te\s*[Tt]hermique\s*$/gi, '')
+    // UltraPC appends ", Ultra Pc Gamer Maroc" to alt text
+    .replace(/,?\s*Ultra\s*Pc\s*Gamer\s*Maroc\s*$/gi, '')
+    // SetupGame appends "Setup Game" or "Setup-Game" branding
+    .replace(/\s*[-–]\s*Setup\s*Game\s*\w*\s*$/gi, '')
+    .replace(/\s*Setup\s*Game\s*\w*\s*$/gi, '');
 
   // Strip marketing/promo noise at the start
   name = name.replace(/^(PROMO\s*!+\s*|SOLDES?\s*!+\s*|NEW\s*!+\s*)/gi, '');
