@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { GitCompare, ShoppingCart, ArrowLeft } from 'lucide-react';
 import { getComponentBySlug, getPrices, getPriceHistory } from '../api';
 import { PriceHistoryChart, PERIOD_DAYS } from '../components/PriceHistoryChart';
@@ -24,6 +24,7 @@ interface Props {
 export function ComponentDetail({ onAddToBuild }: Props = {}) {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { addToCompare, removeFromCompare, isInCompare } = useCompare();
   const [component, setComponent] = useState<Component | null>(null);
   const [prices, setPrices] = useState<PriceOffer[]>([]);
@@ -83,10 +84,22 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
     setTimeout(() => setAddedToBuild(false), 2000);
   }
 
+  // Go back to wherever the user came from (preserves filters/page/scroll).
+  // Falls back to the category browse page if there's no history entry.
+  function goBack() {
+    if (location.key !== 'default') {
+      navigate(-1);
+    } else if (component) {
+      navigate(`/browse/${component.category}`);
+    } else {
+      navigate('/components');
+    }
+  }
+
   if (loading) {
     return (
       <div className={styles.page}>
-        <Link to="/" className={styles.back}><ArrowLeft size={14} /> Retour</Link>
+        <button onClick={goBack} className={styles.back}><ArrowLeft size={14} /> Retour</button>
         <div className={styles.heroLayout}>
           <Skeleton height={160} width={160} style={{ borderRadius: '12px', flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
@@ -107,7 +120,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
     return (
       <div className={styles.error}>
         <p>{error ?? UI.detail.notFound}</p>
-        <Link to="/" className={styles.back}>{UI.detail.backToConfigurator}</Link>
+        <button onClick={goBack} className={styles.back}>{UI.detail.backToConfigurator}</button>
       </div>
     );
   }
@@ -120,9 +133,9 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
 
   return (
     <div className={styles.page}>
-      <Link to={`/browse/${component.category}`} className={styles.back}>
+      <button onClick={goBack} className={styles.back}>
         <ArrowLeft size={14} /> {CATEGORY_LABELS[component.category as ComponentCategory] ?? UI.detail.back}
-      </Link>
+      </button>
 
       {/* ── Hero ──────────────────────────────────────────────────────── */}
       <div className={styles.heroLayout}>

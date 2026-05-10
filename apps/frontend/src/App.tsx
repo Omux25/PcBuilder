@@ -38,6 +38,8 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => { setSearchOpen(false); }, [location.pathname]);
+  // Scroll to top on every route change (BrowserRouter has no built-in ScrollRestoration)
+  useEffect(() => { window.scrollTo(0, 0); }, [location.pathname]);
   useEffect(() => {
     if (searchOpen) setTimeout(() => searchRef.current?.focus(), 50);
   }, [searchOpen]);

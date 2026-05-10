@@ -56,16 +56,24 @@ export function CategoryBrowse() {
   const [availableSockets, setAvailableSockets] = useState<string[]>([]);
 
   const abortRef = useRef<AbortController | null>(null);
-  const hasDataRef = useRef(false); // tracks if we've ever loaded data for this category
-  const tableRef = useRef<HTMLDivElement>(null); // for scroll-to-top on page change
+  const hasDataRef = useRef(false);
+  const tableRef = useRef<HTMLDivElement>(null);
+  const filterMountedRef = useRef(false);
+  const filterResetPageRef = useRef(false); // true when filter effect resets page, so page-change effect skips
+  const brandsPopulated = useRef(false);
+  const prevPageRef = useRef(page);
 
-  // Reset hasDataRef when category changes so initial load shows skeletons
+  // Reset refs when category changes so initial load shows skeletons
   useEffect(() => {
     hasDataRef.current = false;
+    filterMountedRef.current = false;
+    filterResetPageRef.current = false;
+    brandsPopulated.current = false;
+    prevPageRef.current = Number(searchParams.get('page') ?? '1');
     setLoading(true);
     setComponents([]);
     setTotal(0);
-  }, [cat]);
+  }, [cat]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Build Context (for smartSearch compatibility) ─────────────────────────
   const buildContext = useMemo(() => {
@@ -76,9 +84,6 @@ export function CategoryBrowse() {
   }, [build, slotKey]);
 
   // ── Fetch components ──────────────────────────────────────────────────────
-  // Track whether filter options have been populated (only needed once)
-  const brandsPopulated = useRef(false);
-
   const fetchComponents = useCallback(async (
     searchTerm: string,
     brandFilter: string,
@@ -134,7 +139,18 @@ export function CategoryBrowse() {
   useEffect(() => { fetchRef.current = fetchComponents; }, [fetchComponents]);
 
   useEffect(() => {
+    // On first fire (mount), fetch using the page already restored from the URL.
+    // Do NOT reset to page 1 — that would clobber back-navigation state.
+    // filterMountedRef guards against StrictMode double-invoke: the cleanup
+    // resets it so the second invoke also sees false and takes the mount path.
+    if (!filterMountedRef.current) {
+      filterMountedRef.current = true;
+      fetchRef.current(search, brand, socket, ramType, page);
+      return () => { filterMountedRef.current = false; }; // StrictMode cleanup
+    }
+
     const timeout = setTimeout(() => {
+      filterResetPageRef.current = true;
       setPage(1);
       fetchRef.current(search, brand, socket, ramType, 1);
 
@@ -150,13 +166,19 @@ export function CategoryBrowse() {
       setSearchParams(params, { replace: true });
     }, DEBOUNCE_MS);
     return () => clearTimeout(timeout);
-  }, [search, brand, socket, ramType, minPrice, maxPrice, sort, inStockOnly, setSearchParams]);
-  // Note: fetchComponents intentionally excluded — using fetchRef to avoid double-fetch
+  }, [search, brand, socket, ramType, minPrice, maxPrice, sort, inStockOnly, setSearchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+  // page intentionally excluded — initial value used via filterMountedRef, subsequent changes handled below
 
   // ── Fetch on page change only ─────────────────────────────────────────────
-  const prevPageRef = useRef(page);
   useEffect(() => {
-    if (prevPageRef.current === page) return; // skip on initial mount / filter resets
+    // Skip if this page change was triggered by a filter reset — the filter
+    // effect already fetched the correct data with the correct filters.
+    if (filterResetPageRef.current) {
+      filterResetPageRef.current = false;
+      prevPageRef.current = page;
+      return;
+    }
+    if (prevPageRef.current === page) return; // skip on initial mount
     prevPageRef.current = page;
     fetchRef.current(search, brand, socket, ramType, page);
   }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -171,6 +193,20 @@ export function CategoryBrowse() {
 
   const changePage = (newPage: number) => {
     setPage(newPage);
+
+    // Write page to URL so browser back restores it
+    const params: Record<string, string> = {};
+    if (search) params.q = search;
+    if (brand) params.brand = brand;
+    if (socket) params.socket = socket;
+    if (ramType) params.ram_type = ramType;
+    if (minPrice) params.min_price = minPrice;
+    if (maxPrice) params.max_price = maxPrice;
+    if (inStockOnly) params.in_stock = 'true';
+    if (sort !== 'smart') params.sort = sort;
+    if (newPage > 1) params.page = String(newPage);
+    setSearchParams(params, { replace: true });
+
     // Scroll to top of results table so user sees new results immediately
     setTimeout(() => {
       tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
