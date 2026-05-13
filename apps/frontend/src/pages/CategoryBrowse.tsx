@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, ChevronLeft, ChevronRight, GitCompare, Filter, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { smartSearch, type SmartComponent } from '../api';
@@ -16,12 +16,6 @@ const DEBOUNCE_MS = 350;
 
 type SortOption = string;
 
-const SORT_LABELS: Record<SortOption, string> = {
-  smart: 'Pertinence',
-  price_asc: 'Prix croissant',
-  price_desc: 'Prix décroissant',
-  name_asc: 'Nom A → Z',
-};
 
 const SOCKET_CATEGORIES = new Set<ComponentCategory>(['cpu', 'motherboard']);
 const RAM_TYPE_CATEGORIES = new Set<ComponentCategory>(['ram', 'motherboard']);
@@ -113,10 +107,12 @@ export function CategoryBrowse() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { build, addToBuild } = useBuild();
-  const { addToCompare, isInCompare, removeFromCompare, compareCategory } = useCompare();
+  const { addToCompare, isInCompare, removeFromCompare } = useCompare();
 
   const cat = category as ComponentCategory;
-  const isCategoryMismatch = compareCategory && compareCategory !== cat;
+  const isCore = CATEGORY_ORDER.slice(0, 9).includes(cat); 
+  const isSelecting = !!slotKey || isCore;
+
   const colDefs = useMemo(() => getColDefs(cat), [cat]);
   const totalCols = 2 + colDefs.length + 2;
 
@@ -316,7 +312,7 @@ export function CategoryBrowse() {
             <CategoryIcon category={cat} size={20} />
           </span>
           <h1 className={styles.title}>
-            {slotKey ? 'Sélectionner ' : 'Parcourir '}{CATEGORY_LABELS[cat]}
+            {isSelecting ? 'Sélectionner ' : 'Parcourir '}{CATEGORY_LABELS[cat]}
           </h1>
         </div>
       </div>
@@ -543,7 +539,7 @@ export function CategoryBrowse() {
                               }}
                               disabled={isIncompatible}
                             >
-                              {isIncompatible ? 'Incompatible' : slotKey ? 'Choisir' : 'Ajouter'}
+                              {isIncompatible ? 'Incompatible' : isSelecting ? 'Choisir' : 'Ajouter'}
                             </button>
                           </div>
                         </td>

@@ -1,13 +1,10 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Cpu, Sun, Moon, Check, Link2, LayoutGrid, Search, GitCompare, FileText } from 'lucide-react';
+import { Cpu, Sun, Moon, LayoutGrid, Search, GitCompare } from 'lucide-react';
 import { Configurator } from './components/Configurator';
 import { Skeleton } from './components/Skeleton';
 import { CompareTray } from './components/CompareTray';
 import { useBuild } from './context/BuildContext';
-import { calculateBuildTotalPrice } from './utils/buildUtils';
-import { CATEGORY_ORDER, CATEGORY_LABELS } from './types';
-import { encodeBuildToUrl } from './utils/buildUrl';
 import { getInitialTheme, applyTheme, toggleTheme } from './utils/theme';
 import { getComponentById } from './api';
 import { UI } from './ui-strings';
@@ -24,10 +21,8 @@ const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.N
 
 export default function App() {
   const { build, setBuild, addToBuild } = useBuild();
-  const totalPrice = calculateBuildTotalPrice(build);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(getInitialTheme());
-  const [copied, setCopied] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
@@ -67,56 +62,6 @@ export default function App() {
     setBuild(newBuild);
   }
 
-  function handleShare() {
-    const qs = encodeBuildToUrl(build);
-    const url = `${window.location.origin}/?${qs}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }
-
-  function handleExportText() {
-    const lines = [UI.build.exportHeader, ''];
-    // Iterate all slot keys in display order (single-slot categories + indexed RAM/storage)
-    for (const cat of CATEGORY_ORDER) {
-      if (cat === 'ram') {
-        for (let i = 1; i <= 4; i++) {
-          const comp = build[`ram_${i}`];
-          if (!comp) continue;
-          const price = (comp as typeof comp & { lowest_price?: number | null }).lowest_price;
-          const priceStr = price ? ` — ${price.toLocaleString('fr-MA')} MAD` : '';
-          const label = i === 1 ? CATEGORY_LABELS.ram : `${CATEGORY_LABELS.ram} #${i}`;
-          lines.push(`${label}: ${comp.brand ? comp.brand + ' ' : ''}${comp.name}${priceStr}`);
-        }
-      } else if (cat === 'storage') {
-        for (let i = 1; i <= 4; i++) {
-          const comp = build[`storage_${i}`];
-          if (!comp) continue;
-          const price = (comp as typeof comp & { lowest_price?: number | null }).lowest_price;
-          const priceStr = price ? ` — ${price.toLocaleString('fr-MA')} MAD` : '';
-          const label = i === 1 ? CATEGORY_LABELS.storage : `${CATEGORY_LABELS.storage} #${i}`;
-          lines.push(`${label}: ${comp.brand ? comp.brand + ' ' : ''}${comp.name}${priceStr}`);
-        }
-      } else {
-        const comp = build[cat];
-        if (!comp) continue;
-        const price = (comp as typeof comp & { lowest_price?: number | null }).lowest_price;
-        const priceStr = price ? ` — ${price.toLocaleString('fr-MA')} MAD` : '';
-        lines.push(`${CATEGORY_LABELS[cat]}: ${comp.brand ? comp.brand + ' ' : ''}${comp.name}${priceStr}`);
-      }
-    }
-    if (totalPrice > 0) {
-      lines.push('');
-      lines.push(`${UI.build.exportTotal}: ${totalPrice.toLocaleString('fr-MA')} MAD`);
-    }
-    lines.push('');
-    lines.push(`${UI.build.exportLink}: ${window.location.origin}/?${encodeBuildToUrl(build)}`);
-    navigator.clipboard.writeText(lines.join('\n'));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (searchInput.trim()) {
@@ -131,7 +76,6 @@ export default function App() {
     setTheme(next);
   }
 
-  const hasComponents = Object.keys(build).length > 0;
   const isHome = location.pathname === '/';
   const isComponents = location.pathname.startsWith('/components') || location.pathname.startsWith('/browse');
   const isPresets = location.pathname === '/presets';
@@ -198,41 +142,9 @@ export default function App() {
       <Routes>
         {/* ── Home ────────────────────────────────────────────────────── */}
         <Route path="/" element={
-          <>
-            <section className={styles.hero}>
-              <div className={styles.heroContent}>
-                <h2 className={styles.heroTitle}>
-                  {UI.hero.title}{' '}
-                  <span className={styles.heroAccent}>{UI.hero.titleAccent}</span>
-                </h2>
-                <p className={styles.heroSub}>{UI.hero.subtitle}</p>
-                <div className={styles.heroCtas}>
-                  {CATEGORY_ORDER.slice(0, 5).map(cat => (
-                    <Link key={cat} to={`/browse/${cat}`} className={styles.heroCatLink}>
-                      {cat.toUpperCase()}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            <main className={styles.main}>
-              {hasComponents && (
-                <div className={styles.buildActions}>
-                  <button
-                    className={`${styles.actionBtn} ${copied ? styles.actionBtnSuccess : ''}`}
-                    onClick={handleShare}
-                  >
-                    {copied ? <><Check size={14} /> {UI.build.copied}</> : <><Link2 size={14} /> {UI.build.share}</>}
-                  </button>
-                  <button className={styles.actionBtn} onClick={handleExportText}>
-                    <FileText size={14} /> {UI.build.export}
-                  </button>
-                </div>
-              )}
-              <Configurator />
-            </main>
-          </>
+          <main className={styles.main}>
+            <Configurator />
+          </main>
         } />
 
         <Route path="/product/:slug" element={

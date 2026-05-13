@@ -10,9 +10,8 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { X, Plus, ExternalLink, ArrowLeft, BarChart3, CheckCircle2 } from 'lucide-react';
+import { X, Plus, ArrowLeft, BarChart3, CheckCircle2, Share2, Check } from 'lucide-react';
 import { getComponentById, getPrices } from '../api';
-import { CategoryIcon } from '../components/CategoryIcon';
 import type { Component, PriceOffer, ComponentCategory } from '../types';
 import { CATEGORY_LABELS } from '../types';
 import { MAX_COMPARE } from '../context/CompareContext';
@@ -91,6 +90,7 @@ interface ComponentWithPrices {
 
 export function Compare() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [copied, setCopied] = useState(false);
 
   // Parse IDs from URL
   const idsParam = searchParams.get('ids') ?? '';
@@ -98,6 +98,12 @@ export function Compare() {
 
   const [items, setItems] = useState<ComponentWithPrices[]>([]);
   const [loading, setLoading] = useState(ids.length > 0);
+
+  function handleShare() {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   // Load components whenever URL ids change
   useEffect(() => {
@@ -176,9 +182,15 @@ export function Compare() {
     <div className={styles.page}>
       <header className={styles.pageHeader}>
         <div className={styles.headerContent}>
-          <Link to="/" className={styles.back}><ArrowLeft size={16} /> {UI.compare.back}</Link>
-          <h1 className={styles.title}>{UI.compare.title}</h1>
-          {category && <div className={styles.categoryBadge}>{CATEGORY_LABELS[category as ComponentCategory]}</div>}
+          <div className={styles.headerLeft}>
+            <Link to="/" className={styles.back}><ArrowLeft size={16} /> {UI.compare.back}</Link>
+            <h1 className={styles.title}>{UI.compare.title}</h1>
+            {category && <div className={styles.categoryBadge}>{CATEGORY_LABELS[category as ComponentCategory]}</div>}
+          </div>
+          <button className={`${styles.shareBtn} ${copied ? styles.copied : ''}`} onClick={handleShare}>
+            {copied ? <Check size={16} /> : <Share2 size={16} />}
+            <span>{copied ? 'Copié !' : 'Partager'}</span>
+          </button>
         </div>
       </header>
 

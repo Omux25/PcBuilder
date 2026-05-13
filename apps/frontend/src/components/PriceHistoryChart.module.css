@@ -32,7 +32,7 @@
 }
 
 .periodBtnActive {
-  background: var(--accent-blue);
-  color: #fff;
-  border-color: var(--accent-blue);
+  background: var(--text-primary);
+  color: var(--bg-app);
+  border-color: var(--text-primary);
 }
