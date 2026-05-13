@@ -359,7 +359,13 @@ function buildSpecsHint(scrapedName: string, category: SuggestionCategory): Reco
             }
             case 'ram': {
                 const specs = extractRamSpecs(scrapedName);
-                return specs ? { ram_type: specs.ram_type, frequency_mhz: specs.frequency_mhz } : {};
+                return specs ? { 
+                    ram_type: specs.ram_type, 
+                    frequency_mhz: specs.frequency_mhz,
+                    capacity_gb: specs.capacity_gb,
+                    kit_count: specs.kit_count,
+                    cas_latency: specs.cas_latency,
+                } : {};
             }
             case 'storage': {
                 const specs = extractStorageSpecs(scrapedName);

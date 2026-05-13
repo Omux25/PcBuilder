@@ -227,9 +227,10 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         const rawSpecs = extractRamSpecs(scrapedName);
         const kitCount = rawSpecs.kit_count ?? specs?.kit_count ?? 1;
         const casLatency = rawSpecs.cas_latency ?? specs?.cas_latency ?? null;
+        const capacityGb = rawSpecs.capacity_gb ?? specs?.capacity_gb ?? null;
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, ram_type, frequency_mhz, kit_count, cas_latency, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'ram', ${ramType}, ${freqMhz}, ${kitCount}, ${casLatency}, ${listing.image_url}, true)
+          INSERT INTO components (slug, name, brand, category, ram_type, frequency_mhz, kit_count, cas_latency, capacity_gb, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'ram', ${ramType}, ${freqMhz}, ${kitCount}, ${casLatency}, ${capacityGb}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;

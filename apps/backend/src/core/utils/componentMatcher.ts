@@ -148,34 +148,42 @@ function extractCpuDna(name: string): string[] {
 }
 
 /**
- * RAM DNA: capacity + type + speed
- * e.g. "32gb", "ddr5", "6000" — all three must match.
+ * RAM DNA: capacity + kit count + type + speed + CAS latency
+ * e.g. "16gb", "2x", "ddr4", "3200", "cl16" — all must match.
  */
 function extractRamDna(name: string): string[] {
   const n = normalize(name);
   const tokens: string[] = [];
 
-  // Capacity: 8gb, 16gb, 32gb, 64gb — also handles "2x16gb" → "32gb"
+  // 1. Capacity & Kit Count: "16gb", "2x16gb"
   const kitMatch = n.match(/(\d+)\s*x\s*(\d+)\s*gb/);
   if (kitMatch) {
-    tokens.push(`${parseInt(kitMatch[1]) * parseInt(kitMatch[2])}gb`);
+    const count = parseInt(kitMatch[1]);
+    const size = parseInt(kitMatch[2]);
+    tokens.push(`${count * size}gb`);
+    if (count > 1) tokens.push(`${count}x`);
   } else {
     const capMatch = n.match(/\b(\d+)\s*gb\b/);
     if (capMatch) tokens.push(`${capMatch[1]}gb`);
   }
 
-  // Type: DDR4, DDR5
+  // 2. Type: DDR4, DDR5
   const typeMatch = n.match(/\b(ddr[45])\b/);
   if (typeMatch) tokens.push(typeMatch[1]);
 
-  // Speed: 3200, 5600, 6000 MHz
+  // 3. Speed: 3200, 5600, 6000 MHz
   const speedMatch = n.match(/\b(\d{4,5})\s*(mhz)?\b/);
   if (speedMatch && parseInt(speedMatch[1]) >= 2133) {
     tokens.push(speedMatch[1]);
   }
 
+  // 4. CAS Latency: cl16, cl30, cl36
+  const clMatch = n.match(/\bcl(\d{2})\b/);
+  if (clMatch) tokens.push(`cl${clMatch[1]}`);
+
   return tokens.filter(Boolean);
 }
+
 
 /**
  * Storage DNA: model name tokens + capacity + interface type
@@ -514,7 +522,11 @@ export function scoreDnaMatch(productName: string, catalogName: string, category
   // but ONLY for known PSU model prefixes to avoid false positives with motherboard chipsets
   let productNorm = normalize(productName)
     .replace(/(\d+)\s*mhz/g, '$1')
-    .replace(/(\d+)\s*x\s*(\d+)\s*gb/g, (_m, count, size) => `${parseInt(count) * parseInt(size)}gb`);
+    .replace(/(\d+)\s*x\s*(\d+)\s*gb/g, (_m, count, size) => {
+      const c = parseInt(count);
+      const total = c * parseInt(size);
+      return c > 1 ? `${total}gb ${c}x` : `${total}gb`;
+    });
 
   if (category === 'psu') {
     // Expand "850G" → "850w", "850X" → "850w" (efficiency suffix variants)

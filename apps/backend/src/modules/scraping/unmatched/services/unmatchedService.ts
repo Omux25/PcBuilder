@@ -227,7 +227,8 @@ export class UnmatchedService {
         INSERT INTO components (
           slug, name, brand, category,
           socket, supported_ram_types, max_ram_frequency,
-          ram_type, frequency_mhz,
+          ram_type, frequency_mhz, kit_count, cas_latency,
+          capacity_gb, vram_gb, core_count, thread_count,
           length_mm, max_gpu_length_mm,
           supported_motherboards, max_cooler_height_mm,
           form_factor, height_mm,
@@ -243,6 +244,12 @@ export class UnmatchedService {
           ${(s.max_ram_frequency) ?? null},
           ${(s.ram_type) ?? null},
           ${(s.frequency_mhz) ?? null},
+          ${(s.kit_count) ?? 1},
+          ${(s.cas_latency) ?? null},
+          ${(s.capacity_gb) ?? null},
+          ${(s.vram_gb) ?? null},
+          ${(s.core_count) ?? null},
+          ${(s.thread_count) ?? null},
           ${(s.length_mm) ?? null},
           ${(s.max_gpu_length_mm) ?? null},
           ${(s.supported_motherboards) ?? null},
@@ -280,18 +287,38 @@ export class UnmatchedService {
       const extracted = extractRamSpecs(name);
       if (!s.ram_type) s.ram_type = extracted.ram_type;
       if (!s.frequency_mhz) s.frequency_mhz = extracted.frequency_mhz;
+      if (!s.capacity_gb) s.capacity_gb = extracted.capacity_gb;
+      if (!s.kit_count) s.kit_count = extracted.kit_count;
+      if (!s.cas_latency) s.cas_latency = extracted.cas_latency;
     } else if (category === 'cpu') {
       const extracted = extractCpuSpecs(name);
-      if (!s.socket && extracted?.socket) s.socket = extracted.socket;
+      if (extracted) {
+        if (!s.socket && extracted.socket) s.socket = extracted.socket;
+        if (!s.core_count && extracted.core_count) s.core_count = extracted.core_count;
+        if (!s.thread_count && extracted.thread_count) s.thread_count = extracted.thread_count;
+        if (!s.tdp && extracted.tdp) s.tdp = extracted.tdp;
+      }
     } else if (category === 'gpu') {
       const extracted = extractGpuSpecs(name);
-      if (!s.length_mm && extracted?.length_mm) s.length_mm = extracted.length_mm;
+      if (extracted) {
+        if (!s.length_mm && extracted.length_mm) s.length_mm = extracted.length_mm;
+        if (!s.vram_gb && extracted.vram_gb) s.vram_gb = extracted.vram_gb;
+        if (!s.tdp && extracted.tdp) s.tdp = extracted.tdp;
+      }
     } else if (category === 'motherboard') {
       const extracted = extractMotherboardSpecs(name);
       if (extracted) {
         if (!s.socket && extracted.socket) s.socket = extracted.socket;
         if (!s.supported_ram_types && extracted.supported_ram_types) s.supported_ram_types = extracted.supported_ram_types;
         if (!s.max_ram_frequency && extracted.max_ram_frequency) s.max_ram_frequency = extracted.max_ram_frequency;
+        if (!s.form_factor && extracted.form_factor) s.form_factor = extracted.form_factor;
+        if (!s.ram_slots && extracted.ram_slots) s.ram_slots = extracted.ram_slots;
+      }
+    } else if (category === 'storage') {
+      const extracted = extractStorageSpecs(name);
+      if (extracted) {
+        if (!s.capacity_gb && extracted.capacity_gb) s.capacity_gb = extracted.capacity_gb;
+        if (!s.interface_type && extracted.interface_type) s.interface_type = extracted.interface_type;
       }
     } else if (category === 'psu') {
       const extracted = extractPsuSpecs(name);
