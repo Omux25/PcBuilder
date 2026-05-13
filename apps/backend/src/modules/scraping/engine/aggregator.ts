@@ -413,7 +413,14 @@ export async function aggregate(
       } else if (category === 'ram') {
         const s = extractRamSpecs(nameForExtraction);
         const ramType = s?.ram_type ?? (nameForExtraction.toLowerCase().includes('ddr5') ? 'DDR5' : 'DDR4');
-        row = { ...row, ram_type: ramType, frequency_mhz: s?.frequency_mhz ?? (ramType === 'DDR5' ? 4800 : 3200) };
+        row = { 
+          ...row, 
+          ram_type: ramType, 
+          frequency_mhz: s?.frequency_mhz ?? (ramType === 'DDR5' ? 4800 : 3200),
+          capacity_gb: s?.capacity_gb ?? null,
+          kit_count: s?.kit_count ?? 1,
+          cas_latency: s?.cas_latency ?? null
+        };
       } else if (category === 'motherboard') {
         const s = extractMotherboardSpecs(nameForExtraction);
         row = { ...row, socket: s?.socket ?? null, supported_ram_types: s ? `{${s.supported_ram_types.join(',')}}` : null, max_ram_frequency: s?.max_ram_frequency ?? null };

@@ -87,36 +87,69 @@ async function runDataQualityPass(sql: SqlFn): Promise<void> {
     WHERE brand = 'Intel' AND name ~ 'i[0-9]-[0-9]'
   `;
 
-  // 4. Merge exact duplicates (same brand + name, case-insensitive)
+  // 4. Merge exact duplicates (same brand + name + category + critical specs)
   // Keep the one with an image (or lowest ID), redirect all relations, delete the rest
   const dupes = await sql`
     SELECT array_agg(id ORDER BY
       CASE WHEN image_url IS NOT NULL THEN 0 ELSE 1 END, id ASC
     ) as ids
     FROM components WHERE is_active = true
-    GROUP BY LOWER(TRIM(COALESCE(brand,''))), LOWER(TRIM(name))
+    GROUP BY 
+      LOWER(TRIM(COALESCE(brand,''))), 
+      LOWER(TRIM(name)), 
+      category,
+      COALESCE(capacity_gb, 0),
+      COALESCE(chipset, ''),
+      COALESCE(ram_type, ''),
+      COALESCE(frequency_mhz, 0)
     HAVING COUNT(*) > 1
   ` as { ids: number[] }[];
 
-  for (const g of dupes) {
-    const keepId = g.ids[0];
-    for (const dupeId of g.ids.slice(1)) {
-      try {
-        await sql`DELETE FROM prices WHERE component_id = ${dupeId} AND product_url IN (SELECT product_url FROM prices WHERE component_id = ${keepId})`;
-        await sql`UPDATE prices SET component_id = ${keepId} WHERE component_id = ${dupeId}`;
-        await sql`DELETE FROM scraper_mappings WHERE component_id = ${dupeId} AND product_url IN (SELECT product_url FROM scraper_mappings WHERE component_id = ${keepId})`;
-        await sql`UPDATE scraper_mappings SET component_id = ${keepId} WHERE component_id = ${dupeId}`;
-        await sql`UPDATE price_history SET component_id = ${keepId} WHERE component_id = ${dupeId}`;
-        await sql`UPDATE unmatched_listings SET linked_component_id = ${keepId} WHERE linked_component_id = ${dupeId}`;
-        await sql`DELETE FROM components WHERE id = ${dupeId}`;
-      } catch { /* skip individual merge errors */ }
-    }
-  }
-
   if (dupes.length > 0) {
-    await logger.info(`[QUALITY] Merged ${dupes.reduce((n, g) => n + g.ids.length - 1, 0)} duplicate components`);
+    const totalToMerge = dupes.reduce((n, g) => n + g.ids.length - 1, 0);
+    await logger.info(`[QUALITY] Found ${totalToMerge} duplicate components across ${dupes.length} groups. Merging...`);
+    
+    for (const g of dupes) {
+      const keepId = g.ids[0];
+      const dupeIds = g.ids.slice(1);
+      
+      try {
+        await sql.begin(async (tx) => {
+          // 1. Handle price conflicts (delete if keepId already has a price for that retailer/url)
+          await tx`
+            DELETE FROM prices 
+            WHERE component_id IN ${tx(dupeIds)}
+              AND (retailer_id, product_url) IN (
+                SELECT retailer_id, product_url FROM prices WHERE component_id = ${keepId}
+              )
+          `;
+          await tx`UPDATE prices SET component_id = ${keepId} WHERE component_id IN ${tx(dupeIds)}`;
+
+          // 2. Handle mapping conflicts
+          await tx`
+            DELETE FROM scraper_mappings 
+            WHERE component_id IN ${tx(dupeIds)}
+              AND (retailer_id, product_url) IN (
+                SELECT retailer_id, product_url FROM scraper_mappings WHERE component_id = ${keepId}
+              )
+          `;
+          await tx`UPDATE scraper_mappings SET component_id = ${keepId} WHERE component_id IN ${tx(dupeIds)}`;
+
+          // 3. Redirect other relations
+          await tx`UPDATE price_history SET component_id = ${keepId} WHERE component_id IN ${tx(dupeIds)}`;
+          await tx`UPDATE unmatched_listings SET linked_component_id = ${keepId} WHERE linked_component_id IN ${tx(dupeIds)}`;
+
+          // 4. Delete duplicates
+          await tx`DELETE FROM components WHERE id IN ${tx(dupeIds)}`;
+        });
+      } catch (err) {
+        await logger.error(`[QUALITY] Group merge failed for keepId ${keepId}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+    await logger.info(`[QUALITY] Successfully merged duplicate components`);
   }
 }
+
 
 /**
  * Runs a full or partial scraping session.
@@ -280,65 +313,13 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
 
     console.log('✨ Running autonomous enrichment (Inference + Deep Scraping)...');
     try {
+      await logger.info('[SESSION] Starting autonomous enrichment...');
       await runSmartBackfill();
       await runDeepRetailerBackfill();
       await logger.info('[SESSION] Autonomous enrichment complete');
     } catch (err) {
       await logger.error(`[SESSION] Enrichment failed: ${err instanceof Error ? err.message : String(err)}`);
     }
-
-    // Image gap fill — use the already-scraped prices to fill any components
-    // that still have no image after the aggregator's backfill phase.
-    // This catches components that were DNA-matched (not unmatched) and whose
-    // retailer URL wasn't in the aggregator's imageUpdates map.
-    console.log('🖼️  Filling image gaps from scraped data...');
-    try {
-      // Build URL → image map from all scraped prices
-      const imageByUrl = new Map<string, { url: string; urls: string[] | null; score: number }>();
-      for (const p of allPrices) {
-        if (!p.image_url || !p.product_url) continue;
-        const urlLower = p.image_url.toLowerCase();
-        let score = 50;
-        if (urlLower.includes('mpk') || urlLower.includes('bundle')) score -= 30;
-        if (urlLower.includes('placeholder') || urlLower.includes('no-image')) score = -100;
-        if (score < 0) continue;
-        const existing = imageByUrl.get(p.product_url);
-        if (!existing || score > existing.score) {
-          imageByUrl.set(p.product_url, { 
-            url: p.image_url, 
-            urls: p.image_urls || null, 
-            score 
-          });
-        }
-      }
-
-      // Find all components without images that have a mapping in our scraped URLs
-      const mappings = await sql`
-        SELECT sm.component_id, sm.product_url, c.name
-        FROM scraper_mappings sm
-        JOIN components c ON c.id = sm.component_id
-        WHERE c.image_url IS NULL AND c.is_active = true
-      ` as { component_id: number; product_url: string; name: string }[];
-
-      // Pick best image per component
-      const best = new Map<number, { url: string; urls: string[] | null }>();
-      for (const m of mappings) {
-        const img = imageByUrl.get(m.product_url);
-        if (img) best.set(m.component_id, { url: img.url, urls: img.urls });
-      }
-
-      let filled = 0;
-      for (const [id, data] of best) {
-        const pgUrls = data.urls ? `{${data.urls.map(u => `"${u.replace(/"/g, '\\"')}"`).join(',')}}` : null;
-        await sql`UPDATE components SET image_url = ${data.url}, image_urls = ${pgUrls} WHERE id = ${id} AND image_url IS NULL`;
-        filled++;
-      }
-      if (filled > 0) {
-        console.log(`   Filled ${filled} missing images`);
-        await logger.info(`[SESSION] Image gap fill: ${filled} components updated`);
-      }
-    } catch (err) {
-      await logger.error(`[SESSION] Image gap fill failed: ${err instanceof Error ? err.message : String(err)}`);
-    }
   }
 }
+
