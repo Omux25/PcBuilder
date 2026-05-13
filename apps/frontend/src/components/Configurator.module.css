@@ -1,127 +1,157 @@
 /* ── Configurator ─────────────────────────────────────────────────────────── */
 
 .configurator {
-  max-width: 900px;
+  max-width: 1000px;
   width: 100%;
   margin: 0 auto;
-  padding: 2.5rem 0 3rem;
+  padding: 1.5rem 0 3rem;
   animation: fadeIn 0.4s var(--ease-out);
 }
 
 /* ── Header ───────────────────────────────────────────────────────────────── */
 
 .header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .title {
   font-family: 'Outfit', sans-serif;
-  font-size: 1.6rem;
+  font-size: 2rem;
   font-weight: 800;
   color: var(--text-primary);
   letter-spacing: -0.04em;
-  line-height: 1.2;
+  margin: 0;
 }
 
 .statusBadge {
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  margin-top: 0.6rem;
+  gap: 0.5rem;
   letter-spacing: 0.01em;
+  box-shadow: var(--shadow-sm);
 }
 
 .statusOk {
   background: var(--success-tint);
-  color: var(--success-soft);
+  color: var(--success);
+  border: 1px solid rgba(16, 185, 129, 0.1);
 }
 
 .statusWarn {
   background: rgba(245, 158, 11, 0.1);
-  color: #fcd34d;
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.1);
 }
 
 .statusFail {
   background: var(--danger-tint);
-  color: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.1);
 }
 
 /* ── Power Meter ───────────────────────────────────────────────────────────── */
 
 .powerMeter {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 24px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  grid-template-columns: 1fr 200px;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.powerMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .powerInfo {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
+  align-items: flex-end;
 }
 
 .powerLabel {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.95rem;
+  gap: 0.5rem;
+  font-size: 0.9rem;
   color: var(--text-secondary);
+  font-weight: 600;
 }
 
 .zapIcon {
   color: #f59e0b;
 }
 
+.tdpVal {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
 .psuTarget {
-  font-size: 0.85rem;
-  color: var(--text-tertiary);
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-align: right;
 }
 
 .progressBar {
-  height: 8px;
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 4px;
+  height: 10px;
+  background: var(--bg-surface-2);
+  border-radius: 5px;
   overflow: hidden;
-  margin-bottom: 8px;
+  position: relative;
 }
 
 .progressFill {
   height: 100%;
-  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border-radius: 5px;
 }
 
-.psu_safe {
-  background: #10b981;
-}
-
-.psu_warning {
-  background: #f59e0b;
-}
-
-.psu_critical {
-  background: #ef4444;
-}
+.psu_safe { background: linear-gradient(90deg, #10b981, #34d399); }
+.psu_warning { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.psu_critical { background: linear-gradient(90deg, #ef4444, #f87171); }
 
 .psuLegend {
-  font-size: 0.8rem;
-  color: var(--text-tertiary);
-  text-align: right;
+  padding-left: 1.5rem;
+  border-left: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
-/* ── Main Card ───────────────────────────────────────────────────────────── */
+.usageLabel {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
 
+.usageVal {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+/* ── Main List ───────────────────────────────────────────────────────────── */
 
 .card {
   background: var(--bg-surface);
@@ -131,46 +161,22 @@
   box-shadow: var(--shadow-md);
 }
 
-/* ── Row wrapper (holds row + optional expansion) ─────────────────────────── */
-
 .rowWrap {
   border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.2s;
 }
 
-.rowWrap:last-child,
-.rowWrapLast {
+.rowWrap:last-child {
   border-bottom: none;
 }
 
-/* ── Slot count badge (shown next to RAM/Storage category label) ──────────── */
-
-.slotCount {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  margin-left: 0.4rem;
-  background: var(--bg-surface-2);
-  border: 1px solid var(--border-subtle);
-  border-radius: 999px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-  vertical-align: middle;
-}
-
-/* ── Row ──────────────────────────────────────────────────────────────────── */
-
 .row {
   display: grid;
-  grid-template-columns: 200px 1fr 180px;
+  grid-template-columns: 180px 1fr 160px;
   align-items: center;
-  gap: 1rem;
-  padding: 0.9rem 1.5rem;
-  transition: background 0.15s;
-  min-height: 64px;
+  gap: 1.5rem;
+  padding: 1rem 1.5rem;
+  min-height: 80px;
 }
 
 .row:hover {
@@ -182,74 +188,86 @@
 .catCol {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  color: var(--text-secondary);
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-.catIcon {
+  gap: 0.75rem;
   color: var(--text-dim);
-  flex-shrink: 0;
 }
 
-/* ── Column 2: Picker ─────────────────────────────────────────────────────── */
-
-.pickerCol {
+.catIconWrap {
+  width: 36px;
+  height: 36px;
+  background: var(--bg-surface-2);
+  border-radius: 10px;
   display: flex;
   align-items: center;
-  min-width: 0;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all 0.2s;
 }
 
-/* ── Empty state button ───────────────────────────────────────────────────── */
+.row:hover .catIconWrap {
+  background: var(--accent-blue-tint);
+  color: var(--accent-blue);
+}
+
+.catLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.slotCount {
+  font-size: 0.65rem;
+  background: var(--bg-surface-2);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  margin-left: 0.4rem;
+}
+
+/* ── Column 2: Selection ─────────────────────────────────────────────────── */
+
+.pickerCol {
+  min-width: 0;
+}
 
 .emptyButton {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 1rem;
-  background: transparent;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius);
-  color: var(--text-dim);
-  font-size: 0.82rem;
-  font-weight: 500;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--bg-surface-2);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
   text-decoration: none;
-  cursor: pointer;
-  transition: var(--transition);
-  white-space: nowrap;
+  transition: all 0.2s;
+  width: 100%;
 }
 
 .emptyButton:hover {
-  background: var(--bg-surface-2);
-  border-color: var(--border-2);
-  color: var(--text-primary);
-  text-decoration: none;
+  background: var(--accent-blue-tint);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  border-style: solid;
 }
-
-/* ── Filled state ─────────────────────────────────────────────────────────── */
 
 .filledState {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  min-width: 0;
-  flex: 1;
+  gap: 1.25rem;
 }
 
 .compThumb {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   object-fit: contain;
   background: #fff;
-  padding: 6px;
-  border-radius: var(--radius);
+  padding: 4px;
+  border-radius: 8px;
   border: 1px solid var(--border-subtle);
-  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
 }
 
 .compInfo {
@@ -257,85 +275,64 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.15rem;
 }
 
 .compBrand {
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: 0.65rem;
+  font-weight: 800;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.compName {
-  display: block;
-  font-weight: 600;
-  color: var(--text-primary);
-  font-size: 0.9rem;
-  line-height: 1.3;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
 .compNameLink {
-  display: -webkit-box;
-  font-weight: 600;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
   color: var(--text-primary);
-  font-size: 0.9rem;
-  line-height: 1.3;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  font-size: 1rem;
   text-decoration: none;
-  transition: color 0.15s;
-}
-
-.compNameLink:hover {
-  color: var(--accent-blue);
-  text-decoration: underline;
-}
-
-.compSpecs {
-  display: block;
-  font-size: 0.72rem;
-  color: var(--text-secondary);
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* ── Column 3: Price & actions ────────────────────────────────────────────── */
+.compNameLink:hover {
+  color: var(--accent-blue);
+}
+
+.compSpecs {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+/* ── Column 3: Price ─────────────────────────────────────────────────────── */
 
 .priceCol {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .priceVal {
-  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
   color: var(--text-primary);
-  font-size: 0.95rem;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  font-size: 1.05rem;
 }
 
 .actionBtn {
-  background: transparent;
-  color: var(--text-dim);
-  padding: 0.35rem;
-  border-radius: var(--radius-sm);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: var(--transition);
-  flex-shrink: 0;
+  color: var(--text-dim);
+  transition: all 0.2s;
+  background: transparent;
 }
 
 .actionBtn:hover {
@@ -343,232 +340,159 @@
   color: var(--danger);
 }
 
-/* ── Expansion panel ──────────────────────────────────────────────────────── */
-
-.expandContent {
-  padding: 0.75rem 1.5rem 1rem;
-  background: var(--bg-surface-2);
-  border-top: 1px solid var(--border-subtle);
-  animation: slideDown 0.2s var(--ease-out);
-}
-
 /* ── Footer ───────────────────────────────────────────────────────────────── */
 
 .footer {
-  margin-top: 1rem;
-  padding: 1.25rem 1.5rem;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
+  margin-top: 2rem;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  box-shadow: var(--shadow-sm);
+  align-items: stretch;
+  gap: 1.5rem;
 }
 
-.footerLeft {
+.totalCard {
+  flex: 1;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-focus);
+  color: var(--text-primary);
+  padding: 1.5rem 2rem;
+  border-radius: var(--radius-xl);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: var(--shadow-lg), 0 0 20px rgba(255, 255, 255, 0.02);
+  position: relative;
+  overflow: hidden;
+}
+
+.totalCard::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+}
+
+.totalInfo {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
 }
 
 .totalLabel {
-  font-size: 0.68rem;
-  color: var(--text-secondary);
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  opacity: 0.8;
+  letter-spacing: 0.05em;
 }
 
 .totalPrice {
   font-family: 'Outfit', sans-serif;
-  font-size: 1.6rem;
+  font-size: 2.25rem;
   font-weight: 800;
-  color: var(--text-primary);
   letter-spacing: -0.04em;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  min-width: 160px;
-  /* prevent layout shift when price digit count changes */
+}
+
+.footerActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 200px;
+}
+
+.shareBtn {
+  width: 100%;
+  padding: 0.85rem;
+  background: var(--bg-surface);
+  border: 2px solid var(--accent-blue);
+  color: var(--accent-blue);
+  border-radius: var(--radius-lg);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.shareBtn:hover {
+  background: var(--accent-blue);
+  color: #fff;
+}
+
+.shareBtnDone {
+  background: #10b981;
+  border-color: #10b981;
+  color: #fff;
 }
 
 .resetBtn {
-  background: var(--bg-surface-2);
-  color: var(--text-secondary);
+  width: 100%;
+  padding: 0.75rem;
+  background: transparent;
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius);
-  padding: 0.55rem 1.1rem;
-  font-size: 0.82rem;
+  color: var(--text-dim);
+  border-radius: var(--radius-lg);
+  font-size: 0.8rem;
   font-weight: 600;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   cursor: pointer;
-  transition: var(--transition);
-  white-space: nowrap;
+  transition: all 0.2s;
 }
 
 .resetBtn:hover:not(:disabled) {
   background: var(--danger-tint);
   border-color: var(--danger);
-  color: var(--danger-soft);
+  color: var(--danger);
 }
 
-.resetBtn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
+/* ── Expansion ────────────────────────────────────────────────────────────── */
 
-.shareBtn {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0.6rem 1.2rem;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 999px;
-  font-weight: 700;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 4px 12px var(--accent-glow);
-}
-
-.shareBtn:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.1);
-}
-
-.shareBtnDone {
-  background: #10b981;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-.resetConfirm {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-
-.resetConfirmText {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.resetConfirmYes {
-  background: var(--danger-tint);
-  color: var(--danger-soft);
-  border: 1px solid var(--danger);
-  border-radius: var(--radius);
-  padding: 0.45rem 0.9rem;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: var(--transition);
-  white-space: nowrap;
-}
-
-.resetConfirmYes:hover {
-  background: var(--danger);
-  color: #fff;
-}
-
-.resetConfirmNo {
+.expandContent {
   background: var(--bg-surface-2);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius);
-  padding: 0.45rem 0.9rem;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: var(--transition);
-  white-space: nowrap;
-}
-
-.resetConfirmNo:hover {
-  background: var(--bg-surface-hover);
-  color: var(--text-primary);
-}
-
-/* ── Compatibility section ────────────────────────────────────────────────── */
-
-.compatSection {
-  margin-top: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.compatCard {
-  padding: 1rem 1.25rem;
-  border-radius: var(--radius-lg);
-  font-size: 0.85rem;
-  display: flex;
-  gap: 0.85rem;
-  line-height: 1.5;
-  align-items: flex-start;
-}
-
-.compatCard strong {
-  display: block;
-  font-weight: 700;
-  margin-bottom: 0.2rem;
-}
-
-.compatCard p {
-  margin: 0;
-  opacity: 0.85;
-}
-
-.compatErr {
-  background: var(--danger-tint);
-  border: 1px solid rgba(239, 68, 68, 0.15);
-  color: var(--danger-soft);
-}
-
-.compatWarn {
-  background: rgba(245, 158, 11, 0.07);
-  border: 1px solid rgba(245, 158, 11, 0.15);
-  color: #fcd34d;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border-subtle);
+  animation: slideDown 0.2s ease-out;
 }
 
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 
-@media (max-width: 768px) {
-  .configurator {
-    padding: 1.5rem 0 2rem;
+@media (max-width: 900px) {
+  .powerMeter {
+    grid-template-columns: 1fr;
   }
+  .psuLegend {
+    border-left: none;
+    border-top: 1px solid var(--border-subtle);
+    padding-left: 0;
+    padding-top: 1rem;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
 
+@media (max-width: 768px) {
   .row {
     grid-template-columns: 1fr;
-    gap: 0.5rem;
-    padding: 0.85rem 1rem;
+    gap: 0.75rem;
+    padding: 1.5rem;
   }
-
   .catCol {
-    font-size: 0.72rem;
+    order: -1;
   }
-
   .priceCol {
-    justify-content: flex-start;
+    justify-content: space-between;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-subtle);
   }
-
   .footer {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
   }
-
-  .resetBtn {
+  .footerActions {
     width: 100%;
-    justify-content: center;
+    flex-direction: row;
   }
 }

@@ -171,130 +171,12 @@
   border-color: var(--border);
 }
 
-/* ── Hero ─────────────────────────────────────────────────────────────────── */
-
-.hero {
-  padding: 4rem 2rem 3.5rem;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  border-bottom: 1px solid var(--border);
-}
-
-.hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 60% 50% at 50% -10%, var(--accent-glow) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.heroContent {
-  position: relative;
-  max-width: 680px;
-  margin: 0 auto;
-}
-
-.heroTitle {
-  font-family: 'Outfit', sans-serif;
-  font-size: 2.75rem;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  color: var(--text);
-  line-height: 1.1;
-  margin-bottom: 1rem;
-  animation: slideUp 0.5s var(--ease-out);
-}
-
-.heroAccent {
-  color: var(--text-primary);
-  opacity: 0.6;
-}
-
-.heroSub {
-  font-size: 0.95rem;
-  color: var(--text-muted);
-  line-height: 1.65;
-  max-width: 480px;
-  margin: 0 auto;
-  animation: slideUp 0.65s var(--ease-out) backwards;
-}
-
-.heroCtas {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-top: 2rem;
-  animation: slideUp 0.8s var(--ease-out) backwards;
-}
-
-.heroCatLink {
-  padding: 0.35rem 0.9rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--text-secondary);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-decoration: none;
-  transition: var(--transition);
-}
-
-.heroCatLink:hover {
-  border-color: var(--border-2);
-  color: var(--text);
-  transform: translateY(-1px);
-  text-decoration: none;
-}
-
-/* ── Main ─────────────────────────────────────────────────────────────────── */
-
 .main {
   flex: 1;
   max-width: 1240px;
   width: 100%;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
-}
-
-/* ── Build actions bar ────────────────────────────────────────────────────── */
-
-.buildActions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  animation: fadeIn 0.3s var(--ease-out);
-}
-
-.actionBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.8rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  transition: var(--transition);
-}
-
-.actionBtn:hover {
-  color: var(--text);
-  border-color: var(--border-2);
-  background: var(--surface-2);
-}
-
-.actionBtnSuccess {
-  color: var(--success-soft);
-  border-color: var(--success);
-  background: var(--success-row);
+  padding: 1.5rem 1.5rem 4rem;
 }
 
 /* ── Footer ───────────────────────────────────────────────────────────────── */
@@ -342,18 +224,6 @@
     gap: 1rem;
   }
 
-  .hero {
-    padding: 2.5rem 1rem 2rem;
-  }
-
-  .heroTitle {
-    font-size: 1.75rem;
-  }
-
-  .heroSub {
-    font-size: 0.85rem;
-  }
-
   .main {
     padding: 1.25rem 0.75rem;
   }
@@ -375,9 +245,5 @@
 @media (max-width: 480px) {
   .nav {
     display: none;
-  }
-
-  .heroTitle {
-    font-size: 1.4rem;
   }
 }

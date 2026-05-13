@@ -5,8 +5,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { GitCompare, ShoppingCart, ArrowLeft, ExternalLink, Star } from 'lucide-react';
-import { getComponentBySlug, getPrices, getPriceHistory } from '../api';
+import { GitCompare, ShoppingCart, ArrowLeft, Share2, Check, TrendingDown } from 'lucide-react';
+import { getComponentBySlug, getPrices, getPriceHistory, getMarketTrends } from '../api';
 import { PriceHistoryChart } from '../components/PriceHistoryChart';
 import type { HistoryPeriod } from '../constants/periods';
 import { PERIOD_DAYS } from '../constants/periods';
@@ -15,7 +15,6 @@ import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { useCompare } from '../context/CompareContext';
 import type { Component, PriceOffer, PriceHistoryEntry, ComponentCategory } from '../types';
 import { CATEGORY_LABELS } from '../types';
-import { formatComponentName } from '@shared/component-utils';
 import { UI } from '../ui-strings';
 import styles from './ComponentDetail.module.css';
 
@@ -39,6 +38,8 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
   const [showOos, setShowOos] = useState(false);
   const [componentId, setComponentId] = useState<number | null>(null);
   const [selectedImgIdx, setSelectedImgIdx] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const [isTrending, setIsTrending] = useState(false);
 
   // Fetch history separately so period changes don't reload the whole page
   const fetchHistory = useCallback(async (id: number, p: HistoryPeriod) => {
@@ -64,12 +65,14 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
       .then(async (found) => {
         setComponent(found);
         setComponentId(found.id);
-        const [priceData, historyData] = await Promise.all([
+        const [priceData, historyData, trendsData] = await Promise.all([
           getPrices(found.id),
           getPriceHistory(found.id, { days: PERIOD_DAYS[period] }),
+          getMarketTrends({ days: 3, limit: 100 }).catch(() => ({ trends: [] }))
         ]);
         setPrices(priceData);
         setHistory(historyData);
+        setIsTrending(trendsData.trends.some(t => t.component_id === found.id));
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
@@ -85,6 +88,12 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
     }
     setAddedToBuild(true);
     setTimeout(() => setAddedToBuild(false), 2000);
+  }
+
+  function handleShare() {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   // Go back to wherever the user came from (preserves filters/page/scroll).
@@ -129,10 +138,6 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
   }
 
   const specs = component.specs as Record<string, unknown> | undefined;
-  const inStockPrices = prices.filter(p => p.in_stock);
-  const lowestPrice = inStockPrices.length > 0
-    ? Math.min(...inStockPrices.map(p => Number(p.price)))
-    : prices.length > 0 ? Math.min(...prices.map(p => Number(p.price))) : null;
 
   // Simulated gallery images (fallback to product image)
   const images = component?.image_urls && component.image_urls.length > 0
@@ -164,10 +169,22 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
             </>
           )}
         </nav>
-        <h1 className={styles.pageTitle}>
-          {component.brand && <span className={styles.brand}>{component.brand} </span>}
-          {component.name}
-        </h1>
+        <div className={styles.titleRow}>
+          <h1 className={styles.pageTitle}>
+            {component.brand && <span className={styles.brand}>{component.brand} </span>}
+            {component.name}
+          </h1>
+          <button className={`${styles.shareBtn} ${copied ? styles.copied : ''}`} onClick={handleShare}>
+            {copied ? <Check size={16} /> : <Share2 size={16} />}
+            <span className={styles.shareText}>{copied ? 'Copié !' : 'Partager'}</span>
+          </button>
+        </div>
+        {isTrending && (
+          <div className={styles.trendingBadge}>
+            <TrendingDown size={14} />
+            Prix en baisse récente (3 derniers jours)
+          </div>
+        )}
       </header>
 
       {/* ── Unified Dashboard Layout ────────────────────────────────────── */}
@@ -344,25 +361,6 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-/**
- * Returns a human-readable relative time string.
- * e.g. "il y a 6h", "il y a 2j", "il y a 3 min"
- */
-function formatRelativeTime(dateStr: string | Date): string {
-  const date = dateStr instanceof Date ? dateStr : new Date(dateStr);
-  if (isNaN(date.getTime())) return '—';
-  const diff = Date.now() - date.getTime();
-  const minutes = Math.floor(diff / 60_000);
-  const hours = Math.floor(diff / 3_600_000);
-  const days = Math.floor(diff / 86_400_000);
-
-  if (minutes < 2) return 'à l\'instant';
-  if (minutes < 60) return `il y a ${minutes} min`;
-  if (hours < 24) return `il y a ${hours}h`;
-  if (days < 7) return `il y a ${days}j`;
-  return date.toLocaleDateString('fr-MA');
-}
 
 const SPEC_KEY_LABELS: Record<string, string> = {
   socket: 'Socket',

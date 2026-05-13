@@ -5,8 +5,8 @@
 
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingDown, TrendingUp, ShoppingCart, BarChart3 } from 'lucide-react';
-import { getMarketTrends, type MarketTrend } from '../api';
+import { TrendingDown, TrendingUp, ShoppingCart, BarChart3, Share2, Check } from 'lucide-react';
+import { getMarketTrends, getComponentById, type MarketTrend } from '../api';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { Skeleton } from '../components/Skeleton';
 import type { ComponentCategory } from '../types';
@@ -26,6 +26,8 @@ export function MarketTrends() {
   const [category, setCategory] = useState('');
   const [trendType, setTrendType] = useState<'drops' | 'hikes'>('drops');
   const [added, setAdded] = useState<number | null>(null);
+  const [adding, setAdding] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -36,31 +38,48 @@ export function MarketTrends() {
       .finally(() => setLoading(false));
   }, [days, category, trendType]);
 
-  function handleAdd(trend: MarketTrend) {
-    addToBuild({
-      id: trend.component_id,
-      slug: trend.slug,
-      name: trend.name,
-      brand: trend.brand ?? undefined,
-      category: trend.category as ComponentCategory,
-      image_url: trend.image_url ?? undefined,
-      is_active: true,
-      created_at: '',
-      updated_at: '',
-    });
-    setAdded(trend.component_id);
-    setTimeout(() => setAdded(null), 2000);
+  async function handleAdd(trend: MarketTrend) {
+    setAdding(trend.component_id);
+    try {
+      const component = await getComponentById(trend.component_id);
+      // Guarantee the price is available, falling back to the trend's current price
+      component.lowest_price = component.lowest_price || trend.price_after;
+      addToBuild(component);
+      setAdded(trend.component_id);
+      setTimeout(() => setAdded(null), 2000);
+    } catch (e) {
+      console.error('Failed to add component from trends:', e);
+    } finally {
+      setAdding(null);
+    }
+  }
+
+  function handleShare() {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
-        <div className={styles.titleRow}>
-          <BarChart3 size={24} className={styles.titleIcon} />
-          <div>
-            <h1 className={styles.title}>{UI.trends.title}</h1>
-            <p className={styles.subtitle}>{UI.trends.subtitle}</p>
+        <div className={styles.headerTop}>
+          <div className={styles.titleRow}>
+            <BarChart3 size={24} className={styles.titleIcon} />
+            <div>
+              <h1 className={styles.title}>{UI.trends.title}</h1>
+              <p className={styles.subtitle}>{UI.trends.subtitle}</p>
+              <p className={styles.description}>
+                Cette section analyse les fluctuations de prix sur le marché marocain. 
+                Les opportunités sont détectées en comparant le prix actuel au prix moyen des 
+                derniers jours pour les produits en stock.
+              </p>
+            </div>
           </div>
+          <button className={`${styles.shareBtn} ${copied ? styles.copied : ''}`} onClick={handleShare}>
+            {copied ? <Check size={16} /> : <Share2 size={16} />}
+            <span className={styles.shareText}>{copied ? 'Copié !' : 'Partager'}</span>
+          </button>
         </div>
 
         <div className={styles.trendTabs}>
@@ -139,6 +158,7 @@ export function MarketTrends() {
                 key={trend.component_id}
                 trend={trend}
                 isAdded={added === trend.component_id}
+                isAdding={adding === trend.component_id}
                 onAdd={() => handleAdd(trend)}
               />
             ))}
@@ -149,8 +169,17 @@ export function MarketTrends() {
   );
 }
 
-function TrendCard({ trend, isAdded, onAdd }: { trend: MarketTrend; isAdded: boolean; onAdd: () => void }) {
+function TrendCard({ trend, isAdded, isAdding, onAdd }: { trend: MarketTrend; isAdded: boolean; isAdding: boolean; onAdd: () => void }) {
   const isDrop = trend.type === 'drops';
+  const [copied, setCopied] = useState(false);
+
+  function handleShare(e: React.MouseEvent) {
+    e.preventDefault();
+    navigator.clipboard.writeText(`${window.location.origin}/product/${trend.slug}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   return (
     <div className={styles.card}>
       <div className={styles.cardImageWrap}>
@@ -195,9 +224,18 @@ function TrendCard({ trend, isAdded, onAdd }: { trend: MarketTrend; isAdded: boo
 
       <div className={styles.cardFooter}>
         <Link to={`/product/${trend.slug}`} className={styles.detailLink}>{UI.trends.viewDetails}</Link>
-        <button className={`${styles.addBtn} ${isAdded ? styles.addBtnDone : ''}`} onClick={onAdd}>
-          {isAdded ? '✓' : <ShoppingCart size={14} />}
-        </button>
+        <div className={styles.cardActions}>
+          <button className={`${styles.shareIconBtn} ${copied ? styles.copiedIconBtn : ''}`} onClick={handleShare} title="Partager">
+            {copied ? <Check size={14} /> : <Share2 size={14} />}
+          </button>
+          <button 
+            className={`${styles.addBtn} ${isAdded ? styles.addBtnDone : ''}`} 
+            onClick={onAdd}
+            disabled={isAdding || isAdded}
+          >
+            {isAdded ? '✓' : isAdding ? '...' : <ShoppingCart size={14} />}
+          </button>
+        </div>
       </div>
     </div>
   );
