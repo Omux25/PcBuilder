@@ -225,12 +225,12 @@ export function validateBrandAuthority(
     const hasCpuSignal = CPU_SIGNALS.some(r => r.test(name));
     const hasGpuSignal = GPU_SIGNALS.some(r => r.test(name));
     const isWorkstation = /\b(workstation|station\s*de\s*travail|pc\s*professionnel)\b/i.test(name) && hasCpuSignal;
-    if (hasCpuSignal && hasGpuSignal || inferredCategory === 'build' || inferredCategory === 'bundle' || isWorkstation) {
+    if (hasCpuSignal && hasGpuSignal || inferredCategory === 'build' || (inferredCategory as string) === 'bundle' || isWorkstation) {
         return { 
             brand: inferredBrand, 
             dismiss: true, 
             dismissReason: inferredCategory === 'build' ? 'explicit build detection' : 
-                          inferredCategory === 'bundle' ? 'explicit bundle detection' :
+                          (inferredCategory as string) === 'bundle' ? 'explicit bundle detection' :
                           (isWorkstation ? 'workstation detection' : 'bundle: contains both CPU and GPU signals') 
         };
     }

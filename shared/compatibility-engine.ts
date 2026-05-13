@@ -1,4 +1,4 @@
-import type { Component, ComponentCategory, CompatibilityIssue, CompatibilityResult } from './types.js';
+import type { Component, CompatibilityIssue, CompatibilityResult } from './types.js';
 
 export type BuildInput = Partial<Record<string, Partial<Component>>>;
 

@@ -1,4 +1,6 @@
 import { decodeHtml } from '../decode-html.js';
+import { extractRamSpecs } from './specs/ram.js';
+import { extractStorageSpecs } from './specs/storage.js';
 
 /**
  * Standard category keywords used for stripping prefixes/suffixes.
@@ -168,6 +170,7 @@ export function cleanName(rawName: string, brand: string, category?: string): st
     name = name.replace(/(\d)(Ghz)\b/g, '$1GHz');
     name = name.replace(/(\d)(W)\b/g, '$1W');
     name = name.replace(/(\d)(Mm)\b/g, '$1mm');
+    name = name.replace(/(\d)(Nm)\b/g, '$1nm');
 
     for (const [lower, correct] of Object.entries(ACRONYMS)) {
       if (lower === 'm.2') continue;
@@ -194,89 +197,59 @@ export function cleanName(rawName: string, brand: string, category?: string): st
     name = name.replace(/^RAM\s+/i, '').trim();
     name = name.replace(/^U-?Dimm\s+/i, '').replace(/^Dimm\s+/i, '').trim();
 
-    const kitOnlyCapacity = name.match(/\(\s*(\d+)\s*GB\s*[*xX\u00d7]\s*\d+\s*\)/i);
-    const hasStandaloneCapacity = /\b\d+\s*GB\b/i.test(name.replace(/\([^)]*\)/g, ''));
-    if (kitOnlyCapacity && !hasStandaloneCapacity) {
-      name = name.replace(/\(\s*(\d+)\s*GB\s*[*xX\u00d7]\s*\d+\s*\)/i, `${kitOnlyCapacity[1]}GB`);
-    }
+    // Extract specs before stripping anything
+    const ramSpecs = extractRamSpecs(name);
+    const { capacity_gb, kit_count, ram_type, frequency_mhz, cas_latency } = ramSpecs;
 
+    // Strip ALL variations of kit/capacity notation to get the base model name
+    // This prevents "16GB (2x8GB)" from leaving "16GB" behind when we strip "(2x8GB)"
     name = name
-      .replace(/\s*\(\s*\d+\s*[xX\u00d7]\s*\d+\s*GB\s*\)/gi, '')
-      .replace(/\s*\(\s*\d+\s*GB\s*[xX\u00d7]\s*\d+\s*\)/gi, '')
-      .replace(/\s*\(\s*\d+\s*[\u00d7xX]\s*\d+\s*\)/g, '')
-      .replace(/\s*\(\s*\d+\s*GB[xX\u00d7]\s*\d+\s*\)/gi, '')
-      .replace(/\s*\(\s*\d*\s*\*\s*\d+\s*GB?\s*\)/gi, '')
-      .replace(/\s*\(\s*\*\s*\d+\s*\)/g, '')
-      .replace(/\s*\(\s*\d+\s*GB\s*\*\s*\d+\s*\)/gi, '')
-      .replace(/\s+\d+\s*[xX\u00d7]\s*\d+\s*GB\b/gi, '')
-      .replace(/\s+\d+\s*[xX\u00d7]\s*\d+\b(?!\s*GB)/g, '');
+      .replace(/\s*\(\s*\d+\s*[xX\u00d7*]\s*\d+\s*[Gg][BbOo]\s*\)/gi, ' ')
+      .replace(/\s*\(\s*\d+\s*[Gg][BbOo]\s*[xX\u00d7*]\s*\d+\s*\)/gi, ' ')
+      .replace(/\s*\d+\s*[xX\u00d7*]\s*\d+\s*[Gg][BbOo]\b/gi, ' ')
+      .replace(/\s*\d+\s*[Gg][BbOo]\s*[xX\u00d7*]\s*\d+\b/gi, ' ')
+      .replace(/\b\d+\s*[Gg][BbOo]\b/gi, ' ');
 
+    // Strip other specs
+    name = name
+      .replace(/\bCL\d+\b/gi, ' ')
+      .replace(/\bDDR[45]\b/gi, ' ')
+      .replace(/\b\d{4}\s*MHz\b/gi, ' ');
+
+    // Standard noise cleaning
     name = name
       .replace(/\s*[\-\u2013]\s*[A-Z]\d[\-\u2013A-Za-z0-9]+(?:[\-\u2013][A-Za-z0-9]+)*/g, '')
       .replace(/\s*[\-\u2013]\s*[A-Z][a-z][a-z0-9A-Z]{4,}[-\w]*\s*$/g, '')
-      .replace(/\s+[A-Z][a-z][a-z0-9A-Z]{4,}[/\-][\w]+\s*$/g, '');
-
-    name = name.replace(/\s*\([A-Za-z_][A-Za-z0-9_\-]{4,}\)\s*/g, ' ').trim();
-
-    name = name
-      .replace(/\s*[\-\u2013]?\s*M[\u00e9e]oire\s+[Vv]ive\s+(?:PC\s+)?(?:DDR[45]\s+)?[A-Z]\.?\s*$/gi, '')
-      .replace(/\s*[\-\u2013]?\s*M[\u00e9e]oire\s+[Vv]ive\s*$/gi, '')
-      .replace(/\s*[\-\u2013]?\s*M[\u00e9e]oire\s+[Aa]vec\s+[Hh]eatsink\s*[\-\u2013]?\s*$/gi, '')
-      .replace(/\s*[\-\u2013]?\s*M[\u00e9e]oire\s+DDR[45]\s+\w+,?\s*\w*\s*$/gi, '')
-      .replace(/\s*[\-\u2013]?\s*Am[\u00e9e]liorez\s+[Vv]os\s+[Pp]erformances\s+[Pp]c\s*$/gi, '');
-
-    name = name
-      .replace(/\s+[Aa]vec\s+[Hh]eatsink\s*[\-\u2013]?\s*$/gi, '')
-      .replace(/\s+[Aa]vec\s+[Hh]eatspreader\s*$/gi, '');
-
-    name = name
-      .replace(/(\d+)\s*Go\b/g, '$1GB')
-      .replace(/(^|\s)(\d+)\s*G\b(?![A-Za-z0-9])/g, '$1$2GB');
-
-    name = name
-      .replace(/(\d{4,5})\s*MHz/gi, '$1MHz')
-      .replace(/\b(DDR[345])\s+(\d{4,5})\b(?!\s*MHz)/gi, '$1 $2MHz')
-      .replace(/\b(\d{4,5})\s+(DDR[345])\b/gi, '$1MHz $2');
-
-    name = name
-      .replace(/\bCL(\d+)[\-\u2013]\d+[\-\u2013]\d+\b/gi, 'CL$1')
-      .replace(/\b[Cc][Ll](\d+)\b/g, 'CL$1')
-      .replace(/\bC(\d{2})\b/g, 'CL$1');
-
-    name = name.replace(/\bDDR\s*([345])\b/gi, 'DDR$1');
-
-    const capMatch = name.match(/\b(\d+)GB\b/i);
-    const ddrMatch = name.match(/\bDDR[345]\b/i);
-    const speedMatch = name.match(/\b(\d{4,5})MHz\b/i);
-    const clMatch = name.match(/\bCL(\d+)\b/i);
-
-    if (capMatch || ddrMatch || speedMatch) {
-      const cap = capMatch ? capMatch[0].replace(/gb/i, 'GB') : null;
-      const ddr = ddrMatch ? ddrMatch[0].toUpperCase() : null;
-      const spd = speedMatch ? speedMatch[0].replace(/mhz/i, 'MHz') : null;
-      const cl = clMatch ? `CL${clMatch[1]}` : null;
-
-      const specSuffix = [cap, ddr, spd, cl].filter(Boolean).join(' ');
-
-      let model = name;
-      if (cap) model = model.replace(new RegExp(`\\b${cap}\\b`, 'i'), '');
-      if (ddr) model = model.replace(new RegExp(`\\b${ddr}\\b`, 'i'), '');
-      if (spd) model = model.replace(new RegExp(`\\b${spd}\\b`, 'i'), '');
-      if (cl) model = model.replace(new RegExp(`\\b${cl}\\b`, 'i'), '');
-
-      model = model.replace(/\s*[\-\u2013]\s*$/, '').replace(/\s+/g, ' ').trim();
-      name = model ? `${model} ${specSuffix}` : specSuffix;
-    }
-
-    name = name
-      .replace(/\s*[\-\u2013]\s*$/, '')
-      .replace(/\s*\.\s*$/, '')
+      .replace(/\s+[A-Z][a-z][a-z0-9A-Z]{4,}[/\-][\w]+\s*$/g, '')
+      .replace(/\s*\([A-Za-z_][A-Za-z0-9_\-]{4,}\)\s*/g, ' ')
+      .replace(/\s*[\-\u2013]?\s*M[\u00e9e]oire\s+[Vv]ive\s*.*$/gi, '')
+      .replace(/\s+[Aa]vec\s+[Hh]eatsink\s*.*$/gi, '')
+      .replace(/\s+[Aa]vec\s+[Hh]eatspreader\s*$/gi, '')
       .replace(/\s+Dram\b/gi, '')
       .replace(/\s+Memory\b/gi, '')
       .replace(/\bRvb\b/gi, 'RGB')
-      .replace(/\bDDR([345])-(\d{4,5})\b/gi, 'DDR$1 $2MHz')
       .replace(/\bU-?Dimm\b/gi, '')
       .replace(/\bPc\s+Portable\b/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // Reconstruct canonical name with preserved specs
+    const specParts = [];
+    if (capacity_gb) {
+      if (kit_count > 1) {
+        specParts.push(`${capacity_gb}GB (${kit_count}x${capacity_gb / kit_count}GB)`);
+      } else {
+        specParts.push(`${capacity_gb}GB`);
+      }
+    }
+    if (ram_type) specParts.push(ram_type);
+    if (frequency_mhz) specParts.push(`${frequency_mhz}MHz`);
+    if (cas_latency) specParts.push(`CL${cas_latency}`);
+
+    const model = name.replace(/\s*[\-\u2013]\s*$/, '').trim();
+    name = model ? `${model} ${specParts.join(' ')}` : specParts.join(' ');
+
+    name = name
       .replace(/\s*[\-\u2013]\s*RGB\b/gi, ' RGB')
       .replace(/\s*[\-\u2013]\s*Or\b/gi, ' Or')
       .replace(/^[\-\u2013]\s*/, '')
@@ -284,6 +257,7 @@ export function cleanName(rawName: string, brand: string, category?: string): st
       .replace(/\s+/g, ' ')
       .trim();
   }
+
 
   if (name.length < 2) name = rawName;
 
