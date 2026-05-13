@@ -432,6 +432,12 @@
   background: var(--accent);
 }
 
+.compareToggleDisabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
 .price {
   font-weight: 700;
   color: var(--success-soft);

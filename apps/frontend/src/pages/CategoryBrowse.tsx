@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, GitCompare, Filter } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, GitCompare, Filter, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { smartSearch, type SmartComponent } from '../api';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { Skeleton } from '../components/Skeleton';
@@ -8,12 +8,13 @@ import type { Component, ComponentCategory } from '../types';
 import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
 import { useBuild } from '../context/BuildContext';
 import { useCompare } from '../context/CompareContext';
+import { formatComponentName } from '@shared/component-utils';
 import styles from './CategoryBrowse.module.css';
 
 const LIMIT = 20;
 const DEBOUNCE_MS = 350;
 
-type SortOption = 'smart' | 'price_asc' | 'price_desc' | 'name_asc';
+type SortOption = string;
 
 const SORT_LABELS: Record<SortOption, string> = {
   smart: 'Pertinence',
@@ -25,45 +26,137 @@ const SORT_LABELS: Record<SortOption, string> = {
 const SOCKET_CATEGORIES = new Set<ComponentCategory>(['cpu', 'motherboard']);
 const RAM_TYPE_CATEGORIES = new Set<ComponentCategory>(['ram', 'motherboard']);
 
+// ── Per-category column definitions ──────────────────────────────────────────
+
+interface ColDef {
+  header: string;
+  width?: string;
+  sortKey?: string;
+  render: (c: Component) => React.ReactNode;
+}
+
+function getColDefs(cat: ComponentCategory): ColDef[] {
+  const str = (v: unknown) => (v != null && v !== '' ? String(v) : '—');
+
+  switch (cat) {
+    case 'cpu':
+      return [
+        { header: 'Cœurs', width: '60px', sortKey: 'core_count', render: c => str(c.core_count) },
+        { header: 'Fréq. base', width: '85px', sortKey: 'base_clock_ghz', render: c => c.base_clock_ghz ? `${c.base_clock_ghz} GHz` : '—' },
+        { header: 'Fréq. boost', width: '85px', sortKey: 'boost_clock_ghz', render: c => c.boost_clock_ghz ? `${c.boost_clock_ghz} GHz` : '—' },
+        { header: 'Socket', width: '75px', sortKey: 'socket', render: c => str(c.socket) },
+        { header: 'TDP', width: '55px', sortKey: 'tdp', render: c => c.tdp ? `${c.tdp}W` : '—' },
+      ];
+    case 'motherboard':
+      return [
+        { header: 'Socket', width: '80px', sortKey: 'socket', render: c => str(c.socket) },
+        { header: 'Chipset', width: '80px', sortKey: 'chipset', render: c => str(c.chipset) },
+        { header: 'Format', width: '80px', sortKey: 'form_factor', render: c => str(c.form_factor) },
+        { header: 'RAM', width: '70px', render: c => c.supported_ram_types?.join('/') || '—' },
+        { header: 'Slots RAM', width: '80px', sortKey: 'ram_slots', render: c => c.ram_slots ? String(c.ram_slots) : '—' },
+      ];
+    case 'gpu':
+      return [
+        { header: 'Chipset', width: '130px', sortKey: 'chipset', render: c => str(c.chipset) },
+        { header: 'VRAM', width: '70px', sortKey: 'vram_gb', render: c => c.vram_gb ? `${c.vram_gb} Go` : '—' },
+        { header: 'TDP', width: '60px', sortKey: 'tdp', render: c => c.tdp ? `${c.tdp}W` : '—' },
+        { header: 'Longueur', width: '80px', sortKey: 'length_mm', render: c => c.length_mm ? `${c.length_mm}mm` : '—' },
+      ];
+    case 'ram':
+      return [
+        { header: 'Type', width: '60px', sortKey: 'ram_type', render: c => str(c.ram_type) },
+        { header: 'Fréquence', width: '90px', sortKey: 'frequency_mhz', render: c => c.frequency_mhz ? `${c.frequency_mhz} MHz` : '—' },
+        { header: 'Kit', width: '50px', sortKey: 'kit_count', render: c => c.kit_count && c.kit_count > 1 ? `${c.kit_count}×` : '1×' },
+        { header: 'Latence', width: '70px', sortKey: 'cas_latency', render: c => c.cas_latency ? `CL${c.cas_latency}` : '—' },
+        {
+          header: 'Prix/Go',
+          width: '80px',
+          render: c => {
+            if (!c.lowest_price || !c.capacity_gb) return '—';
+            return `${Math.round(c.lowest_price / c.capacity_gb)} MAD`;
+          },
+        },
+      ];
+    case 'storage':
+      return [
+        { header: 'Capacité', width: '80px', sortKey: 'capacity_gb', render: c => { const v = c.capacity_gb; if (!v) return '—'; return v >= 1000 ? `${v / 1000} To` : `${v} Go`; } },
+        { header: 'Interface', width: '80px', sortKey: 'interface_type', render: c => str(c.interface_type) },
+        { header: 'Lecture', width: '90px', sortKey: 'read_speed_mbps', render: c => c.read_speed_mbps ? `${c.read_speed_mbps} Mo/s` : '—' },
+        { header: 'Écriture', width: '90px', sortKey: 'write_speed_mbps', render: c => c.write_speed_mbps ? `${c.write_speed_mbps} Mo/s` : '—' },
+      ];
+    case 'psu':
+      return [
+        { header: 'Puissance', width: '80px', sortKey: 'wattage', render: c => c.wattage ? `${c.wattage}W` : '—' },
+        { header: 'Certification', width: '100px', sortKey: 'efficiency_rating', render: c => str(c.efficiency_rating) },
+        { header: 'Modulaire', width: '90px', sortKey: 'modular', render: c => str(c.modular) },
+      ];
+    case 'case':
+      return [
+        { header: 'Format MB', width: '100px', render: c => c.supported_motherboards?.join('/') || '—' },
+        { header: 'GPU max', width: '80px', sortKey: 'max_gpu_length_mm', render: c => c.max_gpu_length_mm ? `${c.max_gpu_length_mm}mm` : '—' },
+        { header: 'Ventirad max', width: '100px', sortKey: 'max_cooler_height_mm', render: c => c.max_cooler_height_mm ? `${c.max_cooler_height_mm}mm` : '—' },
+      ];
+    case 'cooling':
+      return [
+        { header: 'Type', width: '80px', render: c => { const n = c.name.toLowerCase(); return n.includes('aio') || n.includes('liquid') || n.includes('watercooler') ? 'AIO' : 'Air'; } },
+        { header: 'Hauteur', width: '70px', sortKey: 'height_mm', render: c => c.height_mm ? `${c.height_mm}mm` : '—' },
+        { header: 'TDP max', width: '70px', sortKey: 'max_tdp', render: c => c.max_tdp ? `${c.max_tdp}W` : '—' },
+        { header: 'Sockets', width: '120px', render: c => c.supported_sockets?.join(', ') || '—' },
+      ];
+    default:
+      return [];
+  }
+}
+
 export function CategoryBrowse() {
   const { category, slotKey } = useParams<{ category: string; slotKey?: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { build, addToBuild } = useBuild();
-  const { addToCompare, isInCompare, removeFromCompare } = useCompare();
+  const { addToCompare, isInCompare, removeFromCompare, compareCategory } = useCompare();
 
   const cat = category as ComponentCategory;
+  const isCategoryMismatch = compareCategory && compareCategory !== cat;
+  const colDefs = useMemo(() => getColDefs(cat), [cat]);
+  const totalCols = 2 + colDefs.length + 2;
 
-  // ── Filter state (synced with URL) ────────────────────────────────────────
+  // ── Filter state ──
   const [search, setSearch] = useState(searchParams.get('q') ?? '');
   const [brand, setBrand] = useState(searchParams.get('brand') ?? '');
   const [socket, setSocket] = useState(searchParams.get('socket') ?? '');
   const [ramType, setRamType] = useState(searchParams.get('ram_type') ?? '');
+  const [vramGb, setVramGb] = useState(searchParams.get('vram_gb') ? Number(searchParams.get('vram_gb')) : 0);
+  const [minWattage, setMinWattage] = useState(searchParams.get('min_wattage') ?? '');
+  const [maxWattage, setMaxWattage] = useState(searchParams.get('max_wattage') ?? '');
+  const [minCapacity, setMinCapacity] = useState(searchParams.get('min_capacity') ?? '');
+  const [maxCapacity, setMaxCapacity] = useState(searchParams.get('max_capacity') ?? '');
+  const [minFreq, setMinFreq] = useState(searchParams.get('min_freq') ?? '');
+  const [maxFreq, setMaxFreq] = useState(searchParams.get('max_freq') ?? '');
   const [minPrice, setMinPrice] = useState(searchParams.get('min_price') ?? '');
   const [maxPrice, setMaxPrice] = useState(searchParams.get('max_price') ?? '');
   const [inStockOnly, setInStockOnly] = useState(searchParams.get('in_stock') === 'true');
   const [sort, setSort] = useState<SortOption>((searchParams.get('sort') as SortOption) ?? 'smart');
   const [page, setPage] = useState(Number(searchParams.get('page') ?? '1'));
 
-  // ── Data state ────────────────────────────────────────────────────────────
+  // ── Data state ──
   const [components, setComponents] = useState<SmartComponent[]>([]);
   const [total, setTotal] = useState(0);
   const [inStockTotal, setInStockTotal] = useState(0);
-  const [loading, setLoading] = useState(true);   // true only on initial load (no data yet)
-  const [fetching, setFetching] = useState(false); // true on any in-flight request
+  const [loading, setLoading] = useState(true);
+  const [fetching, setFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [availableBrands, setAvailableBrands] = useState<string[]>([]);
   const [availableSockets, setAvailableSockets] = useState<string[]>([]);
+  const [availableVram, setAvailableVram] = useState<number[]>([]);
 
   const abortRef = useRef<AbortController | null>(null);
   const hasDataRef = useRef(false);
   const tableRef = useRef<HTMLDivElement>(null);
   const filterMountedRef = useRef(false);
-  const filterResetPageRef = useRef(false); // true when filter effect resets page, so page-change effect skips
+  const filterResetPageRef = useRef(false);
   const brandsPopulated = useRef(false);
   const prevPageRef = useRef(page);
 
-  // Reset refs when category changes so initial load shows skeletons
   useEffect(() => {
     hasDataRef.current = false;
     filterMountedRef.current = false;
@@ -73,9 +166,8 @@ export function CategoryBrowse() {
     setLoading(true);
     setComponents([]);
     setTotal(0);
-  }, [cat]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cat]);
 
-  // ── Build Context (for smartSearch compatibility) ─────────────────────────
   const buildContext = useMemo(() => {
     if (!slotKey) return build;
     const ctx = { ...build };
@@ -83,82 +175,66 @@ export function CategoryBrowse() {
     return ctx;
   }, [build, slotKey]);
 
-  // ── Fetch components ──────────────────────────────────────────────────────
   const fetchComponents = useCallback(async (
-    searchTerm: string,
-    brandFilter: string,
-    socketFilter: string,
-    ramTypeFilter: string,
-    pageNum: number,
+    searchTerm: string, brandFilter: string, socketFilter: string,
+    ramTypeFilter: string, pageNum: number, sortOption: SortOption,
+    minPriceVal: string, maxPriceVal: string, inStockVal: boolean, vramGbVal: number,
+    minWatt: string, maxWatt: string, minCap: string, maxCap: string, minF: string, maxF: string
   ) => {
     if (abortRef.current) abortRef.current.abort();
     abortRef.current = new AbortController();
-
     setFetching(true);
     if (!hasDataRef.current) setLoading(true);
     setError(null);
-
     try {
-      const { components: list, total: t, in_stock_total: ist, available_brands: ab, available_sockets: as_ } = await smartSearch({
-        category: cat,
-        search: searchTerm || undefined,
-        brand: brandFilter || undefined,
-        socket: socketFilter || undefined,
-        ram_type: ramTypeFilter || undefined,
-        build: buildContext,
-        page: pageNum,
-        limit: LIMIT,
+      const { components: list, total: t, in_stock_total: ist, available_brands: ab, available_sockets: as_, available_vram: av } = await smartSearch({
+        category: cat, search: searchTerm || undefined, brand: brandFilter || undefined,
+        socket: socketFilter || undefined, ram_type: ramTypeFilter || undefined,
+        vram_gb: vramGbVal || undefined, sort: sortOption,
+        min_price: minPriceVal ? Number(minPriceVal) : undefined,
+        max_price: maxPriceVal ? Number(maxPriceVal) : undefined,
+        min_wattage: minWatt ? Number(minWatt) : undefined,
+        max_wattage: maxWatt ? Number(maxWatt) : undefined,
+        min_capacity_gb: minCap ? Number(minCap) : undefined,
+        max_capacity_gb: maxCap ? Number(maxCap) : undefined,
+        min_frequency_mhz: minF ? Number(minF) : undefined,
+        max_frequency_mhz: maxF ? Number(maxF) : undefined,
+        in_stock: inStockVal || undefined, build: buildContext, page: pageNum, limit: LIMIT,
       });
-
-      setComponents(list);
-      setTotal(t);
-      setInStockTotal(ist);
+      setComponents(list); setTotal(t); setInStockTotal(ist);
       hasDataRef.current = true;
-
-      // Populate filter options from full result set (not just current page)
-      if (!brandsPopulated.current) {
-        brandsPopulated.current = true;
-        setAvailableBrands(ab);
-        setAvailableSockets(as_);
-      }
+      setAvailableBrands(ab); setAvailableSockets(as_); setAvailableVram(av ?? []);
+      brandsPopulated.current = true;
     } catch (e: unknown) {
-      if (e instanceof Error && e.name !== 'AbortError') {
-        setError(e.message);
-      }
-    } finally {
-      setLoading(false);
-      setFetching(false);
-    }
-  }, [cat, buildContext]); // removed availableBrands.length — use ref instead
+      if (e instanceof Error && e.name !== 'AbortError') setError(e.message);
+    } finally { setLoading(false); setFetching(false); }
+  }, [cat, buildContext]);
 
-  // ── Sync URL & Fetch on filter change ────────────────────────────────────
-  // Debounced so rapid typing doesn't fire on every keystroke.
-  // Uses a ref to track the latest fetchComponents without adding it to deps
-  // (avoids the double-fetch loop where fetchComponents recreation triggers this effect).
   const fetchRef = useRef(fetchComponents);
   useEffect(() => { fetchRef.current = fetchComponents; }, [fetchComponents]);
 
   useEffect(() => {
-    // On first fire (mount), fetch using the page already restored from the URL.
-    // Do NOT reset to page 1 — that would clobber back-navigation state.
-    // filterMountedRef guards against StrictMode double-invoke: the cleanup
-    // resets it so the second invoke also sees false and takes the mount path.
     if (!filterMountedRef.current) {
       filterMountedRef.current = true;
-      fetchRef.current(search, brand, socket, ramType, page);
-      return () => { filterMountedRef.current = false; }; // StrictMode cleanup
+      fetchRef.current(search, brand, socket, ramType, page, sort, minPrice, maxPrice, inStockOnly, vramGb, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq);
+      return () => { filterMountedRef.current = false; };
     }
-
     const timeout = setTimeout(() => {
       filterResetPageRef.current = true;
       setPage(1);
-      fetchRef.current(search, brand, socket, ramType, 1);
-
+      fetchRef.current(search, brand, socket, ramType, 1, sort, minPrice, maxPrice, inStockOnly, vramGb, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq);
       const params: Record<string, string> = {};
       if (search) params.q = search;
       if (brand) params.brand = brand;
       if (socket) params.socket = socket;
       if (ramType) params.ram_type = ramType;
+      if (vramGb) params.vram_gb = String(vramGb);
+      if (minWattage) params.min_wattage = minWattage;
+      if (maxWattage) params.max_wattage = maxWattage;
+      if (minCapacity) params.min_capacity = minCapacity;
+      if (maxCapacity) params.max_capacity = maxCapacity;
+      if (minFreq) params.min_freq = minFreq;
+      if (maxFreq) params.max_freq = maxFreq;
       if (minPrice) params.min_price = minPrice;
       if (maxPrice) params.max_price = maxPrice;
       if (inStockOnly) params.in_stock = 'true';
@@ -166,35 +242,36 @@ export function CategoryBrowse() {
       setSearchParams(params, { replace: true });
     }, DEBOUNCE_MS);
     return () => clearTimeout(timeout);
-  }, [search, brand, socket, ramType, minPrice, maxPrice, sort, inStockOnly, setSearchParams]); // eslint-disable-line react-hooks/exhaustive-deps
-  // page intentionally excluded — initial value used via filterMountedRef, subsequent changes handled below
+  }, [search, brand, socket, ramType, vramGb, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq, minPrice, maxPrice, sort, inStockOnly, setSearchParams]);
 
-  // ── Fetch on page change only ─────────────────────────────────────────────
   useEffect(() => {
-    // Skip if this page change was triggered by a filter reset — the filter
-    // effect already fetched the correct data with the correct filters.
-    if (filterResetPageRef.current) {
-      filterResetPageRef.current = false;
-      prevPageRef.current = page;
-      return;
-    }
-    if (prevPageRef.current === page) return; // skip on initial mount
+    if (filterResetPageRef.current) { filterResetPageRef.current = false; prevPageRef.current = page; return; }
+    if (prevPageRef.current === page) return;
     prevPageRef.current = page;
-    fetchRef.current(search, brand, socket, ramType, page);
-  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchRef.current(search, brand, socket, ramType, page, sort, minPrice, maxPrice, inStockOnly, vramGb, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq);
+  }, [page]);
 
   const totalPages = Math.ceil(total / LIMIT);
-  const activeFilters = [brand, socket, ramType, minPrice, maxPrice].filter(Boolean).length;
 
-  const handleAdd = (c: SmartComponent) => {
-    addToBuild(c, slotKey);
-    navigate('/');
+  const handleAdd = (c: SmartComponent) => { addToBuild(c, slotKey); navigate('/'); };
+
+  const toggleSort = (key: string) => {
+    let newSort: string = 'smart';
+    if (sort === `${key}_asc`) newSort = `${key}_desc`;
+    else newSort = `${key}_asc`;
+    setSort(newSort as SortOption);
+  };
+
+  const getSortIcon = (key: string) => {
+    const isAsc = sort === `${key}_asc`;
+    const isDesc = sort === `${key}_desc`;
+    if (isAsc) return <ArrowUp size={12} className={styles.activeSortIcon} />;
+    if (isDesc) return <ArrowDown size={12} className={styles.activeSortIcon} />;
+    return <ArrowUpDown size={12} className={styles.sortIcon} />;
   };
 
   const changePage = (newPage: number) => {
     setPage(newPage);
-
-    // Write page to URL so browser back restores it
     const params: Record<string, string> = {};
     if (search) params.q = search;
     if (brand) params.brand = brand;
@@ -206,16 +283,20 @@ export function CategoryBrowse() {
     if (sort !== 'smart') params.sort = sort;
     if (newPage > 1) params.page = String(newPage);
     setSearchParams(params, { replace: true });
-
-    // Scroll to top of results table so user sees new results immediately
-    setTimeout(() => {
-      tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 50);
+    setTimeout(() => { tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
   };
 
-  const clearFilters = () => {
-    setBrand(''); setSocket(''); setRamType(''); setMinPrice(''); setMaxPrice('');
+  const clearFilters = () => { 
+    setBrand(''); setSocket(''); setRamType(''); setVramGb(0); 
+    setMinPrice(''); setMaxPrice('');
+    setMinWattage(''); setMaxWattage('');
+    setMinCapacity(''); setMaxCapacity('');
+    setMinFreq(''); setMaxFreq('');
   };
+  const activeFilters = [
+    brand, socket, ramType, vramGb ? String(vramGb) : '', 
+    minPrice, maxPrice, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq
+  ].filter(Boolean).length;
 
   if (!CATEGORY_ORDER.includes(cat)) {
     return <div className={styles.error}><p>Catégorie inconnue.</p></div>;
@@ -223,37 +304,31 @@ export function CategoryBrowse() {
 
   return (
     <div className={styles.page}>
-      {/* ── Breadcrumb ──────────────────────────────────────────────────── */}
       <nav className={styles.breadcrumb}>
         <Link to="/" className={styles.breadcrumbLink}>Accueil</Link>
         <span className={styles.breadcrumbSep}>›</span>
         <span className={styles.breadcrumbCurrent}>{CATEGORY_LABELS[cat]}</span>
       </nav>
 
-      {/* ── Page header ─────────────────────────────────────────────────── */}
       <div className={styles.pageHeader}>
         <div className={styles.pageHeaderLeft}>
           <span className={styles.catIconWrap}>
             <CategoryIcon category={cat} size={20} />
           </span>
           <h1 className={styles.title}>
-            {slotKey ? "Sélectionner " : "Parcourir "}{CATEGORY_LABELS[cat]}
+            {slotKey ? 'Sélectionner ' : 'Parcourir '}{CATEGORY_LABELS[cat]}
           </h1>
         </div>
       </div>
 
-      {/* ── Results ─────────────────────────────────────────────────────── */}
       {error && <div className={styles.errorMsg}>{error}</div>}
 
       <div className={styles.layout}>
-        {/* ── Sidebar ──────────────────────────────────────────────────── */}
         <aside className={styles.sidebar}>
           <div className={styles.filterGroup}>
             <label className={styles.filterLabel}><Filter size={12} /> Filtres</label>
             {activeFilters > 0 && (
-              <button className={styles.clearFiltersBtn} onClick={clearFilters}>
-                Réinitialiser
-              </button>
+              <button className={styles.clearFiltersBtn} onClick={clearFilters}>Réinitialiser</button>
             )}
           </div>
 
@@ -288,6 +363,46 @@ export function CategoryBrowse() {
             </div>
           )}
 
+          {cat === 'gpu' && availableVram.length > 0 && (
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>VRAM</label>
+              <select className={styles.filterSelect} value={vramGb || ''} onChange={e => setVramGb(e.target.value ? Number(e.target.value) : 0)}>
+                <option value="">Toutes</option>
+                {availableVram.map(v => <option key={v} value={v}>{v} Go</option>)}
+              </select>
+            </div>
+          )}
+
+          {cat === 'psu' && (
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>Puissance (W)</label>
+              <div className={styles.priceRange}>
+                <input type="number" className={styles.priceInput} placeholder="Min" value={minWattage} onChange={e => setMinWattage(e.target.value)} />
+                <input type="number" className={styles.priceInput} placeholder="Max" value={maxWattage} onChange={e => setMaxWattage(e.target.value)} />
+              </div>
+            </div>
+          )}
+
+          {cat === 'storage' && (
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>Capacité (Go)</label>
+              <div className={styles.priceRange}>
+                <input type="number" className={styles.priceInput} placeholder="Min" value={minCapacity} onChange={e => setMinCapacity(e.target.value)} />
+                <input type="number" className={styles.priceInput} placeholder="Max" value={maxCapacity} onChange={e => setMaxCapacity(e.target.value)} />
+              </div>
+            </div>
+          )}
+
+          {cat === 'ram' && (
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>Fréquence (MHz)</label>
+              <div className={styles.priceRange}>
+                <input type="number" className={styles.priceInput} placeholder="Min" value={minFreq} onChange={e => setMinFreq(e.target.value)} />
+                <input type="number" className={styles.priceInput} placeholder="Max" value={maxFreq} onChange={e => setMaxFreq(e.target.value)} />
+              </div>
+            </div>
+          )}
+
           <div className={styles.filterGroup}>
             <label className={styles.filterLabel}>Prix (MAD)</label>
             <div className={styles.priceRange}>
@@ -302,7 +417,6 @@ export function CategoryBrowse() {
           </label>
         </aside>
 
-        {/* ── Main Section ─────────────────────────────────────────────── */}
         <section className={styles.mainSection}>
           <div className={styles.toolbar}>
             <div className={styles.searchWrap}>
@@ -315,14 +429,6 @@ export function CategoryBrowse() {
                 onChange={e => setSearch(e.target.value)}
               />
             </div>
-            <div className={styles.sortWrap}>
-              <span className={styles.sortLabel}>Trier par:</span>
-              <select className={styles.sortSelect} value={sort} onChange={e => setSort(e.target.value as SortOption)}>
-                {(Object.entries(SORT_LABELS) as [SortOption, string][]).map(([val, label]) => (
-                  <option key={val} value={val}>{label}</option>
-                ))}
-              </select>
-            </div>
           </div>
 
           <div className={styles.tableWrap} ref={tableRef}>
@@ -331,97 +437,110 @@ export function CategoryBrowse() {
                 <span>
                   {total} composant{total > 1 ? 's' : ''}
                   {inStockTotal > 0 && ` · ${inStockTotal} en stock`}
-                  {totalPages > 1 && ` · page ${page}/${totalPages}`}
                 </span>
-                {totalPages > 1 && (
-                  <div className={styles.paginationInline}>
-                    <button className={styles.pageBtn} disabled={page <= 1} onClick={() => changePage(page - 1)}>
-                      <ChevronLeft size={14} />
-                    </button>
-                    {Array.from({ length: totalPages }).map((_, i) => {
-                      const p = i + 1;
-                      if (p === 1 || p === totalPages || (p >= page - 1 && p <= page + 1)) {
-                        return (
-                          <button key={p} className={`${styles.pageNum} ${p === page ? styles.pageNumActive : ''}`} onClick={() => changePage(p)}>
-                            {p}
-                          </button>
-                        );
-                      }
-                      if (p === page - 2 || p === page + 2) return <span key={p} className={styles.pageDots}>…</span>;
-                      return null;
-                    })}
-                    <button className={styles.pageBtn} disabled={page >= totalPages} onClick={() => changePage(page + 1)}>
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
-                )}
               </div>
             )}
+
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th colSpan={2}>Composant</th>
-                  <th>Spécifications</th>
-                  <th className={styles.priceCell}>Prix</th>
-                  <th className={styles.actionCell}></th>
+                  <th className={styles.thImg}></th>
+                  <th 
+                    className={`${styles.thName} ${styles.sortableHeader}`}
+                    onClick={() => toggleSort('name')}
+                  >
+                    <div className={styles.thContent}>
+                      Composant {getSortIcon('name')}
+                    </div>
+                  </th>
+                  {colDefs.map(col => (
+                    <th 
+                      key={col.header} 
+                      className={`${styles.thSpec} ${col.sortKey ? styles.sortableHeader : ''}`} 
+                      style={{ width: col.width }}
+                      onClick={() => col.sortKey && toggleSort(col.sortKey)}
+                    >
+                      <div className={styles.thContent} style={{ justifyContent: 'flex-end' }}>
+                        {col.header} {col.sortKey && getSortIcon(col.sortKey)}
+                      </div>
+                    </th>
+                  ))}
+                  <th 
+                    className={`${styles.thPrice} ${styles.sortableHeader}`}
+                    onClick={() => toggleSort('price')}
+                  >
+                    <div className={styles.thContent} style={{ justifyContent: 'flex-end' }}>
+                      Prix {getSortIcon('price')}
+                    </div>
+                  </th>
+                  <th className={styles.thAction}></th>
                 </tr>
               </thead>
               <tbody className={fetching && components.length > 0 ? styles.tbodyFading : undefined}>
                 {loading && components.length === 0 ? (
                   Array.from({ length: 10 }).map((_, i) => (
                     <tr key={i} className={styles.skeletonRow}>
-                      <td colSpan={5}><Skeleton height={40} /></td>
+                      <td colSpan={totalCols}><Skeleton height={44} /></td>
                     </tr>
                   ))
                 ) : components.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className={styles.empty}>Aucun résultat trouvé.</td>
+                    <td colSpan={totalCols} className={styles.emptyCell}>Aucun résultat trouvé.</td>
                   </tr>
                 ) : (
                   components.map(c => {
                     const isIncompatible = c.compatibility === 'incompatible';
                     const isCompared = isInCompare(c.id);
-                    const specs = getKeySpecs(c, cat);
-
                     return (
-                      <tr key={c.id} className={isIncompatible ? styles.incompatibleRow : ''}>
-                        <td className={styles.imgCell}>
-                          {c.image_url && <img src={c.image_url} alt="" className={styles.compThumb} referrerPolicy="no-referrer" />}
-                        </td>
-                        <td className={styles.nameCell}>
-                          <span className={styles.compBrand}>{c.brand}</span>
-                          <Link to={`/product/${c.slug}`} className={styles.compName}>{c.name}</Link>
-                        </td>
-                        <td>
-                          <div className={styles.specList}>
-                            {specs.map(s => (
-                              <div key={s.label} className={styles.specItem}>
-                                <span className={styles.specLabel}>{s.label}</span>
-                                <span className={styles.specVal}>{s.value}</span>
-                              </div>
-                            ))}
+                      <tr key={c.id} className={[
+                        styles.dataRow,
+                        isIncompatible ? styles.incompatibleRow : '',
+                      ].filter(Boolean).join(' ')}>
+                        <td className={styles.tdImg}>
+                          <div className={styles.thumbWrapper}>
+                            {c.image_url
+                              ? <img src={c.image_url} alt="" className={styles.compThumb} referrerPolicy="no-referrer" />
+                              : <div className={styles.compThumbPlaceholder}><CategoryIcon category={cat} size={16} /></div>
+                            }
                           </div>
                         </td>
-                        <td className={styles.priceCell}>
+                        <td className={styles.tdName}>
+                          <div className={styles.nameWrap}>
+                            <span className={styles.compBrand}>{c.brand}</span>
+                            <Link to={`/product/${c.slug}`} className={styles.compName} title={formatComponentName(c)}>{formatComponentName(c)}</Link>
+                          </div>
+                        </td>
+                        {colDefs.map(col => (
+                          <td key={col.header} className={styles.tdSpec}>
+                            {col.render(c)}
+                          </td>
+                        ))}
+                        <td className={styles.tdPrice}>
                           <span className={styles.priceVal}>
                             {c.lowest_price ? `${c.lowest_price.toLocaleString('fr-MA')} MAD` : '—'}
                           </span>
-                          <span className={`${styles.stockStatus} ${c.in_stock ? styles.inStock : styles.outStock}`}>
+                          <span className={`${styles.stockBadge} ${c.in_stock ? styles.inStock : styles.outStock}`}>
                             {c.in_stock ? 'En stock' : 'Rupture'}
                           </span>
                         </td>
-                        <td className={styles.actionCell}>
+                        <td className={styles.tdAction}>
                           <div className={styles.btnGroup}>
                             <button
                               className={`${styles.iconBtn} ${isCompared ? styles.iconBtnActive : ''}`}
-                              onClick={() => isCompared ? removeFromCompare(c.id) : addToCompare(c.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                isCompared ? removeFromCompare(c.id) : addToCompare(c.id, c.category);
+                              }}
                               title="Comparer"
                             >
                               <GitCompare size={14} />
                             </button>
                             <button
                               className={`${styles.addBtn} ${isIncompatible ? styles.addBtnDisabled : ''}`}
-                              onClick={() => !isIncompatible && handleAdd(c)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isIncompatible) handleAdd(c);
+                              }}
                               disabled={isIncompatible}
                             >
                               {isIncompatible ? 'Incompatible' : slotKey ? 'Choisir' : 'Ajouter'}
@@ -438,63 +557,19 @@ export function CategoryBrowse() {
 
           {totalPages > 1 && (
             <div className={styles.pagination}>
-              <button className={styles.pageBtn} disabled={page <= 1} onClick={() => changePage(page - 1)}>
-                <ChevronLeft size={16} />
-              </button>
+              <button className={styles.pageBtn} disabled={page <= 1} onClick={() => changePage(page - 1)}><ChevronLeft size={16} /></button>
               {Array.from({ length: totalPages }).map((_, i) => {
                 const p = i + 1;
-                if (p === 1 || p === totalPages || (p >= page - 2 && p <= page + 2)) {
-                  return (
-                    <button
-                      key={p}
-                      className={`${styles.pageNum} ${p === page ? styles.pageNumActive : ''}`}
-                      onClick={() => changePage(p)}
-                    >
-                      {p}
-                    </button>
-                  );
-                }
+                if (p === 1 || p === totalPages || (p >= page - 2 && p <= page + 2))
+                  return <button key={p} className={`${styles.pageNum} ${p === page ? styles.pageNumActive : ''}`} onClick={() => changePage(p)}>{p}</button>;
                 if (p === page - 3 || p === page + 3) return <span key={p}>...</span>;
                 return null;
               })}
-              <button className={styles.pageBtn} disabled={page >= totalPages} onClick={() => changePage(page + 1)}>
-                <ChevronRight size={16} />
-              </button>
+              <button className={styles.pageBtn} disabled={page >= totalPages} onClick={() => changePage(page + 1)}><ChevronRight size={16} /></button>
             </div>
           )}
         </section>
       </div>
     </div>
   );
-}
-
-/** Extract 2 key specs for the table. */
-function getKeySpecs(c: Component, cat: ComponentCategory): { label: string; value: string }[] {
-  const specs = c.specs as Record<string, unknown> | undefined;
-  const get = (key: string) => specs?.[key] ?? (c as unknown as Record<string, unknown>)[key];
-
-  switch (cat) {
-    case 'cpu':
-      return [
-        { label: 'Socket', value: String(get('socket') || '—') },
-        { label: 'Boost', value: get('boost_clock_ghz') ? `${get('boost_clock_ghz')} GHz` : '—' },
-      ];
-    case 'motherboard':
-      return [
-        { label: 'Socket', value: String(get('socket') || '—') },
-        { label: 'RAM', value: c.supported_ram_types?.join('/') || '—' },
-      ];
-    case 'gpu':
-      return [
-        { label: 'VRAM', value: get('vram_gb') ? `${get('vram_gb')} Go` : '—' },
-        { label: 'TDP', value: c.tdp ? `${c.tdp}W` : '—' },
-      ];
-    case 'ram':
-      return [
-        { label: 'Type', value: c.ram_type || '—' },
-        { label: 'Fréq.', value: c.frequency_mhz ? `${c.frequency_mhz} MHz` : '—' },
-      ];
-    default:
-      return [];
-  }
 }

@@ -1,0 +1,52 @@
+.page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    text-align: center;
+    gap: 1rem;
+    padding: 2rem;
+}
+
+.code {
+    font-family: 'Outfit', sans-serif;
+    font-size: 6rem;
+    font-weight: 900;
+    color: var(--border-2);
+    line-height: 1;
+    letter-spacing: -0.05em;
+}
+
+.title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.sub {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.homeBtn {
+    margin-top: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.6rem 1.4rem;
+    background: var(--accent-blue);
+    color: #fff;
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: opacity 0.15s;
+}
+
+.homeBtn:hover {
+    opacity: 0.85;
+    text-decoration: none;
+}

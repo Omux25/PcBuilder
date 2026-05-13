@@ -8,12 +8,14 @@ import { useNavigate } from 'react-router-dom';
 import { GitCompare, X, Trash2 } from 'lucide-react';
 import { useCompare } from '../context/CompareContext';
 import { getComponentById } from '../api';
-import type { Component } from '../types';
+import type { Component, ComponentCategory } from '../types';
+import { CATEGORY_LABELS } from '../types';
+import { formatComponentName } from '@shared/component-utils';
 import { UI } from '../ui-strings';
 import styles from './CompareTray.module.css';
 
 export function CompareTray() {
-  const { compareIds, removeFromCompare, clearCompare } = useCompare();
+  const { compareIds, removeFromCompare, clearCompare, compareCategory } = useCompare();
   const [items, setItems]   = useState<Component[]>([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -33,7 +35,7 @@ export function CompareTray() {
       <div className={styles.header}>
         <div className={styles.title}>
           <GitCompare size={16} />
-          <span>{UI.compareTray.title(compareIds.length)}</span>
+          <span>{UI.compareTray.title(compareIds.length)} {compareCategory && `(${CATEGORY_LABELS[compareCategory as ComponentCategory]})`}</span>
         </div>
         <button className={styles.clearBtn} onClick={clearCompare} title={UI.compareTray.clearTitle}>
           <Trash2 size={14} />
@@ -44,7 +46,7 @@ export function CompareTray() {
         {items.map(item => (
           <div key={item.id} className={styles.item}>
             <div className={styles.itemInfo}>
-              <span className={styles.itemName} title={item.name}>{item.name}</span>
+              <span className={styles.itemName} title={formatComponentName(item)}>{formatComponentName(item)}</span>
             </div>
             <button className={styles.removeItem} onClick={() => removeFromCompare(item.id)} title={UI.compareTray.removeTitle}>
               <X size={12} />

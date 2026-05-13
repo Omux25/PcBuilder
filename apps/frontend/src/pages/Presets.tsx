@@ -8,6 +8,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { getPresets } from '../api';
 import type { PresetBuild } from '../types';
 import { CATEGORY_LABELS, slotKeyToCategory } from '../types';
+import { formatComponentName } from '@shared/component-utils';
 import { SkeletonCard } from '../components/Skeleton';
 import { UI } from '../ui-strings';
 import styles from './Presets.module.css';
@@ -108,7 +109,7 @@ function PresetCard({ preset, onLoad }: { preset: PresetBuild; onLoad: (p: Prese
             <div key={slotKey} className={`${styles.componentRow} ${!component.is_active ? styles.inactive : ''}`}>
               <span className={styles.componentCat}>{label}</span>
               <span className={styles.componentName}>
-                {component.brand ? `${component.brand} ` : ''}{component.name}
+                {formatComponentName({ ...component, category: cat })}
               </span>
             </div>
           );
