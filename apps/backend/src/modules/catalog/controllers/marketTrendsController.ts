@@ -52,6 +52,8 @@ export class MarketTrendsController {
           ) AS change_pct
         FROM price_trends
         WHERE day_count > 1
+          AND ABS(price_after - price_before) >= 20 -- Min 20 MAD change
+          AND (ABS(price_after - price_before) / price_before * 100) >= 2 -- Min 2% change
           AND (
             (${type} = 'drops' AND price_after < price_before) OR
             (${type} = 'hikes' AND price_after > price_before)

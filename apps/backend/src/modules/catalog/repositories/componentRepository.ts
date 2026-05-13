@@ -173,31 +173,65 @@ export class ComponentRepository {
       return `'${val.replace(/'/g, "''")}'`;
   }
 
-  async getComponentById(id: number, activeOnly = true): Promise<Component | null> {
-    const rows = (await this.sql`
-      SELECT * FROM components
-      WHERE id = ${id} AND (${activeOnly ? true : null}::boolean IS NULL OR is_active = true)
-      LIMIT 1
-    `) as Component[];
-    return rows[0] || null;
+  async getComponentById(id: number, activeOnly = true): Promise<(Component & { lowest_price: number | null; in_stock: boolean }) | null> {
+    const rows = await this.sql`
+        SELECT 
+            c.*,
+            (SELECT MIN(price) FROM prices WHERE component_id = c.id AND in_stock = true) as lowest_in_stock,
+            (SELECT MIN(price) FROM prices WHERE component_id = c.id) as lowest_any,
+            EXISTS (SELECT 1 FROM prices WHERE component_id = c.id AND in_stock = true) as is_in_stock
+        FROM components c
+        WHERE c.id = ${id} AND (${activeOnly ? true : null}::boolean IS NULL OR c.is_active = true)
+        LIMIT 1
+    ` as any[];
+    
+    if (!rows[0]) return null;
+    const c = rows[0];
+    return {
+        ...c,
+        lowest_price: Number(c.lowest_in_stock || c.lowest_any) || null,
+        in_stock: c.is_in_stock
+    };
   }
 
-  async getComponentsByIds(ids: number[], activeOnly = true): Promise<Component[]> {
+  async getComponentsByIds(ids: number[], activeOnly = true): Promise<(Component & { lowest_price: number | null; in_stock: boolean })[]> {
     if (ids.length === 0) return [];
-    const rows = (await this.sql`
-      SELECT * FROM components
-      WHERE id IN (${ids}) AND (${activeOnly ? true : null}::boolean IS NULL OR is_active = true)
-    `) as Component[];
-    return rows;
+    const rows = await this.sql`
+        SELECT 
+            c.*,
+            (SELECT MIN(price) FROM prices WHERE component_id = c.id AND in_stock = true) as lowest_in_stock,
+            (SELECT MIN(price) FROM prices WHERE component_id = c.id) as lowest_any,
+            EXISTS (SELECT 1 FROM prices WHERE component_id = c.id AND in_stock = true) as is_in_stock
+        FROM components c
+        WHERE c.id IN (${ids}) AND (${activeOnly ? true : null}::boolean IS NULL OR c.is_active = true)
+    ` as any[];
+    
+    return rows.map(c => ({
+        ...c,
+        lowest_price: Number(c.lowest_in_stock || c.lowest_any) || null,
+        in_stock: c.is_in_stock
+    }));
   }
 
-  async getComponentBySlug(slug: string, activeOnly = true): Promise<Component | null> {
-    const rows = (await this.sql`
-      SELECT * FROM components
-      WHERE slug = ${slug} AND (${activeOnly ? true : null}::boolean IS NULL OR is_active = true)
-      LIMIT 1
-    `) as Component[];
-    return rows[0] || null;
+  async getComponentBySlug(slug: string, activeOnly = true): Promise<(Component & { lowest_price: number | null; in_stock: boolean }) | null> {
+    const rows = await this.sql`
+        SELECT 
+            c.*,
+            (SELECT MIN(price) FROM prices WHERE component_id = c.id AND in_stock = true) as lowest_in_stock,
+            (SELECT MIN(price) FROM prices WHERE component_id = c.id) as lowest_any,
+            EXISTS (SELECT 1 FROM prices WHERE component_id = c.id AND in_stock = true) as is_in_stock
+        FROM components c
+        WHERE c.slug = ${slug} AND (${activeOnly ? true : null}::boolean IS NULL OR c.is_active = true)
+        LIMIT 1
+    ` as any[];
+    
+    if (!rows[0]) return null;
+    const c = rows[0];
+    return {
+        ...c,
+        lowest_price: Number(c.lowest_in_stock || c.lowest_any) || null,
+        in_stock: c.is_in_stock
+    };
   }
 
   async insertComponent(data: any): Promise<Component> {
