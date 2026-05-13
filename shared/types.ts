@@ -20,6 +20,7 @@ export interface Component {
   description?: string;
   specs?: Record<string, unknown>;
   image_url?: string;
+  image_urls?: string[];
   release_year?: number;
   is_active: boolean;
   // Compatibility/Spec columns
@@ -41,6 +42,33 @@ export interface Component {
   ram_slots?: number;
   m2_slots?: number;
   sata_ports?: number;
+  // Cooling-specific compatibility fields
+  supported_sockets?: string[];   // sockets this cooler mounts on (e.g. ['AM4','AM5','LGA1700'])
+  max_tdp?: number;               // max CPU TDP the cooler can handle (W)
+  // PSU-specific fields
+  psu_form_factor?: string;       // ATX | SFX | SFX-L | TFX | Flex-ATX
+  // Case-specific compatibility fields
+  supported_psu_form_factors?: string[]; // PSU form factors the case accepts
+  // RAM kit fields
+  kit_count?: number;             // number of physical sticks in the kit (default 1)
+  cas_latency?: number;           // CAS latency (e.g. 16 for CL16)
+  capacity_gb?: number;           // RAM: capacity per stick in GB; Storage: total capacity in GB
+  // CPU-specific fields
+  core_count?: number;            // CPU: number of physical cores
+  thread_count?: number;          // CPU: number of threads
+  // GPU-specific fields
+  vram_gb?: number;               // GPU: VRAM in GB
+  // Schema enrichment (migration 036)
+  chipset?: string;               // GPU: 'RTX 4090' | Motherboard: 'B650M', 'Z790'
+  interface_type?: string;        // Storage: 'NVMe' | 'SATA' | 'HDD'
+  read_speed_mbps?: number;       // Storage: sequential read MB/s
+  write_speed_mbps?: number;      // Storage: sequential write MB/s
+  efficiency_rating?: string;     // PSU: 'Gold' | 'Platinum' | 'Titanium' | 'Bronze'
+  modular?: string;               // PSU: 'Full' | 'Semi' | 'Non'
+  base_clock_ghz?: number;        // CPU: base clock GHz
+  boost_clock_ghz?: number;       // CPU: boost clock GHz
+  mpn?: string;                   // Manufacturer Part Number
+  tags?: string[];                // ['rgb', 'white', 'nvme', 'wifi', ...]
   // Fan-specific fields
   size_mm?: number;
   airflow_cfm?: number;
@@ -129,6 +157,8 @@ export interface UnmatchedListing {
   status: 'pending' | 'linked' | 'dismissed';
   manual_category: string | null;
   linked_component_id: number | null;
+  image_url: string | null;
+  image_urls: string[] | null;
   scraped_at: string;
 }
 
@@ -208,6 +238,12 @@ export const RULE_LABELS: Record<string, string> = {
   cooler_too_tall: 'Refroidissement trop haut pour le boîtier',
   ram_slots_exceeded: 'Trop de barrettes RAM',
   storage_slots_exceeded: 'Trop de disques de stockage',
+  cooler_socket_mismatch: 'Socket CPU non supporté par le ventirad',
+  mixed_ram_types: 'Types de RAM mixtes',
+  mixed_ram_frequencies: 'Fréquences RAM différentes',
+  cpu_cooler_tdp_insufficient: 'Ventirad insuffisant pour le CPU',
+  dual_channel_warning: 'Dual-channel non optimal',
+  psu_form_factor_mismatch: 'Format d\'alimentation incompatible',
 };
 
 export const RULE_TOOLTIPS: Record<string, string> = {
@@ -220,6 +256,12 @@ export const RULE_TOOLTIPS: Record<string, string> = {
   cooler_too_tall: 'Le ventirad CPU est trop haut pour ce boîtier. Vérifiez la hauteur maximale supportée.',
   ram_slots_exceeded: 'La carte mère n\'a pas assez de slots DIMM pour le nombre de barrettes RAM sélectionnées.',
   storage_slots_exceeded: 'La carte mère n\'a pas assez de ports M.2 et SATA pour le nombre de disques sélectionnés.',
+  cooler_socket_mismatch: 'Ce ventirad n\'est pas compatible avec le socket de votre processeur. Vérifiez les sockets supportés.',
+  mixed_ram_types: 'Vous avez mélangé des barrettes DDR4 et DDR5. Un PC ne peut utiliser qu\'un seul type de RAM.',
+  mixed_ram_frequencies: 'Les barrettes RAM ont des fréquences différentes. Le système fonctionnera à la fréquence la plus basse.',
+  cpu_cooler_tdp_insufficient: 'Le ventirad n\'est pas conçu pour dissiper autant de chaleur que votre CPU. Risque de throttling thermique.',
+  dual_channel_warning: 'Un nombre impair de barrettes RAM désactive le mode dual-channel. Utilisez 2 ou 4 barrettes pour de meilleures performances.',
+  psu_form_factor_mismatch: 'L\'alimentation ne rentre pas physiquement dans ce boîtier. Vérifiez le format supporté (ATX, SFX, etc.).',
 };
 
 export const CORE_CATEGORIES: ComponentCategory[] = [

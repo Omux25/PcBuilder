@@ -45,17 +45,42 @@ export function scoreImageQuality(imageUrl: string, productName: string): number
         score -= 30; // Prefer non-MPK but still usable
     }
 
-    if (urlLower.includes('placeholder') || urlLower.includes('no-image') || urlLower.includes('default')) {
-        score -= 100; // Hard reject placeholders
+    // Hard reject placeholders, but allow PrestaShop standard sizes like 'large_default'
+    if ((urlLower.includes('placeholder') || urlLower.includes('no-image')) || 
+        (urlLower.includes('default') && !urlLower.includes('large_default') && !urlLower.includes('home_default'))) {
+        score -= 100;
     }
 
     if (urlLower.includes('thumb') || urlLower.includes('small') || urlLower.includes('icon')) {
         score -= 20; // Prefer full-size images
     }
 
+    // Penalties
+    if (urlLower.includes('tray') || urlLower.includes('mpk') || urlLower.includes('no-fan')) {
+        score -= 20; // Prefer retail boxes over tray chips
+    }
+
     // Bonuses
     if (urlLower.includes('large') || urlLower.includes('full') || urlLower.includes('original')) {
         score += 20; // Prefer high-res
+    }
+
+    // BIG BONUS for Box/Retail packaging shots (User preference)
+    if (urlLower.includes('box') || urlLower.includes('retail') || urlLower.includes('packaging')) {
+        score += 50; 
+    }
+
+    // PENALTY for NextLevel generic CPU placeholders (User preference)
+    // Detected by presence of 'tray', 'mpk', or 'no-fan' OR if it's a CPU image from NextLevel without 'box'
+    if (urlLower.includes('nextlevelpc') && (nameLower.includes('ryzen') || nameLower.includes('intel') || nameLower.includes('core'))) {
+        const isBox = urlLower.includes('box') || urlLower.includes('retail') || urlLower.includes('packaging');
+        const isGeneric = urlLower.includes('tray') || urlLower.includes('mpk') || urlLower.includes('no-fan') || urlLower.includes('wraith-stealth');
+        
+        if (isGeneric && !isBox) {
+            score -= 60; // Very high penalty to ensure it's last resort
+        } else if (!isBox) {
+            score -= 30; // Medium penalty for any NextLevel CPU image that isn't explicitly a box
+        }
     }
 
     // Prefer images that match the product name (not generic)
