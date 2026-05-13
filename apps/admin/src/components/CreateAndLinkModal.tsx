@@ -19,6 +19,7 @@ import type { FanSpecValues } from './FanSpecFields';
 import type { ThermalPasteSpecValues } from './ThermalPasteSpecFields';
 import { CATEGORY_ORDER, CATEGORY_LABELS } from '@shared/types';
 import type { ComponentCategory } from '@shared/types';
+import { cleanName } from '@shared/component-utils';
 import styles from './Form.module.css';
 import { getKeywordRules, reprocessSuggestions, getErrorMessage, scrapeUrls, createAndLinkComponent } from '../api';
 import type { CanonicalGroup, KeywordRuleResponse, CreateAndLinkPayload } from '../api';
@@ -52,7 +53,7 @@ export function CreateAndLinkModal({ group, isOpen, onClose, onSuccess }: Props)
 
     useEffect(() => {
         if (!group || !isOpen) return;
-        setName(group.canonical_name ?? '');
+        setName(cleanName(group.canonical_name ?? '', group.brand ?? ''));
         setBrand(group.brand ?? '');
         const cat = group.category ?? '';
         setCategory(cat);

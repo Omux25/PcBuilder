@@ -37,7 +37,38 @@ export function ScrapedListingRow({ listing, onReject }: Props) {
         <>
             <tr style={{ background: 'var(--surface-2)', fontSize: '13px' }}>
                 <td style={{ width: '32px' }} />
-                <td style={{ paddingLeft: '32px' }}>
+                <td style={{ width: '48px', padding: '4px 0' }}>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                        {(listing.image_urls && listing.image_urls.length > 0 ? listing.image_urls : [listing.image_url]).filter(Boolean).slice(0, 3).map((url, i) => (
+                            <img
+                                key={i}
+                                src={url!}
+                                alt=""
+                                style={{
+                                    width: i === 0 ? '40px' : '32px',
+                                    height: i === 0 ? '40px' : '32px',
+                                    objectFit: 'contain',
+                                    background: '#fff',
+                                    borderRadius: '4px',
+                                    border: '1px solid var(--border)',
+                                    alignSelf: 'center',
+                                    cursor: 'zoom-in',
+                                }}
+                                onClick={() => window.open(url!, '_blank')}
+                            />
+                        ))}
+                        {(!listing.image_url && (!listing.image_urls || listing.image_urls.length === 0)) && (
+                            <div style={{
+                                width: '40px',
+                                height: '40px',
+                                background: 'var(--surface-3)',
+                                borderRadius: '4px',
+                                border: '1px solid var(--border)',
+                            }} />
+                        )}
+                    </div>
+                </td>
+                <td style={{ paddingLeft: '8px' }}>
                     <a
                         href={listing.product_url}
                         target="_blank"

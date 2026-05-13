@@ -130,6 +130,32 @@ export function CanonicalGroupRow({
                     {isExpanded ? '▼' : '▶'}
                 </td>
 
+                {/* Thumbnail */}
+                <td style={{ width: '48px', padding: '4px 0' }}>
+                    {listings[0]?.image_url ? (
+                        <img
+                            src={listings[0].image_url}
+                            alt=""
+                            style={{
+                                width: '40px',
+                                height: '40px',
+                                objectFit: 'contain',
+                                background: '#fff',
+                                borderRadius: '4px',
+                                border: '1px solid var(--border)',
+                            }}
+                        />
+                    ) : (
+                        <div style={{
+                            width: '40px',
+                            height: '40px',
+                            background: 'var(--surface-3)',
+                            borderRadius: '4px',
+                            border: '1px solid var(--border)',
+                        }} />
+                    )}
+                </td>
+
                 {/* Canonical name + brand + count */}
                 <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
