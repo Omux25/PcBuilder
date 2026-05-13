@@ -165,6 +165,7 @@ export function UnknownSection({ onCategoryAssigned, onToast, refreshTrigger }: 
                 <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 var(--radius) var(--radius)', overflow: 'hidden' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                            <th style={{ width: '48px', padding: '8px 12px' }}></th>
                             <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nom scrappé</th>
                             <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Revendeur</th>
                             <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prix</th>
@@ -176,6 +177,37 @@ export function UnknownSection({ onCategoryAssigned, onToast, refreshTrigger }: 
                         {listings.map((listing) => (
                             <>
                                 <tr key={listing.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                    <td style={{ width: '48px', padding: '4px 12px' }}>
+                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                            {(listing.image_urls && listing.image_urls.length > 0 ? listing.image_urls : [listing.image_url]).filter(Boolean).slice(0, 3).map((url, i) => (
+                                                <img
+                                                    key={i}
+                                                    src={url!}
+                                                    alt=""
+                                                    style={{
+                                                        width: i === 0 ? '40px' : '32px',
+                                                        height: i === 0 ? '40px' : '32px',
+                                                        objectFit: 'contain',
+                                                        background: '#fff',
+                                                        borderRadius: '4px',
+                                                        border: '1px solid var(--border)',
+                                                        alignSelf: 'center',
+                                                        cursor: 'zoom-in',
+                                                    }}
+                                                    onClick={() => window.open(url!, '_blank')}
+                                                />
+                                            ))}
+                                            {(!listing.image_url && (!listing.image_urls || listing.image_urls.length === 0)) && (
+                                                <div style={{
+                                                    width: '40px',
+                                                    height: '40px',
+                                                    background: 'var(--surface-3)',
+                                                    borderRadius: '4px',
+                                                    border: '1px solid var(--border)',
+                                                }} />
+                                            )}
+                                        </div>
+                                    </td>
                                     <td style={{ padding: '8px 12px' }}>
                                         <a
                                             href={listing.product_url}

@@ -5,7 +5,7 @@ import type { AdminComponent } from '../api';
 import { ComponentModal } from '../components/ComponentModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import styles from './Components.module.css';
-import { CATEGORY_ORDER } from '@shared/types';
+import { CATEGORY_ORDER, formatComponentName } from '@shared/component-utils';
 
 const LIMIT = 20;
 
@@ -146,7 +146,7 @@ export function Components() {
               {components.map((c) => (
                 <tr key={c.id}>
                   <td>
-                    <div className={styles.componentName}>{c.name}</div>
+                    <div className={styles.componentName}>{formatComponentName(c)}</div>
                     <div className={styles.componentSlug}>{c.slug}</div>
                   </td>
                   <td>{c.brand ?? '—'}</td>

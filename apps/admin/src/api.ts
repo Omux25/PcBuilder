@@ -215,6 +215,8 @@ export interface CanonicalGroupListing {
   scraped_name: string;
   scraped_price: number | null;
   product_url: string;
+  image_url: string | null;
+  image_urls: string[] | null;
   scraped_at: string;
   confidence: 'high' | 'medium' | 'low' | 'unknown';
 }
