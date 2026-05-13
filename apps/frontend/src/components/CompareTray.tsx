@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { GitCompare, X, Trash2 } from 'lucide-react';
 import { useCompare } from '../context/CompareContext';
 import { getComponentById } from '../api';
@@ -19,6 +19,7 @@ export function CompareTray() {
   const [items, setItems]   = useState<Component[]>([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (compareIds.length === 0) { setItems([]); return; }
@@ -28,7 +29,7 @@ export function CompareTray() {
       .finally(() => setLoading(false));
   }, [compareIds]);
 
-  if (compareIds.length === 0) return null;
+  if (compareIds.length === 0 || location.pathname === '/compare') return null;
 
   return (
     <div className={styles.tray}>

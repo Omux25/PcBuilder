@@ -177,18 +177,51 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 1rem;
   color: var(--text-dim);
   text-decoration: none;
-  background: rgba(0, 0, 0, 0.01);
+  background: var(--bg-surface);
   border-left: 1px solid var(--border-subtle);
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.addSlot::before {
+  content: '';
+  position: absolute;
+  inset: 1.5rem;
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  transition: all 0.3s ease;
+}
+
+.addSlot span {
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+  z-index: 1;
+}
+
+.addSlot svg {
+  z-index: 1;
+  transition: transform 0.3s ease;
 }
 
 .addSlot:hover {
-  background: rgba(0, 0, 0, 0.03);
-  color: var(--text-primary);
+  background: var(--bg-surface-hover);
+  color: var(--accent-blue);
 }
+
+.addSlot:hover::before {
+  border-color: var(--accent-blue);
+  background: rgba(var(--accent-blue-rgb), 0.03);
+}
+
+.addSlot:hover svg {
+  transform: scale(1.1) rotate(90deg);
+}
+
 
 /* ── Body Rows ──────────────────────────────────────────────────────────── */
 
