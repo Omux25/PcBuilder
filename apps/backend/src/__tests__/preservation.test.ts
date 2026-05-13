@@ -119,7 +119,7 @@ describe('Preservation: Bulk import per-row error handling is intact', () => {
 
 describe('Preservation: Existing compatibility rules still work after PSU TDP fix', () => {
   test('socket_mismatch still fires for mismatched sockets', async () => {
-    const { validateCompatibility } = await import('../services/compatibilityService.js');
+    const { validateCompatibility } = await import('../modules/builds/services/compatibilityService.js');
     const result = validateCompatibility({
       cpu: { socket: 'AM5', tdp: 65 },
       motherboard: { socket: 'LGA1700', supported_ram_types: ['DDR5'], max_ram_frequency: 6000 },

@@ -12,7 +12,7 @@
 // @ts-nocheck
 import { describe, test } from 'bun:test';
 import * as fc from 'fast-check';
-import { validateCompatibility } from '../../services/compatibilityService.js';
+import { validateCompatibility } from '../../../modules/builds/services/compatibilityService.js';
 
 // ── Arbitraries ───────────────────────────────────────────────────────────────
 

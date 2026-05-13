@@ -1,0 +1,298 @@
+[Gigabyte] 80 Plus Gold - Ud850Gm
+[Corsair] 80Plus Bronze
+[Connect] 80Plus Bronze
+[Mars Gaming] 80Plus Bronze
+[NZXT] 80Plus Gold
+[Antec] 80Plus Gold Ea550G Pro Semi-Modulaire
+[Hybrok] 80Plus Gold Full Modulaire
+[MSI] A850Gls Mlg
+[MSI] A850Gls Mlg 80Plus Gold
+[Gigabyte] AORUS P750W 80Plus Gold
+[Gigabyte] AORUS P850W 80Plus Gold
+[Aerocool] Aero Bronze
+[Tacens] Anima Apb550 80Plus Bronze
+[Tacens] Anima Apii600
+[Tacens] Anima Apiii
+[Tacens] Anima Apiii500 85% Efficacité
+[Tacens] Anima Sfx Apsii500
+[Antec] Atom G750
+[Antec] Atom G750 80Plus Gold
+[Antec] Atom G850
+[Antec] Atom G850 - Modulaire 3.1
+[Antec] Atom G850 80Plus Gold
+[Seasonic] B12 80 Plus Bronze
+[Seasonic] B12 Bc 80Plus Bronze
+[be quiet!] Be Quiet Straight Power 11 80Plus Platinum
+[Corsair] Be Quiet! Dark Power Pro 13 80Plus Titanium 3.0
+[Nova] Bronze
+[Connect] Bronze 80 Plus
+[NZXT] C1000 Gold 3.1 80Plus Gold Plus De 900 W
+[NZXT] C1000 Gold Core 3.1 80Plus Gold Plus De 900 W
+[NZXT] C1200 Gold 3.1 80Plus Gold Plus De 900 W
+[NZXT] C750 Bronze 3.1 80Plus Bronze
+[NZXT] C850 Gold 3.1 80Plus Gold Entre 800 W Et 899 W
+[NZXT] C850 Gold Core 3.1 80Plus Gold Entre 800 W Et 899 W
+[Connect] Connect 850W 80+ Bronze
+[Connect] Connect Pc 650W
+[Antec] Csk1000 Pro 80Plus Bronze
+[Antec] Csk1000 Pro Atx3.1 - Semi-Modulaire
+[Corsair] Cv450 80Plus Bronze
+[Corsair] Cv450 Atx12V – 80 Plus Bronze
+[Corsair] Cv550 80Plus Bronze
+[Corsair] Cv650 80 Plus Bronze
+[Corsair] Cv650 80Plus Bronze
+[Corsair] Cv650 – 80Plus Bronze
+[Corsair] Cv750 80Plus Bronze
+[Corsair] Cx550 80Plus Bronze
+[Corsair] Cx550 – 80Plus Bronze
+[Corsair] Cx550F RGB 80Plus Bronze
+[Corsair] Cx650F RGB 80Plus Bronze
+[Corsair] Cx650M 80Plus Bronze
+[Corsair] Cx750 80Plus Bronze
+[Corsair] Cx750F Bronze
+[Corsair] Cx750F RGB 80Plus Bronze
+[Antec] Ea550G Pro Gold
+[Lian Li] Edge 1000 80Plus Gold - With Hub Plus De 900 W Lian
+[Lian Li] Edge 1200 80Plus Gold - With Hub Plus De 900 W Lian
+[Lian Li] Edge 850 80Plus Gold
+[Lian Li] Edge Gold
+[Cooler Master] Elite Gold 1000 3.1 Plus De
+[Cooler Master] Elite Gold 1200 3.1 Plus De
+[Cooler Master] Elite Gold 750 3.1 Entre Et 799 W
+[Cooler Master] Elite Gold 850 3.1 Entre Et 899 W
+[Cooler Master] G Gold V2 3.1
+[Seasonic] G12 Gc 80Plus Gold
+[Seasonic] G12 Gm-750 80Plus Gold
+[Antec] G750 - Alimentation 80 Plus Gold Modulaire
+[Antec] G750 80 Plus Gold
+[Antec] G750 80Plus Gold
+[Antec] G850 80 Plus Gold
+[Antec] G850 80Plus Gold
+[OCPC] Gaming Usa E2 Gd1000M Gen5 80 Plus Gold
+[OCPC] Gaming Usa E2 Pt1200M Gen5 80 Plus Platinum
+[Gigabyte] Gp-P1000Gm – 80Plus Gold Full Modulaire
+[Gigabyte] Gp-P850Gm Gold Modulaire
+[EVGA] Hadron Air V2 + PSU 500W 80+ Gold
+[Antec] Hcg 80Plus Gold
+[Nox] Hummer Gd 80 Plus Gold
+[Corsair] Hx1000 – 80Plus Platinum
+[Corsair] Hx1200 – 80Plus Platinum
+[Corsair] Hx1200I
+[Corsair] Hx1200I 80Plus Platinum
+[Corsair] Hx1200I Platinum
+[Corsair] Hx1500I 80Plus Platinum 3.1
+[Corsair] Hx1500I Platinum
+[Corsair] Hx750I 80Plus Platinum
+[Corsair] Hx850 80Plus Platinum
+[FSP] Hydro K Pro
+[L-Link] L Link Ll-Ps
+[L-Link] L Link Ll-Ps-750W
+[Thermaltake] Litepower RGB
+[Aerocool] Lux 80 Plus Bronze
+[Aerocool] Lux 80 Plus Gold
+[Aerocool] Lux 80Plus Bronze
+[Aerocool] Lux PSU 80 Plus Gold
+[Aerocool] Lux RGB
+[Aerocool] Lux RGB 750M 80Plus Bronze Semi-Modulaire
+[Aerocool] Lux RGB Semi-Modulaire /Eps 12V – 80Plus Bronze
+[MSI] MAG 80Plus Gold A750Gl Pcie5
+[MSI] MAG 80Plus Gold A850Gl Pcie5
+[MSI] MAG A1000G Pcie5 80Plus Gold
+[MSI] MAG A1000Gl Pcie5
+[MSI] MAG A1000Gl Pcie5 80Plus Gold
+[MSI] MAG A1000Gl Pcie5 Gold
+[MSI] MAG A1000Gs Pcie5 80Plus Gold
+[MSI] MAG A1250Gl Pcie5
+[MSI] MAG A1250Gl Pcie5 80Plus Gold
+[MSI] MAG A1250Gs Pcie5 80Plus Gold
+[MSI] MAG A300N-H
+[MSI] MAG A500Dn
+[MSI] MAG A500Dn 80Plus
+[MSI] MAG A500N-H
+[MSI] MAG A550Bn
+[MSI] MAG A550Bn 80Plus Bronze
+[MSI] MAG A550Bnl 80Plus Bronze
+[MSI] MAG A550Bnl Bronze
+[MSI] MAG A600Dn
+[MSI] MAG A600Dn 80Plus
+[MSI] MAG A650Bn
+[MSI] MAG A650Bn - 80Plus Bronze
+[MSI] MAG A650Bn 80Plus Bronze
+[MSI] MAG A650Bnl 80Plus Bronze
+[MSI] MAG A650Bnl Bronze
+[MSI] MAG A750Bn Pcie5 - Bronze
+[MSI] MAG A750Bn Pcie5 80Plus Bronze
+[MSI] MAG A750Bn Pcie5 Bronze
+[MSI] MAG A750Gl Pcie5
+[MSI] MAG A750Gl Pcie5 80Plus Gold
+[MSI] MAG A750Gn Pcie5 80Plus Gold
+[MSI] MAG A850Gl
+[MSI] MAG A850Gl Pcie5
+[MSI] MAG A850Gl Pcie5 80Plus Gold
+[MSI] MAG A850Gn Pcie5 80Plus Gold
+[MSI] MAG A850Gs Pcie5 80Plus Gold
+[MSI] MEG Ai1300P Pcie5 80Plus Platinum
+[MSI] MEG Ai1600T 80 Plus Titanium Pcie5
+[MSI] MEG Ai1600T Pcie5 80 Plus Titanium Pcies
+[MSI] MPG 80Plus Gold A1000G Pcie5
+[MSI] MPG 80Plus Gold A1000Gl Pcie5
+[MSI] MPG A1000G
+[MSI] MPG A1000G 80Plus Gold
+[MSI] MPG A1000Gs Pcie5 80Plus Gold
+[MSI] MPG A1250Gs 80 Plus Gold Pcie5
+[MSI] MPG A1250Gs Pcie5 80Plus Gold
+[MSI] MPG A750Gf
+[MSI] MPG A750Gf 12V - 80Plus Gold 100% Modulaire
+[MSI] MPG A750Gf 80 Plus Gold
+[MSI] MPG A750Gf 80Plus Gold
+[MSI] MPG A850G Pcie5 80Plus Gold
+[MSI] MPG A850Gs Pcie5 80Plus Gold
+[Aerocool] Mirage Gold Gold RGB Full Modulaire
+[Mars Gaming] Mpb550 80 Plus Bronze
+[Mars Gaming] Mpb650 80 Plus Bronze
+[Mars Gaming] Mpb750M 80Plus Bronze
+[Mars Gaming] Mpb850 80 Plus Bronze
+[Mars Gaming] Mpb850M 80Plus Bronze
+[Mars Gaming] Mpiii550 85% Efficacité
+[Cooler Master] Mwe 80Plus Bronze V2
+[Cooler Master] Mwe Bronze V2
+[Cooler Master] Mwe Bronze V2 230V A/Eu
+[Cooler Master] Mwe Bronze V3
+[Cooler Master] Mwe Gold
+[Cooler Master] Mwe Gold 1050 V2
+[Cooler Master] Mwe Gold 1050 V2 3.0 80Plus Gold
+[Cooler Master] Mwe Gold 1050 V2 3.1 80Plus Gold Plus De 900 W
+[Cooler Master] Mwe Gold 1050 V2 80Plus Gold
+[Cooler Master] Mwe Gold 1250 V2
+[Cooler Master] Mwe Gold 1250 V2 3.0
+[Cooler Master] Mwe Gold 1250 V2 3.0 80Plus Gold
+[Cooler Master] Mwe Gold 1250 V2 3.1 80Plus Gold Plus De 900 W
+[Cooler Master] Mwe Gold 1250 V2 80Plus Gold
+[Cooler Master] Mwe Gold 650
+[Cooler Master] Mwe Gold 750
+[Cooler Master] Mwe Gold 750 V2 3.0 80Plus Gold
+[Cooler Master] Mwe Gold 750 V2 80Plus Gold
+[Cooler Master] Mwe Gold 750 V3 3.1 80Plus Gold Entre 700 W Et 799 W
+[Cooler Master] Mwe Gold 850 V2
+[Cooler Master] Mwe Gold 850 V2 3.0 80Plus Gold
+[Cooler Master] Mwe Gold 850 V2 80Plus Gold
+[Cooler Master] Mwe Gold 850 V2 80Plus Gold Entre 800 W Et 899 W
+[Cooler Master] Mwe Gold 850 V3 3.1 80Plus Gold Entre 800 W Et 899 W
+[Cooler Master] Mwe Gold V2
+[Cooler Master] Mwe Gold V2 3.0
+[Antec] Ne1000G M 3.1 Ec
+[Antec] Ne1000G M 80Plus Gold
+[Antec] Ne1300G M - 3.1 Modulaire
+[Antec] Ne1300G M 80Plus Gold
+[Arctic] Nova
+[Gigabyte] P550Ss
+[Gigabyte] P550Ss Ice
+[Gigabyte] P650Ss
+[Gigabyte] P650Ss Ice
+[Gigabyte] P750Bs Bronze
+[Gigabyte] P750Gm 80 Plus Gold Full Modulaire
+[Gigabyte] P850Gm Gold
+[Hybrok] PSU 550 80 Plus Bronze
+[Connect] PSU 550 80 Plus Bronze
+[Connect] PSU 550 Pc Core 80 Plus Bronze
+[Hybrok] PSU 650 80 Plus Bronze
+[Connect] PSU 650 80 Plus Bronze
+[Connect] PSU 650 Pc Core 80 Plus Bronze
+[Hybrok] PSU 750 80 Plus Bronze
+[Connect] PSU 750 Pc Core 80 Plus Bronze
+[Connect] PSU 850 80 Plus Bronze
+[Hybrok] PSU Bronze 80+
+[Hybrok] PSU Gold 80+
+[DeepCool] Pl750-D
+[DeepCool] Pl800-D
+[ASUS] Prime Gold
+[be quiet!] Pure Power 12 M 80Plus Gold
+[be quiet!] Pure Power 13 M 80Plus Gold
+[be quiet!] Pure Zone 2 80Plus Platinum
+[DeepCool] Px1000-G
+[DeepCool] Px1000-P 80Plus Platinum
+[DeepCool] Px1200-G
+[DeepCool] Px1300P
+[DeepCool] Px850-G
+[ASUS] ROG Loki Sfx-L 80Plus Platinum
+[ASUS] ROG Loki Sfx-L Platinum
+[ASUS] ROG Loki Sfx-L Platinum 80Plus Gold
+[ASUS] ROG Strix 1000G 80Plus Gold
+[ASUS] ROG Strix 750G 80Plus Gold
+[ASUS] ROG Strix 80Plus Gold
+[ASUS] ROG Strix Gold
+[ASUS] ROG Strix Gold Aura
+[ASUS] ROG Strix Platinum
+[ASUS] ROG Thor 80Plus Platinum
+[ASUS] ROG Thor Platinum Ii
+[ASUS] ROG Thor Titanium Iii
+[ASUS] ROG-Strix-1000G 80Plus Gold
+[ASUS] ROG-Strix-850G 80Plus Gold
+[Lian Li] Rb Series 80Plus Bronze
+[Corsair] Rm1000E
+[Corsair] Rm1000E 80Plus Gold
+[Corsair] Rm1000E 80Plus Platinum
+[Corsair] Rm1000E Gold
+[Corsair] Rm1000x 80Plus Gold
+[Corsair] Rm1000x – 80Plus Gold
+[Corsair] Rm1200E
+[Corsair] Rm1200E 80Plus Gold
+[Corsair] Rm1200E Gold
+[Corsair] Rm750 80Plus Gold
+[Corsair] Rm750E 80 Plus Gold
+[Corsair] Rm750E 80Plus Gold
+[Corsair] Rm750E 80Plus Platinum
+[Corsair] Rm750E Gold
+[Corsair] Rm750x 80Plus Gold
+[Corsair] Rm750x Eu
+[Corsair] Rm850 80Plus Gold
+[Corsair] Rm850E
+[Corsair] Rm850E 80Plus Gold
+[Corsair] Rm850E Gold
+[Corsair] Rm850x Eu
+[Corsair] Rm850x V2 80Plus Gold
+[Corsair] Rm850x – 80Plus Gold
+[Corsair] Rmx Series 2022 – Rm1000x 80Plus Gold
+[Corsair] Rmx Series Rm1000x 80Plus Gold
+[ASUS] Seasonic Prime Gold 80 Plus
+[ASUS] Seasonic Prime Px-1600 3.1 80 Plus Platinum
+[ASUS] Seasonic Prime Px-1600 80 Plus Platinum
+[ASUS] Seasonic Prime Tx-1300 3.0 ATX 80 Plus Titanium
+[Setup Game] Sg 80 Plus Bronze
+[Thermaltake] Smart 12V V2.3 – RGB
+[Lian Li] Sx 1000P Series 80Plus Platinum Plus De 900 W Lian
+[Lian Li] Sx 1200P Series 80Plus Platinum Plus De 900 W Lian
+[Lian Li] Sx 850P Series 80Plus Platinum Entre 800 W Et 899 W Lian
+[be quiet!] System Power 10 80Plus Bronze
+[be quiet!] System Power 9 Cm 80Plus Bronze
+[ASUS] TUF Gaming 750B 80Plus Bronze
+[ASUS] TUF Gaming 750G Gold
+[ASUS] TUF Gaming 80Plus Gold
+[ASUS] TUF Gaming Gold
+[ASUS] TUF-Gaming-750B 80Plus Bronze
+[Thermaltake] Toughpower Gf1 Gold ARGB
+[Thermaltake] Toughpower Gf3 80 Plus Gold
+[Corsair] Tx750M 80Plus Gold
+[Gigabyte] Ud 1000GM Pg5 Gold
+[Gigabyte] Ud1000Gm Pg5 Atx12V - 80Plus Gold
+[Gigabyte] Ud1000Gm Pg5 Gold
+[Gigabyte] Ud1300Gm Pg5 12V - 80Plus Gold
+[Gigabyte] Ud1300Gm Pg5 Gold
+[Gigabyte] Ud750Gm 80 Plus Gold
+[Gigabyte] Ud750Gm Pg5 Gold
+[Gigabyte] Ud850Gm Pg5 Gold
+[Nox] Urano Vx 80Plus Bronze
+[Cooler Master] V1000 80Plus Platinum
+[Cooler Master] V1300 80Plus Platinum
+[Cooler Master] V650 Sfx 80Plus Gold
+[Cooler Master] V750 Sfx 80Plus Gold
+[Cooler Master] V850 Gold V2 80Plus
+[Cooler Master] V850 Platinum – 80 Plus
+[Cooler Master] V850 Sfx 80Plus Gold
+[Cooler Master] V850 Sfx Gold 80Plus Gold
+[Aerocool] Vx Plus
+[Cooler Master] Xg750 Plus Platinum
+[Cooler Master] Xg850 80Plus Platinum
+[Cooler Master] Xg850 Plus Platinum
+[Nox] – Hummer X Plus Gold
+[Nox] – Urano Vx Bronze

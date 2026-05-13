@@ -5,7 +5,7 @@
  * Run manually with: bun scripts/tools/import_benchmarks.ts
  */
 
-import { importBenchmarks } from '../../scraper/benchmarkImporter.js';
+import { importBenchmarks } from '../../src/modules/scraping/engine/benchmarkImporter.js';
 
 console.log('🚀 Starting Benchmark Import...');
 const { updated, missed } = await importBenchmarks();

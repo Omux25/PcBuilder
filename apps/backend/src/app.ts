@@ -10,24 +10,16 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { secureHeaders } from 'hono/secure-headers';
 import { serveStatic } from 'hono/bun';
-import { authRouter } from './routes/auth.js';
-import { componentsRouter } from './routes/components.js';
-import { compatibilityRouter } from './routes/compatibility.js';
-import { healthRouter } from './routes/health.js';
-import { presetsRouter } from './routes/presets.js';
-import { marketTrendsRouter } from './routes/marketTrends.js';
-import { adminComponentsRouter } from './routes/admin/components.js';
-import { adminLogsRouter } from './routes/admin/logs.js';
-import { adminDashboardRouter } from './routes/admin/dashboard.js';
-import { adminRetailersRouter } from './routes/admin/retailers.js';
-import { adminScrapersRouter } from './routes/admin/scrapers.js';
-import { adminUnmatchedRouter } from './routes/admin/unmatched.js';
-import { unmatchedSuggestionsRouter } from './routes/admin/unmatchedSuggestions.js';
-import { unmatchedAccordionRouter } from './routes/admin/unmatchedAccordion.js';
-import { adminPresetsRouter } from './routes/admin/presets.js';
-import { scraperUrlsRouter } from './routes/admin/scraperUrls.js';
-import { keywordRulesRouter } from './routes/admin/keywordRulesRouter.js';
-import { AppError } from './utils/errors.js';
+import { authRouter } from './modules/auth/auth.routes.js';
+import { catalogRouter, adminCatalogRouter } from './modules/catalog/catalog.routes.js';
+import { buildsRouter, adminBuildsRouter } from './modules/builds/builds.routes.js';
+import { compatibilityRouter } from './modules/builds/compatibility.routes.js';
+import { healthRouter } from './modules/health/health.routes.js';
+import { adminRouter } from './modules/admin/admin.routes.js';
+import { scrapingRouter } from './modules/scraping/scraping.routes.js';
+import { unmatchedRouter } from './modules/scraping/unmatched/unmatched.routes.js';
+import { rulesRouter } from './modules/scraping/rules/rules.routes.js';
+import { AppError } from './core/errors/errors.js';
 
 const app = new Hono();
 
@@ -68,28 +60,19 @@ app.use('/api/*', cors({
 // ── Public routes ─────────────────────────────────────────────────────────────
 
 app.route('/api/auth', authRouter);
-app.route('/api/builds/presets', presetsRouter);
-app.route('/api/components', componentsRouter);
+app.route('/api/builds', buildsRouter);
 app.route('/api/compatibility', compatibilityRouter);
+app.route('/api', catalogRouter);
 app.route('/api/health', healthRouter);
-app.route('/api/market-trends', marketTrendsRouter);
 
 // ── Protected routes ──────────────────────────────────────────────────────────
 
-app.route('/api/admin/dashboard', adminDashboardRouter);
-app.route('/api/admin/components', adminComponentsRouter);
-app.route('/api/admin/logs', adminLogsRouter);
-app.route('/api/admin/retailers', adminRetailersRouter);
-app.route('/api/admin/scrapers', adminScrapersRouter);
-// scraperUrlsRouter adds POST /api/admin/scrapers/scrape-urls — no conflict with adminScrapersRouter
-app.route('/api/admin/scrapers', scraperUrlsRouter);
-app.route('/api/admin/unmatched-listings', adminUnmatchedRouter);
-// unmatchedSuggestionsRouter adds /grouped, /reprocess, /bulk-* — no conflict with adminUnmatchedRouter
-app.route('/api/admin/unmatched-listings', unmatchedSuggestionsRouter);
-// unmatchedAccordionRouter adds /by-category, /reject, /bulk-associate — no conflict with above
-app.route('/api/admin/unmatched-listings', unmatchedAccordionRouter);
-app.route('/api/admin/presets', adminPresetsRouter);
-app.route('/api/admin/keyword-rules', keywordRulesRouter);
+app.route('/api/admin', adminRouter);
+app.route('/api/admin', adminCatalogRouter);
+app.route('/api/admin', adminBuildsRouter);
+app.route('/api/admin/scrapers', scrapingRouter);
+app.route('/api/admin/unmatched-listings', unmatchedRouter);
+app.route('/api/admin/keyword-rules', rulesRouter);
 
 // ── Global 404 ───────────────────────────────────────────────────────────────
 

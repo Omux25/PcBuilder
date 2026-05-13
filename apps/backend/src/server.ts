@@ -7,7 +7,7 @@
  */
 
 import { app } from './app.js';
-import { startRefreshTokenCleanup, stopRefreshTokenCleanup } from './routes/auth.js';
+import { startRefreshTokenCleanup, stopRefreshTokenCleanup } from './modules/auth/auth.routes.js';
 
 // ── Startup validation ────────────────────────────────────────────────────────
 // Fail fast on missing required environment variables rather than silently
@@ -53,7 +53,7 @@ startRefreshTokenCleanup();
 
 // Start the scraper scheduler (only in production — not in test/dev without explicit opt-in)
 if (process.env.ENABLE_SCHEDULER === 'true') {
-  const { startScheduler } = await import('../scraper/scheduler.js');
+  const { startScheduler } = await import('./modules/scraping/engine/scheduler.js');
   startScheduler();
 }
 
@@ -68,7 +68,7 @@ async function shutdown(signal: string): Promise<void> {
 
   // Stop the scheduler so no new scraping sessions start
   if (process.env.ENABLE_SCHEDULER === 'true') {
-    const { stopScheduler } = await import('../scraper/scheduler.js');
+    const { stopScheduler } = await import('./modules/scraping/engine/scheduler.js');
     stopScheduler();
   }
 
