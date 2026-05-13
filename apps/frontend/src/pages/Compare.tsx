@@ -20,6 +20,26 @@ import { formatComponentName } from '@shared/component-utils';
 import { UI } from '../ui-strings';
 import styles from './Compare.module.css';
 
+// Ranks for non-numeric specs
+const SPEC_RANKINGS: Record<string, Record<string, number>> = {
+  efficiency_rating: {
+    'Titanium': 6, '80+ Titanium': 6,
+    'Platinum': 5, '80+ Platinum': 5,
+    'Gold': 4, '80+ Gold': 4,
+    'Silver': 3, '80+ Silver': 3,
+    'Bronze': 2, '80+ Bronze': 2,
+    'White': 1, '80+ White': 1, 'Standard': 1, '80+ Standard': 1,
+  },
+  modular: {
+    'Full': 3, 'Full-Modulaire': 3, 'Oui': 3,
+    'Semi': 2, 'Semi-Modulaire': 2,
+    'Non': 1, 'Non-Modulaire': 1,
+  },
+  interface_type: {
+    'NVMe': 3, 'PCIe': 3, 'SATA': 2, 'HDD': 1,
+  }
+};
+
 // All spec rows we know how to display
 const ALL_SPEC_ROWS: Record<string, { label: string; unit?: string; highlight?: 'higher' | 'lower' }> = {
   benchmark_score: { label: 'Score de performance', highlight: 'higher' },
@@ -37,12 +57,12 @@ const ALL_SPEC_ROWS: Record<string, { label: string; unit?: string; highlight?: 
   frequency_mhz: { label: 'Fréquence', unit: 'MHz', highlight: 'higher' },
   cas_latency: { label: 'Latence CAS', highlight: 'lower' },
   capacity_gb: { label: 'Capacité', unit: 'Go', highlight: 'higher' },
-  interface_type: { label: 'Interface' },
+  interface_type: { label: 'Interface', highlight: 'higher' },
   read_speed_mbps: { label: 'Lecture', unit: 'Mo/s', highlight: 'higher' },
   write_speed_mbps: { label: 'Écriture', unit: 'Mo/s', highlight: 'higher' },
   wattage: { label: 'Puissance', unit: 'W', highlight: 'higher' },
-  efficiency_rating: { label: 'Certification' },
-  modular: { label: 'Modulaire' },
+  efficiency_rating: { label: 'Certification', highlight: 'higher' },
+  modular: { label: 'Modulaire', highlight: 'higher' },
   form_factor: { label: 'Format' },
   length_mm: { label: 'Longueur', unit: 'mm', highlight: 'lower' },
   max_gpu_length_mm: { label: 'GPU max', unit: 'mm', highlight: 'higher' },
@@ -118,16 +138,25 @@ export function Compare() {
   const category = items[0]?.component.category;
   const specKeys = category ? CATEGORY_SPECS[category] || Object.keys(ALL_SPEC_ROWS) : [];
 
-  // For numeric highlight: find best value per row
+  const totalCols = items.length + (items.length < MAX_COMPARE ? 1 : 0);
+
+  const lowestPrices = items.map(item => item.lowestPrice).filter((p): p is number => p !== null);
+  const absoluteLowest = lowestPrices.length > 1 ? Math.min(...lowestPrices) : null;
+
+  // Find best value per row (handles numbers and ranked strings)
   function getBestValue(key: string): number | null {
     const row = ALL_SPEC_ROWS[key];
     if (!row?.highlight) return null;
+
     const nums = items
       .map(item => {
         const v = getSpecValue(item.component, key);
-        return typeof v === 'number' ? v : null;
+        if (typeof v === 'number') return v;
+        if (typeof v === 'string' && SPEC_RANKINGS[key]?.[v]) return SPEC_RANKINGS[key][v];
+        return null;
       })
       .filter((v): v is number => v !== null);
+
     if (nums.length < 2) return null;
     return row.highlight === 'higher' ? Math.max(...nums) : Math.min(...nums);
   }
@@ -155,7 +184,7 @@ export function Compare() {
 
       {loading && <div className={styles.loadingBar} />}
 
-      <div className={styles.compareGrid} style={{ '--cols': items.length } as any}>
+      <div className={styles.compareGrid} style={{ '--cols': totalCols } as any}>
         {/* Row 1: Headers */}
         <div className={styles.rowSticky}>
           <div className={styles.cornerCol}>
@@ -192,11 +221,15 @@ export function Compare() {
             <div className={styles.sectionDivider}>Prix et Offres</div>
             <div className={styles.specRow}>
                 <div className={styles.labelCol}>Meilleur prix</div>
-                {items.map(item => (
-                    <div key={item.component.id} className={styles.valCol}>
-                        <span className={styles.primaryPrice}>{item.lowestPrice?.toLocaleString('fr-MA')} MAD</span>
-                    </div>
-                ))}
+                {items.map(item => {
+                    const isLowest = absoluteLowest !== null && item.lowestPrice === absoluteLowest;
+                    return (
+                        <div key={item.component.id} className={`${styles.valCol} ${isLowest ? styles.isBest : ''}`}>
+                            <span className={styles.primaryPrice}>{item.lowestPrice?.toLocaleString('fr-MA')} MAD</span>
+                            {isLowest && <CheckCircle2 size={12} className={styles.bestIcon} />}
+                        </div>
+                    );
+                })}
             </div>
             <div className={styles.specRow}>
                 <div className={styles.labelCol}>Offres</div>
@@ -223,7 +256,8 @@ export function Compare() {
                         <div className={styles.labelCol}>{row.label}</div>
                         {items.map(item => {
                             const raw = getSpecValue(item.component, key);
-                            const isBest = bestVal !== null && typeof raw === 'number' && raw === bestVal;
+                            const valToCompare = typeof raw === 'number' ? raw : (typeof raw === 'string' ? SPEC_RANKINGS[key]?.[raw] : null);
+                            const isBest = bestVal !== null && valToCompare !== null && valToCompare === bestVal;
                             return (
                                 <div key={item.component.id} className={`${styles.valCol} ${isBest ? styles.isBest : ''}`}>
                                     {formatSpecVal(raw, row.unit)}
