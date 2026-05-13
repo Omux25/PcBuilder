@@ -1,0 +1,291 @@
+import { decodeHtml } from '../decode-html.js';
+
+/**
+ * Standard category keywords used for stripping prefixes/suffixes.
+ */
+export const CATEGORY_WORDS = new Set([
+  'boitier', 'bo\u00eetier', 'boitiers', 'bo\u00eetiers',
+  'watercooler', 'watercooling',
+  'processeur', 'processeurs',
+  'carte graphique', 'cartes graphiques',
+  'alimentation', 'alimentations',
+  'stockage',
+  'memoire', 'm\u00e9moire', 'memoires', 'm\u00e9moires',
+  'aircooler', 'air cooler',
+  'carte m\u00e8re', 'carte mere', 'cartes m\u00e8res', 'cartes meres',
+  'disque', 'disques',
+  'pate thermique', 'p\u00e2te thermique'
+]);
+
+export function cleanName(rawName: string, brand: string, category?: string): string {
+  let name = decodeHtml(rawName);
+
+  // Strip French Retail prefixes
+  name = name
+    .replace(/l['\u2019]alimentation\s+/gi, '')
+    .replace(/le\s+processeur\s+/gi, '')
+    .replace(/les\s+processeurs\s+/gi, '')
+    .replace(/la\s+carte\s+graphique\s+/gi, '')
+    .replace(/les\s+cartes\s+graphiques\s+/gi, '')
+    .replace(/la\s+carte\s*m[e\u00e8]re\s+/gi, '')
+    .replace(/les\s+cartes\s*m[e\u00e8]re\s+/gi, '')
+    .replace(/carte\s*m[e\u00e8]re\s+/gi, '');
+
+  // Strip leading em-dash prefix (retailer category prefix artifact)
+  // e.g. "\u2013 Matrexx 55 V3" \u2192 "Matrexx 55 V3"
+  name = name.replace(/^[\u2013\-]\s+/, '');
+
+  // Strip SKU codes appended after pipe
+  // e.g. "AddGame Spider S5 16GB ... | AG16GB56C40S5UB" \u2192 "AddGame Spider S5 16GB ..."
+  name = name.replace(/\s*\|.*$/, '').trim();
+
+  // Strip category prefix patterns (handle both "Category - Name" and "Category Name")
+  name = name
+    .replace(/^(processeurs?|cartes?\s*graphiques?|cartes?\s*m[e\u00e8]res?|m[e\u00e9]moires?\s*vives?|disques?\s*durs?|alimentations?|[Bb]o\u00eetiers?|refroidissement|ventilateurs?\s*bo\u00eetier|p[\u00e2a]tes?\s*thermique)\s*[\-\u2013]\s+/gi, '')
+    .replace(/^(processeurs?|cartes?\s*graphiques?|cartes?\s*m[e\u00e8]res?|m[e\u00e9]moires?\s*vives?|disques?\s*durs?|alimentations?|[Bb]o\u00eetiers?|refroidissement|ventilateurs?\s*bo\u00eetier|p[\u00e2a]tes?\s*thermique)\s+/gi, '');
+
+  // Strip category breadcrumb suffixes appended by retailers (UltraPC, NextLevel, etc.)
+  name = name
+    .replace(/Processeurs?\s*$/gi, '')
+    .replace(/Cartes?\s*[Gg]raphiques?\s*$/gi, '')
+    .replace(/Cartes?\s*[Mm][e\u00e8]res?\s*$/gi, '')
+    .replace(/M[e\u00e9]moire\s*[Vv]ive\s*(PC|DDR[45])?\s*\w*\s*$/gi, '')
+    .replace(/Disques?\s*(durs?\s*(et\s*SSD)?|SSD)\s*\w*\s*$/gi, '')
+    .replace(/Alimentations?\s*(PC)?\s*\w*\s*$/gi, '')
+    .replace(/[Bb]o\u00eetiers?\s*(PC|[Gg]amer)?\s*\w*\s*$/gi, '')
+    .replace(/Refroidissement\s*$/gi, '')
+    .replace(/Ventilateurs?\s*[Bb]o\u00eetier\s*\w*\s*$/gi, '')
+    .replace(/P[\u00e2a]te\s*[Tt]hermique\s*$/gi, '')
+    // UltraPC appends ", Ultra Pc Gamer Maroc" to alt text
+    .replace(/,?\s*Ultra\s*Pc\s*Gamer\s*Maroc\s*$/gi, '')
+    // SetupGame appends "Setup Game" or "Setup-Game" branding
+    .replace(/\s*[\-\u2013]\s*Setup\s*Game\s*\w*\s*$/gi, '')
+    .replace(/\s*Setup\s*Game\s*\w*\s*$/gi, '');
+
+  // Strip marketing/promo noise at the start
+  name = name.replace(/^(PROMO\s*!+\s*|SOLDES?\s*!+\s*|NEW\s*!+\s*)/gi, '');
+
+  // Strip marketing noise in parentheses anywhere
+  name = name.replace(/\s*\((Livraison\s*Gratuite|Promo|Solde|New|Nouveau|Gratuit)[^)]*\)\s*/gi, ' ');
+
+  // Remove brand if present (handles double-brand like "AMD AMD Ryzen")
+  if (brand) {
+    const bRegex = new RegExp(`\\b(${brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|processeur)\\b`, 'gi');
+    name = name.replace(bRegex, '');
+    // Run twice to catch double-brand
+    name = name.replace(bRegex, '');
+  }
+
+  // Remove retail noise + Colors + Technical specs
+  name = name
+    .replace(/\s*(BOX|Tray|MPK|OEM|Bulk|no\s*fan|WOF|wraith\s*\w+|edition|noir|blanc|white|black|silver|argent|grey|gris|sans\s*emballage|sans\s*refroidisseur|avec\s*dissipateur(\s*thermique)?)\s*/gi, ' ')
+    .replace(/\s*\(\s*\)\s*/g, ' ') // Strip empty parentheses
+    // French marketing phrases: (jusqu'\u00e0 4.7 GHz)
+    .replace(/\s*\(jusqu['\u2019]?\u00e0?\s*[\d.,]+\s*GHz\)\s*/gi, ' ')
+    .replace(/\s*\(jusqu['\u2019]?\u00e0?\s*[\d.,]+\s*GHz[^)]*\)\s*/gi, ' ')
+    .replace(/\s*\(\d+\.?\d*\s*GHz\s*\/\s*\d+\.?\d*\s*GHz\)\s*/gi, '') // (3.7 GHz / 4.6 GHz)
+    .replace(/\s*\(\d+\.?\d*\s*GHz[^)]*\)\s*/gi, '') // (3.7 GHz Max)
+    .replace(/\s*\(\d+\.?\d*\s*GHz[^)]*\.{3}?\s*/gi, '') // (3.7 GHz /... truncated
+    .replace(/\s*\(\d+\.?\d*\s*GHz[^)]*$/, '') 
+    // English boost speed phrases: (Up To 5.0 GHz)
+    .replace(/\s*\(up\s+to\s+[\d.,]+\s*GHz[^)]*\)\s*/gi, '')
+    .replace(/\s+\d+\.?\d*\s*GHz\s*\/\s*\d+\.?\d*\s*GHz\s*/gi, ' ') // 3.7 GHz / 4.6 GHz
+    .replace(/\s+\d+\.?\d*\s*GHz\s*$/i, '') // Trailing GHz
+    .replace(/\s*[\-\u2013]\s*ed\s*$/i, '') // "- Ed"
+    // Strip trailing cache/socket noise
+    .replace(/\s+\d+\s*MB\s*$/i, '') // e.g. "6MB"
+    .replace(/\s+\d{4}\s*$/i, '') // e.g. "1200", "1700"
+    // Strip trailing ellipsis
+    .replace(/\s*\.{2,}\s*$/, '')
+    // Strip spec text appended after em-dash: "\u2013 32 C\u0153urs / 64 threads"
+    .replace(/\s*[\-\u2013]\s*\d+\s*[Cc][\u0153o]urs?.*$/i, '')
+    // Strip inline core/thread count: "8C 16T"
+    .replace(/\s+\d+[Cc]\s+\d+[Tt]\b/g, '')
+    // Strip trailing LED/RGB noise
+    .replace(/\s+[Ll]ed\s+RGB\s*$/g, '')
+    .replace(/\s+[Ll]ed\s*$/g, '')
+    // Compatibility info in parens
+    .replace(/\s*\((Micro\s*ATX|Mini\s*ITX|ATX|ITX|LGA\d+|AM[45])\)\s*/gi, ' ')
+    // Souris Gaming / Clavier Gaming suffixes
+    .replace(/\s*\((Souris|Clavier|Casque|\u00c9cran)\s*Gaming\)\s*/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Normalize Intel CPU model names:
+  name = name.replace(/\b(Core\s+(?:Ultra\s+)?i\d|i\d)-(\d)/gi, '$1 $2');
+  name = name.replace(/^(i\d)\s+(\d)/i, 'Core $1 $2');
+  name = name.replace(/^(I\d)-(\d)/i, 'Core $1 $2');
+
+  // Strip DDR4/DDR5 suffix from motherboard names only
+  if (/\b[ABXZH]\d{3,4}[A-Z]?\b/.test(name)) {
+    name = name.replace(/\s+DDR[45]\s*$/i, '');
+    name = name.replace(/\s+D[45]\s*$/i, '');
+  }
+
+  // Strip socket suffix leaked from retailer names
+  name = name.replace(/\s*Socket\s*(AM[45]|LGA\s*\d{4}|\d{4})\s*$/i, '');
+  name = name.replace(/\s*(AM[45]|LGA\d{4})\s*$/i, '');
+
+  // Normalize capitalization
+  {
+    const ACRONYMS: Record<string, string> = {
+      'rtx': 'RTX', 'gtx': 'GTX', 'rx': 'RX',
+      'ddr4': 'DDR4', 'ddr5': 'DDR5',
+      'gddr5': 'GDDR5', 'gddr6': 'GDDR6', 'gddr6x': 'GDDR6X', 'gddr7': 'GDDR7',
+      'lpddr5': 'LPDDR5', 'lpddr4': 'LPDDR4',
+      'gb': 'GB', 'go': 'Go', 'tb': 'TB', 'to': 'To', 'mb': 'MB', 'mo': 'Mo',
+      'mhz': 'MHz', 'ghz': 'GHz',
+      'cl16': 'CL16', 'cl18': 'CL18', 'cl30': 'CL30', 'cl32': 'CL32',
+      'cl34': 'CL34', 'cl36': 'CL36', 'cl38': 'CL38', 'cl40': 'CL40',
+      'cl42': 'CL42', 'cl46': 'CL46',
+      'nvme': 'NVMe', 'm.2': 'M.2', 'pcie': 'PCIe', 'sata': 'SATA',
+      'usb': 'USB', 'hdmi': 'HDMI',
+      'atx': 'ATX', 'matx': 'mATX', 'itx': 'ITX', 'eatx': 'E-ATX',
+      'ssd': 'SSD', 'hdd': 'HDD',
+      'rgb': 'RGB', 'argb': 'ARGB',
+      'aio': 'AIO', 'tdp': 'TDP',
+      'amd': 'AMD', 'nvidia': 'NVIDIA',
+      'tuf': 'TUF', 'rog': 'ROG', 'meg': 'MEG', 'mag': 'MAG', 'mpg': 'MPG',
+      'aorus': 'AORUS', 'xlr8': 'XLR8',
+      'lga1700': 'LGA1700', 'lga1851': 'LGA1851', 'lga1200': 'LGA1200', 'lga1151': 'LGA1151',
+      'am4': 'AM4', 'am5': 'AM5',
+      'wifi': 'WiFi', 'dp': 'DP',
+      'oc': 'OC', 'soc': 'SOC', 'lhr': 'LHR',
+      'xmp': 'XMP', 'expo': 'EXPO',
+      'cpu': 'CPU', 'gpu': 'GPU', 'psu': 'PSU', 'ram': 'RAM',
+    };
+
+    name = name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+    name = name.replace(/(\d)([a-wyz])/g, (_, d, l) => d + l.toUpperCase()); 
+
+    name = name.replace(/(\d)(Gb)\b/g, '$1GB');
+    name = name.replace(/(\d)(Go)\b/g, '$1Go');
+    name = name.replace(/(\d)(Tb)\b/g, '$1TB');
+    name = name.replace(/(\d)(To)\b/g, '$1To');
+    name = name.replace(/(\d)(Mb)\b/g, '$1MB');
+    name = name.replace(/(\d)(Mo)\b/g, '$1Mo');
+    name = name.replace(/(\d)(Mhz)\b/g, '$1MHz');
+    name = name.replace(/(\d)(Ghz)\b/g, '$1GHz');
+    name = name.replace(/(\d)(W)\b/g, '$1W');
+    name = name.replace(/(\d)(Mm)\b/g, '$1mm');
+
+    for (const [lower, correct] of Object.entries(ACRONYMS)) {
+      if (lower === 'm.2') continue;
+      name = name.replace(new RegExp(`\\b${lower}\\b`, 'gi'), correct);
+    }
+    name = name.replace(/\bM\.2\b/gi, 'M.2');
+
+    name = name.replace(/\bGeforce\b/gi, 'GeForce');
+    name = name.replace(/\bI([3579])\b/g, 'i$1');
+    name = name.replace(/\bCore\s+I([3579])\b/g, 'Core i$1');
+    name = name.replace(/\b(\d{3,5})([a-zA-Z][a-zA-Z0-9]*)\b/g, (match, num, suffix) => {
+      const suffixLower = suffix.toLowerCase();
+      const units = new Set(['gb', 'go', 'tb', 'to', 'mb', 'mo', 'mhz', 'ghz', 'w', 'mm', 'nm']);
+      if (units.has(suffixLower)) return match;
+      if (/^x\d+$/i.test(suffixLower)) return match;
+      return `${num}${suffix.toUpperCase()}`;
+    });
+    name = name.replace(/\((\d+)\s+X\s+(\d+)/g, '($1x$2');
+    name = name.replace(/\b([1-9][0-9]?)X\b(?!\s*[A-Z]{2})/g, '$1x');
+  }
+
+  // \u2500\u2500 RAM-specific normalization \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  if (category === 'ram') {
+    name = name.replace(/^RAM\s+/i, '').trim();
+    name = name.replace(/^U-?Dimm\s+/i, '').replace(/^Dimm\s+/i, '').trim();
+
+    const kitOnlyCapacity = name.match(/\(\s*(\d+)\s*GB\s*[*xX\u00d7]\s*\d+\s*\)/i);
+    const hasStandaloneCapacity = /\b\d+\s*GB\b/i.test(name.replace(/\([^)]*\)/g, ''));
+    if (kitOnlyCapacity && !hasStandaloneCapacity) {
+      name = name.replace(/\(\s*(\d+)\s*GB\s*[*xX\u00d7]\s*\d+\s*\)/i, `${kitOnlyCapacity[1]}GB`);
+    }
+
+    name = name
+      .replace(/\s*\(\s*\d+\s*[xX\u00d7]\s*\d+\s*GB\s*\)/gi, '')
+      .replace(/\s*\(\s*\d+\s*GB\s*[xX\u00d7]\s*\d+\s*\)/gi, '')
+      .replace(/\s*\(\s*\d+\s*[\u00d7xX]\s*\d+\s*\)/g, '')
+      .replace(/\s*\(\s*\d+\s*GB[xX\u00d7]\s*\d+\s*\)/gi, '')
+      .replace(/\s*\(\s*\d*\s*\*\s*\d+\s*GB?\s*\)/gi, '')
+      .replace(/\s*\(\s*\*\s*\d+\s*\)/g, '')
+      .replace(/\s*\(\s*\d+\s*GB\s*\*\s*\d+\s*\)/gi, '')
+      .replace(/\s+\d+\s*[xX\u00d7]\s*\d+\s*GB\b/gi, '')
+      .replace(/\s+\d+\s*[xX\u00d7]\s*\d+\b(?!\s*GB)/g, '');
+
+    name = name
+      .replace(/\s*[\-\u2013]\s*[A-Z]\d[\-\u2013A-Za-z0-9]+(?:[\-\u2013][A-Za-z0-9]+)*/g, '')
+      .replace(/\s*[\-\u2013]\s*[A-Z][a-z][a-z0-9A-Z]{4,}[-\w]*\s*$/g, '')
+      .replace(/\s+[A-Z][a-z][a-z0-9A-Z]{4,}[/\-][\w]+\s*$/g, '');
+
+    name = name.replace(/\s*\([A-Za-z_][A-Za-z0-9_\-]{4,}\)\s*/g, ' ').trim();
+
+    name = name
+      .replace(/\s*[\-\u2013]?\s*M[\u00e9e]oire\s+[Vv]ive\s+(?:PC\s+)?(?:DDR[45]\s+)?[A-Z]\.?\s*$/gi, '')
+      .replace(/\s*[\-\u2013]?\s*M[\u00e9e]oire\s+[Vv]ive\s*$/gi, '')
+      .replace(/\s*[\-\u2013]?\s*M[\u00e9e]oire\s+[Aa]vec\s+[Hh]eatsink\s*[\-\u2013]?\s*$/gi, '')
+      .replace(/\s*[\-\u2013]?\s*M[\u00e9e]oire\s+DDR[45]\s+\w+,?\s*\w*\s*$/gi, '')
+      .replace(/\s*[\-\u2013]?\s*Am[\u00e9e]liorez\s+[Vv]os\s+[Pp]erformances\s+[Pp]c\s*$/gi, '');
+
+    name = name
+      .replace(/\s+[Aa]vec\s+[Hh]eatsink\s*[\-\u2013]?\s*$/gi, '')
+      .replace(/\s+[Aa]vec\s+[Hh]eatspreader\s*$/gi, '');
+
+    name = name
+      .replace(/(\d+)\s*Go\b/g, '$1GB')
+      .replace(/(^|\s)(\d+)\s*G\b(?![A-Za-z0-9])/g, '$1$2GB');
+
+    name = name
+      .replace(/(\d{4,5})\s*MHz/gi, '$1MHz')
+      .replace(/\b(DDR[345])\s+(\d{4,5})\b(?!\s*MHz)/gi, '$1 $2MHz')
+      .replace(/\b(\d{4,5})\s+(DDR[345])\b/gi, '$1MHz $2');
+
+    name = name
+      .replace(/\bCL(\d+)[\-\u2013]\d+[\-\u2013]\d+\b/gi, 'CL$1')
+      .replace(/\b[Cc][Ll](\d+)\b/g, 'CL$1')
+      .replace(/\bC(\d{2})\b/g, 'CL$1');
+
+    name = name.replace(/\bDDR\s*([345])\b/gi, 'DDR$1');
+
+    const capMatch = name.match(/\b(\d+)GB\b/i);
+    const ddrMatch = name.match(/\bDDR[345]\b/i);
+    const speedMatch = name.match(/\b(\d{4,5})MHz\b/i);
+    const clMatch = name.match(/\bCL(\d+)\b/i);
+
+    if (capMatch || ddrMatch || speedMatch) {
+      const cap = capMatch ? capMatch[0].replace(/gb/i, 'GB') : null;
+      const ddr = ddrMatch ? ddrMatch[0].toUpperCase() : null;
+      const spd = speedMatch ? speedMatch[0].replace(/mhz/i, 'MHz') : null;
+      const cl = clMatch ? `CL${clMatch[1]}` : null;
+
+      const specSuffix = [cap, ddr, spd, cl].filter(Boolean).join(' ');
+
+      let model = name;
+      if (cap) model = model.replace(new RegExp(`\\b${cap}\\b`, 'i'), '');
+      if (ddr) model = model.replace(new RegExp(`\\b${ddr}\\b`, 'i'), '');
+      if (spd) model = model.replace(new RegExp(`\\b${spd}\\b`, 'i'), '');
+      if (cl) model = model.replace(new RegExp(`\\b${cl}\\b`, 'i'), '');
+
+      model = model.replace(/\s*[\-\u2013]\s*$/, '').replace(/\s+/g, ' ').trim();
+      name = model ? `${model} ${specSuffix}` : specSuffix;
+    }
+
+    name = name
+      .replace(/\s*[\-\u2013]\s*$/, '')
+      .replace(/\s*\.\s*$/, '')
+      .replace(/\s+Dram\b/gi, '')
+      .replace(/\s+Memory\b/gi, '')
+      .replace(/\bRvb\b/gi, 'RGB')
+      .replace(/\bDDR([345])-(\d{4,5})\b/gi, 'DDR$1 $2MHz')
+      .replace(/\bU-?Dimm\b/gi, '')
+      .replace(/\bPc\s+Portable\b/gi, '')
+      .replace(/\s*[\-\u2013]\s*RGB\b/gi, ' RGB')
+      .replace(/\s*[\-\u2013]\s*Or\b/gi, ' Or')
+      .replace(/^[\-\u2013]\s*/, '')
+      .replace(/\s+[\-\u2013]\s+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  if (name.length < 2) name = rawName;
+
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
