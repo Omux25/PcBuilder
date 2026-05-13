@@ -1,32 +1,31 @@
-# dev.ps1 - Start the full PC Builder dev stack
-# All processes run via WSL2/Bun (no Node/npm required on Windows)
+# dev.ps1 - Start the full PC Builder dev stack concurrently in one terminal
+# All processes run via WSL2/Bun
 # Usage: .\dev.ps1
 
+$ProjectRoot = $PSScriptRoot
+if (-not $ProjectRoot) { $ProjectRoot = Get-Location }
+
 Write-Host ""
-Write-Host "PC Builder - Dev Stack Startup" -ForegroundColor Cyan
+Write-Host "PC Builder - Unified Dev Stack" -ForegroundColor Cyan
 Write-Host "==============================" -ForegroundColor Cyan
+Write-Host "Project Root: $ProjectRoot"
 Write-Host ""
 
-# Backend - Bun hot reload on port 3000
-Write-Host "Starting Backend  -> http://localhost:3000" -ForegroundColor Green
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'BACKEND - Bun/Hono' -ForegroundColor Green; wsl -d Ubuntu -- bash -c 'cd /mnt/c/Headquarters/Projects/PcBuilder/apps/backend; ~/.bun/bin/bun --hot src/server.ts'"
+# Define app paths (Windows style)
+$BackendPath = Join-Path $ProjectRoot "apps\backend"
+$FrontendPath = Join-Path $ProjectRoot "apps\frontend"
+$AdminPath = Join-Path $ProjectRoot "apps\admin"
 
-Start-Sleep -Milliseconds 1000
-
-# Frontend - Vite via Bun on port 5173
-Write-Host "Starting Frontend -> http://localhost:5173" -ForegroundColor Blue
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'FRONTEND - Vite' -ForegroundColor Blue; wsl -d Ubuntu -- bash -c 'cd /mnt/c/Headquarters/Projects/PcBuilder/apps/frontend; ~/.bun/bin/bun run dev'"
-
-Start-Sleep -Milliseconds 1000
-
-# Admin panel - Vite via Bun on port 5174
-Write-Host "Starting Admin    -> http://localhost:5174/admin" -ForegroundColor Magenta
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'ADMIN - Vite' -ForegroundColor Magenta; wsl -d Ubuntu -- bash -c 'cd /mnt/c/Headquarters/Projects/PcBuilder/apps/admin; ~/.bun/bin/bun run dev'"
+# Run all 3 concurrently
+# We use npx concurrently to multiplex the logs into a single terminal window.
+# We use --cd with Windows paths and keep the bash command simple to avoid quoting issues.
+npx concurrently `
+  --kill-others `
+  -n "backend,frontend,admin" `
+  -c "green,blue,magenta" `
+  "wsl --cd $BackendPath bash -c '~/.bun/bin/bun run dev'" `
+  "wsl --cd $FrontendPath bash -c '~/.bun/bin/bun run dev'" `
+  "wsl --cd $AdminPath bash -c '~/.bun/bin/bun run dev'"
 
 Write-Host ""
-Write-Host "All 3 processes started in separate windows." -ForegroundColor Cyan
-Write-Host ""
-Write-Host "  Backend  -> http://localhost:3000" -ForegroundColor Green
-Write-Host "  Frontend -> http://localhost:5173" -ForegroundColor Blue
-Write-Host "  Admin    -> http://localhost:5174/admin" -ForegroundColor Magenta
-Write-Host ""
+Write-Host "Unified dev stack stopped." -ForegroundColor Cyan
