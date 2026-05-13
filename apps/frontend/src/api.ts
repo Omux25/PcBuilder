@@ -56,6 +56,12 @@ export async function smartSearch(params: {
   sort?: string;
   min_price?: number;
   max_price?: number;
+  min_wattage?: number;
+  max_wattage?: number;
+  min_capacity_gb?: number;
+  max_capacity_gb?: number;
+  min_frequency_mhz?: number;
+  max_frequency_mhz?: number;
   in_stock?: boolean;
   build?: BuildConfig;
   page?: number;
@@ -71,6 +77,12 @@ export async function smartSearch(params: {
   if (params.sort) qs.set('sort', params.sort);
   if (params.min_price != null) qs.set('min_price', String(params.min_price));
   if (params.max_price != null) qs.set('max_price', String(params.max_price));
+  if (params.min_wattage != null) qs.set('min_wattage', String(params.min_wattage));
+  if (params.max_wattage != null) qs.set('max_wattage', String(params.max_wattage));
+  if (params.min_capacity_gb != null) qs.set('min_capacity_gb', String(params.min_capacity_gb));
+  if (params.max_capacity_gb != null) qs.set('max_capacity_gb', String(params.max_capacity_gb));
+  if (params.min_frequency_mhz != null) qs.set('min_frequency_mhz', String(params.min_frequency_mhz));
+  if (params.max_frequency_mhz != null) qs.set('max_frequency_mhz', String(params.max_frequency_mhz));
   if (params.in_stock) qs.set('in_stock', 'true');
   if (params.page) qs.set('page', String(params.page));
   if (params.limit) qs.set('limit', String(params.limit));
