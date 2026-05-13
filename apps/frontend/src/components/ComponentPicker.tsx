@@ -14,6 +14,7 @@ import { SlidersHorizontal, X, ArrowUpDown, GitCompare } from 'lucide-react';
 import { smartSearch, type SmartComponent } from '../api';
 import { useCompare } from '../context/CompareContext';
 import type { Component, ComponentCategory, BuildConfig } from '../types';
+import { formatComponentName } from '@shared/component-utils';
 import { CATEGORY_LABELS } from '../types';
 import { CategoryIcon } from './CategoryIcon';
 import { UI } from '../ui-strings';
@@ -227,9 +228,7 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
               <CategoryIcon category={category} size={20} className={styles.iconSvg} />
             )}
             <span className={styles.selectedName}>
-              {selected.brand && !selected.name.toLowerCase().startsWith(selected.brand.toLowerCase())
-                ? `${selected.brand} ` : ''}
-              {selected.name}
+              {formatComponentName(selected)}
             </span>
           </span>
         ) : (
@@ -427,10 +426,11 @@ function ComponentRow({
   isSelected: boolean;
   onSelect: () => void;
 }) {
-  const { addToCompare, isInCompare, removeFromCompare } = useCompare();
+  const { addToCompare, isInCompare, removeFromCompare, compareCategory } = useCompare();
   const isIncompatible = component.compatibility === 'incompatible';
   const hasPrice = component.lowest_price !== null;
   const isCompared = isInCompare(component.id);
+  const isCategoryMismatch = compareCategory && compareCategory !== component.category;
 
   return (
     <li
@@ -447,22 +447,20 @@ function ComponentRow({
     >
       <div className={styles.itemMain}>
         <div className={styles.itemName}>
-          {component.brand && !component.name.toLowerCase().startsWith(component.brand.toLowerCase()) && (
-            <span className={styles.brand}>{component.brand}</span>
-          )}
-          <span>{component.name}</span>
+          <span>{formatComponentName(component)}</span>
         </div>
 
         <div className={styles.itemMeta}>
           {/* Compare Toggle */}
           <button
-            className={`${styles.compareToggle} ${isCompared ? styles.compareToggleActive : ''}`}
+            className={`${styles.compareToggle} ${isCompared ? styles.compareToggleActive : ''} ${isCategoryMismatch ? styles.compareToggleDisabled : ''}`}
             onClick={(e) => {
               e.stopPropagation();
               if (isCompared) removeFromCompare(component.id);
-              else addToCompare(component.id);
+              else if (!isCategoryMismatch) addToCompare(component.id, component.category);
             }}
-            title={isCompared ? "Retirer de la comparaison" : "Ajouter à la comparaison"}
+            disabled={isCategoryMismatch && !isCompared}
+            title={isCompared ? "Retirer" : isCategoryMismatch ? `Déjà en comparaison: ${CATEGORY_LABELS[compareCategory as ComponentCategory]}` : "Comparer"}
           >
             <GitCompare size={14} />
           </button>

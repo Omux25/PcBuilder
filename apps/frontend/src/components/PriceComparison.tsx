@@ -12,6 +12,7 @@ import type { Component, PriceOffer } from '../types';
 import { CATEGORY_LABELS } from '../types';
 import { SkeletonText } from './Skeleton';
 import { formatDate } from '../utils/date';
+import { formatComponentName } from '@shared/component-utils';
 import { UI } from '../ui-strings';
 import styles from './PriceComparison.module.css';
 
@@ -77,9 +78,7 @@ export function PriceComparison({ component }: Props) {
       <div className={styles.componentInfo}>
         <span className={styles.category}>{CATEGORY_LABELS[component.category]}</span>
         <span className={styles.name}>
-          {component.brand && !component.name.toLowerCase().startsWith(component.brand.toLowerCase())
-            ? `${component.brand} ` : ''}
-          {component.name}
+          {formatComponentName(component)}
         </span>
       </div>
 

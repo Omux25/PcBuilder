@@ -8,8 +8,9 @@
  * addToBuild() places a component into the first available slot for its category.
  */
 
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
-import type { BuildConfig, Component, ComponentCategory } from '../types';
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
+import type { BuildConfig, Component, ComponentCategory, CompatibilityResult } from '../types';
+import { validateCompatibility } from '@shared/compatibility-engine';
 import { getComponentsByIds } from '../api';
 import {
   saveBuildToStorage,
@@ -21,6 +22,7 @@ import { pruneExcessSlots } from '../utils/buildUtils';
 
 interface BuildContextValue {
   build: BuildConfig;
+  analysis: CompatibilityResult | null;
   setBuild: (build: BuildConfig) => void;
   addToBuild: (component: Component, specificSlotKey?: string) => void;
   removeFromBuild: (slotKey: string) => void;
@@ -126,8 +128,13 @@ export function BuildProvider({ children }: { children: ReactNode }) {
     setBuildState({});
   }, []);
 
+  const analysis = useMemo(() => {
+    if (Object.keys(build).length === 0) return null;
+    return validateCompatibility(build);
+  }, [build]);
+
   return (
-    <BuildContext.Provider value={{ build, setBuild, addToBuild, removeFromBuild, resetBuild, initializing }}>
+    <BuildContext.Provider value={{ build, analysis, setBuild, addToBuild, removeFromBuild, resetBuild, initializing }}>
       {children}
     </BuildContext.Provider>
   );

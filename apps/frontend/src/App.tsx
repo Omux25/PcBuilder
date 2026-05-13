@@ -20,6 +20,7 @@ const ComponentsIndex = lazy(() => import('./pages/ComponentsIndex').then(m => (
 const Compare = lazy(() => import('./pages/Compare').then(m => ({ default: m.Compare })));
 const GlobalSearch = lazy(() => import('./pages/GlobalSearch').then(m => ({ default: m.GlobalSearch })));
 const MarketTrends = lazy(() => import('./pages/MarketTrends').then(m => ({ default: m.MarketTrends })));
+const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })));
 
 export default function App() {
   const { build, setBuild, addToBuild } = useBuild();
@@ -289,6 +290,14 @@ export default function App() {
             </Suspense>
           </main>
         } />
+
+        <Route path="*" element={
+          <main className={styles.main}>
+            <Suspense fallback={<Skeleton height={400} />}>
+              <NotFound />
+            </Suspense>
+          </main>
+        } />
       </Routes>
 
       <footer className={styles.footer}>
@@ -297,9 +306,6 @@ export default function App() {
           <Link to="/search" className={styles.footerLink}>{UI.footer.search}</Link>
           <Link to="/compare" className={styles.footerLink}>{UI.footer.compare}</Link>
           <Link to="/market-trends" className={styles.footerLink}>{UI.footer.trends}</Link>
-          <a href="https://www.ultrapc.ma" target="_blank" rel="noopener noreferrer" className={styles.footerLink}>UltraPC</a>
-          <a href="https://nextlevelpc.ma" target="_blank" rel="noopener noreferrer" className={styles.footerLink}>NextLevel</a>
-          <a href="https://setupgame.ma" target="_blank" rel="noopener noreferrer" className={styles.footerLink}>SetupGame</a>
         </div>
       </footer>
 

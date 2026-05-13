@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus,
@@ -6,14 +6,19 @@ import {
   X,
   AlertCircle,
   CheckCircle2,
+  Zap,
+  Share2,
+  Check,
 } from 'lucide-react';
 import { InlinePrices } from './InlinePrices';
 import { CategoryIcon } from './CategoryIcon';
 import type { ComponentCategory, CompatibilityResult } from '../types';
 import { CATEGORY_LABELS, RULE_LABELS, slotKeyToCategory, CATEGORY_ORDER, CORE_CATEGORIES } from '../types';
-import { validateBuild } from '../api';
 import { useBuild } from '../context/BuildContext';
+import { validateCompatibility } from '@shared/compatibility-engine';
 import { calculateBuildTotalPrice } from '../utils/buildUtils';
+import { encodeBuildToUrl } from '../utils/buildUrl';
+import { getSpecLine } from '../utils/specLine';
 import styles from './Configurator.module.css';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -49,21 +54,28 @@ function countStorage(build: Record<string, unknown>): number {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function Configurator() {
-  const { build, removeFromBuild, resetBuild } = useBuild();
+  const { build, analysis: compat, removeFromBuild, resetBuild } = useBuild();
   const totalPrice = calculateBuildTotalPrice(build);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
-  const [compat, setCompat] = useState<CompatibilityResult | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const hasComponents = Object.keys(build).length > 0;
 
-  // Debounced compatibility check
-  useEffect(() => {
-    if (!hasComponents) { setCompat(null); return; }
-    const timer = setTimeout(() => {
-      validateBuild(build).then(setCompat).catch(() => setCompat(null));
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [build, hasComponents]);
+  function handleShare() {
+    const params = encodeBuildToUrl(build);
+    const url = `${window.location.origin}${window.location.pathname}?${params}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  const psu = build.psu;
+  const tdp = compat?.total_tdp || 0;
+  const psuWattage = psu?.wattage || 0;
+  const psuPercent = psuWattage > 0 ? Math.min(100, (tdp / psuWattage) * 100) : 0;
+  const psuStatus = psuPercent > 90 ? 'critical' : psuPercent > 75 ? 'warning' : 'safe';
 
   // ── Build the ordered list of rows to render ──────────────────────────────
   // Each entry is either a filled/empty slot row, or an "add" button row.
@@ -121,13 +133,48 @@ export function Configurator() {
         <div>
           <h1 className={styles.title}>Configurateur</h1>
           {compat && (
-            <div className={`${styles.statusBadge} ${compat.compatible ? styles.statusOk : styles.statusFail}`}>
-              {compat.compatible ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
-              {compat.compatible ? 'Configuration compatible' : 'Incompatibilités détectées'}
+            <div className={`${styles.statusBadge} ${!compat.compatible
+              ? styles.statusFail
+              : compat.warnings.length > 0
+                ? styles.statusWarn
+                : styles.statusOk
+              }`}>
+              {!compat.compatible
+                ? <><AlertCircle size={14} /> Incompatibilités détectées</>
+                : compat.warnings.length > 0
+                  ? <><AlertCircle size={14} /> {compat.warnings.length} avertissement{compat.warnings.length > 1 ? 's' : ''}</>
+                  : <><CheckCircle2 size={14} /> Configuration compatible</>
+              }
             </div>
           )}
         </div>
       </header>
+
+      {/* Power Meter */}
+      {hasComponents && (
+        <div className={styles.powerMeter}>
+          <div className={styles.powerInfo}>
+            <div className={styles.powerLabel}>
+              <Zap size={14} className={styles.zapIcon} />
+              Consommation estimée: <strong>{tdp}W</strong>
+            </div>
+            <div className={styles.psuTarget}>
+              Alimentation conseillée: <strong>{compat?.recommended_psu_wattage}W</strong>
+            </div>
+          </div>
+          <div className={styles.progressBar}>
+            <div 
+              className={`${styles.progressFill} ${styles['psu_' + psuStatus]}`}
+              style={{ width: `${psuPercent}%` }}
+            />
+          </div>
+          {psu && (
+            <div className={styles.psuLegend}>
+              Utilisation de votre PSU ({psuWattage}W): {Math.round(psuPercent)}%
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Main Card */}
       <div className={styles.card}>
@@ -208,12 +255,16 @@ export function Configurator() {
                         {selected.brand && (
                           <span className={styles.compBrand}>{selected.brand}</span>
                         )}
-                        <span className={styles.compName}>{selected.name}</span>
+                        <Link
+                          to={`/product/${selected.slug}`}
+                          className={styles.compNameLink}
+                          onClick={e => e.stopPropagation()}
+                          title="Voir la fiche produit"
+                        >
+                          {selected.name}
+                        </Link>
                         <span className={styles.compSpecs}>
-                          {selected.tdp && `${selected.tdp}W TDP`}
-                          {selected.frequency_mhz && ` • ${selected.frequency_mhz} MHz`}
-                          {selected.wattage && ` • ${selected.wattage}W`}
-                          {selected.form_factor && ` • ${selected.form_factor}`}
+                          {getSpecLine(selected)}
                         </span>
                       </div>
                     </div>
@@ -264,14 +315,41 @@ export function Configurator() {
           <div className={styles.totalLabel}>Total estimé</div>
           <div className={styles.totalPrice}>{totalPrice.toLocaleString('fr-MA')} MAD</div>
         </div>
-        <button
-          className={styles.resetBtn}
-          onClick={resetBuild}
-          disabled={!hasComponents}
-        >
-          <RefreshCw size={16} />
-          Réinitialiser
-        </button>
+        {confirmReset ? (
+          <div className={styles.resetConfirm}>
+            <span className={styles.resetConfirmText}>Vider la configuration ?</span>
+            <button
+              className={styles.resetConfirmYes}
+              onClick={() => { resetBuild(); setConfirmReset(false); }}
+            >
+              Confirmer
+            </button>
+            <button
+              className={styles.resetConfirmNo}
+              onClick={() => setConfirmReset(false)}
+            >
+              Annuler
+            </button>
+          </div>
+        ) : (
+          <button
+            className={styles.resetBtn}
+            onClick={() => setConfirmReset(true)}
+            disabled={!hasComponents}
+          >
+            <RefreshCw size={16} />
+            Réinitialiser
+          </button>
+        )}
+
+        {hasComponents && (
+          <button
+            className={`${styles.shareBtn} ${copied ? styles.shareBtnDone : ''}`}
+            onClick={handleShare}
+          >
+            {copied ? <><Check size={16} /> Copié !</> : <><Share2 size={16} /> Partager</>}
+          </button>
+        )}
       </footer>
 
       {/* Compatibility messages */}

@@ -5,15 +5,17 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { GitCompare, ShoppingCart, ArrowLeft } from 'lucide-react';
+import { GitCompare, ShoppingCart, ArrowLeft, ExternalLink, Star } from 'lucide-react';
 import { getComponentBySlug, getPrices, getPriceHistory } from '../api';
-import { PriceHistoryChart, PERIOD_DAYS } from '../components/PriceHistoryChart';
-import type { HistoryPeriod } from '../components/PriceHistoryChart';
+import { PriceHistoryChart } from '../components/PriceHistoryChart';
+import type { HistoryPeriod } from '../constants/periods';
+import { PERIOD_DAYS } from '../constants/periods';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { useCompare } from '../context/CompareContext';
 import type { Component, PriceOffer, PriceHistoryEntry, ComponentCategory } from '../types';
 import { CATEGORY_LABELS } from '../types';
+import { formatComponentName } from '@shared/component-utils';
 import { UI } from '../ui-strings';
 import styles from './ComponentDetail.module.css';
 
@@ -36,6 +38,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
   const [addedToBuild, setAddedToBuild] = useState(false);
   const [showOos, setShowOos] = useState(false);
   const [componentId, setComponentId] = useState<number | null>(null);
+  const [selectedImgIdx, setSelectedImgIdx] = useState(0);
 
   // Fetch history separately so period changes don't reload the whole page
   const fetchHistory = useCallback(async (id: number, p: HistoryPeriod) => {
@@ -131,200 +134,210 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
     ? Math.min(...inStockPrices.map(p => Number(p.price)))
     : prices.length > 0 ? Math.min(...prices.map(p => Number(p.price))) : null;
 
+  // Simulated gallery images (fallback to product image)
+  const images = component?.image_urls && component.image_urls.length > 0
+    ? component.image_urls
+    : component?.image_url 
+      ? [component.image_url] 
+      : [];
+  const quickSpecs = specs ? Object.entries(specs).slice(0, 4) : [];
+  
+  // Gallery logic — always show thumbnails if we have at least one image
+  const showGallery = images.length > 0;
+
   return (
     <div className={styles.page}>
-      <button onClick={goBack} className={styles.back}>
-        <ArrowLeft size={14} /> {CATEGORY_LABELS[component.category as ComponentCategory] ?? UI.detail.back}
-      </button>
-
-      {/* ── Hero ──────────────────────────────────────────────────────── */}
-      <div className={styles.heroLayout}>
-        {/* Product image */}
-        <div className={styles.heroImage}>
-          {component.image_url ? (
-            <img src={component.image_url} alt={component.name} className={styles.productImg} referrerPolicy="no-referrer" />
-          ) : (
-            <div className={styles.productImgPlaceholder}>
-              <CategoryIcon category={component.category as ComponentCategory} size={48} />
-            </div>
+      {/* ── Anchor Header ────────────────────────────────────────────── */}
+      <header className={styles.headerSection}>
+        <nav className={styles.breadcrumbs}>
+          <Link to="/" className={styles.breadcrumbLink}>Accueil</Link>
+          <span className={styles.breadcrumbSep}>/</span>
+          <Link to="/browse" className={styles.breadcrumbLink}>Composants</Link>
+          <span className={styles.breadcrumbSep}>/</span>
+          <Link to={`/browse/${component.category}`} className={styles.breadcrumbLink}>
+            {CATEGORY_LABELS[component.category as ComponentCategory]}
+          </Link>
+          {component.brand && (
+            <>
+              <span className={styles.breadcrumbSep}>/</span>
+              <span className={styles.brand}>{component.brand}</span>
+            </>
           )}
-        </div>
+        </nav>
+        <h1 className={styles.pageTitle}>
+          {component.brand && <span className={styles.brand}>{component.brand} </span>}
+          {component.name}
+        </h1>
+      </header>
 
-        {/* Info */}
-        <div className={styles.heroInfo}>
-          <div className={styles.heroTopRow}>
-            <span className={styles.categoryBadge}>
-              <CategoryIcon category={component.category as ComponentCategory} size={12} />
-              {CATEGORY_LABELS[component.category as ComponentCategory] ?? component.category}
-            </span>
-            {component.release_year && (
-              <span className={styles.year}>{component.release_year}</span>
+      {/* ── Unified Dashboard Layout ────────────────────────────────────── */}
+      <div className={styles.dashboard}>
+        {/* Left Column: Visuals & Quick Context (Sticky) */}
+        <div className={styles.dashboardLeft}>
+          <div className={styles.displayCase}>
+            {/* Subtle background blur for a premium look */}
+            {images.length > 0 && (
+              <div 
+                className={styles.displayBlur} 
+                style={{ backgroundImage: `url(${images[selectedImgIdx]})` }} 
+              />
             )}
-          </div>
-
-          <h1 className={styles.name}>
-            {component.brand && <span className={styles.brand}>{component.brand} </span>}
-            {component.name}
-          </h1>
-
-          {component.description && (
-            <p className={styles.description}>{component.description}</p>
-          )}
-
-          {/* Price + CTA */}
-          <div className={styles.heroPriceRow}>
-            {lowestPrice !== null && (
-              <div className={styles.heroPrice}>
-                <span className={styles.heroPriceLabel}>{UI.detail.fromPrice}</span>
-                <span className={styles.heroPriceVal}>
-                  {lowestPrice.toLocaleString('fr-MA')} MAD
-                </span>
-                {inStockPrices.length > 0 ? (
-                  <span className={styles.inStockBadge}>
-                    {UI.detail.inStock}
-                    {inStockPrices.length < prices.length && (
-                      <span className={styles.inStockRetailerCount}>
-                        {' '}· {inStockPrices.length}/{prices.length} revendeur{inStockPrices.length > 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </span>
-                ) : prices.length > 0 ? (
-                  <span className={styles.outOfStockBadge}>{UI.detail.outOfStock}</span>
-                ) : null}
+            {images.length > 0 ? (
+              <img 
+                src={images[selectedImgIdx]} 
+                alt={component.name} 
+                className={styles.productImg} 
+                referrerPolicy="no-referrer" 
+              />
+            ) : (
+              <div className={styles.productImgPlaceholder}>
+                <CategoryIcon category={component.category as ComponentCategory} size={40} />
               </div>
             )}
-
-            <div className={styles.heroCtas}>
-              <button
-                className={`${styles.addToBuildBtn} ${addedToBuild ? styles.addToBuildBtnDone : ''}`}
-                onClick={handleAddToBuild}
-              >
-                {addedToBuild ? UI.detail.added : <><ShoppingCart size={15} /> {UI.detail.addToConfig}</>}
-              </button>
-              <button
-                className={`${styles.compareBtn} ${component && isInCompare(component.id) ? styles.compareBtnActive : ''}`}
-                title={component && isInCompare(component.id) ? UI.detail.inCompare : UI.detail.compare}
-                onClick={() => {
-                  if (!component) return;
-                  if (isInCompare(component.id)) {
-                    removeFromCompare(component.id);
-                  } else {
-                    addToCompare(component.id);
-                    navigate(`/compare?ids=${component.id}`);
-                  }
-                }}
-              >
-                <GitCompare size={15} />
-                {component && isInCompare(component.id) ? UI.detail.inCompare : UI.detail.compare}
-              </button>
-            </div>
           </div>
+
+          {showGallery && (
+            <div className={styles.thumbnails}>
+              {images.map((img, idx) => (
+                <button 
+                  key={idx}
+                  className={`${styles.thumbBtn} ${selectedImgIdx === idx ? styles.thumbActive : ''}`}
+                  onClick={() => setSelectedImgIdx(idx)}
+                >
+                  <img src={img} alt="" referrerPolicy="no-referrer" className={styles.productImg} />
+                </button>
+              ))}
+            </div>
+          )}
+
+          {quickSpecs.length > 0 && (
+            <div className={styles.quickSpecsList}>
+              {quickSpecs.map(([key, val]) => (
+                <div key={key} className={styles.quickSpecItem}>
+                  <span className={styles.quickSpecKey}>{formatSpecKey(key)}</span>
+                  <span className={styles.quickSpecVal}>{formatSpecValue(val)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      </div>
 
-      {/* ── Content grid ──────────────────────────────────────────────── */}
-      <div className={styles.grid}>
-        {/* Specs */}
-        {specs && Object.keys(specs).length > 0 && (
-          <section className={styles.card}>
-            <h2 className={styles.cardTitle}>{UI.detail.specs}</h2>
-            <table className={styles.specsTable}>
-              <tbody>
-                {Object.entries(specs).map(([key, value]) => (
-                  <tr key={key}>
-                    <td className={styles.specKey}>{formatSpecKey(key)}</td>
-                    <td className={styles.specValue}>{formatSpecValue(value)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        )}
-
-        <section className={styles.card}>
-          <h2 className={styles.cardTitle}>{UI.detail.prices}</h2>
-          {prices.length === 0 ? (
-            <p className={styles.empty}>{UI.detail.noRetailer}</p>
-          ) : (
-            <>
-              {(() => {
-                const inStock = prices.filter(p => p.in_stock);
-                const oos = prices.filter(p => !p.in_stock);
-                const visible = showOos ? prices : inStock;
-                // Staleness: warn if the most recent update is older than 24h
-                const mostRecent = prices.reduce((latest, p) =>
-                  new Date(p.last_updated) > new Date(latest) ? p.last_updated : latest,
-                  prices[0].last_updated
-                );
-                const ageHours = (Date.now() - (mostRecent instanceof Date ? mostRecent : new Date(mostRecent)).getTime()) / 3_600_000;
-                return (
-                  <>
-                    {ageHours > 24 && (
-                      <div className={styles.staleWarning}>
-                        ⚠️ Données mises à jour {formatRelativeTime(mostRecent)} — les disponibilités peuvent avoir changé.
-                      </div>
-                    )}
-                    {inStock.length === 0 && oos.length > 0 && (
-                      <p className={styles.allOosMsg}>
-                        Aucune offre en stock.{' '}
-                        <button className={styles.oosToggleBtn} onClick={() => setShowOos(v => !v)}>
-                          {showOos ? UI.priceComparison.hideOos : UI.priceComparison.showOos(oos.length)}
-                        </button>
-                      </p>
-                    )}
-                    {visible.length > 0 && (
+        {/* Right Column: Market, Actions, History & Full Specs */}
+        <div className={styles.dashboardRight}>
+          <section className={styles.marketSection}>
+            {prices.length === 0 ? (
+              <p className={styles.empty}>{UI.detail.noRetailer}</p>
+            ) : (
+              <div className={styles.pricesContainer}>
+                {(() => {
+                  const inStock = prices.filter(p => p.in_stock);
+                  const oos = prices.filter(p => !p.in_stock);
+                  const visible = showOos ? prices : inStock;
+                  
+                  return (
+                    <>
                       <table className={styles.pricesTable}>
                         <thead>
                           <tr>
-                            <th>{UI.detail.retailer}</th>
-                            <th>{UI.detail.variant}</th>
-                            <th>{UI.detail.price}</th>
-                            <th>{UI.detail.stock}</th>
-                            <th>{UI.detail.updated}</th>
+                            <th>Marchand</th>
+                            <th>État</th>
+                            <th>Prix</th>
+                            <th></th>
                           </tr>
                         </thead>
                         <tbody>
                           {visible.map((offer, i) => (
-                            <tr key={`${offer.retailer_id}-${i}`} className={!offer.in_stock ? styles.oosRow : undefined}>
+                            <tr key={`${offer.retailer_id}-${i}`}>
                               <td>
-                                <a href={offer.product_url} target="_blank" rel="noopener noreferrer" className={styles.retailerLink}>
-                                  {offer.retailer_name} ↗
-                                </a>
+                                <div className={styles.retailerCell}>
+                                  <span className={styles.retailerName}>{offer.retailer_name}</span>
+                                  {offer.variant_label && (
+                                    <span className={styles.variantBadge}>{offer.variant_label}</span>
+                                  )}
+                                </div>
                               </td>
-                              <td className={styles.variantCell}>{offer.variant_label ?? '—'}</td>
-                              <td className={styles.price}>{Number(offer.price).toLocaleString('fr-MA')} MAD</td>
                               <td>
-                                <span className={offer.in_stock ? styles.inStock : styles.outStock}>
-                                  {offer.in_stock ? UI.detail.inStockBadge : UI.detail.outOfStock}
+                                <span className={offer.in_stock ? styles.stockStatus : styles.oosStatus}>
+                                  {offer.in_stock ? 'En Stock' : 'Rupture'}
                                 </span>
                               </td>
-                              <td className={styles.updated}>{formatRelativeTime(offer.last_updated)}</td>
+                              <td>
+                                <span className={styles.priceVal}>{Number(offer.price).toLocaleString('fr-MA')} MAD</span>
+                              </td>
+                              <td style={{ textAlign: 'right' }}>
+                                <a href={offer.product_url} target="_blank" rel="noopener noreferrer" className={styles.buyBtn}>
+                                  Acheter
+                                </a>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
-                    )}
-                    {inStock.length > 0 && oos.length > 0 && (
-                      <button className={styles.oosToggleBtn} onClick={() => setShowOos(v => !v)}>
-                        {showOos ? UI.priceComparison.hideOos : UI.priceComparison.showOos(oos.length)}
-                      </button>
-                    )}
-                  </>
-                );
-              })()}
-            </>
-          )}
-        </section>
+                      
+                      {inStock.length > 0 && oos.length > 0 && (
+                        <button className={styles.oosToggleBtn} onClick={() => setShowOos(v => !v)}>
+                          {showOos ? UI.priceComparison.hideOos : UI.priceComparison.showOos(oos.length)}
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+          </section>
 
-        <section className={`${styles.card} ${styles.fullWidth}`}>
-          <h2 className={styles.cardTitle}>{UI.detail.priceHistory}</h2>
-          <PriceHistoryChart
-            history={history}
-            loading={historyLoading}
-            period={period}
-            onPeriodChange={handlePeriodChange}
-          />
-        </section>
+          {/* Action Center */}
+          <div className={styles.mainActions}>
+            <button
+              className={`${styles.addToBuildBtn} ${addedToBuild ? styles.addToBuildBtnDone : ''}`}
+              onClick={handleAddToBuild}
+            >
+              {addedToBuild ? UI.detail.added : <><ShoppingCart size={22} /> {UI.detail.addToConfig}</>}
+            </button>
+            
+            <button
+              className={`${styles.compareBtn} ${isInCompare(component.id) ? styles.compareBtnActive : ''}`}
+              onClick={() => {
+                if (isInCompare(component.id)) {
+                  removeFromCompare(component.id);
+                } else {
+                  addToCompare(component.id, component.category);
+                  navigate(`/compare?ids=${component.id}`);
+                }
+              }}
+            >
+              <GitCompare size={20} /> {isInCompare(component.id) ? 'Retirer du comparateur' : 'Comparer ce produit'}
+            </button>
+          </div>
+
+          {/* Pricing History */}
+          <section className={styles.card}>
+            <h3 className={styles.cardTitle}>Historique des prix</h3>
+            <PriceHistoryChart
+              history={history}
+              loading={historyLoading}
+              period={period}
+              onPeriodChange={handlePeriodChange}
+            />
+          </section>
+
+          {/* Full Specs */}
+          {specs && Object.keys(specs).length > 4 && (
+            <section className={styles.card}>
+              <h3 className={styles.cardTitle}>Toutes les Caractéristiques</h3>
+              <table className={styles.specsTable}>
+                <tbody>
+                  {Object.entries(specs).slice(4).map(([key, value]) => (
+                    <tr key={key}>
+                      <td className={styles.specKey}>{formatSpecKey(key)}</td>
+                      <td className={styles.specValue}>{formatSpecValue(value)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
+        </div>
       </div>
     </div>
   );

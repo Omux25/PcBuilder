@@ -42,6 +42,7 @@ export interface SmartSearchResult {
   in_stock_total: number;
   available_brands: string[];
   available_sockets: string[];
+  available_vram: number[];
 }
 
 /** Smart search — returns components sorted by compatibility, stock, and price. */
@@ -51,6 +52,11 @@ export async function smartSearch(params: {
   brand?: string;
   socket?: string;
   ram_type?: string;
+  vram_gb?: number;
+  sort?: string;
+  min_price?: number;
+  max_price?: number;
+  in_stock?: boolean;
   build?: BuildConfig;
   page?: number;
   limit?: number;
@@ -61,6 +67,11 @@ export async function smartSearch(params: {
   if (params.brand) qs.set('brand', params.brand);
   if (params.socket) qs.set('socket', params.socket);
   if (params.ram_type) qs.set('ram_type', params.ram_type);
+  if (params.vram_gb != null) qs.set('vram_gb', String(params.vram_gb));
+  if (params.sort) qs.set('sort', params.sort);
+  if (params.min_price != null) qs.set('min_price', String(params.min_price));
+  if (params.max_price != null) qs.set('max_price', String(params.max_price));
+  if (params.in_stock) qs.set('in_stock', 'true');
   if (params.page) qs.set('page', String(params.page));
   if (params.limit) qs.set('limit', String(params.limit));
 
