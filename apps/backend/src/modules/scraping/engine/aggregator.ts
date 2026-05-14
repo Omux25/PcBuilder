@@ -282,7 +282,8 @@ export async function aggregate(
       const sourceDna = extractDna(nameForExtraction, resolvedCategory);
       
       const dnaMatch = catComponents.find(c => {
-        const { score } = scoreDnaMatch(sourceDna, c.dna, resolvedCategory);
+        const fullName = c.brand ? `${c.brand} ${c.name}` : c.name;
+        const { score } = scoreDnaMatch(nameForExtraction, fullName, resolvedCategory);
         const threshold = SCRAPER_CONFIG.PARTIAL_MATCH_CATEGORIES.includes(resolvedCategory) ? SCRAPER_CONFIG.PARTIAL_THRESHOLD : SCRAPER_CONFIG.PERFECT_THRESHOLD;
         return score >= threshold;
       });
@@ -300,7 +301,8 @@ export async function aggregate(
             const otherCatComponents = componentsByCategory.get(otherCat) || [];
             const otherCatSourceDna = extractDna(nameForExtraction, otherCat as any);
             const hasMatchInOtherCat = otherCatComponents.some(oc => {
-              const { score } = scoreDnaMatch(otherCatSourceDna, oc.dna, otherCat as any, true /* skipBrandCheck for bundles */);
+              const ocFullName = oc.brand ? `${oc.brand} ${oc.name}` : oc.name;
+              const { score } = scoreDnaMatch(nameForExtraction, ocFullName, otherCat as any, true /* skipBrandCheck for bundles */);
               return score >= 1.0;
             });
             if (hasMatchInOtherCat) {
