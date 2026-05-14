@@ -106,8 +106,12 @@ export function PriceHistoryChart({ history, loading, period, onPeriodChange }: 
         .filter(e => new Date(e.recorded_at).setHours(0, 0, 0, 0) <= ts)
         .sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime())[0];
       
-      if (lastEntry) {
+      if (lastEntry && lastEntry.in_stock) {
         dataPoint[name] = Number(lastEntry.price);
+        dataPoint[`${name}_in_stock`] = true;
+      } else {
+        dataPoint[name] = null;
+        dataPoint[`${name}_in_stock`] = false;
       }
     }
     chartData.push(dataPoint);
@@ -161,10 +165,17 @@ export function PriceHistoryChart({ history, loading, period, onPeriodChange }: 
               }}
               labelStyle={{ color: getCssVar('--text-2'), fontSize: 12, fontWeight: 600, marginBottom: 4 }}
               itemStyle={{ fontSize: 12, padding: '2px 0' }}
-              formatter={(value, name) => [
-                <span key={name as string} style={{ fontWeight: 600 }}>{Number(value).toLocaleString()} MAD</span>,
-                name
-              ]}
+              formatter={(value, name, props) => {
+                const inStock = props.payload[`${name}_in_stock`];
+                if (value === null || !inStock) return [
+                  <span key={name as string} style={{ color: tickColor, opacity: 0.5 }}>Épuisé</span>,
+                  name
+                ];
+                return [
+                  <span key={name as string} style={{ fontWeight: 600 }}>{Number(value).toLocaleString()} MAD</span>,
+                  name
+                ];
+              }}
             />
             <Legend 
               wrapperStyle={{ fontSize: 11, color: legendColor, paddingTop: 10 }}
@@ -189,7 +200,7 @@ export function PriceHistoryChart({ history, loading, period, onPeriodChange }: 
                   strokeDasharray={dashPatterns[i % dashPatterns.length]}
                   dot={{ r: 2, strokeWidth: 0, fill: color, fillOpacity: isFocused ? 1 : 0.2 }}
                   activeDot={{ r: 5, strokeWidth: 0, fill: color }}
-                  connectNulls
+                  connectNulls={false}
                   animationDuration={300}
                 />
               );

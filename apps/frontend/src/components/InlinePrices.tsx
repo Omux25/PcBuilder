@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { getPrices } from '../api';
 import type { PriceOffer } from '../types';
 import { UI } from '../ui-strings';
+import { formatPrice } from '../utils/format';
 import styles from './InlinePrices.module.css';
 
 interface Props {
@@ -79,7 +80,7 @@ export function InlinePrices({ componentId }: Props) {
                   <span className={styles.retailerName}>{offer.retailer_name}</span>
                 </div>
                 {offer.variant_label && <span className={styles.variant}>{offer.variant_label}</span>}
-                <span className={styles.price}>{offer.price.toLocaleString('fr-MA')} MAD</span>
+                <span className={styles.price}>{formatPrice(offer.price)}</span>
                 <span className={offer.in_stock ? styles.inStock : styles.outOfStock}>
                   {offer.in_stock ? UI.inlinePrices.inStock : UI.inlinePrices.outOfStock}
                 </span>

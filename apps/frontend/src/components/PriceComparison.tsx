@@ -14,6 +14,7 @@ import { SkeletonText } from './Skeleton';
 import { formatDate } from '../utils/date';
 import { formatComponentName } from '@shared/component-utils';
 import { UI } from '../ui-strings';
+import { formatPrice } from '../utils/format';
 import styles from './PriceComparison.module.css';
 
 interface Props {
@@ -135,7 +136,7 @@ export function PriceComparison({ component }: Props) {
                       </td>
                     )}
                     <td className={styles.price}>
-                      {offer.price.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}
+                      {formatPrice(offer.price)}
                     </td>
                     <td>
                       <span className={offer.in_stock ? styles.inStock : styles.outOfStock}>

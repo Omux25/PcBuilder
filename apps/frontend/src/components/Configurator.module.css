@@ -4,18 +4,18 @@
   max-width: 1000px;
   width: 100%;
   margin: 0 auto;
-  padding: 1.5rem 0 3rem;
+  padding: 0.5rem 0 3rem;
   animation: fadeIn 0.4s var(--ease-out);
 }
 
 /* ── Header ───────────────────────────────────────────────────────────────── */
 
 .header {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .title {
@@ -62,13 +62,13 @@
 .powerMeter {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  padding: 1.5rem;
-  margin-bottom: 2rem;
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
   box-shadow: var(--shadow-sm);
   display: grid;
-  grid-template-columns: 1fr 200px;
-  gap: 1.5rem;
+  grid-template-columns: 1fr 180px;
+  gap: 2rem;
   align-items: center;
 }
 
@@ -172,11 +172,11 @@
 
 .row {
   display: grid;
-  grid-template-columns: 180px 1fr 160px;
+  grid-template-columns: 160px 1fr 150px;
   align-items: center;
-  gap: 1.5rem;
-  padding: 1rem 1.5rem;
-  min-height: 80px;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  min-height: 72px;
 }
 
 .row:hover {
@@ -351,15 +351,15 @@
 
 .totalCard {
   flex: 1;
-  background: var(--bg-surface-2);
+  background: linear-gradient(135deg, var(--bg-surface-2) 0%, var(--bg-surface) 100%);
   border: 1px solid var(--border-focus);
   color: var(--text-primary);
-  padding: 1.5rem 2rem;
+  padding: 1.25rem 2rem;
   border-radius: var(--radius-xl);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: var(--shadow-lg), 0 0 20px rgba(255, 255, 255, 0.02);
+  box-shadow: var(--shadow-lg), 0 0 25px var(--accent-blue-tint);
   position: relative;
   overflow: hidden;
 }
