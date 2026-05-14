@@ -43,6 +43,8 @@ export interface SmartSearchResult {
   available_brands: string[];
   available_sockets: string[];
   available_vram: number[];
+  available_chipsets: string[];
+  available_form_factors: string[];
 }
 
 /** Smart search — returns components sorted by compatibility, stock, and price. */
@@ -53,6 +55,12 @@ export async function smartSearch(params: {
   socket?: string;
   ram_type?: string;
   vram_gb?: number;
+  chipset?: string;
+  form_factor?: string;
+  interface_type?: string;
+  efficiency_rating?: string;
+  modular?: string;
+  core_count?: number;
   sort?: string;
   min_price?: number;
   max_price?: number;
@@ -63,6 +71,7 @@ export async function smartSearch(params: {
   min_frequency_mhz?: number;
   max_frequency_mhz?: number;
   in_stock?: boolean;
+  compatible_only?: boolean;
   build?: BuildConfig;
   page?: number;
   limit?: number;
@@ -74,6 +83,12 @@ export async function smartSearch(params: {
   if (params.socket) qs.set('socket', params.socket);
   if (params.ram_type) qs.set('ram_type', params.ram_type);
   if (params.vram_gb != null) qs.set('vram_gb', String(params.vram_gb));
+  if (params.chipset) qs.set('chipset', params.chipset);
+  if (params.form_factor) qs.set('form_factor', params.form_factor);
+  if (params.interface_type) qs.set('interface_type', params.interface_type);
+  if (params.efficiency_rating) qs.set('efficiency_rating', params.efficiency_rating);
+  if (params.modular) qs.set('modular', params.modular);
+  if (params.core_count != null) qs.set('core_count', String(params.core_count));
   if (params.sort) qs.set('sort', params.sort);
   if (params.min_price != null) qs.set('min_price', String(params.min_price));
   if (params.max_price != null) qs.set('max_price', String(params.max_price));
@@ -84,8 +99,11 @@ export async function smartSearch(params: {
   if (params.min_frequency_mhz != null) qs.set('min_frequency_mhz', String(params.min_frequency_mhz));
   if (params.max_frequency_mhz != null) qs.set('max_frequency_mhz', String(params.max_frequency_mhz));
   if (params.in_stock) qs.set('in_stock', 'true');
+  if (params.compatible_only) qs.set('compatible_only', 'true');
   if (params.page) qs.set('page', String(params.page));
   if (params.limit) qs.set('limit', String(params.limit));
+
+
 
   return request<SmartSearchResult>(`/components/smart-search?${qs.toString()}`, {
     method: 'POST',

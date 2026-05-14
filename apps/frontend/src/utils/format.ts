@@ -3,14 +3,14 @@
  * Ensures consistent price/date display across all components.
  */
 
-/** Format a price in Moroccan Dirham (MAD) with consistent formatting. */
+/** Format a price in Moroccan Dirham (MAD) with consistent formatting (no thousands separators). */
 export function formatPrice(amount: number): string {
-  return amount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' });
+  return `${Math.floor(amount)} MAD`;
 }
 
-/** Format a price as a short label (no currency symbol, just number + MAD). */
+/** Format a price as a short label (alias for formatPrice for consistency). */
 export function formatPriceShort(amount: number): string {
-  return `${amount.toLocaleString('fr-MA')} MAD`;
+  return formatPrice(amount);
 }
 
 /** Format a date string for display. */

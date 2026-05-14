@@ -22,12 +22,44 @@ export const UI = {
   },
 
   nav: {
+    home: 'Accueil',
     configurator: 'Configurateur',
     components: 'Composants',
     presets: 'Configurations',
     compare: 'Comparer',
     trends: 'Tendances',
     search: 'Rechercher',
+  },
+
+  // ── Home page ─────────────────────────────────────────────────────────────
+  home: {
+    heroTitle: 'Créez votre PC idéal,',
+    heroTitleAccent: 'au meilleur prix.',
+    heroSubtitle: 'Comparez les prix chez les plus grands revendeurs du Maroc, vérifiez la compatibilité de vos composants et créez votre setup sur mesure.',
+    ctaBuild: 'Lancer le configurateur',
+    ctaBrowse: 'Parcourir les composants',
+    
+    sections: {
+      categories: 'Catégories populaires',
+      presets: 'Configurations recommandées',
+      trends: 'Dernières baisses de prix',
+      why: 'Pourquoi utiliser PC Builder ?',
+    },
+    
+    features: [
+      {
+        title: 'Compatibilité garantie',
+        desc: 'Notre moteur vérifie automatiquement les sockets, formats et dimensions pour éviter toute erreur.',
+      },
+      {
+        title: 'Prix en temps réel',
+        desc: 'Nous scannons quotidiennement les boutiques marocaines pour vous offrir les meilleurs tarifs.',
+      },
+      {
+        title: 'Historique des prix',
+        desc: 'Suivez l\'évolution des tarifs pour acheter au moment le plus opportun.',
+      }
+    ]
   },
 
   // ── Hero section ──────────────────────────────────────────────────────────
