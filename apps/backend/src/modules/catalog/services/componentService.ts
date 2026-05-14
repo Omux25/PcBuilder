@@ -69,7 +69,14 @@ export class ComponentService {
     max_capacity_gb?: number | null;
     min_frequency_mhz?: number | null;
     max_frequency_mhz?: number | null;
+    chipset?: string;
+    form_factor?: string;
+    interface_type?: string;
+    efficiency_rating?: string;
+    modular?: string;
+    core_count?: number;
     inStockOnly?: boolean;
+    compatibleOnly?: boolean;
     vramGb?: number;
     page: number;
     limit: number;
@@ -77,19 +84,61 @@ export class ComponentService {
   }) {
     const { 
         category, search, brand, socket, ram_type, sort, 
-        minPrice, maxPrice, inStockOnly, vramGb, page, limit, currentBuild,
-        min_wattage, max_wattage, min_capacity_gb, max_capacity_gb, min_frequency_mhz, max_frequency_mhz
+        minPrice, maxPrice, inStockOnly, compatibleOnly, vramGb, page, limit, currentBuild,
+        min_wattage, max_wattage, min_capacity_gb, max_capacity_gb, min_frequency_mhz, max_frequency_mhz,
+        chipset, form_factor, interface_type, efficiency_rating, modular, core_count
     } = params;
 
     const offset = (page - 1) * limit;
 
-    // 1. Fetch filtered and sorted components from DB
+    // 1. Extract Compatibility Hints from currentBuild
+    const compatHints: Partial<ComponentFilters> = {};
+    if (currentBuild) {
+        if (category === 'motherboard' || category === 'cooling') {
+            const cpu = currentBuild.cpu;
+            if (cpu?.socket) compatHints.compat_socket = cpu.socket;
+        }
+        if (category === 'cpu') {
+            const mb = currentBuild.motherboard;
+            if (mb?.socket) compatHints.compat_socket = mb.socket;
+        }
+        if (category === 'ram') {
+            const mb = currentBuild.motherboard;
+            const cpu = currentBuild.cpu;
+            // RAM type usually determined by motherboard
+            if (mb?.supported_ram_types?.length) {
+                compatHints.compat_ram_type = mb.supported_ram_types[0]; // Simplified
+            } else if (cpu?.supported_ram_types?.length) {
+                compatHints.compat_ram_type = cpu.supported_ram_types[0];
+            }
+        }
+        if (category === 'motherboard') {
+            const ram = currentBuild.ram;
+            if (ram?.ram_type) compatHints.compat_ram_type = ram.ram_type;
+            
+            const pcCase = currentBuild.case;
+            if (pcCase?.supported_motherboards?.length) {
+                compatHints.compat_form_factors = pcCase.supported_motherboards;
+            }
+        }
+        if (category === 'case') {
+            const mb = currentBuild.motherboard;
+            if (mb?.form_factor) {
+                compatHints.compat_form_factors = [mb.form_factor];
+            }
+        }
+    }
+
+    // 2. Fetch filtered and sorted components from DB
+    // NOTE: If compatibleOnly is true, we could theoretically filter in DB,
+    // but full compatibility rules are complex JS. So we fetch more and filter in JS if needed,
+    // OR we just use the hints to filter by socket/ram_type in DB.
     const { components, total, in_stock_total } = await this.repository.getComponents({
       category,
       search: search || undefined,
       brand: brand || undefined,
-      socket: socket || undefined,
-      ram_type: ram_type || undefined,
+      socket: socket || (compatibleOnly ? compatHints.compat_socket : undefined),
+      ram_type: ram_type || (compatibleOnly ? compatHints.compat_ram_type : undefined),
       sort: sort || undefined,
       vram_gb: vramGb,
       min_price: minPrice ?? undefined,
@@ -100,14 +149,21 @@ export class ComponentService {
       max_capacity_gb: max_capacity_gb ?? undefined,
       min_frequency_mhz: min_frequency_mhz ?? undefined,
       max_frequency_mhz: max_frequency_mhz ?? undefined,
+      chipset,
+      form_factor,
+      interface_type,
+      efficiency_rating,
+      modular,
+      core_count,
       in_stock: inStockOnly || undefined,
       is_active: true,
+      ...compatHints
     }, limit, offset);
 
-    if (components.length === 0) return { components: [], total, in_stock_total: 0, available_brands: [], available_sockets: [], available_vram: [] };
+    if (components.length === 0) return { components: [], total, in_stock_total: 0, available_brands: [], available_sockets: [], available_vram: [], available_chipsets: [], available_form_factors: [] };
 
-    // 2. Enrich with compatibility (Post-DB)
-    const enriched = components.map((component) => {
+    // 3. Enrich with compatibility (Post-DB)
+    let enriched = components.map((component) => {
       const testBuild = { ...currentBuild, [category]: component };
 
       let compatibility: 'compatible' | 'incompatible' | 'unknown' = 'unknown';
@@ -134,9 +190,16 @@ export class ComponentService {
       return { ...component, compatibility, compatibility_issues };
     });
 
+    // 4. Filter by compatibility if requested
+    if (compatibleOnly) {
+        enriched = enriched.filter(c => c.compatibility !== 'incompatible');
+    }
+
     const availableBrands = [...new Set(components.map(c => c.brand).filter(Boolean) as string[])].sort();
     const availableSockets = [...new Set(components.map(c => (c as any).socket).filter(Boolean) as string[])].sort();
     const availableVram = [...new Set(components.map(c => (c as any).vram_gb).filter(Boolean) as number[])].sort((a, b) => a - b);
+    const availableChipsets = [...new Set(components.map(c => (c as any).chipset).filter(Boolean) as string[])].sort();
+    const availableFormFactors = [...new Set(components.map(c => (c as any).form_factor).filter(Boolean) as string[])].sort();
 
     return {
       components: enriched,
@@ -145,7 +208,10 @@ export class ComponentService {
       available_brands: availableBrands,
       available_sockets: availableSockets,
       available_vram: availableVram,
+      available_chipsets: availableChipsets,
+      available_form_factors: availableFormFactors,
     };
+
   }
 
   async createComponent(data: ComponentInput): Promise<Component> {

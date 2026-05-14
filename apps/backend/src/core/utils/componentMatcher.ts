@@ -148,14 +148,18 @@ function extractCpuDna(name: string): string[] {
 }
 
 /**
- * RAM DNA: capacity + kit count + type + speed + CAS latency
- * e.g. "16gb", "2x", "ddr4", "3200", "cl16" — all must match.
+ * RAM DNA: capacity + kit count + type + speed + CAS latency + color + rgb + mpn
+ * e.g. "16gb", "2x", "ddr4", "3200", "cl16", "white", "rgb", "kf560c32rsk2-32"
  */
 function extractRamDna(name: string): string[] {
   const n = normalize(name);
   const tokens: string[] = [];
 
-  // 1. Capacity & Kit Count: "16gb", "2x16gb"
+  // 1. MPN (Manufacturer Part Number) - Highest precision
+  const mpnMatch = n.match(/\b(kf\d[a-z0-9-]+|hx\d[a-z0-9-]+|cm[a-z0-9-]+|f[45]-[a-z0-9-]+|ct\d+[a-z0-9-]+|ld[a-z0-9-]+)\b/);
+  if (mpnMatch) tokens.push(mpnMatch[1]);
+
+  // 2. Capacity & Kit Count: "16gb", "2x16gb"
   const kitMatch = n.match(/(\d+)\s*x\s*(\d+)\s*gb/);
   if (kitMatch) {
     const count = parseInt(kitMatch[1]);
@@ -167,19 +171,25 @@ function extractRamDna(name: string): string[] {
     if (capMatch) tokens.push(`${capMatch[1]}gb`);
   }
 
-  // 2. Type: DDR4, DDR5
+  // 3. Type: DDR4, DDR5
   const typeMatch = n.match(/\b(ddr[45])\b/);
   if (typeMatch) tokens.push(typeMatch[1]);
 
-  // 3. Speed: 3200, 5600, 6000 MHz
-  const speedMatch = n.match(/\b(\d{4,5})\s*(mhz)?\b/);
+  // 4. Speed: 3200, 5600, 6000 MHz
+  const speedMatch = n.match(/\b(\d{4,5})\s*(mhz|mt\/s)?\b/);
   if (speedMatch && parseInt(speedMatch[1]) >= 2133) {
     tokens.push(speedMatch[1]);
   }
 
-  // 4. CAS Latency: cl16, cl30, cl36
+  // 5. CAS Latency: cl16, cl30, cl36
   const clMatch = n.match(/\bcl(\d{2})\b/);
   if (clMatch) tokens.push(`cl${clMatch[1]}`);
+
+  // 6. Aesthetics (Prevent variant fusion)
+  if (n.includes('white') || n.includes('blanc')) tokens.push('white');
+  else if (n.includes('black') || n.includes('noir')) tokens.push('black');
+  
+  if (n.includes('rgb')) tokens.push('rgb');
 
   return tokens.filter(Boolean);
 }
@@ -252,13 +262,15 @@ function extractPsuDna(name: string): string[] {
   const PSU_BRANDS = new Set([
     'corsair', 'seasonic', 'evga', 'bequiet', 'be', 'coolermaster', 'thermaltake',
     'antec', 'fractal', 'silverstone', 'fsp', 'superflower', 'xpg', 'asus',
-    'gigabyte', 'msi', 'deepcool', 'aerocool', 'cougar', 'chieftec', 'lc',
+    'gigabyte', 'msi', 'deepcool', 'aerocool', 'cougar', 'chieftec', 'lc', 'nox', 'setupgame'
   ]);
   const firstWord = n.split(' ')[0];
   if (PSU_BRANDS.has(firstWord)) {
     tokens.push(firstWord);
   } else if (n.includes('be quiet') || n.includes('be-quiet')) {
     tokens.push('bequiet');
+  } else if (n.includes('setup game') || n.includes('setup-game') || n.match(/\bsg\b/)) {
+    tokens.push('setupgame');
   }
 
   // Wattage — explicit "850W" takes priority (must have W suffix)
@@ -325,12 +337,16 @@ function extractMotherboardDna(name: string): string[] {
   else if (n.includes('lga1700') || n.includes('lga 1700')) tokens.push('lga1700');
   else if (n.includes('lga1200') || n.includes('lga 1200')) tokens.push('lga1200');
 
+  // RAM Type (Critical for LGA1700 boards which often have both variants)
+  if (n.includes('ddr5')) tokens.push('ddr5');
+  else if (n.includes('ddr4')) tokens.push('ddr4');
+
   // Model name tokens — what distinguishes boards with the same chipset.
   // Strip generic noise words and the chipset/socket tokens already captured.
   // Keep short tokens (even single letters like "d", "s") because they are
   // the actual model differentiators (Z790 D vs Z790 S, B650M DS3H, etc.)
   const noise = new Set([
-    'wifi', 'ax', 'atx', 'matx', 'itx', 'ddr4', 'ddr5',
+    'wifi', 'ax', 'atx', 'matx', 'itx',
     'am4', 'am5', 'lga1700', 'lga1851', 'lga1200',
     'gaming', 'gen', 'pcie', 'usb', 'rgb', 'argb',
     'asus', 'msi', 'gigabyte', 'asrock', 'biostar', 'evga',
@@ -365,13 +381,23 @@ function extractCaseDna(name: string): string[] {
 
   if (n.includes('mini itx') || n.includes('itx')) tokens.push('itx');
   else if (n.includes('micro atx') || n.includes('matx') || n.includes('m atx')) tokens.push('matx');
-  else tokens.push('atx');
+  else if (n.includes('e atx') || n.includes('eatx')) tokens.push('eatx');
+  else if (n.match(/\b(atx)\b/)) tokens.push('atx');
 
   // Model name tokens — strip generic structural noise but keep color and model identifiers.
   // Colors (black, white, pink, etc.) are kept because they distinguish product variants.
-  const noise = new Set(['atx', 'matx', 'itx', 'tower', 'case', 'boitier', 'gaming',
-    'tempered', 'glass', 'tg', 'rgb', 'argb', 'mid', 'full', 'mini']);
-  const modelTokens = n.split(' ').filter((t) => t.length > 2 && !noise.has(t) && !/^\d+$/.test(t));
+  const noise = new Set(['atx', 'matx', 'itx', 'eatx', 'tower', 'case', 'boitier', 'gaming',
+    'tempered', 'glass', 'tg', 'rgb', 'argb', 'mid', 'full', 'mini', 'moyen', 'tour', 'grand',
+    'chassis', 'black', 'white', 'noir', 'blanc', 'mesh', 'flow', 'elite', 'pro', 'dual', 'triple',
+    '120', '140', '200', '240', '280', '360', '420' // common fan/rad sizes to avoid as DNA
+  ]);
+  const modelTokens = n.split(' ').filter((t) => {
+    if (t.length < 2) return false;
+    if (noise.has(t)) return false;
+    // Allow numbers if they aren't in the common size noise list
+    if (/^\d+$/.test(t)) return t.length >= 2; 
+    return true;
+  });
   tokens.push(...modelTokens.slice(0, 5)); // take up to 5 model tokens to capture brand + model + color
 
   return tokens.filter(Boolean);
@@ -494,6 +520,16 @@ export function scoreDnaMatch(productName: string, catalogName: string, category
   dnaTokens: string[];
 } {
   if (!productName || !catalogName) return { score: 0, dnaTokens: [] };
+
+  // 1. MPN Veto Logic (Highest Precision Guardrail)
+  // If BOTH names contain a standard MPN pattern, they MUST match.
+  const mpnRegex = /\b(kf\d[a-z0-9-]+|hx\d[a-z0-9-]+|cm[a-z0-9-]+|f[45]-[a-z0-9-]+|ct\d+[a-z0-9-]+|ld[a-z0-9-]+)\b/i;
+  const pMpn = productName.match(mpnRegex);
+  const cMpn = catalogName.match(mpnRegex);
+  if (pMpn && cMpn && pMpn[1].toUpperCase() !== cMpn[1].toUpperCase()) {
+    return { score: 0, dnaTokens: [] };
+  }
+
   if (!skipBrandCheck) {
     const pBrand = extractBrand(productName);
     const cBrand = extractBrand(catalogName);
@@ -514,6 +550,14 @@ export function scoreDnaMatch(productName: string, catalogName: string, category
 
   const dnaTokens = extractDna(catalogName, category);
   if (dnaTokens.length === 0) return { score: 0, dnaTokens: [] };
+
+  // Guard: Reject single-token DNA for generic categories.
+  // A single token like "750w" (PSU) or "atx" (Case) or "120mm" (Fan) is too generic
+  // and will act as a wildcard, absorbing any product that happens to share that token.
+  // CPU and GPU are the only categories where 1 token (the specific model chip, e.g. "rtx4090") is sufficient.
+  if (dnaTokens.length === 1 && category !== 'cpu' && category !== 'gpu') {
+    return { score: 0, dnaTokens };
+  }
 
   // Keep the product name naturally spaced — just lowercase and strip punctuation
   // Also normalize speed notation: "3200MHz" → "3200" so speed tokens match

@@ -109,7 +109,8 @@ const BRAND_CATEGORIES: Record<string, Set<Category>> = {
     'Sharkoon': new Set(['case', 'psu', 'cooling']),
     'BitFenix': new Set(['case']),
     'Mars Gaming': new Set(['case', 'fan', 'cooling', 'psu']),
-    'XTRMLAB': new Set(['case']),
+    'XTRMLAB': new Set(['case', 'cooling', 'fan', 'fan_controller']),
+    'XTMLAB': new Set(['case', 'cooling', 'fan', 'fan_controller']),
     'HAVN': new Set(['case']),
     'Aerocool': new Set(['case', 'psu', 'cooling', 'fan']),
     'Antec': new Set(['case', 'psu', 'cooling', 'fan']),
@@ -117,11 +118,12 @@ const BRAND_CATEGORIES: Record<string, Set<Category>> = {
     'Xigmatek': new Set(['case', 'cooling', 'fan']),
     'APNX': new Set(['case', 'cooling', 'fan']),
     'Abkoncore': new Set(['case', 'cooling', 'fan']),
-    'Hybrok': new Set(['case', 'cooling', 'psu']),
-    'HYBROK': new Set(['case', 'cooling', 'psu']),
-    'SG': new Set(['case', 'psu']),
-    'SG-WAVE': new Set(['case']),
-    'SG-LINGS': new Set(['case']),
+    'Hybrok': new Set(['case', 'cooling', 'psu', 'fan']),
+    'HYBROK': new Set(['case', 'cooling', 'psu', 'fan']),
+    'SG': new Set(['case', 'psu', 'cooling', 'fan']),
+    'Setup Game': new Set(['case', 'psu', 'cooling', 'fan', 'storage']),
+    'SG-WAVE': new Set(['case', 'cooling', 'fan']),
+    'SG-LINGS': new Set(['case', 'cooling', 'fan']),
     'Itek': new Set(['case']),
     'Spirit of Gamer': new Set(['case', 'cooling', 'fan']),
     'Raijintek': new Set(['case', 'cooling']),
@@ -144,6 +146,7 @@ const BRAND_ALIASES: Record<string, string> = {
     // HyperX was Kingston's gaming brand — some retailers still list it under
     // "Cooler Master" because they share shelf space or catalog sections
     'HyperX': 'Kingston',
+    'SG': 'Setup Game',
 };
 
 // Products whose name contains these strings should have their brand remapped

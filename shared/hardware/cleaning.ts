@@ -76,6 +76,12 @@ export function cleanName(rawName: string, brand: string, category?: string): st
     name = name.replace(bRegex, '');
     // Run twice to catch double-brand
     name = name.replace(bRegex, '');
+    
+    // Normalize SG / Setup Game redundancy
+    if (brand.toLowerCase() === 'setup game' || brand.toLowerCase() === 'sg') {
+      name = name.replace(/\bsg\b/gi, '');
+      name = name.replace(/\bsetup\s*game\b/gi, '');
+    }
   }
 
   // Remove retail noise + Colors + Technical specs
@@ -258,6 +264,25 @@ export function cleanName(rawName: string, brand: string, category?: string): st
       .trim();
   }
 
+  // ── CASE-specific normalization ────────────────────────────────────────────
+  if (category === 'case') {
+    // Strip generic case terminology
+    name = name
+      .replace(/\s*[\-\u2013]\s*Bo[\u00eeti]tier\s*(PC|Gamer|Mid-Tower|Moyen Tour|Grand Tour|Mini-Tour)?\s*(ATX|mATX|Micro-ATX|Mini-ITX|ITX)?\s*(Verre Tremp[\u00e9e]|Tempered Glass|TG)?\s*$/gi, '')
+      .replace(/\b(Bo[\u00eeti]tier|Case|Chassis|Mid-Tower|Moyen Tour|Grand Tour|Full Tower|Mini-Tour|Mini Tower)\b/gi, '')
+      .replace(/\b(Verre Tremp[\u00e9e]|Tempered Glass|TG|Glass)\b/gi, '')
+      .replace(/\s*(ATX|mATX|Micro-?ATX|Mini-?ITX|ITX)\s*$/gi, '')
+      .replace(/\s+PC\s*$/gi, '')
+      .replace(/\s+Gamer\s*$/gi, '')
+      .replace(/\s+De\s+Pc\s*$/gi, '')
+      .replace(/\s*\(?(sans alimentation|no psu|sans alim)\)?\s*/gi, '')
+      .replace(/\s+avec\s+fen[e\u00eatre]tre\s*/gi, '')
+      .replace(/\b(Moyen Tour|Grand Tour|Mini Tour)\b/gi, '')
+      .replace(/\s+[\-\u2013]\s*$/g, '')
+      .replace(/\s+[\-\u2013]\s+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
 
   if (name.length < 2) name = rawName;
 

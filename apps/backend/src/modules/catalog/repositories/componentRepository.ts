@@ -16,8 +16,18 @@ export interface ComponentFilters {
   max_capacity_gb?: number;
   min_frequency_mhz?: number;
   max_frequency_mhz?: number;
+  chipset?: string;
+  form_factor?: string;
+  interface_type?: string;
+  efficiency_rating?: string;
+  modular?: string;
+  core_count?: number;
   include_inactive?: boolean;
   is_active?: boolean;
+  // Compatibility Hints (for sorting)
+  compat_socket?: string;
+  compat_ram_type?: string;
+  compat_form_factors?: string[];
 }
 
 export interface ComponentListResult {
@@ -52,6 +62,10 @@ export class ComponentRepository {
     const dir = direction.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
 
     // 2. Build Where Clauses
+    const { 
+      compat_socket, compat_ram_type, compat_form_factors 
+    } = filters;
+
     const whereClauses: string[] = [
         include_inactive ? '1=1' : 'is_active = true',
         is_active !== undefined ? `is_active = ${is_active}` : null,
@@ -66,6 +80,12 @@ export class ComponentRepository {
         max_capacity_gb ? `capacity_gb <= ${max_capacity_gb}` : null,
         min_frequency_mhz ? `frequency_mhz >= ${min_frequency_mhz}` : null,
         max_frequency_mhz ? `frequency_mhz <= ${max_frequency_mhz}` : null,
+        filters.chipset ? `chipset = ${this.escape(filters.chipset)}` : null,
+        filters.form_factor ? `form_factor = ${this.escape(filters.form_factor)}` : null,
+        filters.interface_type ? `interface_type = ${this.escape(filters.interface_type)}` : null,
+        filters.efficiency_rating ? `efficiency_rating = ${this.escape(filters.efficiency_rating)}` : null,
+        filters.modular ? `modular = ${this.escape(filters.modular)}` : null,
+        filters.core_count ? `core_count = ${filters.core_count}` : null,
     ].filter(Boolean) as string[];
 
     if (search && search.trim() !== '') {
@@ -77,8 +97,34 @@ export class ComponentRepository {
 
     const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
-    // 3. Define the Order By Logic (CRITICAL: One dir only)
-    const validCols = ['wattage', 'frequency_mhz', 'core_count', 'thread_count', 'vram_gb', 'capacity_gb', 'read_speed_mbps', 'write_speed_mbps', 'height_mm', 'max_tdp', 'benchmark_score', 'ram_slots', 'kit_count', 'cas_latency', 'tdp', 'length_mm', 'max_gpu_length_mm', 'max_cooler_height_mm'];
+    // 3. Define Compatibility Prioritization
+    const compatParts: string[] = [];
+    if (compat_socket) {
+        // For CPU/MB: match socket. For Coolers: socket in supported_sockets
+        compatParts.push(`(CASE WHEN socket = ${this.escape(compat_socket)} OR ${this.escape(compat_socket)} = ANY(supported_sockets) THEN 1 ELSE 0 END)`);
+    }
+    if (compat_ram_type) {
+        // For RAM: match ram_type. For MB: ram_type in supported_ram_types
+        compatParts.push(`(CASE WHEN ram_type = ${this.escape(compat_ram_type)} OR ${this.escape(compat_ram_type)} = ANY(supported_ram_types) THEN 1 ELSE 0 END)`);
+    }
+    if (compat_form_factors && compat_form_factors.length > 0) {
+        const ffList = compat_form_factors.map(f => this.escape(f)).join(', ');
+        // For MB: match form_factor. For Cases: form_factor in supported_motherboards
+        compatParts.push(`(CASE WHEN form_factor IN (${ffList}) OR EXISTS (SELECT 1 FROM unnest(supported_motherboards) AS sm WHERE sm IN (${ffList})) THEN 1 ELSE 0 END)`);
+    }
+
+    const compatSort = compatParts.length > 0 ? `${compatParts.join(' + ')} DESC, ` : '';
+
+    // 4. Define the Order By Logic (CRITICAL: One dir only)
+    const validCols = [
+        'wattage', 'frequency_mhz', 'core_count', 'thread_count', 'vram_gb', 
+        'capacity_gb', 'read_speed_mbps', 'write_speed_mbps', 'height_mm', 
+        'max_tdp', 'benchmark_score', 'ram_slots', 'kit_count', 'cas_latency', 
+        'tdp', 'length_mm', 'max_gpu_length_mm', 'max_cooler_height_mm',
+        'socket', 'chipset', 'form_factor', 'interface_type', 'ram_type',
+        'base_clock_ghz', 'boost_clock_ghz', 'airflow_cfm', 'noise_db',
+        'pack_size', 'weight_grams', 'thermal_conductivity'
+    ];
     
     let orderExpr = '';
     if (field === 'price') {
@@ -126,9 +172,10 @@ export class ComponentRepository {
         ) sub
         CROSS JOIN LATERAL (SELECT COALESCE(lowest_in_stock, lowest_any) as final_price) p_calc
         WHERE (${in_stock === true ? 'is_in_stock = true' : in_stock === false ? 'is_in_stock = false' : '1=1'})
-        ORDER BY ${orderExpr} NULLS LAST
+        ORDER BY ${compatSort}${orderExpr} NULLS LAST
         LIMIT ${limit} OFFSET ${offset}
     `;
+
 
     const rows = await this.sql.unsafe(finalSql) as any[];
     
