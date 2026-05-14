@@ -23,6 +23,7 @@ import { cleanName } from '@shared/component-utils';
 import styles from './Form.module.css';
 import { getKeywordRules, reprocessSuggestions, getErrorMessage, scrapeUrls, createAndLinkComponent } from '../api';
 import type { CanonicalGroup, KeywordRuleResponse, CreateAndLinkPayload } from '../api';
+import { fmtPriceRange, fmtPrice } from '../utils/fmt';
 
 export interface CreateAndLinkResult {
     component_id: number;
@@ -241,9 +242,7 @@ export function CreateAndLinkModal({ group, isOpen, onClose, onSuccess }: Props)
                     </span>
                     {group.price_min !== null && (
                         <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                            · {group.price_min === group.price_max
-                                ? `${group.price_min?.toLocaleString('fr-MA')} MAD`
-                                : `${group.price_min?.toLocaleString('fr-MA')} – ${group.price_max?.toLocaleString('fr-MA')} MAD`}
+                            · {fmtPriceRange(group.price_min, group.price_max)}
                         </span>
                     )}
                 </div>
@@ -293,7 +292,7 @@ export function CreateAndLinkModal({ group, isOpen, onClose, onSuccess }: Props)
                                 style={{ color: 'var(--accent-blue)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>
                                 {l.scraped_name}
                             </a>
-                            <span style={{ flexShrink: 0 }}>{l.retailer_name} · {l.scraped_price ? `${Number(l.scraped_price).toLocaleString('fr-MA')} MAD` : '—'}</span>
+                            <span style={{ flexShrink: 0 }}>{l.retailer_name} · {fmtPrice(l.scraped_price)}</span>
                         </div>
                     ))}
                     {group.listings.length > 4 && (

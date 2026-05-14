@@ -5,7 +5,8 @@ import type { AdminComponent } from '../api';
 import { ComponentModal } from '../components/ComponentModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import styles from './Components.module.css';
-import { CATEGORY_ORDER, formatComponentName } from '@shared/component-utils';
+import { formatComponentName } from '@shared/component-utils';
+import { CATEGORY_ORDER } from '@shared/types';
 
 const LIMIT = 20;
 

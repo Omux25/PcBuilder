@@ -6,6 +6,7 @@ import {
 } from '../api';
 import type { AdminRetailer } from '../api';
 import type { LogEntry } from '@shared/types';
+import { fmtDate } from '../utils/fmt';
 import styles from './Scrapers.module.css';
 
 const POLL_INTERVAL_MS = 3000;
@@ -191,7 +192,7 @@ export function Scrapers() {
       const data = await getAdminLogs({ limit: '10000' });
       const allLogs = data.logs ?? [];
       const lines = allLogs.map((log) => {
-        const time = new Date(log.created_at).toLocaleString('fr-MA');
+        const time = fmtDate(log.created_at);
         const site = log.site ? `[${log.site}] ` : '';
         return `[${time}] ${log.level.padEnd(7)} ${site}${log.message}`;
       });
@@ -226,9 +227,9 @@ export function Scrapers() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.header}>
+      <div className="admin-header">
         <h1>Scrapers</h1>
-        <button className={styles.runAllBtn} onClick={handleRunAll} disabled={running}>
+        <button className="btn-primary" onClick={handleRunAll} disabled={running}>
           <PlayCircle size={16} />
           {running ? 'Scraping en cours...' : 'Lancer tous'}
         </button>
@@ -236,15 +237,14 @@ export function Scrapers() {
 
       {running && (
         <div className={styles.runningBanner}>
-          <span className={styles.spinner} />
+          <div className={styles.pulseDot} />
           <span className={styles.bannerStep}>{currentStep}</span>
           <button
-            className={styles.stopBtn}
+            className={styles.hideBannerBtn}
             onClick={stopPolling}
-            aria-label="Masquer l'indicateur de progression"
-            title="Le scraping continue en arrière-plan — ceci masque seulement l'indicateur"
+            title="Masquer l'indicateur (le scraping continue)"
           >
-            ✕ Masquer
+            Masquer
           </button>
         </div>
       )}
@@ -253,69 +253,76 @@ export function Scrapers() {
       {mutationError && <p className="admin-error">{mutationError}</p>}
 
       {!loading && (
-        <table className={styles.table}>
+        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
           <thead>
-            <tr>
-              <th>Revendeur</th>
-              <th>Dernier scraping</th>
-              <th>Statut</th>
-              <th>Planification</th>
-              <th>Intervalle</th>
-              <th>Action</th>
+            <tr style={{ textAlign: 'left' }}>
+              <th style={{ padding: '0 1rem', fontSize: '11px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Revendeur</th>
+              <th style={{ padding: '0 1rem', fontSize: '11px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Dernier scraping</th>
+              <th style={{ padding: '0 1rem', fontSize: '11px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Statut</th>
+              <th style={{ padding: '0 1rem', fontSize: '11px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Planification</th>
+              <th style={{ padding: '0 1rem', fontSize: '11px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Intervalle</th>
+              <th style={{ padding: '0 1rem', fontSize: '11px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>Action</th>
             </tr>
           </thead>
           <tbody>
             {retailers.map((r) => (
-              <tr key={r.id} className={!r.scraping_enabled ? styles.rowDisabled : ''}>
-                <td className={styles.retailerName}>{r.name}</td>
-                <td className={styles.date}>
-                  {r.last_scrape_at
-                    ? new Date(r.last_scrape_at as string).toLocaleString('fr-MA')
-                    : '—'}
+              <tr 
+                key={r.id} 
+                className={!r.scraping_enabled ? styles.rowDisabled : ''}
+                style={{ 
+                  background: 'var(--surface)', 
+                  boxShadow: 'var(--shadow-sm)',
+                  transition: 'transform 0.2s, box-shadow 0.2s'
+                }}
+                onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+                onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
+              >
+                <td style={{ padding: '1rem', borderRadius: 'var(--radius) 0 0 var(--radius)', borderLeft: `3px solid ${r.scraping_enabled ? 'var(--accent)' : 'transparent'}` }}>
+                  <div className={styles.retailerName}>{r.name}</div>
                 </td>
-                <td>
+                <td className={styles.dateCell} style={{ padding: '1rem' }}>
+                  {fmtDate(r.last_scrape_at as string)}
+                </td>
+                <td style={{ padding: '1rem' }}>
                   {r.last_scrape_status ? (
-                    <span className={`badge badge-${(r.last_scrape_status as string).toLowerCase()}`}>
+                    <span className={`badge badge-${(r.last_scrape_status as string).toLowerCase()}`} style={{ fontWeight: 700 }}>
                       {r.last_scrape_status as string}
                     </span>
                   ) : '—'}
                 </td>
-                <td>
+                <td style={{ padding: '1rem' }}>
                   <div className={styles.scheduleCell}>
                     <button
                       className={`${styles.toggle} ${r.scraping_enabled ? styles.toggleOn : styles.toggleOff}`}
                       onClick={() => handleToggleEnabled(r)}
                       title={r.scraping_enabled ? 'Désactiver la planification' : 'Activer la planification'}
-                      aria-label={r.scraping_enabled ? `Désactiver la planification pour ${r.name}` : `Activer la planification pour ${r.name}`}
                     >
                       <span className={styles.toggleThumb} />
                     </button>
                     <span className={styles.nextScrape}>{nextScrapeLabel(r)}</span>
                   </div>
                 </td>
-                <td>
+                <td style={{ padding: '1rem' }}>
                   <select
                     className={styles.intervalSelect}
                     value={r.scraping_interval_hours}
                     onChange={(e) => handleIntervalChange(r, Number(e.target.value))}
                     disabled={!r.scraping_enabled}
-                    aria-label={`Intervalle de scraping pour ${r.name}`}
                   >
                     {INTERVAL_OPTIONS.map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                   </select>
                 </td>
-                <td>
+                <td style={{ padding: '1rem', textAlign: 'right', borderRadius: '0 var(--radius) var(--radius) 0' }}>
                   <button
-                    className={styles.runBtn}
+                    className="admin-btn-secondary"
+                    style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', borderRadius: 'var(--radius-lg)' }}
                     onClick={() => handleRunOne(r.id)}
                     disabled={fullSessionRunning || runningJobs.has(r.id) || !r.is_active}
-                    title={!r.is_active ? 'Revendeur inactif' : fullSessionRunning ? 'Session complète en cours' : runningJobs.has(r.id) ? 'Scraping en cours...' : 'Lancer maintenant'}
-                    aria-label={`Lancer le scraper pour ${r.name}`}
                   >
                     <Play size={14} />
-                    {(fullSessionRunning || runningJobs.has(r.id)) ? 'En cours...' : 'Lancer'}
+                    {(fullSessionRunning || runningJobs.has(r.id)) ? 'En cours' : 'Lancer'}
                   </button>
                 </td>
               </tr>
@@ -327,59 +334,64 @@ export function Scrapers() {
       {/* Log viewer */}
       <section className={styles.logSection}>
         <div className={styles.logHeader}>
-          <h2>Logs récents</h2>
-          <select
-            value={logLevel}
-            onChange={(e) => setLogLevel(e.target.value)}
-            disabled={running}
-            aria-label="Filtrer par niveau de log"
-          >
-            <option value="">Tous niveaux</option>
-            <option value="INFO">INFO</option>
-            <option value="WARNING">WARNING</option>
-            <option value="ERROR">ERROR</option>
-          </select>
-          <button className={styles.refreshBtn} onClick={() => loadLogs()} disabled={running}>
-            <RefreshCw size={13} />
-            {running ? 'Auto' : 'Actualiser'}
-          </button>
-          <button
-            className={styles.downloadBtn}
-            onClick={handleDownloadLogs}
-            disabled={logs.length === 0}
-            aria-label="Télécharger les logs"
-          >
-            <Download size={13} />
-            Sauvegarder
-          </button>
-
-          {!clearConfirm ? (
-            <button
-              className={styles.clearBtn}
-              onClick={() => setClearConfirm(true)}
-              disabled={logs.length === 0}
-              aria-label="Vider les logs"
+        <div className={styles.logToolbar}>
+          <div className={styles.logFilters}>
+            <h2>Logs récents</h2>
+            <select
+              value={logLevel}
+              onChange={(e) => setLogLevel(e.target.value)}
+              disabled={running}
             >
-              <Trash2 size={13} />
-              Vider
+              <option value="">Tous les niveaux</option>
+              <option value="INFO">INFO</option>
+              <option value="WARNING">WARNING</option>
+              <option value="ERROR">ERROR</option>
+            </select>
+            <button className="admin-btn-secondary" onClick={() => loadLogs()} disabled={running}>
+              <RefreshCw size={14} className={running ? 'spin' : ''} />
+              Actualiser
             </button>
-          ) : (
-            <div className={styles.clearConfirm}>
-              <span>Supprimer :</span>
-              <button className={styles.clearConfirmOption} onClick={() => handleClearLogs('keep7')}>
-                Garder 7 jours
-              </button>
+          </div>
+          
+          <div className={styles.logActions}>
+            <button
+              className="admin-btn-secondary"
+              onClick={handleDownloadLogs}
+              disabled={logs.length === 0}
+            >
+              <Download size={14} />
+              Exporter
+            </button>
+
+            {!clearConfirm ? (
               <button
-                className={`${styles.clearConfirmOption} ${styles.clearConfirmDanger}`}
-                onClick={() => handleClearLogs('all')}
+                className="btn-danger"
+                style={{ padding: '0.4rem 0.8rem' }}
+                onClick={() => setClearConfirm(true)}
+                disabled={logs.length === 0}
               >
-                Tout supprimer
+                <Trash2 size={14} />
+                Vider
               </button>
-              <button className={styles.clearConfirmCancel} onClick={() => setClearConfirm(false)}>
-                Annuler
-              </button>
-            </div>
-          )}
+            ) : (
+              <div className={styles.clearConfirm}>
+                <span>Supprimer :</span>
+                <button className={styles.clearConfirmOption} onClick={() => handleClearLogs('keep7')}>
+                  Garder 7 jours
+                </button>
+                <button
+                  className={`${styles.clearConfirmOption} ${styles.clearConfirmDanger}`}
+                  onClick={() => handleClearLogs('all')}
+                >
+                  Tout supprimer
+                </button>
+                <button className={styles.clearConfirmCancel} onClick={() => setClearConfirm(false)}>
+                  Annuler
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
         </div>
         <div className={styles.logBox} ref={logBoxRef}>
           {logs.length === 0 ? (
@@ -387,12 +399,12 @@ export function Scrapers() {
           ) : (
             logs.map((log) => (
               <div key={log.id} className={`${styles.logEntry} ${styles[log.level.toLowerCase()]}`}>
-                <span className={styles.logLevel}>{log.level}</span>
+                <span className={styles.logLevelBadge}>{log.level}</span>
                 {log.site && !log.message.startsWith(`[${log.site}]`) && (
-                  <span className={styles.logSite}>[{log.site}]</span>
+                  <span className={styles.logSite}>{log.site}</span>
                 )}
                 <span className={styles.logMsg}>{log.message}</span>
-                <span className={styles.logTime}>{new Date(log.created_at).toLocaleString('fr-MA')}</span>
+                <span className={styles.logTime}>{fmtDate(log.created_at)}</span>
               </div>
             ))
           )}

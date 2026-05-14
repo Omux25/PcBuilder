@@ -1,18 +1,20 @@
 .page {
-  padding: 1.5rem;
-  max-width: 1100px;
+  padding: 2rem 2.5rem;
+  max-width: 1300px;
 }
 
 .filters {
   display: flex;
   gap: 0.75rem;
-  margin-bottom: 1.25rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
   flex-wrap: wrap;
 }
 
 .searchInput {
   flex: 1;
   min-width: 200px;
+  max-width: 400px;
 }
 
 .searchBtn {
@@ -21,54 +23,80 @@
   padding: 0.45rem 0.9rem;
   border-radius: var(--radius);
   font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  transition: var(--transition);
+}
+
+.searchBtn:hover:not(:disabled) {
+  filter: none;
+  background: var(--border-2);
 }
 
 .componentName {
-  font-weight: 500;
-  color: var(--text);
+  font-weight: 600;
+  font-size: 0.875rem;
 }
 
 .componentSlug {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-dim);
-}
-
-.toggleBtn {
-  background: none;
-  padding: 0;
-  display: flex;
+  margin-top: 2px;
+  font-family: monospace;
 }
 
 .actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.35rem;
   align-items: center;
+}
+
+.toggleBtn {
+  background: none;
+  border: none;
+  padding: 0.2rem;
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+}
+
+.toggleBtn:hover:not(:disabled) {
+  filter: none;
+  background: var(--surface-3);
 }
 
 .editBtn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  padding: 0.3rem 0.5rem;
+  background: var(--surface-3);
   color: var(--text-muted);
-  padding: 0.3rem;
-  border-radius: 4px;
-  background: none;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  transition: var(--transition);
 }
 
-.editBtn:hover {
-  color: var(--accent-blue);
-  background: rgba(137, 180, 250, 0.1);
+.editBtn:hover:not(:disabled) {
+  filter: none;
+  background: var(--border-2);
+  color: var(--text);
 }
 
 .deleteBtn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  color: var(--text-muted);
-  background: none;
-  padding: 0.3rem;
-  border-radius: 4px;
+  justify-content: center;
+  padding: 0.3rem 0.5rem;
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--danger-soft);
+  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  transition: var(--transition);
 }
 
-.deleteBtn:hover {
-  color: var(--danger-soft);
-  background: rgba(243, 139, 168, 0.1);
+.deleteBtn:hover:not(:disabled) {
+  filter: none;
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.3);
 }
