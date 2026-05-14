@@ -59,7 +59,14 @@ export class ComponentController {
     const min_frequency_mhz = c.req.query('min_freq') ? Number(c.req.query('min_freq')) : null;
     const max_frequency_mhz = c.req.query('max_freq') ? Number(c.req.query('max_freq')) : null;
     const inStockOnly = c.req.query('in_stock') === 'true';
+    const compatibleOnly = c.req.query('compatible_only') === 'true';
     const vramGb = c.req.query('vram_gb') ? Number(c.req.query('vram_gb')) : undefined;
+    const chipset = c.req.query('chipset');
+    const form_factor = c.req.query('form_factor');
+    const interface_type = c.req.query('interface_type');
+    const efficiency_rating = c.req.query('efficiency_rating');
+    const modular = c.req.query('modular');
+    const core_count = c.req.query('core_count') ? Number(c.req.query('core_count')) : undefined;
     const page = c.req.query('page') ? Number(c.req.query('page')) : 1;
     const limit = Math.min(100, c.req.query('limit') ? Number(c.req.query('limit')) : 20);
 
@@ -76,9 +83,12 @@ export class ComponentController {
     } catch { }
 
     const result = await this.componentService.smartSearch({
-      category, search, brand, socket, ram_type, sort, minPrice, maxPrice, inStockOnly, vramGb, page, limit, currentBuild,
-      min_wattage, max_wattage, min_capacity_gb, max_capacity_gb, min_frequency_mhz, max_frequency_mhz
+      category, search, brand, socket, ram_type, sort, minPrice, maxPrice, inStockOnly, compatibleOnly, vramGb, page, limit, currentBuild,
+      min_wattage, max_wattage, min_capacity_gb, max_capacity_gb, min_frequency_mhz, max_frequency_mhz,
+      chipset, form_factor, interface_type, efficiency_rating, modular, core_count
     });
+
+
 
     c.header('X-Total-Count', String(result.total));
     return c.json(result);

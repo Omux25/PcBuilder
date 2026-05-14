@@ -12,7 +12,8 @@ export function extractBrand(name: string): string {
     'trident': 'G.Skill', 'ripjaws': 'G.Skill',
     'fury': 'Kingston', 'renegade': 'Kingston',
     'sn550': 'WD', 'sn570': 'WD', 'sn580': 'WD', 'sn770': 'WD', 'sn850': 'WD',
-    '970 evo': 'Samsung', '980 pro': 'Samsung', '990 pro': 'Samsung'
+    '970 evo': 'Samsung', '980 pro': 'Samsung', '990 pro': 'Samsung',
+    'sg ': 'Setup Game', 'sg-': 'Setup Game'
   };
 
   for (const [sub, parent] of Object.entries(SUB_BRANDS)) {
@@ -20,7 +21,7 @@ export function extractBrand(name: string): string {
   }
 
   // 2. Search for major brands anywhere in the name (not just at the start)
-  const BRANDS = ['AMD', 'Intel', 'NVIDIA', 'ASUS', 'MSI', 'Gigabyte', 'ASRock', 'EVGA', 'Corsair', 'G.Skill', 'Kingston', 'Crucial', 'TeamGroup', 'Team Group', 'Lexar', 'ADATA', 'Samsung', 'WD', 'Seagate', 'Sabrent', 'Silicon Power', 'Seasonic', 'be quiet!', 'Cooler Master', 'Thermaltake', 'Antec', 'DeepCool', 'Fractal', 'NZXT', 'Lian Li', 'Phanteks', 'Aerocool', 'Silverstone', 'Noctua', 'Arctic', 'Thermalright', 'Scythe', 'ID-Cooling', 'APNX', 'Arktek', 'Inno3D', 'Palit', 'Zotac', 'Sapphire', 'PowerColor', 'XFX', 'PNY', 'Gainward', 'Colorful', 'Galax', 'KFA2', 'Acer', 'HP', 'Toshiba', 'Patriot', 'Klevv', 'Geil', 'Mushkin', 'FSP', 'Super Flower', 'XPG', 'Cougar', 'Chieftec', 'LC Power', '1stPlayer', 'Kolink', 'Sharkoon', 'BitFenix', 'Mars Gaming', 'M.RED', 'Enermax', 'Xigmatek', 'Montech', 'Biostar', 'Verbatim', 'Abkoncore', 'XTRMLAB', 'OCPC', 'HIKSEMI', 'FANXIANG', 'Setup Game', 'Hyte', 'Yeyian', 'HAVN', 'Itek', 'Spirit of Gamer', 'Western Digital', 'Razer', 'Innovation IT', 'Viper'];
+  const BRANDS = ['AMD', 'Intel', 'NVIDIA', 'ASUS', 'MSI', 'Gigabyte', 'ASRock', 'EVGA', 'Corsair', 'G.Skill', 'Kingston', 'Crucial', 'TeamGroup', 'Team Group', 'Lexar', 'ADATA', 'Samsung', 'WD', 'Seagate', 'Sabrent', 'Silicon Power', 'Seasonic', 'be quiet!', 'Cooler Master', 'Thermaltake', 'Antec', 'DeepCool', 'Fractal', 'NZXT', 'Lian Li', 'Phanteks', 'Aerocool', 'Silverstone', 'Noctua', 'Arctic', 'Thermalright', 'Scythe', 'ID-Cooling', 'APNX', 'Arktek', 'Inno3D', 'Palit', 'Zotac', 'Sapphire', 'PowerColor', 'XFX', 'PNY', 'Gainward', 'Colorful', 'Galax', 'KFA2', 'Acer', 'HP', 'Toshiba', 'Patriot', 'Klevv', 'Geil', 'Mushkin', 'FSP', 'Super Flower', 'XPG', 'Cougar', 'Chieftec', 'LC Power', '1stPlayer', 'Kolink', 'Sharkoon', 'BitFenix', 'Mars Gaming', 'M.RED', 'Enermax', 'Xigmatek', 'Montech', 'Biostar', 'Verbatim', 'Abkoncore', 'XTRMLAB', 'OCPC', 'HIKSEMI', 'FANXIANG', 'Setup Game', 'Hyte', 'Yeyian', 'HAVN', 'Itek', 'Spirit of Gamer', 'Western Digital', 'Razer', 'Innovation IT', 'Viper', 'Nox'];
 
   for (const brand of BRANDS) {
     const bLower = brand.toLowerCase();
