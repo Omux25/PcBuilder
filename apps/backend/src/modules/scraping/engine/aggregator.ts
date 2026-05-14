@@ -882,8 +882,8 @@ export async function aggregate(
       const resolvedUrls = finalResolved.map(p => p.product_url);
       for (let i = 0; i < resolvedUrls.length; i += 1000) {
         const batch = resolvedUrls.slice(i, i + 1000);
-        await sql`DELETE FROM unmatched_suggestions WHERE unmatched_listing_id IN (SELECT id FROM unmatched_listings WHERE product_url IN ${sql(batch)})`;
-        await sql`DELETE FROM unmatched_listings WHERE product_url IN ${sql(batch)}`;
+        await (sql as any)`DELETE FROM unmatched_suggestions WHERE unmatched_listing_id IN (SELECT id FROM unmatched_listings WHERE product_url IN ${ (sql as any)(batch) })`;
+        await (sql as any)`DELETE FROM unmatched_listings WHERE product_url IN ${ (sql as any)(batch) }`;
       }
     } catch { /* ignore */ }
   }
