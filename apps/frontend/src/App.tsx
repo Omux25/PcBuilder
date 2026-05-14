@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { Cpu, Sun, Moon, LayoutGrid, Search, GitCompare } from 'lucide-react';
 import { Configurator } from './components/Configurator';
 import { Skeleton } from './components/Skeleton';
@@ -10,6 +10,7 @@ import { getComponentById } from './api';
 import { UI } from './ui-strings';
 import styles from './App.module.css';
 
+const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
 const ComponentDetail = lazy(() => import('./pages/ComponentDetail').then(m => ({ default: m.ComponentDetail })));
 const Presets = lazy(() => import('./pages/Presets').then(m => ({ default: m.Presets })));
 const CategoryBrowse = lazy(() => import('./pages/CategoryBrowse').then(m => ({ default: m.CategoryBrowse })));
@@ -77,6 +78,7 @@ export default function App() {
   }
 
   const isHome = location.pathname === '/';
+  const isBuild = location.pathname === '/build';
   const isComponents = location.pathname.startsWith('/components') || location.pathname.startsWith('/browse');
   const isPresets = location.pathname === '/presets';
 
@@ -91,6 +93,9 @@ export default function App() {
           </Link>
           <nav className={styles.nav}>
             <Link to="/" className={`${styles.navLink} ${isHome ? styles.navLinkActive : ''}`}>
+              {UI.nav.home}
+            </Link>
+            <Link to="/build" className={`${styles.navLink} ${isBuild ? styles.navLinkActive : ''}`}>
               {UI.nav.configurator}
             </Link>
             <Link to="/components" className={`${styles.navLink} ${isComponents ? styles.navLinkActive : ''}`}>
@@ -143,6 +148,14 @@ export default function App() {
         {/* ── Home ────────────────────────────────────────────────────── */}
         <Route path="/" element={
           <main className={styles.main}>
+            <Suspense fallback={<Skeleton height={400} />}>
+              <Home />
+            </Suspense>
+          </main>
+        } />
+
+        <Route path="/build" element={
+          <main className={styles.main}>
             <Configurator />
           </main>
         } />
@@ -162,6 +175,8 @@ export default function App() {
             </Suspense>
           </main>
         } />
+
+        <Route path="/browse" element={<Navigate to="/components" replace />} />
 
         <Route path="/browse/:category/:slotKey?" element={
           <main className={styles.main}>
