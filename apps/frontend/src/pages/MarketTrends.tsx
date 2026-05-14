@@ -13,6 +13,7 @@ import type { ComponentCategory } from '../types';
 import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
 import { useBuild } from '../context/BuildContext';
 import { UI } from '../ui-strings';
+import { formatPrice } from '../utils/format';
 import styles from './MarketTrends.module.css';
 
 const DAY_OPTIONS = [3, 7, 14, 30];
@@ -106,7 +107,11 @@ export function MarketTrends() {
               {DAY_OPTIONS.map(d => (
                 <button
                   key={d}
-                  className={`${styles.dayPill} ${days === d ? styles.dayPillActive : ''}`}
+                  className={`
+                    ${styles.dayPill} 
+                    ${trendType === 'drops' ? styles.dayPillHoverDrops : styles.dayPillHoverHikes}
+                    ${days === d ? (trendType === 'drops' ? styles.dayPillActiveDrops : styles.dayPillActiveHikes) : ''}
+                  `}
                   onClick={() => setDays(d)}
                 >
                   {UI.trends.dayUnit(d)}
@@ -181,7 +186,7 @@ function TrendCard({ trend, isAdded, isAdding, onAdd }: { trend: MarketTrend; is
   }
 
   return (
-    <div className={styles.card}>
+    <div className={`${styles.card} ${isDrop ? styles.cardDrops : styles.cardHikes}`}>
       <div className={styles.cardImageWrap}>
         {trend.image_url ? (
           <img src={trend.image_url} alt={trend.name} className={styles.cardImage} referrerPolicy="no-referrer" />
@@ -208,16 +213,16 @@ function TrendCard({ trend, isAdded, isAdding, onAdd }: { trend: MarketTrend; is
         <Link to={`/product/${trend.slug}`} className={styles.cardName}>{trend.name}</Link>
 
         <div className={styles.priceRow}>
-          <span className={styles.priceBefore}>{trend.price_before.toLocaleString('fr-MA')} MAD</span>
+          <span className={styles.priceBefore}>{formatPrice(trend.price_before)}</span>
           <span className={styles.priceArrow}>→</span>
           <span className={isDrop ? styles.priceAfter : styles.priceAfterUp}>
-            {trend.price_after.toLocaleString('fr-MA')} MAD
+            {formatPrice(trend.price_after)}
           </span>
         </div>
 
         <div className={styles.savingsRow}>
-          <span className={styles.savings}>
-            {isDrop ? UI.trends.savings : UI.trends.hike} : {trend.diff_amount.toLocaleString('fr-MA')} MAD
+          <span className={isDrop ? styles.savings : styles.hike}>
+            {isDrop ? UI.trends.savings : UI.trends.hike} : {formatPrice(trend.diff_amount)}
           </span>
         </div>
       </div>

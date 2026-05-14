@@ -9,6 +9,7 @@ import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
 import { useBuild } from '../context/BuildContext';
 import { useCompare } from '../context/CompareContext';
 import { formatComponentName } from '@shared/component-utils';
+import { formatPrice } from '../utils/format';
 import styles from './CategoryBrowse.module.css';
 
 const LIMIT = 20;
@@ -95,7 +96,18 @@ function getColDefs(cat: ComponentCategory): ColDef[] {
         { header: 'Type', width: '80px', render: c => { const n = c.name.toLowerCase(); return n.includes('aio') || n.includes('liquid') || n.includes('watercooler') ? 'AIO' : 'Air'; } },
         { header: 'Hauteur', width: '70px', sortKey: 'height_mm', render: c => c.height_mm ? `${c.height_mm}mm` : '—' },
         { header: 'TDP max', width: '70px', sortKey: 'max_tdp', render: c => c.max_tdp ? `${c.max_tdp}W` : '—' },
-        { header: 'Sockets', width: '120px', render: c => c.supported_sockets?.join(', ') || '—' },
+      ];
+    case 'fan':
+      return [
+        { header: 'Taille', width: '70px', sortKey: 'height_mm', render: c => c.height_mm ? `${c.height_mm}mm` : '—' },
+        { header: 'Flux d\'air', width: '80px', sortKey: 'airflow_cfm', render: c => c.airflow_cfm ? `${c.airflow_cfm} CFM` : '—' },
+        { header: 'Bruit', width: '70px', sortKey: 'noise_db', render: c => (c as any).noise_db ? `${(c as any).noise_db} dB` : '—' },
+        { header: 'Pack', width: '60px', sortKey: 'pack_size', render: c => (c as any).pack_size ? `${(c as any).pack_size}×` : '1×' },
+      ];
+    case 'thermal_paste':
+      return [
+        { header: 'Poids', width: '70px', sortKey: 'weight_grams', render: c => (c as any).weight_grams ? `${(c as any).weight_grams}g` : '—' },
+        { header: 'Conductivité', width: '90px', sortKey: 'thermal_conductivity', render: c => (c as any).thermal_conductivity ? `${(c as any).thermal_conductivity} W/mK` : '—' },
       ];
     default:
       return [];
@@ -131,6 +143,13 @@ export function CategoryBrowse() {
   const [minPrice, setMinPrice] = useState(searchParams.get('min_price') ?? '');
   const [maxPrice, setMaxPrice] = useState(searchParams.get('max_price') ?? '');
   const [inStockOnly, setInStockOnly] = useState(searchParams.get('in_stock') === 'true');
+  const [compatibleOnly, setCompatibleOnly] = useState(searchParams.get('compatible_only') !== 'false'); // Default true
+  const [chipset, setChipset] = useState(searchParams.get('chipset') ?? '');
+  const [formFactor, setFormFactor] = useState(searchParams.get('form_factor') ?? '');
+  const [interfaceType, setInterfaceType] = useState(searchParams.get('interface_type') ?? '');
+  const [efficiency, setEfficiency] = useState(searchParams.get('efficiency') ?? '');
+  const [modular, setModular] = useState(searchParams.get('modular') ?? '');
+  const [coreCount, setCoreCount] = useState(searchParams.get('core_count') ?? '');
   const [sort, setSort] = useState<SortOption>((searchParams.get('sort') as SortOption) ?? 'smart');
   const [page, setPage] = useState(Number(searchParams.get('page') ?? '1'));
 
@@ -144,6 +163,8 @@ export function CategoryBrowse() {
   const [availableBrands, setAvailableBrands] = useState<string[]>([]);
   const [availableSockets, setAvailableSockets] = useState<string[]>([]);
   const [availableVram, setAvailableVram] = useState<number[]>([]);
+  const [availableChipsets, setAvailableChipsets] = useState<string[]>([]);
+  const [availableFormFactors, setAvailableFormFactors] = useState<string[]>([]);
 
   const abortRef = useRef<AbortController | null>(null);
   const hasDataRef = useRef(false);
@@ -174,8 +195,9 @@ export function CategoryBrowse() {
   const fetchComponents = useCallback(async (
     searchTerm: string, brandFilter: string, socketFilter: string,
     ramTypeFilter: string, pageNum: number, sortOption: SortOption,
-    minPriceVal: string, maxPriceVal: string, inStockVal: boolean, vramGbVal: number,
-    minWatt: string, maxWatt: string, minCap: string, maxCap: string, minF: string, maxF: string
+    minPriceVal: string, maxPriceVal: string, inStockVal: boolean, compatOnlyVal: boolean, vramGbVal: number,
+    minWatt: string, maxWatt: string, minCap: string, maxCap: string, minF: string, maxF: string,
+    chipsetVal: string, formFactorVal: string, interfaceVal: string, efficiencyVal: string, modularVal: string, coreVal: string
   ) => {
     if (abortRef.current) abortRef.current.abort();
     abortRef.current = new AbortController();
@@ -183,7 +205,11 @@ export function CategoryBrowse() {
     if (!hasDataRef.current) setLoading(true);
     setError(null);
     try {
-      const { components: list, total: t, in_stock_total: ist, available_brands: ab, available_sockets: as_, available_vram: av } = await smartSearch({
+      const { 
+        components: list, total: t, in_stock_total: ist, 
+        available_brands: ab, available_sockets: as_, available_vram: av,
+        available_chipsets: ac, available_form_factors: aff
+      } = await smartSearch({
         category: cat, search: searchTerm || undefined, brand: brandFilter || undefined,
         socket: socketFilter || undefined, ram_type: ramTypeFilter || undefined,
         vram_gb: vramGbVal || undefined, sort: sortOption,
@@ -195,11 +221,20 @@ export function CategoryBrowse() {
         max_capacity_gb: maxCap ? Number(maxCap) : undefined,
         min_frequency_mhz: minF ? Number(minF) : undefined,
         max_frequency_mhz: maxF ? Number(maxF) : undefined,
-        in_stock: inStockVal || undefined, build: buildContext, page: pageNum, limit: LIMIT,
+        chipset: chipsetVal || undefined,
+        form_factor: formFactorVal || undefined,
+        interface_type: interfaceVal || undefined,
+        efficiency_rating: efficiencyVal || undefined,
+        modular: modularVal || undefined,
+        core_count: coreVal ? Number(coreVal) : undefined,
+        in_stock: inStockVal || undefined, 
+        compatible_only: compatOnlyVal,
+        build: buildContext, page: pageNum, limit: LIMIT,
       });
       setComponents(list); setTotal(t); setInStockTotal(ist);
       hasDataRef.current = true;
       setAvailableBrands(ab); setAvailableSockets(as_); setAvailableVram(av ?? []);
+      setAvailableChipsets(ac ?? []); setAvailableFormFactors(aff ?? []);
       brandsPopulated.current = true;
     } catch (e: unknown) {
       if (e instanceof Error && e.name !== 'AbortError') setError(e.message);
@@ -212,13 +247,13 @@ export function CategoryBrowse() {
   useEffect(() => {
     if (!filterMountedRef.current) {
       filterMountedRef.current = true;
-      fetchRef.current(search, brand, socket, ramType, page, sort, minPrice, maxPrice, inStockOnly, vramGb, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq);
+      fetchRef.current(search, brand, socket, ramType, page, sort, minPrice, maxPrice, inStockOnly, compatibleOnly, vramGb, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq, chipset, formFactor, interfaceType, efficiency, modular, coreCount);
       return () => { filterMountedRef.current = false; };
     }
     const timeout = setTimeout(() => {
       filterResetPageRef.current = true;
       setPage(1);
-      fetchRef.current(search, brand, socket, ramType, 1, sort, minPrice, maxPrice, inStockOnly, vramGb, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq);
+      fetchRef.current(search, brand, socket, ramType, 1, sort, minPrice, maxPrice, inStockOnly, compatibleOnly, vramGb, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq, chipset, formFactor, interfaceType, efficiency, modular, coreCount);
       const params: Record<string, string> = {};
       if (search) params.q = search;
       if (brand) params.brand = brand;
@@ -231,25 +266,33 @@ export function CategoryBrowse() {
       if (maxCapacity) params.max_capacity = maxCapacity;
       if (minFreq) params.min_freq = minFreq;
       if (maxFreq) params.max_freq = maxFreq;
+      if (chipset) params.chipset = chipset;
+      if (formFactor) params.form_factor = formFactor;
+      if (interfaceType) params.interface_type = interfaceType;
+      if (efficiency) params.efficiency = efficiency;
+      if (modular) params.modular = modular;
+      if (coreCount) params.core_count = coreCount;
       if (minPrice) params.min_price = minPrice;
       if (maxPrice) params.max_price = maxPrice;
       if (inStockOnly) params.in_stock = 'true';
+      if (!compatibleOnly) params.compatible_only = 'false';
       if (sort !== 'smart') params.sort = sort;
       setSearchParams(params, { replace: true });
     }, DEBOUNCE_MS);
     return () => clearTimeout(timeout);
-  }, [search, brand, socket, ramType, vramGb, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq, minPrice, maxPrice, sort, inStockOnly, setSearchParams]);
+  }, [search, brand, socket, ramType, vramGb, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq, chipset, formFactor, interfaceType, efficiency, modular, coreCount, minPrice, maxPrice, sort, inStockOnly, compatibleOnly, setSearchParams]);
 
   useEffect(() => {
     if (filterResetPageRef.current) { filterResetPageRef.current = false; prevPageRef.current = page; return; }
     if (prevPageRef.current === page) return;
     prevPageRef.current = page;
-    fetchRef.current(search, brand, socket, ramType, page, sort, minPrice, maxPrice, inStockOnly, vramGb, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq);
+    fetchRef.current(search, brand, socket, ramType, page, sort, minPrice, maxPrice, inStockOnly, compatibleOnly, vramGb, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq, chipset, formFactor, interfaceType, efficiency, modular, coreCount);
   }, [page]);
+
 
   const totalPages = Math.ceil(total / LIMIT);
 
-  const handleAdd = (c: SmartComponent) => { addToBuild(c, slotKey); navigate('/'); };
+  const handleAdd = (c: SmartComponent) => { addToBuild(c, slotKey); navigate('/build'); };
 
   const toggleSort = (key: string) => {
     let newSort: string = 'smart';
@@ -288,10 +331,13 @@ export function CategoryBrowse() {
     setMinWattage(''); setMaxWattage('');
     setMinCapacity(''); setMaxCapacity('');
     setMinFreq(''); setMaxFreq('');
+    setChipset(''); setFormFactor(''); setInterfaceType(''); setEfficiency(''); setModular(''); setCoreCount('');
+    setInStockOnly(false); setCompatibleOnly(true);
   };
   const activeFilters = [
     brand, socket, ramType, vramGb ? String(vramGb) : '', 
-    minPrice, maxPrice, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq
+    minPrice, maxPrice, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq,
+    chipset, formFactor, interfaceType, efficiency, modular, coreCount
   ].filter(Boolean).length;
 
   if (!CATEGORY_ORDER.includes(cat)) {
@@ -328,6 +374,18 @@ export function CategoryBrowse() {
             )}
           </div>
 
+          <label className={styles.stockToggle}>
+            <input type="checkbox" checked={compatibleOnly} onChange={e => setCompatibleOnly(e.target.checked)} />
+            Compatible uniquement
+          </label>
+
+          <label className={styles.stockToggle}>
+            <input type="checkbox" checked={inStockOnly} onChange={e => setInStockOnly(e.target.checked)} />
+            En stock uniquement
+          </label>
+
+          <div className={styles.divider} />
+
           {availableBrands.length > 0 && (
             <div className={styles.filterGroup}>
               <label className={styles.filterLabel}>Marque</label>
@@ -357,6 +415,64 @@ export function CategoryBrowse() {
                 <option value="DDR5">DDR5</option>
               </select>
             </div>
+          )}
+
+          {(cat === 'gpu' || cat === 'motherboard') && availableChipsets.length > 0 && (
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>Chipset</label>
+              <select className={styles.filterSelect} value={chipset} onChange={e => setChipset(e.target.value)}>
+                <option value="">Tous</option>
+                {availableChipsets.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          )}
+
+          {(cat === 'motherboard' || cat === 'case') && availableFormFactors.length > 0 && (
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>Format</label>
+              <select className={styles.filterSelect} value={formFactor} onChange={e => setFormFactor(e.target.value)}>
+                <option value="">Tous</option>
+                {availableFormFactors.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </div>
+          )}
+
+          {cat === 'storage' && (
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>Interface</label>
+              <select className={styles.filterSelect} value={interfaceType} onChange={e => setInterfaceType(e.target.value)}>
+                <option value="">Toutes</option>
+                <option value="NVMe">NVMe</option>
+                <option value="SATA">SATA</option>
+                <option value="HDD">HDD</option>
+              </select>
+            </div>
+          )}
+
+          {cat === 'psu' && (
+            <>
+              <div className={styles.filterGroup}>
+                <label className={styles.filterLabel}>Certification</label>
+                <select className={styles.filterSelect} value={efficiency} onChange={e => setEfficiency(e.target.value)}>
+                  <option value="">Toutes</option>
+                  <option value="80+ Titanium">Titanium</option>
+                  <option value="80+ Platinum">Platinum</option>
+                  <option value="80+ Gold">Gold</option>
+                  <option value="80+ Silver">Silver</option>
+                  <option value="80+ Bronze">Bronze</option>
+                  <option value="80+">80+</option>
+                </select>
+              </div>
+              <div className={styles.filterGroup}>
+                <label className={styles.filterLabel}>Modularité</label>
+                <select className={styles.filterSelect} value={modular} onChange={e => setModular(e.target.value)}>
+                  <option value="">Toutes</option>
+                  <option value="Full">Modulaire</option>
+                  <option value="Semi">Semi-modulaire</option>
+                  <option value="Non">Non-modulaire</option>
+                </select>
+              </div>
+            </>
           )}
 
           {cat === 'gpu' && availableVram.length > 0 && (
@@ -406,12 +522,8 @@ export function CategoryBrowse() {
               <input type="number" className={styles.priceInput} placeholder="Max" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
             </div>
           </div>
-
-          <label className={styles.stockToggle}>
-            <input type="checkbox" checked={inStockOnly} onChange={e => setInStockOnly(e.target.checked)} />
-            En stock uniquement
-          </label>
         </aside>
+
 
         <section className={styles.mainSection}>
           <div className={styles.toolbar}>
@@ -513,7 +625,7 @@ export function CategoryBrowse() {
                         ))}
                         <td className={styles.tdPrice}>
                           <span className={styles.priceVal}>
-                            {c.lowest_price ? `${c.lowest_price.toLocaleString('fr-MA')} MAD` : '—'}
+                            {c.lowest_price ? formatPrice(c.lowest_price) : '—'}
                           </span>
                           <span className={`${styles.stockBadge} ${c.in_stock ? styles.inStock : styles.outStock}`}>
                             {c.in_stock ? 'En stock' : 'Rupture'}

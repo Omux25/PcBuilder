@@ -11,6 +11,7 @@ import { CATEGORY_LABELS, slotKeyToCategory } from '../types';
 import { formatComponentName } from '@shared/component-utils';
 import { SkeletonCard } from '../components/Skeleton';
 import { UI } from '../ui-strings';
+import { formatPrice } from '../utils/format';
 import styles from './Presets.module.css';
 
 interface Props {
@@ -36,14 +37,14 @@ export function Presets({ onLoadPreset }: Props) {
       if (component.is_active) componentIds[category] = component.id;
     }
     onLoadPreset(componentIds);
-    navigate('/');
+    navigate('/build');
   }
 
   if (loading) {
     return (
       <div className={styles.page}>
         <div className={styles.pageHeader}>
-          <Link to="/" className={styles.back}>{UI.presets.back}</Link>
+          <Link to="/build" className={styles.back}>{UI.presets.back}</Link>
           <h1 className={styles.title}>{UI.presets.title}</h1>
         </div>
         <div className={styles.group}>
@@ -66,7 +67,7 @@ export function Presets({ onLoadPreset }: Props) {
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
-        <Link to="/" className={styles.back}>{UI.presets.back}</Link>
+        <Link to="/build" className={styles.back}>{UI.presets.back}</Link>
         <h1 className={styles.title}>{UI.presets.title}</h1>
         <p className={styles.subtitle}>{UI.presets.subtitle}</p>
       </div>
@@ -118,7 +119,7 @@ function PresetCard({ preset, onLoad }: { preset: PresetBuild; onLoad: (p: Prese
 
       <div className={styles.cardFooter}>
         {preset.total_price_estimate && (
-          <span className={styles.price}>~{preset.total_price_estimate.toLocaleString('fr-MA')} MAD</span>
+          <span className={styles.price}>~{formatPrice(preset.total_price_estimate)}</span>
         )}
         <button className={styles.loadBtn} onClick={() => onLoad(preset)} disabled={componentCount === 0}>
           {UI.presets.load}
