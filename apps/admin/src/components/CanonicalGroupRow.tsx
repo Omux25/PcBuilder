@@ -19,6 +19,7 @@ import type { CanonicalGroup, CanonicalGroupListing } from '../api';
 import { getErrorMessage, rejectUnmatchedListings } from '../api';
 import { CATEGORY_LABELS } from '@shared/types';
 import type { ComponentCategory } from '@shared/types';
+import { fmtPriceRange } from '../utils/fmt';
 
 type Confidence = 'high' | 'medium' | 'low' | 'unknown';
 
@@ -194,11 +195,7 @@ export function CanonicalGroupRow({
 
                 {/* Price range */}
                 <td style={{ fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
-                    {group.price_min !== null && group.price_max !== null
-                        ? group.price_min === group.price_max
-                            ? `${group.price_min.toLocaleString('fr-MA')} MAD`
-                            : `${group.price_min.toLocaleString('fr-MA')} – ${group.price_max.toLocaleString('fr-MA')} MAD`
-                        : '—'}
+                    {fmtPriceRange(group.price_min, group.price_max)}
                 </td>
 
                 {/* Actions */}

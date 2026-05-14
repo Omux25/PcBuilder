@@ -19,6 +19,7 @@ import {
     bulkDismissUnmatched,
     getErrorMessage,
 } from '../api';
+import { fmtPrice } from '../utils/fmt';
 import { CATEGORY_ORDER, CATEGORY_LABELS } from '@shared/types';
 import type { ComponentCategory } from '@shared/types';
 
@@ -222,9 +223,7 @@ export function UnknownSection({ onCategoryAssigned, onToast, refreshTrigger }: 
                                         {listing.retailer_name}
                                     </td>
                                     <td style={{ padding: '8px 12px', fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
-                                        {listing.scraped_price !== null
-                                            ? `${Number(listing.scraped_price).toLocaleString('fr-MA')} MAD`
-                                            : '—'}
+                                        {fmtPrice(listing.scraped_price)}
                                     </td>
                                     <td style={{ padding: '8px 12px' }}>
                                         {/* Inline category dropdown — immediate save on change */}

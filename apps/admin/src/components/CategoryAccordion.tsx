@@ -9,7 +9,7 @@
  * Requirements: 1.1, 1.4, 1.5, 1.6, 2.1–2.6, 5.1–5.3, 8.1–8.4
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Link2 } from 'lucide-react';
 import { CanonicalGroupRow } from './CanonicalGroupRow';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -37,6 +37,8 @@ interface Props {
     onAssociateTout: (canonicalNames: string[]) => void;
     onGroupRemoved: (canonicalName: string) => void;
     onToast: (toast: ToastState) => void;
+    hideHeader?: boolean;
+    expandAllGroups?: boolean;
 }
 
 export function CategoryAccordion({
@@ -49,16 +51,25 @@ export function CategoryAccordion({
     onAssociateTout,
     onGroupRemoved,
     onToast,
+    hideHeader = false,
+    expandAllGroups = false,
 }: Props) {
     const [confirmAssociate, setConfirmAssociate] = useState(false);
     const [createLinkTarget, setCreateLinkTarget] = useState<CanonicalGroup | null>(null);
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-
     const label = CATEGORY_LABELS[category as ComponentCategory] ?? category;
+
     const groups = state?.groups ?? [];
     const hasMore = state?.hasMore ?? false;
     const loading = state?.loading ?? false;
     const error = state?.error ?? null;
+
+    // ── Fetch first batch on first open or if open on mount ──────────────────
+    useEffect(() => {
+        if (isOpen && !state && !loading) {
+            fetchGroups(0);
+        }
+    }, [isOpen, state, loading]);
 
     // ── Fetch first batch on first open ──────────────────────────────────────
     async function handleToggle() {
@@ -85,6 +96,10 @@ export function CategoryAccordion({
                 loading: false,
                 error: null,
             });
+            if (expandAllGroups) {
+                const names = newGroups.map(g => g.canonical_name);
+                setExpandedGroups(prev => new Set([...prev, ...names]));
+            }
         } catch (err) {
             onStateChange({ loading: false, error: getErrorMessage(err) });
         }
@@ -146,63 +161,94 @@ export function CategoryAccordion({
     return (
         <>
             {/* ── Header row ──────────────────────────────────────────────────── */}
-            <div
-                onClick={handleToggle}
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '10px 14px',
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    borderRadius: isOpen ? 'var(--radius) var(--radius) 0 0' : 'var(--radius)',
-                    cursor: 'pointer',
-                    marginBottom: isOpen ? 0 : '6px',
-                    userSelect: 'none',
-                }}
-            >
-                <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
-                    {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                </span>
-                <span style={{ fontWeight: 600, fontSize: '14px', flex: 1 }}>
-                    {label}
-                </span>
-                <span style={{ color: 'var(--text-dim)', fontSize: '12px' }}>
-                    {summary.group_count} groupe{summary.group_count !== 1 ? 's' : ''}
-                </span>
-                {eligibleCount > 0 && (
-                    <button
-                        onClick={handleAssociateToutClick}
-                        title={`Associer ${eligibleCount} groupe${eligibleCount !== 1 ? 's' : ''} haute confiance`}
-                        style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '4px 10px',
-                            background: 'var(--success, #22c55e)',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: 'var(--radius)',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            flexShrink: 0,
-                        }}
-                    >
-                        <Link2 size={12} /> Associer tout ({eligibleCount})
-                    </button>
-                )}
-            </div>
+            {!hideHeader && (
+                <div
+                    onClick={handleToggle}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '10px 14px',
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: isOpen ? 'var(--radius) var(--radius) 0 0' : 'var(--radius)',
+                        cursor: 'pointer',
+                        marginBottom: isOpen ? 0 : '6px',
+                        userSelect: 'none',
+                    }}
+                >
+                    <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+                        {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    </span>
+                    <span style={{ fontWeight: 600, fontSize: '14px', flex: 1 }}>
+                        {label}
+                    </span>
+                    <span style={{ color: 'var(--text-dim)', fontSize: '12px' }}>
+                        {summary.group_count} groupe{summary.group_count !== 1 ? 's' : ''}
+                    </span>
+                    {eligibleCount > 0 && (
+                        <button
+                            onClick={handleAssociateToutClick}
+                            title={`Associer ${eligibleCount} groupe${eligibleCount !== 1 ? 's' : ''} haute confiance`}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '4px 10px',
+                                background: 'var(--success, #22c55e)',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: 'var(--radius)',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                flexShrink: 0,
+                            }}
+                        >
+                            <Link2 size={12} /> Associer tout ({eligibleCount})
+                        </button>
+                    )}
+                </div>
+            )}
 
             {/* ── Body ────────────────────────────────────────────────────────── */}
             {isOpen && (
                 <div style={{
                     border: '1px solid var(--border)',
-                    borderTop: 'none',
-                    borderRadius: '0 0 var(--radius) var(--radius)',
+                    borderTop: hideHeader ? '1px solid var(--border)' : 'none',
+                    borderRadius: hideHeader ? 'var(--radius)' : '0 0 var(--radius) var(--radius)',
                     marginBottom: '6px',
                     overflow: 'hidden',
+                    background: 'var(--surface)',
                 }}>
+                    {hideHeader && eligibleCount > 0 && (
+                        <div style={{
+                            padding: '10px 14px',
+                            borderBottom: '1px solid var(--border)',
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            background: 'var(--bg)',
+                        }}>
+                             <button
+                                onClick={handleAssociateToutClick}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '6px 14px',
+                                    background: 'var(--success, #22c55e)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: 'var(--radius)',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                <Link2 size={12} /> Associer tout ({eligibleCount})
+                            </button>
+                        </div>
+                    )}
                     {loading && groups.length === 0 && (
                         <p style={{ padding: '16px', color: 'var(--text-dim)', fontSize: '13px' }}>
                             Chargement...

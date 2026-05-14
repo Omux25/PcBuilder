@@ -6,6 +6,7 @@ import type { PresetComponent } from '@shared/types';
 import { CATEGORY_LABELS } from '@shared/types';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PresetModal } from '../components/PresetModal';
+import { fmtPrice } from '../utils/fmt';
 import styles from './Presets.module.css';
 
 const USE_CASE_LABELS: Record<string, string> = {
@@ -121,7 +122,7 @@ export function Presets() {
                 </div>
 
                 {p.total_price_estimate && (
-                  <div className={styles.price}>~{Number(p.total_price_estimate).toLocaleString('fr-MA')} MAD</div>
+                  <div className={styles.price}>~{fmtPrice(p.total_price_estimate)}</div>
                 )}
               </div>
             ))}

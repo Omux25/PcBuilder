@@ -28,6 +28,7 @@
   --text-dim: #6c7086;
   --radius: 8px;
   --radius-lg: 12px;
+  --transition: all 0.15s ease;
 
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   font-size: 15px;
@@ -57,7 +58,7 @@ button {
   border: none;
   border-radius: var(--radius);
   font: inherit;
-  transition: all .15s;
+  transition: var(--transition);
 }
 
 button:disabled {
@@ -66,7 +67,7 @@ button:disabled {
 }
 
 button:not(:disabled):hover {
-  filter: brightness(1.1);
+  filter: brightness(1.12);
 }
 
 input,
@@ -78,21 +79,24 @@ textarea {
   border: 1px solid var(--border-2);
   border-radius: var(--radius);
   padding: .45rem .7rem;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 2px solid var(--accent-blue);
-  outline-offset: 2px;
+  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(137, 180, 250, 0.15);
 }
 
-input:hover,
-select:hover,
-textarea:hover {
+input:hover:not(:focus),
+select:hover:not(:focus),
+textarea:hover:not(:focus) {
   border-color: var(--accent);
 }
+
+/* ── Tables ───────────────────────────────────────────────────────────────── */
 
 table {
   border-collapse: collapse;
@@ -102,19 +106,24 @@ table {
 th {
   text-align: left;
   color: var(--text-dim);
-  font-weight: 500;
-  font-size: 0.78rem;
+  font-weight: 600;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 0.5rem 0.75rem;
+  letter-spacing: 0.07em;
+  padding: 0.4rem 0.75rem;
   border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 td {
-  padding: 0.6rem 0.75rem;
+  padding: 0.4rem 0.75rem;
   border-bottom: 1px solid var(--border);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   color: var(--text);
+  vertical-align: middle;
 }
 
 tr {
@@ -122,8 +131,10 @@ tr {
 }
 
 tr:hover td {
-  background: var(--surface);
+  background: rgba(137, 180, 250, 0.04);
 }
+
+/* ── Typography ───────────────────────────────────────────────────────────── */
 
 h1 {
   font-size: 1.5rem;
@@ -141,13 +152,15 @@ h3 {
   font-weight: 600;
 }
 
-/* Scrollbar styling */
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -159,51 +172,69 @@ h3 {
   background: var(--border-2);
 }
 
-/* ── Shared page layout ──────────────────────────────────────────────────── */
+/* ── Shared page layout ───────────────────────────────────────────────────── */
+
 .admin-page {
-  padding: 1.5rem;
-  max-width: 1100px;
+  padding: 2rem 2.5rem;
+  max-width: 1400px;
 }
 
-/* ── Shared feedback states ──────────────────────────────────────────────── */
+/* ── Shared feedback states ───────────────────────────────────────────────── */
+
 .admin-loading {
-  padding: 1rem;
+  padding: 3rem;
   color: var(--text-muted);
+  text-align: center;
+  font-size: 0.9rem;
 }
 
 .admin-error {
-  padding: 1rem;
+  padding: 1rem 1.25rem;
   color: var(--danger-soft);
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
 }
 
 .admin-empty {
-  padding: 1rem;
+  padding: 3rem;
   color: var(--text-muted);
+  text-align: center;
+  font-size: 0.9rem;
 }
 
-/* ── Shared status badges ────────────────────────────────────────────────── */
+/* ── Shared status badges ─────────────────────────────────────────────────── */
+
 .badge {
-  display: inline-block;
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .badge-success {
-  background: rgba(166, 227, 161, 0.15);
+  background: rgba(34, 197, 94, 0.12);
   color: var(--success-soft);
+  border: 1px solid rgba(34, 197, 94, 0.2);
 }
 
 .badge-failed {
-  background: rgba(243, 139, 168, 0.15);
+  background: rgba(243, 139, 168, 0.12);
   color: var(--danger-soft);
+  border: 1px solid rgba(243, 139, 168, 0.2);
 }
 
 .badge-partial {
-  background: rgba(249, 226, 175, 0.15);
+  background: rgba(249, 226, 175, 0.12);
   color: var(--warning-soft);
+  border: 1px solid rgba(249, 226, 175, 0.2);
 }
 
 .badge-accent {
@@ -212,38 +243,92 @@ h3 {
   border: 1px solid rgba(137, 180, 250, 0.2);
 }
 
-/* ── Shared page header (title + action button row) ─────────────────────── */
+/* ── Shared page header ───────────────────────────────────────────────────── */
+
 .admin-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.75rem;
+  gap: 1rem;
 }
 
-/* ── Shared add/primary action button ───────────────────────────────────── */
+/* ── Primary action button ────────────────────────────────────────────────── */
+
 .btn-primary {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background: var(--accent-blue);
-  color: var(--bg);
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: #fff;
   font-weight: 600;
   font-size: 0.85rem;
-  padding: 0.45rem 0.9rem;
+  padding: 0.5rem 1.1rem;
   border-radius: var(--radius);
+  border: none;
+  box-shadow: 0 0 14px rgba(99, 102, 241, 0.35), 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: var(--transition);
+  white-space: nowrap;
 }
 
 .btn-primary:hover:not(:disabled) {
-  opacity: 0.85;
+  filter: none;
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.55), 0 4px 10px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
 }
 
-/* ── Shared pagination ───────────────────────────────────────────────────── */
+/* ── Secondary button ─────────────────────────────────────────────────────── */
+
+.admin-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--surface-3);
+  color: var(--text);
+  font-weight: 500;
+  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  transition: var(--transition);
+}
+
+.admin-btn-secondary:hover:not(:disabled) {
+  filter: none;
+  background: var(--border-2);
+  border-color: var(--border-2);
+}
+
+/* ── Danger button ────────────────────────────────────────────────────────── */
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger-soft);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  transition: var(--transition);
+}
+
+.btn-danger:hover:not(:disabled) {
+  filter: none;
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* ── Shared pagination ────────────────────────────────────────────────────── */
+
 .admin-pagination {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  margin-top: 1.5rem;
+  margin-top: 2rem;
   font-size: 0.85rem;
   color: var(--text-muted);
 }
@@ -251,14 +336,32 @@ h3 {
 .admin-pagination button {
   background: var(--surface-3);
   color: var(--text);
-  padding: 0.35rem 0.75rem;
+  padding: 0.4rem 0.9rem;
   border-radius: var(--radius);
   font-size: 0.85rem;
+  border: 1px solid var(--border);
 }
 
-/* ── Shared loading spinner (full-page session restore) ─────────────────── */
+.admin-pagination button:not(:disabled):hover {
+  filter: none;
+  background: var(--border-2);
+}
+
+/* ── Session loading ──────────────────────────────────────────────────────── */
+
 .session-loading {
   padding: 2rem;
   text-align: center;
   color: var(--text-2);
+}
+
+/* ── Spin animation ───────────────────────────────────────────────────────── */
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
 }

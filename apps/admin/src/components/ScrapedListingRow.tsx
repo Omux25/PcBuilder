@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import type { CanonicalGroupListing } from '../api';
 import { getErrorMessage } from '../api';
+import { fmtPrice } from '../utils/fmt';
 
 interface Props {
     listing: CanonicalGroupListing;
@@ -82,9 +83,7 @@ export function ScrapedListingRow({ listing, onReject }: Props) {
                     {listing.retailer_name}
                 </td>
                 <td style={{ fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
-                    {listing.scraped_price !== null
-                        ? `${Number(listing.scraped_price).toLocaleString('fr-MA')} MAD`
-                        : '—'}
+                    {fmtPrice(listing.scraped_price)}
                 </td>
                 <td />
                 <td style={{ textAlign: 'right' }}>
