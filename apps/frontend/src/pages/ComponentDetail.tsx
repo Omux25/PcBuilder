@@ -5,7 +5,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { GitCompare, ShoppingCart, ArrowLeft, Share2, Check, TrendingDown } from 'lucide-react';
+import { GitCompare, ShoppingCart, ArrowLeft, Share2, Check, TrendingDown, ChevronDown } from 'lucide-react';
 import { getComponentBySlug, getPrices, getPriceHistory, getMarketTrends } from '../api';
 import { PriceHistoryChart } from '../components/PriceHistoryChart';
 import type { HistoryPeriod } from '../constants/periods';
@@ -16,6 +16,8 @@ import { useCompare } from '../context/CompareContext';
 import type { Component, PriceOffer, PriceHistoryEntry, ComponentCategory } from '../types';
 import { CATEGORY_LABELS } from '../types';
 import { UI } from '../ui-strings';
+import { formatPrice } from '../utils/format';
+import { formatComponentName } from '@shared/component-utils';
 import styles from './ComponentDetail.module.css';
 
 interface Props {
@@ -84,7 +86,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
       onAddToBuild(component);
     } else {
       // Navigate to home with this component pre-selected via URL
-      navigate(`/?${component.category}=${component.id}`);
+      navigate(`/build?${component.category}=${component.id}`);
     }
     setAddedToBuild(true);
     setTimeout(() => setAddedToBuild(false), 2000);
@@ -157,7 +159,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
         <nav className={styles.breadcrumbs}>
           <Link to="/" className={styles.breadcrumbLink}>Accueil</Link>
           <span className={styles.breadcrumbSep}>/</span>
-          <Link to="/browse" className={styles.breadcrumbLink}>Composants</Link>
+          <Link to="/components" className={styles.breadcrumbLink}>Composants</Link>
           <span className={styles.breadcrumbSep}>/</span>
           <Link to={`/browse/${component.category}`} className={styles.breadcrumbLink}>
             {CATEGORY_LABELS[component.category as ComponentCategory]}
@@ -171,8 +173,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
         </nav>
         <div className={styles.titleRow}>
           <h1 className={styles.pageTitle}>
-            {component.brand && <span className={styles.brand}>{component.brand} </span>}
-            {component.name}
+            {formatComponentName(component)}
           </h1>
           <button className={`${styles.shareBtn} ${copied ? styles.copied : ''}`} onClick={handleShare}>
             {copied ? <Check size={16} /> : <Share2 size={16} />}
@@ -279,7 +280,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
                                 </span>
                               </td>
                               <td>
-                                <span className={styles.priceVal}>{Number(offer.price).toLocaleString('fr-MA')} MAD</span>
+                                <span className={styles.priceVal}>{formatPrice(Number(offer.price))}</span>
                               </td>
                               <td style={{ textAlign: 'right' }}>
                                 <a href={offer.product_url} target="_blank" rel="noopener noreferrer" className={styles.buyBtn}>
@@ -293,7 +294,14 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
                       
                       {inStock.length > 0 && oos.length > 0 && (
                         <button className={styles.oosToggleBtn} onClick={() => setShowOos(v => !v)}>
-                          {showOos ? UI.priceComparison.hideOos : UI.priceComparison.showOos(oos.length)}
+                          <span>{showOos ? UI.priceComparison.hideOos : UI.priceComparison.showOos(oos.length)}</span>
+                          <ChevronDown 
+                            size={14} 
+                            style={{ 
+                              transform: showOos ? 'rotate(180deg)' : 'rotate(0deg)',
+                              transition: 'transform 0.2s' 
+                            }} 
+                          />
                         </button>
                       )}
                     </>

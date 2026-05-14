@@ -9,6 +9,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
 import { getComponents } from '../api';
+import { formatComponentName } from '@shared/component-utils';
 import { CategoryIcon } from '../components/CategoryIcon';
 import type { Component, ComponentCategory } from '../types';
 import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
@@ -139,8 +140,7 @@ export function GlobalSearch() {
                       </div>
                     )}
                     <div className={styles.componentInfo}>
-                      {c.brand && <span className={styles.componentBrand}>{c.brand}</span>}
-                      <span className={styles.componentName}>{c.name}</span>
+                      <span className={styles.componentName}>{formatComponentName(c)}</span>
                       {getKeySpec(c) && <span className={styles.componentSpec}>{getKeySpec(c)}</span>}
                     </div>
                     <span className={styles.componentArrow}>→</span>

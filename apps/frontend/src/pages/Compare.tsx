@@ -16,6 +16,7 @@ import type { Component, PriceOffer, ComponentCategory } from '../types';
 import { CATEGORY_LABELS } from '../types';
 import { MAX_COMPARE } from '../context/CompareContext';
 import { formatComponentName } from '@shared/component-utils';
+import { formatPrice } from '../utils/format';
 import { UI } from '../ui-strings';
 import styles from './Compare.module.css';
 
@@ -72,7 +73,7 @@ const ALL_SPEC_ROWS: Record<string, { label: string; unit?: string; highlight?: 
 };
 
 const CATEGORY_SPECS: Record<string, string[]> = {
-  cpu: ['benchmark_score', 'socket', 'core_count', 'thread_count', 'base_clock_ghz', 'boost_clock_ghz', 'tdp'],
+  cpu: ['socket', 'core_count', 'thread_count', 'base_clock_ghz', 'boost_clock_ghz', 'tdp'],
   gpu: ['benchmark_score', 'chipset', 'vram_gb', 'length_mm', 'tdp'],
   motherboard: ['socket', 'chipset', 'form_factor', 'supported_ram_types', 'max_ram_frequency', 'ram_slots', 'm2_slots'],
   ram: ['capacity_gb', 'ram_type', 'frequency_mhz', 'cas_latency'],
@@ -214,7 +215,7 @@ export function Compare() {
                 <span className={styles.brand}>{item.component.brand}</span>
                 <Link to={`/product/${item.component.slug}`} className={styles.name}>{formatComponentName(item.component)}</Link>
                 <div className={styles.price}>
-                   {item.lowestPrice ? `${item.lowestPrice.toLocaleString('fr-MA')} MAD` : 'Rupture'}
+                   {item.lowestPrice ? formatPrice(item.lowestPrice) : 'Rupture'}
                 </div>
               </div>
             </div>
@@ -237,7 +238,7 @@ export function Compare() {
                     const isLowest = absoluteLowest !== null && item.lowestPrice === absoluteLowest;
                     return (
                         <div key={item.component.id} className={`${styles.valCol} ${isLowest ? styles.isBest : ''}`}>
-                            <span className={styles.primaryPrice}>{item.lowestPrice?.toLocaleString('fr-MA')} MAD</span>
+                            <span className={styles.primaryPrice}>{item.lowestPrice ? formatPrice(item.lowestPrice) : '—'}</span>
                             {isLowest && <CheckCircle2 size={12} className={styles.bestIcon} />}
                         </div>
                     );
@@ -250,7 +251,7 @@ export function Compare() {
                         <div className={styles.offersList}>
                             {item.prices.slice(0, 3).map(p => (
                                 <a key={p.product_url} href={p.product_url} target="_blank" className={styles.offerLink}>
-                                    {p.retailer_name} <span>{p.price.toLocaleString('fr-MA')} MAD</span>
+                                    {p.retailer_name} <span>{formatPrice(p.price)}</span>
                                 </a>
                             ))}
                         </div>
