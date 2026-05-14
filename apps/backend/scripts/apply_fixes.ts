@@ -1,4 +1,4 @@
-import { getSql } from '../src/db/index';
+import { getSql } from '../src/core/db/index';
 import { inferCategory } from '@shared/component-utils';
 
 async function applyFixes() {
@@ -57,7 +57,7 @@ async function applyFixes() {
     // B. Specific category bleeds
     
     // 1. Storage in RAM
-    if (c.category === 'ram' && (name.includes('tb') || name.includes('to') || name.includes('960gb') || name.includes('ssd') || name.includes('nvme'))) {
+    if (c.category === 'ram' && (/\b(\d+)\s*(tb|to)\b/i.test(name) || name.includes('960gb') || name.includes('ssd') || name.includes('nvme'))) {
       if (!name.includes('ddr') && !name.includes('mhz')) {
         console.log(`Fixing RAM -> Storage for ${c.id}: "${c.name}"`);
         await sql`UPDATE components SET category = 'storage' WHERE id = ${c.id}`;

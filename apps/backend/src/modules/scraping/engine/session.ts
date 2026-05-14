@@ -69,16 +69,17 @@ async function runDataQualityPass(sql: SqlFn): Promise<void> {
   `;
 
   // 2. Fix Intel CPU names: add "Core" prefix to bare iX names
-  const bareIntel = await sql`
-    SELECT id, name FROM components
+  // e.g. "i5-12400F" -> "Core i5 12400F", "i7 13700K" -> "Core i7 13700K"
+  const intelFix = await sql`
+    UPDATE components
+    SET name = REGEXP_REPLACE(
+      REGEXP_REPLACE(name, '^([Ii])([0-9])-([0-9])', 'Core i\\2 \\3'),
+      '^([Ii])([0-9])\\s+([0-9])', 'Core i\\2 \\3'
+    )
     WHERE brand = 'Intel' AND (name ~ '^[Ii][0-9][-\s]' OR name ~ '^[Ii][0-9]$')
-  ` as { id: number; name: string }[];
-  for (const c of bareIntel) {
-    const fixed = c.name
-      .replace(/^([Ii])([0-9])-([0-9])/g, 'Core i$2 $3')
-      .replace(/^([Ii])([0-9])\s+([0-9])/g, 'Core i$2 $3');
-    if (fixed !== c.name) await sql`UPDATE components SET name = ${fixed} WHERE id = ${c.id}`;
-  }
+    RETURNING id
+  `;
+  if (intelFix.length > 0) await logger.info(`[QUALITY] Normalized ${intelFix.length} Intel CPU names`);
 
   // 3. Fix Intel CPU names: normalize dash to space (Core i5-14400F → Core i5 14400F)
   await sql`
@@ -118,29 +119,29 @@ async function runDataQualityPass(sql: SqlFn): Promise<void> {
           // 1. Handle price conflicts (delete if keepId already has a price for that retailer/url)
           await tx`
             DELETE FROM prices 
-            WHERE component_id IN ${tx(dupeIds)}
+            WHERE component_id IN (${dupeIds})
               AND (retailer_id, product_url) IN (
                 SELECT retailer_id, product_url FROM prices WHERE component_id = ${keepId}
               )
           `;
-          await tx`UPDATE prices SET component_id = ${keepId} WHERE component_id IN ${tx(dupeIds)}`;
+          await tx`UPDATE prices SET component_id = ${keepId} WHERE component_id IN (${dupeIds})`;
 
           // 2. Handle mapping conflicts
           await tx`
             DELETE FROM scraper_mappings 
-            WHERE component_id IN ${tx(dupeIds)}
+            WHERE component_id IN (${dupeIds})
               AND (retailer_id, product_url) IN (
                 SELECT retailer_id, product_url FROM scraper_mappings WHERE component_id = ${keepId}
               )
           `;
-          await tx`UPDATE scraper_mappings SET component_id = ${keepId} WHERE component_id IN ${tx(dupeIds)}`;
+          await tx`UPDATE scraper_mappings SET component_id = ${keepId} WHERE component_id IN (${dupeIds})`;
 
           // 3. Redirect other relations
-          await tx`UPDATE price_history SET component_id = ${keepId} WHERE component_id IN ${tx(dupeIds)}`;
-          await tx`UPDATE unmatched_listings SET linked_component_id = ${keepId} WHERE linked_component_id IN ${tx(dupeIds)}`;
+          await tx`UPDATE price_history SET component_id = ${keepId} WHERE component_id IN (${dupeIds})`;
+          await tx`UPDATE unmatched_listings SET linked_component_id = ${keepId} WHERE linked_component_id IN (${dupeIds})`;
 
           // 4. Delete duplicates
-          await tx`DELETE FROM components WHERE id IN ${tx(dupeIds)}`;
+          await tx`DELETE FROM components WHERE id IN (${dupeIds})`;
         });
       } catch (err) {
         await logger.error(`[QUALITY] Group merge failed for keepId ${keepId}: ${err instanceof Error ? err.message : String(err)}`);
@@ -282,44 +283,56 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
 
   await logger.info(`[SESSION] Pipeline done — ${updated} prices updated, ${autoMapped} auto-mapped, ${autoCreated} auto-created, ${unmatched} unmatched`);
 
-  // Pre-compute suggestions for all remaining pending listings
-  console.log('\n🔍 Computing suggestions for unmatched listings...');
-  await logger.info('[SESSION] Computing suggestions for unmatched listings...');
-  await runSuggestionPreprocessing();
+  // ── Maintenance & Enrichment Flow ──────────────────────────────────────────
 
-  // Auto-update benchmark scores after each session — keeps scores current
-  // as new components are added to the catalog by the catalog builder.
-  console.log('📈 Updating benchmark scores...');
-  await logger.info('[SESSION] Updating benchmark scores...');
+  // 1. Quality Pass First: Fixes categories/names before suggestions/benchmarks run
+  console.log('🧹 Running data quality pass...');
   try {
-    const { updated: bUpdated } = await importBenchmarks();
-    if (bUpdated > 0) {
-      console.log(`   Updated ${bUpdated} benchmark scores`);
-      await logger.info(`[BENCHMARKS] Updated ${bUpdated} component score(s)`);
-    }
-  } catch { /* non-critical — benchmark import failure must not crash the session */ }
-
-  // Post-pipeline data quality pass — only in production (real DB connection).
-  // Fixes miscategorized components, duplicate entries, Intel name normalization.
-
-
-  if (allPrices.length > 0) {
-    console.log('🧹 Running data quality pass...');
-    try {
-      await runDataQualityPass(sql);
-    } catch (err) {
-      await logger.error(`[SESSION] Data quality pass failed: ${err instanceof Error ? err.message : String(err)}`);
-    }
-
-    console.log('✨ Running autonomous enrichment (Inference + Deep Scraping)...');
-    try {
-      await logger.info('[SESSION] Starting autonomous enrichment...');
-      await runSmartBackfill();
-      await runDeepRetailerBackfill();
-      await logger.info('[SESSION] Autonomous enrichment complete');
-    } catch (err) {
-      await logger.error(`[SESSION] Enrichment failed: ${err instanceof Error ? err.message : String(err)}`);
-    }
+    await runDataQualityPass(sql);
+  } catch (err) {
+    await logger.error(`[SESSION] Data quality pass failed: ${err instanceof Error ? err.message : String(err)}`);
   }
+
+  // 2. Parallel Tasks: Suggestions, Benchmarks, and Smart Inference
+  console.log('🚀 Running parallel maintenance (Suggestions, Benchmarks, Inference)...');
+  await Promise.all([
+    // Suggestion Preprocessing
+    (async () => {
+      try {
+        console.log('🔍 Computing suggestions for unmatched listings...');
+        await runSuggestionPreprocessing();
+      } catch (err) {
+        await logger.error(`[SESSION] Suggestion preprocessing failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    })(),
+
+    // Benchmarks
+    (async () => {
+      try {
+        console.log('📈 Updating benchmark scores...');
+        const { updated: bUpdated } = await importBenchmarks();
+        if (bUpdated > 0) await logger.info(`[BENCHMARKS] Updated ${bUpdated} component score(s)`);
+      } catch (err) {
+        await logger.error(`[SESSION] Benchmark import failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    })(),
+
+    // Smart Backfill (Inference)
+    (async () => {
+      try {
+        console.log('✨ Running smart spec inference...');
+        await runSmartBackfill();
+      } catch (err) {
+        await logger.error(`[SESSION] Smart backfill failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    })()
+  ]);
+
+  // 3. Deep Backfill: Non-blocking (runs in background)
+  console.log('Starting background enrichment for product specs and galleries...');
+  runDeepRetailerBackfill()
+    .then(() => logger.info('[SESSION] Background enrichment task finished successfully'))
+    .catch((err) => logger.error(`[SESSION] Background enrichment task failed: ${err instanceof Error ? err.message : String(err)}`));
 }
+
 

@@ -10,6 +10,6 @@
       "@shared/*": ["../../shared/*"]
     }
   },
-  "include": ["src/**/*", "scraper/**/*", "../../shared/**/*"],
+  "include": ["src/**/*", "scraper/**/*", "scripts/**/*", "../../shared/**/*"],
   "exclude": ["node_modules", "src/**/__tests__/**", "src/__tests__/**"]
 }

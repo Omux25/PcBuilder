@@ -21,8 +21,8 @@ import { getSql, setSql, resetSql } from '../../../core/db/index.js';
 import { logger } from './utils/logger.js';
 import { SCRAPER_CONFIG } from '@shared/scraper-config';
 import {
-  decodeHtml, inferCategory, extractBrand, cleanName, CATEGORY_WORDS,
-  extractCpuSpecs, extractGpuSpecs, extractRamSpecs, extractStorageSpecs,
+  decodeHtml, inferCategory, inferCategoryFromUrl, getCategoryPriority, extractBrand, cleanName, CATEGORY_WORDS,
+  extractCpuSpecs, extractGpuSpecs, extractRamSpecs,
   extractMotherboardSpecs, extractPsuSpecs, extractCoolingSpecs, extractCaseSpecs,
   extractFanSpecs, extractThermalPasteSpecs
 } from '@shared/component-utils';
@@ -143,11 +143,17 @@ export async function aggregate(
 
   // ── HELPERS ────────────────────────────────────────────────────────────────
 
-  function resolveCategory(name: string): ComponentCategory | null {
+  function resolveCategory(name: string, url?: string): ComponentCategory | null {
     for (const rule of adminRules) {
       if (matchesRule(rule, name)) return rule.category as ComponentCategory;
     }
-    return inferCategory(name);
+    const catByName = inferCategory(name);
+    if (catByName) return catByName;
+
+    if (url) {
+      return inferCategoryFromUrl(url);
+    }
+    return null;
   }
 
   // ── PROCESSING ─────────────────────────────────────────────────────────────
@@ -238,7 +244,7 @@ export async function aggregate(
         continue;
       }
 
-      const category = p.manual_category || resolveCategory(scrapedName) || resolveCategory(nameForExtraction) || (p as any).sug_category;
+      const category = p.manual_category || resolveCategory(scrapedName, p.product_url) || resolveCategory(nameForExtraction, p.product_url) || (p as any).sug_category;
 
       if (!category) {
         unmatchedListingsToUpsert.push({
@@ -273,8 +279,10 @@ export async function aggregate(
 
       // Step 3: DNA Match against existing components
       const catComponents = componentsByCategory.get(resolvedCategory) || [];
+      const sourceDna = extractDna(nameForExtraction, resolvedCategory);
+      
       const dnaMatch = catComponents.find(c => {
-        const { score } = scoreDnaMatch(nameForExtraction, c.brand ? `${c.brand} ${c.name}` : c.name, resolvedCategory);
+        const { score } = scoreDnaMatch(sourceDna, c.dna, resolvedCategory);
         const threshold = SCRAPER_CONFIG.PARTIAL_MATCH_CATEGORIES.includes(resolvedCategory) ? SCRAPER_CONFIG.PARTIAL_THRESHOLD : SCRAPER_CONFIG.PERFECT_THRESHOLD;
         return score >= threshold;
       });
@@ -290,8 +298,9 @@ export async function aggregate(
           for (const otherCat of MAJOR_CATEGORIES) {
             if (otherCat === resolvedCategory) continue;
             const otherCatComponents = componentsByCategory.get(otherCat) || [];
+            const otherCatSourceDna = extractDna(nameForExtraction, otherCat as any);
             const hasMatchInOtherCat = otherCatComponents.some(oc => {
-              const { score } = scoreDnaMatch(nameForExtraction, oc.brand ? `${oc.brand} ${oc.name}` : oc.name, otherCat, true /* skipBrandCheck for bundles */);
+              const { score } = scoreDnaMatch(otherCatSourceDna, oc.dna, otherCat as any, true /* skipBrandCheck for bundles */);
               return score >= 1.0;
             });
             if (hasMatchInOtherCat) {
@@ -357,6 +366,9 @@ export async function aggregate(
       await logger.error(`[PIPELINE] Classification failed for ${p.product_url}: ${err instanceof Error ? err.message : String(err)}`);
     }
     classifiedCount++;
+    if (classifiedCount % 100 === 0) {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
     await onProgress?.(classifiedCount, prices.length);
   }
 
