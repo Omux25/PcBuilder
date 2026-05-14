@@ -50,9 +50,14 @@ async function fixPollutions() {
       const nameToUse = m.original_name || c.name;
       const specs = c.category === 'ram' ? extractRamSpecs(nameToUse) : extractStorageSpecs(nameToUse);
       
-      const specKey = c.category === 'ram' 
-        ? `${specs.capacity_gb}|${specs.ram_type}|${specs.frequency_mhz}`
-        : `${specs.capacity_gb}|${(specs as any).interface_type}`;
+      let specKey: string;
+      if (c.category === 'ram') {
+        const rs = specs as ReturnType<typeof extractRamSpecs>;
+        specKey = `${rs.capacity_gb}|${rs.ram_type}|${rs.frequency_mhz}`;
+      } else {
+        const ss = specs as ReturnType<typeof extractStorageSpecs>;
+        specKey = `${ss.capacity_gb}|${ss.interface_type}`;
+      }
         
       const list = groupsBySpec.get(specKey) || [];
       list.push(m);
@@ -88,9 +93,10 @@ async function fixPollutions() {
       existingSlugs.add(uniqueSlug);
 
       try {
+        const ramSpecs = c.category === 'ram' ? (specs as ReturnType<typeof extractRamSpecs>) : null;
         const [newComp] = await sql`
           INSERT INTO components (name, brand, category, capacity_gb, slug, is_active, image_url, image_urls, ram_type, frequency_mhz)
-          SELECT ${newCleanName}, brand, category, ${specs.capacity_gb}, ${uniqueSlug}, true, image_url, image_urls, ${c.category === 'ram' ? specs.ram_type : null}, ${c.category === 'ram' ? specs.frequency_mhz : null}
+          SELECT ${newCleanName}, brand, category, ${specs.capacity_gb}, ${uniqueSlug}, true, image_url, image_urls, ${ramSpecs?.ram_type}, ${ramSpecs?.frequency_mhz}
           FROM components WHERE id = ${c.component_id}
           RETURNING id
         ` as { id: number }[];
@@ -112,12 +118,13 @@ async function fixPollutions() {
     const targetSpecs = c.category === 'ram' ? extractRamSpecs(sampleForTarget.original_name) : extractStorageSpecs(sampleForTarget.original_name);
     const newOfficialName = cleanName(sampleForTarget.original_name || c.name, c.brand, c.category);
     
+    const targetRamSpecs = c.category === 'ram' ? (targetSpecs as ReturnType<typeof extractRamSpecs>) : null;
     await sql`
       UPDATE components 
       SET name = ${newOfficialName}, 
           capacity_gb = ${targetSpecs.capacity_gb},
-          ram_type = ${c.category === 'ram' ? targetSpecs.ram_type : null},
-          frequency_mhz = ${c.category === 'ram' ? targetSpecs.frequency_mhz : null}
+          ram_type = ${targetRamSpecs?.ram_type ?? null},
+          frequency_mhz = ${targetRamSpecs?.frequency_mhz ?? null}
       WHERE id = ${c.component_id}
     `;
     console.log(`   Updated original component ID ${c.component_id} to ${targetSpecKey} (${newOfficialName}).`);

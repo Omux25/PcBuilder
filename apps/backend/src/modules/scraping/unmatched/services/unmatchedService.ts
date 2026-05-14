@@ -130,7 +130,7 @@ export class UnmatchedService {
   async reprocessSuggestions() {
     (async () => {
       try {
-        const { reprocessUnmatched } = await import('../../../scraper/aggregator.js');
+        const { reprocessUnmatched } = await import('../../engine/aggregator.js');
         await reprocessUnmatched();
         await runSuggestionPreprocessing(true);
       } catch (err: any) {
@@ -140,7 +140,7 @@ export class UnmatchedService {
   }
 
   async autoBuild() {
-    const { reprocessUnmatched } = await import('../../../scraper/aggregator.js');
+    const { reprocessUnmatched } = await import('../../engine/aggregator.js');
     reprocessUnmatched().catch((err: any) =>
       logger.error(`[CATALOG] Auto-build failed: ${err.message}`)
     );

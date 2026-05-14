@@ -12,17 +12,17 @@
  */
 
 import { componentSlug, generateUniqueSlug } from '@shared/slugify';
-import { scoreDnaMatch, type CatalogComponent } from '../../../../core/utils/componentMatcher.js';
+import { scoreDnaMatch, type CatalogComponent } from '../../../core/utils/componentMatcher.js';
 import { logger } from './utils/logger.js';
-import { getSql, setSql, resetSql } from '../../../../core/db/index.js';
+import { getSql, setSql, resetSql } from '../../../core/db/index.js';
 import {
-  decodeHtml, inferCategory, extractBrand, cleanName, CATEGORY_WORDS,
+  decodeHtml, inferCategory, inferCategoryFromUrl, extractBrand, cleanName, CATEGORY_WORDS,
   extractCpuSpecs, extractGpuSpecs, extractRamSpecs,
   extractMotherboardSpecs, extractPsuSpecs, extractCoolingSpecs, extractCaseSpecs,
   extractFanSpecs, extractThermalPasteSpecs
 } from '@shared/component-utils';
 import { ComponentCategory } from '@shared/types';
-import { loadAdminRules, matchesRule, type KeywordRule } from '../rules/services/keywordRulesLegacy.js';
+import { loadAdminRules, matchesRule, type KeywordRule } from '../services/keywordRulesService.js';
 
 // Re-export DI helpers so tests can inject a mock SQL function.
 export { setSql, resetSql };
@@ -221,13 +221,14 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         newId = rows[0]?.id;
       } else if (category === 'ram') {
         const specs = extractRamSpecs(nameForExtraction);
-        const ramType = specs?.ram_type ?? (nameForExtraction.toLowerCase().includes('ddr5') ? 'DDR5' : 'DDR4');
-        const freqMhz = specs?.frequency_mhz ?? (ramType === 'DDR5' ? 4800 : 3200);
-        // Extract kit_count and cas_latency from raw scraped name — cleanName() strips (2x8GB) and CL notation
         const rawSpecs = extractRamSpecs(scrapedName);
+        
+        const ramType = specs?.ram_type || rawSpecs.ram_type || (nameForExtraction.toLowerCase().includes('ddr5') ? 'DDR5' : (nameForExtraction.toLowerCase().includes('ddr4') ? 'DDR4' : null));
+        const freqMhz = specs?.frequency_mhz || rawSpecs.frequency_mhz || null;
         const kitCount = rawSpecs.kit_count ?? specs?.kit_count ?? 1;
         const casLatency = rawSpecs.cas_latency ?? specs?.cas_latency ?? null;
         const capacityGb = rawSpecs.capacity_gb ?? specs?.capacity_gb ?? null;
+
         const rows = await sql`
           INSERT INTO components (slug, name, brand, category, ram_type, frequency_mhz, kit_count, cas_latency, capacity_gb, image_url, is_active)
           VALUES (${slug}, ${cleanedName}, ${brand}, 'ram', ${ramType}, ${freqMhz}, ${kitCount}, ${casLatency}, ${capacityGb}, ${listing.image_url}, true)

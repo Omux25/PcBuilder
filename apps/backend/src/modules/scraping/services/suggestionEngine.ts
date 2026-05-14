@@ -28,6 +28,7 @@ import {
     extractCaseSpecs,
     decodeHtml,
     inferCategory as resolveCategory,
+    inferCategoryFromUrl,
 } from '@shared/component-utils';
 import { SCRAPER_CONFIG } from '@shared/scraper-config';
 import type { ComponentCategory } from '@shared/types';
@@ -441,6 +442,7 @@ export function suggestForListing(
     scrapedName: string,
     catalog: CatalogComponent[],
     adminRules?: KeywordRule[],
+    url?: string,
 ): Suggestion {
     // Decode HTML entities first (retailers store names with &#8211;, &Prime;, etc.)
     const name = decodeHtml(scrapedName);
@@ -448,7 +450,7 @@ export function suggestForListing(
     const canonical_name = deriveCanonicalName(name, brand);
 
     // Step 1.5: Infer category FIRST to avoid cross-pollination
-    const inferredCategory = resolveCategory(name) ?? resolveCategory(canonical_name);
+    const inferredCategory = resolveCategory(name) ?? resolveCategory(canonical_name) ?? (url ? inferCategoryFromUrl(url) : null);
 
     // If it's a build, stop here and return null category
     if (inferredCategory === 'build') {
@@ -540,13 +542,13 @@ export function suggestForListing(
  * Requirements: 4.5
  */
 export function processBatch(
-    listings: Array<{ id: number; scraped_name: string }>,
+    listings: Array<{ id: number; scraped_name: string; product_url?: string }>,
     catalog: CatalogComponent[],
     adminRules?: KeywordRule[],
 ): Map<number, Suggestion> {
     const results = new Map<number, Suggestion>();
     for (const listing of listings) {
-        results.set(listing.id, suggestForListing(listing.scraped_name, catalog, adminRules));
+        results.set(listing.id, suggestForListing(listing.scraped_name, catalog, adminRules, listing.product_url));
     }
     return results;
 }

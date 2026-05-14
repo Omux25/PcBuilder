@@ -62,7 +62,7 @@ export async function runSuggestionPreprocessing(force = false): Promise<Preproc
   // If force=true (e.g. triggered by a new keyword rule), reprocess ALL pending listings
   // so the new rule is applied immediately even to listings with a cached suggestion.
   const pending = (await sql`
-    SELECT ul.id, ul.scraped_name, ul.manual_category
+    SELECT ul.id, ul.scraped_name, ul.product_url, ul.manual_category
     FROM unmatched_listings ul
     LEFT JOIN unmatched_suggestions us ON us.unmatched_listing_id = ul.id
     WHERE ul.status = 'pending'
@@ -74,14 +74,15 @@ export async function runSuggestionPreprocessing(force = false): Promise<Preproc
         OR us.computed_at < NOW() - INTERVAL '24 hours'
       )
     ORDER BY ul.scraped_at DESC
-  `) as { id: number; scraped_name: string; manual_category: string | null }[];
+  `) as { id: number; scraped_name: string; product_url: string; manual_category: string | null }[];
 
   if (pending.length === 0) return { processed, skipped };
 
   // Step 3: Run batch suggestion (pure, no DB queries inside)
   const suggestions = processBatch(pending, catalog, adminRules);
 
-  // Step 4: Upsert results into unmatched_suggestions
+  // Step 4: Batch upsert results into unmatched_suggestions
+  const upsertRows: any[] = [];
   for (const listing of pending) {
     const suggestion = suggestions.get(listing.id);
     if (!suggestion) {
@@ -89,50 +90,45 @@ export async function runSuggestionPreprocessing(force = false): Promise<Preproc
       continue;
     }
 
-    // If there is a manual category, override the suggestion's category and boost confidence
     if (listing.manual_category) {
       suggestion.category = listing.manual_category as any;
       suggestion.confidence = 'high';
     }
 
+    upsertRows.push({
+      unmatched_listing_id: listing.id,
+      category: suggestion.category || null,
+      confidence: suggestion.confidence,
+      canonical_name: suggestion.canonical_name || listing.scraped_name,
+      brand: suggestion.brand || null,
+      existing_component_id: suggestion.existing_component_id || null,
+      specs_hint: suggestion.specs_hint || null,
+      computed_at: new Date()
+    });
+  }
+
+  if (upsertRows.length > 0) {
     try {
-      await sql`
-        INSERT INTO unmatched_suggestions (
-          unmatched_listing_id,
-          category,
-          confidence,
-          canonical_name,
-          brand,
-          existing_component_id,
-          specs_hint,
-          computed_at
-        )
-        VALUES (
-          ${listing.id},
-          ${suggestion.category || null},
-          ${suggestion.confidence},
-          ${suggestion.canonical_name || listing.scraped_name},
-          ${suggestion.brand || null},
-          ${suggestion.existing_component_id || null},
-          ${suggestion.specs_hint ? JSON.stringify(suggestion.specs_hint) : null},
-          NOW()
-        )
-        ON CONFLICT (unmatched_listing_id)
-        DO UPDATE SET
-          category = EXCLUDED.category,
-          confidence = EXCLUDED.confidence,
-          canonical_name = EXCLUDED.canonical_name,
-          brand = EXCLUDED.brand,
-          existing_component_id = EXCLUDED.existing_component_id,
-          specs_hint = EXCLUDED.specs_hint,
-          computed_at = NOW()
-      `;
-      processed++;
+      const BATCH = 200;
+      for (let i = 0; i < upsertRows.length; i += BATCH) {
+        const batch = upsertRows.slice(i, i + BATCH);
+        await sql`
+          INSERT INTO unmatched_suggestions ${sql(batch)}
+          ON CONFLICT (unmatched_listing_id)
+          DO UPDATE SET
+            category = EXCLUDED.category,
+            confidence = EXCLUDED.confidence,
+            canonical_name = EXCLUDED.canonical_name,
+            brand = EXCLUDED.brand,
+            existing_component_id = EXCLUDED.existing_component_id,
+            specs_hint = EXCLUDED.specs_hint,
+            computed_at = EXCLUDED.computed_at
+        `;
+        processed += batch.length;
+      }
     } catch (err) {
-      // Log and continue — never abort the batch for a single failure
-      skipped++;
       await logger.error(
-        `[SUGGESTION-PREPROCESSOR] Failed to upsert suggestion for listing ${listing.id}: ${err instanceof Error ? err.message : String(err)}`,
+        `[SUGGESTION-PREPROCESSOR] Bulk upsert failed: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
   }
