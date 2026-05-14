@@ -259,6 +259,24 @@
   flex: 1;
 }
 
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-2);
+  cursor: pointer;
+  user-select: none;
+  height: 100%;
+}
+
+.checkboxLabel input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
+}
+
 .filterLabel {
   font-size: 0.62rem;
   font-weight: 700;

@@ -18,6 +18,7 @@ import { formatComponentName } from '@shared/component-utils';
 import { CATEGORY_LABELS } from '../types';
 import { CategoryIcon } from './CategoryIcon';
 import { UI } from '../ui-strings';
+import { formatPrice } from '../utils/format';
 import styles from './ComponentPicker.module.css';
 
 interface Props {
@@ -53,12 +54,14 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
   const [maxPrice, setMaxPrice] = useState('');
   const [sort, setSort] = useState<SortOption>('smart');
   const [showFilters, setShowFilters] = useState(false);
+  const [compatibleOnly, setCompatibleOnly] = useState(true);
 
   const [allComponents, setAllComponents] = useState<SmartComponent[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
 
   // Available filter options (derived from first full fetch)
   const [availableBrands, setAvailableBrands] = useState<string[]>([]);
@@ -96,6 +99,7 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
     socketFilter: string,
     ramTypeFilter: string,
     pageNum: number,
+    compatOnly: boolean,
   ) => {
     setLoading(true); // always — prevents stale results flashing
     setError(null);
@@ -106,10 +110,12 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
       brand: brandFilter || undefined,
       socket: socketFilter || undefined,
       ram_type: ramTypeFilter || undefined,
+      compatible_only: compatOnly,
       build: buildContext,
       page: pageNum,
       limit: PAGE_SIZE,
     })
+
       .then(({ components: list, total: t }) => {
         setAllComponents(list);
         setTotal(t);
@@ -139,6 +145,17 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
     if (sort === 'smart') return list; // already sorted by backend
 
     return list.sort((a, b) => {
+      // 1. Compatibility priority (Compatible > Unknown > Incompatible)
+      const rank = (c: SmartComponent) => {
+        if (c.compatibility === 'compatible') return 0;
+        if (c.compatibility === 'unknown') return 1;
+        return 2;
+      };
+      const rankA = rank(a);
+      const rankB = rank(b);
+      if (rankA !== rankB) return rankA - rankB;
+
+      // 2. Field-specific sort
       if (sort === 'price_asc') {
         if (a.lowest_price == null && b.lowest_price == null) return 0;
         if (a.lowest_price == null) return 1;
@@ -154,6 +171,7 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
       if (sort === 'name_asc') return a.name.localeCompare(b.name);
       return 0;
     });
+
   }, [allComponents, sort, minPrice, maxPrice]);
 
   // ── Debounced search + filter changes ─────────────────────────────────────
@@ -162,15 +180,15 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       setPage(1);
-      fetchComponents(search, brand, socket, ramType, 1);
+      fetchComponents(search, brand, socket, ramType, 1, compatibleOnly);
     }, DEBOUNCE_MS);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [search, brand, socket, ramType, open, fetchComponents]);
+  }, [search, brand, socket, ramType, compatibleOnly, open, fetchComponents]);
 
   // ── Load on open ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (open) {
-      fetchComponents(search, brand, socket, ramType, page);
+      fetchComponents(search, brand, socket, ramType, page, compatibleOnly);
       setTimeout(() => searchRef.current?.focus(), 50);
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -205,7 +223,7 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
 
   function handlePageChange(newPage: number) {
     setPage(newPage);
-    fetchComponents(search, brand, socket, ramType, newPage);
+    fetchComponents(search, brand, socket, ramType, newPage, compatibleOnly);
   }
 
   return (
@@ -289,6 +307,17 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
           {/* Advanced filters */}
           {showFilters && (
             <div className={styles.filterPanel}>
+              <div className={styles.filterGroup}>
+                <label className={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={compatibleOnly}
+                    onChange={e => setCompatibleOnly(e.target.checked)}
+                  />
+                  Compatible uniquement
+                </label>
+              </div>
+
               {/* Brand */}
               {availableBrands.length > 0 && (
                 <div className={styles.filterGroup}>
@@ -467,7 +496,7 @@ function ComponentRow({
 
           {hasPrice ? (
             <span className={styles.price}>
-              {component.lowest_price!.toLocaleString('fr-MA')} MAD
+              {formatPrice(component.lowest_price!)}
             </span>
           ) : (
             <span className={styles.noPrice}>—</span>

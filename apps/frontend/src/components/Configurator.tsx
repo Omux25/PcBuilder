@@ -18,6 +18,7 @@ import { useBuild } from '../context/BuildContext';
 import { calculateBuildTotalPrice } from '../utils/buildUtils';
 import { encodeBuildToUrl } from '../utils/buildUrl';
 import { getSpecLine } from '../utils/specLine';
+import { formatPrice } from '../utils/format';
 import styles from './Configurator.module.css';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -244,7 +245,7 @@ export function Configurator() {
                   {selected ? (
                     <>
                       <span className={styles.priceVal}>
-                        {selected.lowest_price ? `${selected.lowest_price.toLocaleString('fr-MA')} MAD` : '—'}
+                        {selected.lowest_price ? formatPrice(selected.lowest_price) : '—'}
                       </span>
                       <button
                         className={styles.actionBtn}
@@ -272,7 +273,7 @@ export function Configurator() {
         <div className={styles.totalCard}>
           <div className={styles.totalInfo}>
             <span className={styles.totalLabel}>Total estimé</span>
-            <span className={styles.totalPrice}>{totalPrice.toLocaleString('fr-MA')} MAD</span>
+            <span className={styles.totalPrice}>{formatPrice(totalPrice)}</span>
           </div>
           {hasComponents && (
             <div className={styles.footerActions}>
