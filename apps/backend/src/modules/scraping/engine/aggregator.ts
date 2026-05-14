@@ -148,10 +148,11 @@ export async function aggregate(
       if (matchesRule(rule, name)) return rule.category as ComponentCategory;
     }
     const catByName = inferCategory(name);
-    if (catByName) return catByName;
+    if (catByName && DB_CATEGORIES.has(catByName)) return catByName as ComponentCategory;
 
     if (url) {
-      return inferCategoryFromUrl(url);
+      const catByUrl = inferCategoryFromUrl(url);
+      if (catByUrl && DB_CATEGORIES.has(catByUrl)) return catByUrl as ComponentCategory;
     }
     return null;
   }
@@ -253,9 +254,7 @@ export async function aggregate(
           scraped_name: scrapedName,
           scraped_price: p.price,
           image_url: p.image_url ?? null,
-          image_urls: (p.image_urls && p.image_urls.length > 0) 
-            ? `{${p.image_urls.map(u => `"${u.replace(/"/g, '\\"')}"`).join(',')}}`
-            : null
+          image_urls: (p.image_urls && p.image_urls.length > 0) ? p.image_urls : null
         });
         unmatched++;
         continue;
@@ -475,8 +474,8 @@ export async function aggregate(
         try {
           // Strip the _pending helper before sending to DB
           const dbRows = batch.map(({ _pending, ...rest }) => rest);
-          const inserted = await sql`
-            INSERT INTO components ${sql(dbRows)}
+          const inserted = await (sql as any)`
+            INSERT INTO components ${ (sql as any)(dbRows) }
             ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
             RETURNING id, slug
           ` as { id: number; slug: string }[];
@@ -501,7 +500,7 @@ export async function aggregate(
           for (const row of batch) {
             try {
               const { _pending: item, ...dbRow } = row;
-              const inserted2 = await sql`INSERT INTO components ${sql([dbRow])} ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name RETURNING id, slug` as { id: number; slug: string }[];
+              const inserted2 = await (sql as any)`INSERT INTO components ${ (sql as any)([dbRow]) } ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name RETURNING id, slug` as { id: number; slug: string }[];
               if (inserted2[0]) {
                 const newComp = { id: inserted2[0].id, name: item.cleanedName, brand: item.brand, category: item.category, dna: extractDna(item.cleanedName, item.category), slug: inserted2[0].slug };
                 existingComponents.push(newComp);
@@ -558,7 +557,7 @@ export async function aggregate(
         for (let i = 0; i < mappingRows.length; i += 500) {
           const batch = mappingRows.slice(i, i + 500);
           await tx`
-            INSERT INTO scraper_mappings ${tx(batch)}
+            INSERT INTO scraper_mappings ${ (tx as any)(batch) }
             ON CONFLICT (retailer_id, product_url) DO UPDATE SET
               component_id = EXCLUDED.component_id,
               product_identifier = EXCLUDED.product_identifier
@@ -576,7 +575,7 @@ export async function aggregate(
         for (let i = 0; i < dedupedUnmatched.length; i += 500) {
           const batch = dedupedUnmatched.slice(i, i + 500);
           await tx`
-            INSERT INTO unmatched_listings ${tx(batch)}
+            INSERT INTO unmatched_listings ${ (tx as any)(batch) }
             ON CONFLICT (retailer_id, product_url) DO UPDATE SET
               scraped_name = EXCLUDED.scraped_name,
               scraped_price = EXCLUDED.scraped_price,
@@ -646,7 +645,7 @@ export async function aggregate(
           const batch = priceRows.slice(i, i + BATCH);
           try {
             await tx`
-              INSERT INTO prices ${tx(batch.map(r => ({ ...r, last_updated: new Date() })))}
+              INSERT INTO prices ${ (tx as any)(batch.map(r => ({ ...r, last_updated: new Date() }))) }
               ON CONFLICT (component_id, retailer_id, product_url)
               DO UPDATE SET
                 price = EXCLUDED.price,
@@ -668,7 +667,7 @@ export async function aggregate(
           for (let i = 0; i < historyRows.length; i += BATCH) {
             const batch = historyRows.slice(i, i + BATCH);
             try {
-              await tx`INSERT INTO price_history ${tx(batch)}`;
+              await tx`INSERT INTO price_history ${ (tx as any)(batch) }`;
             } catch { /* non-critical — history failure must not roll back prices */ }
           }
         }
