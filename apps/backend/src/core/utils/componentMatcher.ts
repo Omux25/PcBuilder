@@ -519,6 +519,9 @@ export function scoreDnaMatch(productName: string, catalogName: string, category
   score: number;
   dnaTokens: string[];
 } {
+  if (typeof productName !== 'string' || typeof catalogName !== 'string') {
+    return { score: 0, dnaTokens: [] };
+  }
   if (!productName || !catalogName) return { score: 0, dnaTokens: [] };
 
   // 1. MPN Veto Logic (Highest Precision Guardrail)
