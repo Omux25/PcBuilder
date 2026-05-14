@@ -1,18 +1,13 @@
 import { Link } from 'react-router-dom';
 import { 
-  Cpu, 
   Gamepad2, 
   Zap, 
   History, 
   ShieldCheck, 
   LayoutGrid, 
-  ChevronRight,
-  HardDrive,
-  Monitor,
-  MousePointer2,
-  Settings
+  ChevronRight
 } from 'lucide-react';
-import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
+import { CATEGORY_LABELS } from '../types';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { UI } from '../ui-strings';
 import styles from './Home.module.css';
