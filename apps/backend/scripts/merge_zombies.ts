@@ -9,13 +9,13 @@ async function main() {
   console.log('🚀 Starting Zombie Component Merger...');
 
   // 1. Load all components with mapping counts
-  const components = await sql`
+  const components = (await sql`
     SELECT c.id, c.name, c.brand, c.category, COUNT(sm.id) as mapping_count
     FROM components c
     LEFT JOIN scraper_mappings sm ON sm.component_id = c.id
     GROUP BY c.id, c.name, c.brand, c.category
     ORDER BY c.id ASC
-  `;
+  `) as any[];
 
   console.log(`Analyzing ${components.length} components for duplicates...`);
 

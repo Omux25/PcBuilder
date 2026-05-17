@@ -18,14 +18,14 @@ async function deepAudit() {
     const ramInPsu = await sql`SELECT id, name FROM components WHERE category = 'psu' AND name ~* 'DDR[45]|RAM|Mémoire'`;
     if (ramInPsu.length > 0) {
         console.log(`⚠️  Moving ${ramInPsu.length} RAM modules found in PSU category...`);
-        await sql`UPDATE components SET category = 'ram' WHERE id IN ${sql(ramInPsu.map(r => r.id))}`;
+        await sql`UPDATE components SET category = 'ram' WHERE id IN ${sql(ramInPsu.map((r: any) => r.id))}`;
     }
 
     // 3. PSUs in Cooling (Common)
     const psuInCooling = await sql`SELECT id, name FROM components WHERE category = 'cooling' AND name ~* 'Gold|Platinum|Bronze|Modular|[56789]00W'`;
     if (psuInCooling.length > 0) {
         console.log(`⚠️  Moving ${psuInCooling.length} PSUs found in Cooling category...`);
-        await sql`UPDATE components SET category = 'psu' WHERE id IN ${sql(psuInCooling.map(r => r.id))}`;
+        await sql`UPDATE components SET category = 'psu' WHERE id IN ${sql(psuInCooling.map((r: any) => r.id))}`;
     }
 
     // 4. Fans in Cooling (Kits vs single fans)
@@ -33,7 +33,7 @@ async function deepAudit() {
     const packsInCooling = await sql`SELECT id, name FROM components WHERE category = 'cooling' AND name ~* 'Pack of|Pack de|3-Pack|2-Pack'`;
     if (packsInCooling.length > 0) {
         console.log(`⚠️  Moving ${packsInCooling.length} fan packs found in Cooling to Fan category...`);
-        await sql`UPDATE components SET category = 'fan' WHERE id IN ${sql(packsInCooling.map(r => r.id))}`;
+        await sql`UPDATE components SET category = 'fan' WHERE id IN ${sql(packsInCooling.map((r: any) => r.id))}`;
     }
 
     // 5. Final Report of suspicious items that need manual check

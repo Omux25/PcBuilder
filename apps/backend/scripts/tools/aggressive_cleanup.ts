@@ -12,7 +12,7 @@ async function aggressiveCleanup() {
     `;
     if (coolingInPsu.length > 0) {
         console.log(`❄️ Moving ${coolingInPsu.length} cooling items from PSU to Cooling...`);
-        await sql`UPDATE components SET category = 'cooling' WHERE id IN ${sql(coolingInPsu.map(r => r.id))}`;
+        await sql`UPDATE components SET category = 'cooling' WHERE id IN ${sql(coolingInPsu.map((r: any) => r.id))}`;
     }
 
     // 2. Move anything with "Boitier", "Chassis", "Tower", "Glass" to case
@@ -23,7 +23,7 @@ async function aggressiveCleanup() {
     `;
     if (casesInPsu.length > 0) {
         console.log(`📦 Moving ${casesInPsu.length} cases/bundles from PSU to Case...`);
-        await sql`UPDATE components SET category = 'case' WHERE id IN ${sql(casesInPsu.map(r => r.id))}`;
+        await sql`UPDATE components SET category = 'case' WHERE id IN ${sql(casesInPsu.map((r: any) => r.id))}`;
     }
     
     // 3. Specific fix for "Elite" series that are actually cases (repeating for thoroughness)
@@ -34,7 +34,7 @@ async function aggressiveCleanup() {
     `;
     if (eliteCases.length > 0) {
         console.log(`📦 Moving ${eliteCases.length} Elite cases to Case category...`);
-        await sql`UPDATE components SET category = 'case' WHERE id IN ${sql(eliteCases.map(r => r.id))}`;
+        await sql`UPDATE components SET category = 'case' WHERE id IN ${sql(eliteCases.map((r: any) => r.id))}`;
     }
 
     console.log('✅ Aggressive cleanup complete.');

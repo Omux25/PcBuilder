@@ -10,7 +10,7 @@
  */
 
 import { sql } from 'bun';
-import { componentSlug, generateUniqueSlug } from './src/utils/slugify';
+import { componentSlug, generateUniqueSlug } from '@shared/slugify';
 
 async function backfill() {
   console.log('Starting slug backfill...');

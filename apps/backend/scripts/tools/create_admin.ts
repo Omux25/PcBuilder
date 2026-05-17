@@ -3,7 +3,7 @@
  * Usage: bun scripts/tools/create_admin.ts <username> <password>
  */
 import bcrypt from 'bcrypt';
-import { getSql } from '../../src/db/index.js';
+import { getSql } from '../../src/core/db/index.js';
 
 const [username, password] = process.argv.slice(2);
 

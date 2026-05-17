@@ -7,9 +7,9 @@
  *   bun run scripts/tools/backfill_images.ts
  */
 import { sql as bunSql } from 'bun';
-import { UltraPcScraper } from '../../scraper/scrapers/ultrapcScraper.js';
-import { SetupGameScraper } from '../../scraper/scrapers/setupgameScraper.js';
-import { NextLevelScraper } from '../../scraper/scrapers/nextlevelScraper.js';
+import { UltraPcScraper } from '../../src/modules/scraping/engine/scrapers/ultrapcScraper.js';
+import { SetupGameScraper } from '../../src/modules/scraping/engine/scrapers/setupgameScraper.js';
+import { NextLevelScraper } from '../../src/modules/scraping/engine/scrapers/nextlevelScraper.js';
 import { scoreImageQuality } from '@shared/image-utils';
 
 console.log('🖼️  Image Backfill Tool\n');
@@ -52,8 +52,8 @@ async function applyImages(imageByUrl: Map<string, string>, label: string) {
 // Phase 1: UltraPC + SetupGame in parallel (fast JSON APIs)
 console.log('🔄 Phase 1: UltraPC + SetupGame (parallel)...');
 const [ultrapcPrices, setupgamePrices] = await Promise.all([
-    new UltraPcScraper().scrapeAllCategories(1).then(p => { process.stdout.write(`   ✅ UltraPC: ${p.length} products\n`); return p; }),
-    new SetupGameScraper().scrapeAllCategories(3).then(p => { process.stdout.write(`   ✅ SetupGame: ${p.length} products\n`); return p; }),
+    new UltraPcScraper().scrapeAllCategories(1).then((p: any) => { process.stdout.write(`   ✅ UltraPC: ${p.length} products\n`); return p; }),
+    new SetupGameScraper().scrapeAllCategories(3).then((p: any) => { process.stdout.write(`   ✅ SetupGame: ${p.length} products\n`); return p; }),
 ]);
 
 const phase1Map = new Map<string, string>();

@@ -1,6 +1,7 @@
 // apps/backend/scripts/audit_categories.ts
 import { getSql } from '../src/core/db/index.js';
-import { inferCategory, inferCategoryFromUrl, getCategoryPriority } from '@shared/component-utils';
+import { inferCategory, inferCategoryFromUrl, getCategoryPriority, extractBrand } from '@shared/component-utils';
+import { deriveCanonicalName } from '../src/modules/scraping/services/suggestionEngine.js';
 import { logger } from '../src/modules/scraping/engine/utils/logger.js';
 
 function resolveCategory(name: string, url?: string) {
@@ -33,12 +34,17 @@ async function main() {
     const resolved = resolveCategory(item.scraped_name, item.product_url);
 
     if (resolved && resolved !== item.sug_category) {
+      const brand = extractBrand(item.scraped_name);
+      const canonicalName = deriveCanonicalName(item.scraped_name, brand);
+
       await sql`
-        INSERT INTO unmatched_suggestions (unmatched_listing_id, category, confidence, computed_at)
-        VALUES (${item.id}, ${resolved}, 'high', NOW())
+        INSERT INTO unmatched_suggestions (unmatched_listing_id, category, confidence, canonical_name, brand, computed_at)
+        VALUES (${item.id}, ${resolved}, 'high', ${canonicalName}, ${brand}, NOW())
         ON CONFLICT (unmatched_listing_id) DO UPDATE SET
           category = EXCLUDED.category,
           confidence = EXCLUDED.confidence,
+          canonical_name = EXCLUDED.canonical_name,
+          brand = EXCLUDED.brand,
           computed_at = NOW()
       `;
       unmatchedFixed++;

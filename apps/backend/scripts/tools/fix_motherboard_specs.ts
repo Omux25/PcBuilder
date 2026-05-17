@@ -19,7 +19,7 @@
  */
 
 import { sql } from 'bun';
-import { inferMotherboardSpecs } from '@shared/component-utils';
+import { extractMotherboardSpecs } from '@shared/component-utils';
 
 console.log('🔧 Fixing motherboard category\n');
 
@@ -86,7 +86,7 @@ let skipped = 0;
 const skippedNames: string[] = [];
 
 for (const board of boards) {
-  const specs = inferMotherboardSpecs(board.name);
+  const specs = extractMotherboardSpecs(board.name);
   if (!specs) {
     skipped++;
     skippedNames.push(`${board.brand} ${board.name}`);

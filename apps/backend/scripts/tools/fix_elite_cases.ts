@@ -23,7 +23,7 @@ async function fixEliteGaps() {
     `;
     if (cmMisc.length > 0) {
         console.log(`⚠️  Found ${cmMisc.length} more potential CM cases in PSU category.`);
-        await sql`UPDATE components SET category = 'case' WHERE id IN ${sql(cmMisc.map(r => r.id))}`;
+        await sql`UPDATE components SET category = 'case' WHERE id IN ${sql(cmMisc.map((r: any) => r.id))}`;
     }
 
     console.log('\n✨ Cleanup complete.');
