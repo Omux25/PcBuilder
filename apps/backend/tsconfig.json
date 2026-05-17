@@ -3,13 +3,23 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "strict": true,
     "skipLibCheck": true,
+    "downlevelIteration": true,
     "types": ["node"],
+    "baseUrl": ".",
     "paths": {
       "@shared/*": ["../../shared/*"]
     }
   },
-  "include": ["src/**/*", "scraper/**/*", "scripts/**/*", "../../shared/**/*"],
+  "include": [
+    "src/**/*",
+    "scraper/**/*",
+    "scripts/**/*",
+    "seed/**/*",
+    "../../shared/**/*"
+  ],
   "exclude": ["node_modules", "src/**/__tests__/**", "src/__tests__/**"]
 }

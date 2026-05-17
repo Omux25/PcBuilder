@@ -459,7 +459,7 @@ function ComponentRow({
   const isIncompatible = component.compatibility === 'incompatible';
   const hasPrice = component.lowest_price !== null;
   const isCompared = isInCompare(component.id);
-  const isCategoryMismatch = compareCategory && compareCategory !== component.category;
+  const isCategoryMismatch = !!compareCategory && compareCategory !== component.category;
 
   return (
     <li

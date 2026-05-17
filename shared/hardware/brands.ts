@@ -12,6 +12,7 @@ export function extractBrand(name: string): string {
     'vengance': 'Corsair', 'dominator': 'Corsair', 'icue': 'Corsair', 'hydroshift': 'Lian Li', 'titan': 'Corsair',
     'trident': 'G.Skill', 'ripjaws': 'G.Skill',
     'fury': 'Kingston', 'renegade': 'Kingston',
+    't-force': 'TeamGroup', 't.force': 'TeamGroup', 'vulcan': 'TeamGroup', 'delta': 'TeamGroup', 'team': 'TeamGroup',
     'sn550': 'WD', 'sn570': 'WD', 'sn580': 'WD', 'sn770': 'WD', 'sn850': 'WD',
     '970 evo': 'Samsung', '980 pro': 'Samsung', '990 pro': 'Samsung',
     'sg ': 'Setup Game', 'sg-': 'Setup Game',
@@ -27,16 +28,16 @@ export function extractBrand(name: string): string {
   // We find ALL matches and pick the one that appears EARLIEST in the string.
   // This handles "Connect Arctic Frost" by picking Connect (index 0) over Arctic (index 8).
   const BRANDS = [
-    '1stPlayer', 'Abkoncore', 'Acer', 'ADATA', 'Aerocool', 'AMD', 'Antec', 'APNX', 'Arctic', 'Arktek',
+    '1stPlayer', 'Abkoncore', 'Acer', 'ADATA', 'Addlink', 'Aerocool', 'AMD', 'Antec', 'Apacer', 'APNX', 'Arctic', 'Arktek',
     'ASRock', 'ASUS', 'be quiet!', 'Biostar', 'BitFenix', 'Chieftec', 'Colorful', 'Cooler Master',
-    'Connect', 'Corsair', 'Cougar', 'Crucial', 'DeepCool', 'Enermax', 'EVGA', 'FANXIANG', 'Fractal',
-    'FSP', 'G.Skill', 'Gainward', 'Galax', 'Geil', 'Gigabyte', 'HIKSEMI', 'HP', 'HAVN', 'Hyte',
-    'ID-Cooling', 'Infinity', 'Inno3D', 'Innovation IT', 'Intel', 'Itek', 'KFA2', 'Kingston', 'Klevv',
-    'Kolink', 'LC Power', 'Lexar', 'Lian Li', 'M.RED', 'Mars Gaming', 'Montech', 'MSI', 'Mushkin',
-    'Noctua', 'Nova', 'Nox', 'NVIDIA', 'NZXT', 'OCPC', 'Palit', 'Patriot', 'Phanteks', 'PNY',
-    'PowerColor', 'Razer', 'Sabrent', 'Samsung', 'Sapphire', 'Scythe', 'Seagate', 'Seasonic',
+    'Connect', 'Corsair', 'Cougar', 'Crucial', 'DeepCool', 'Dell', 'Deskooze', 'EKWB', 'Enermax', 'EVGA', 'FANXIANG', 'Fractal',
+    'FSP', 'G.Skill', 'Gainward', 'Galax', 'Geil', 'Gigabyte', 'Goodram', 'HIKSEMI', 'Hikvision', 'HP', 'HAVN', 'Hybrok', 'Hyte',
+    'ID-Cooling', 'Infinity', 'Inno3D', 'Innovation IT', 'Intel', 'Intenso', 'Itek', 'KFA2', 'Kingston', 'Klevv',
+    'Kolink', 'LC Power', 'Lenovo', 'Lexar', 'Lian Li', 'M.RED', 'Mars Gaming', 'Montech', 'MSI', 'Mushkin',
+    'Noctua', 'Nova', 'Nox', 'NVIDIA', 'NZXT', 'OCPC', 'Palit', 'Patriot', 'Phanteks', 'Philips', 'PNY',
+    'PowerColor', 'Razer', 'Reletech', 'Sabrent', 'Samsung', 'Sapphire', 'Scythe', 'Seagate', 'Seasonic',
     'Setup Game', 'Sharkoon', 'Silicon Power', 'Silverstone', 'Spirit of Gamer', 'Super Flower',
-    'Symphony', 'Team Group', 'TeamGroup', 'Thermalright', 'Thermaltake', 'Toshiba', 'Verbatim',
+    'Symphony', 'Team Group', 'TeamGroup', 'Thermal Grizzly', 'Thermalright', 'Thermaltake', 'Tooq', 'Toshiba', 'Transcend', 'Twinmos', 'Verbatim',
     'Viper', 'WD', 'Western Digital', 'XFX', 'Xigmatek', 'XPG', 'XTRMLAB', 'Yeyian', 'Zotac'
   ];
 

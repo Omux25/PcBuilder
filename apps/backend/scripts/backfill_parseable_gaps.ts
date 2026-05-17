@@ -421,3 +421,4 @@ for (const { id, name } of misclassified) {
 
 console.log(`\n=== Done. Total rows updated: ${total} ===`);
 process.exit(0);
+ 
