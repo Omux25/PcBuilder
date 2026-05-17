@@ -60,6 +60,7 @@ function getColDefs(cat: ComponentCategory): ColDef[] {
     case 'ram':
       return [
         { header: 'Type', width: '60px', sortKey: 'ram_type', render: c => str(c.ram_type) },
+        { header: 'Capacité', width: '80px', sortKey: 'capacity_gb', render: c => c.capacity_gb ? `${c.capacity_gb} Go` : '—' },
         { header: 'Fréquence', width: '90px', sortKey: 'frequency_mhz', render: c => c.frequency_mhz ? `${c.frequency_mhz} MHz` : '—' },
         { header: 'Kit', width: '50px', sortKey: 'kit_count', render: c => c.kit_count && c.kit_count > 1 ? `${c.kit_count}×` : '1×' },
         { header: 'Latence', width: '70px', sortKey: 'cas_latency', render: c => c.cas_latency ? `CL${c.cas_latency}` : '—' },
@@ -615,7 +616,7 @@ export function CategoryBrowse() {
                         <td className={styles.tdName}>
                           <div className={styles.nameWrap}>
                             <span className={styles.compBrand}>{c.brand}</span>
-                            <Link to={`/product/${c.slug}`} className={styles.compName} title={formatComponentName(c)}>{formatComponentName(c)}</Link>
+                            <Link to={`/product/${c.slug}`} className={styles.compName} title={formatComponentName(c)}>{formatComponentName(c, { excludeBrand: true })}</Link>
                           </div>
                         </td>
                         {colDefs.map(col => (

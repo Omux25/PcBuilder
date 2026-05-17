@@ -250,7 +250,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
                 {(() => {
                   const inStock = prices.filter(p => p.in_stock);
                   const oos = prices.filter(p => !p.in_stock);
-                  const visible = showOos ? prices : inStock;
+                  const visible = (showOos || inStock.length === 0) ? prices : inStock;
                   
                   return (
                     <>

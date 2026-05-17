@@ -24,7 +24,7 @@ export function Home() {
         <div className={styles.heroContent}>
           <div className={styles.heroBadge}>
             <Zap size={14} />
-            <span>Nouveau: Configs 2024</span>
+            <span>Nouveau: Configs 2026</span>
           </div>
           <h1 className={styles.heroTitle}>
             {UI.home.heroTitle}
