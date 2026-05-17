@@ -59,20 +59,21 @@ async function main() {
       // so they can be re-processed correctly.
       
       // Get details for unmatched_listings before deleting
-      const details = await tx`
-        SELECT sm.retailer_id, sm.product_url, sm.product_identifier, p.price, p.image_url
+      const details = (await tx`
+        SELECT sm.retailer_id, sm.product_url, sm.product_identifier, p.price
         FROM scraper_mappings sm
         LEFT JOIN prices p ON p.product_url = sm.product_url AND p.retailer_id = sm.retailer_id
         WHERE sm.id IN ${tx(toUnlink)}
-      `;
+      `) as { retailer_id: number; product_url: string; product_identifier: string; price: number | null }[];
 
       for (const d of details) {
         await tx`
           INSERT INTO unmatched_listings (retailer_id, product_url, scraped_name, scraped_price, image_url, status)
-          VALUES (${d.retailer_id}, ${d.product_url}, ${d.product_identifier}, ${d.price || 0}, ${d.image_url}, 'pending')
+          VALUES (${d.retailer_id}, ${d.product_url}, ${d.product_identifier}, ${d.price || 0}, NULL, 'pending')
           ON CONFLICT (retailer_id, product_url) DO UPDATE SET status = 'pending'
         `;
       }
+
 
       await tx`DELETE FROM scraper_mappings WHERE id IN ${tx(toUnlink)}`;
       // Also delete price for this specific mapping to avoid ghost prices
@@ -87,15 +88,15 @@ async function main() {
 
   // 2. Clean up "Zombie" components (no mappings left)
   console.log('🔍 Cleaning up orphan components...');
-  const orphans = await sql`
+  const orphans = (await sql`
     SELECT c.id, c.name FROM components c
     LEFT JOIN scraper_mappings sm ON sm.component_id = c.id
     WHERE sm.id IS NULL AND c.is_active = true
-  `;
+  `) as any[];
 
   if (orphans.length > 0) {
     console.log(`🗑 Found ${orphans.length} orphan components. Deleting...`);
-    await sql`DELETE FROM components WHERE id IN ${sql(orphans.map(o => o.id))}`;
+    await sql`DELETE FROM components WHERE id IN ${sql(orphans.map((o: any) => o.id))}`;
     console.log(`✅ Deleted ${orphans.length} orphans.`);
   }
 

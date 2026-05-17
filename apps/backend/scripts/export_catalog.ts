@@ -1,4 +1,4 @@
-import { getSql } from '../src/db/index';
+import { getSql } from '../src/core/db/index.js';
 import fs from 'fs';
 
 async function exportCatalog() {

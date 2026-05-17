@@ -3,7 +3,7 @@
  * Shows real-time progress so you're not waiting blindly.
  */
 import { sql } from 'bun';
-import { reprocessUnmatched } from '../../scraper/aggregator.js';
+import { reprocessUnmatched } from '../../src/modules/scraping/engine/aggregator.js';
 
 // ── Progress bar helper ───────────────────────────────────────────────────────
 

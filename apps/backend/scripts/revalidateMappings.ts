@@ -1,17 +1,17 @@
 // apps/backend/scripts/revalidateMappings.ts
-import { getSql } from '../src/db/index';
-import { scoreDnaMatch } from '../src/utils/componentMatcher';
+import { getSql } from '../src/core/db/index.js';
+import { scoreDnaMatch } from '../src/core/utils/componentMatcher.js';
 
 async function revalidate() {
   const sql = getSql();
   
   // It appears 'product_identifier' in scraper_mappings is used to store the product name
-  const mappings = await sql`
+  const mappings = (await sql`
     SELECT sm.id, sm.component_id, sm.product_identifier as scraped_name, sm.product_url, sm.retailer_id,
            c.category, c.name as component_name
     FROM scraper_mappings sm
     JOIN components c ON c.id = sm.component_id
-  `;
+  `) as any[];
 
   console.log(`Revalidating ${mappings.length} mappings...`);
   let deletedCount = 0;

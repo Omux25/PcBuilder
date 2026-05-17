@@ -8,7 +8,7 @@
  */
 
 import { sql } from 'bun';
-import { runScrapingSession } from '../../scraper/session.js';
+import { runScrapingSession } from '../../src/modules/scraping/engine/session.js';
 
 const args = process.argv.slice(2);
 const retailerArg = args.find(a => a.startsWith('--retailer='))?.split('=')[1]

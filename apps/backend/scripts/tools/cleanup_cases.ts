@@ -15,7 +15,7 @@ async function cleanupCasePollution() {
 
     if (coolingInCase.length > 0) {
         console.log(`⚠️  Found ${coolingInCase.length} cooling items in Case category. Moving them...`);
-        const ids = coolingInCase.map(r => r.id);
+        const ids = coolingInCase.map((r: any) => r.id);
         await sql`UPDATE components SET category = 'cooling' WHERE id IN ${sql(ids)}`;
         console.log('✅ Moved to Cooling.');
     }
@@ -29,7 +29,7 @@ async function cleanupCasePollution() {
     `;
     if (psusInCase.length > 0) {
         console.log(`⚠️  Found ${psusInCase.length} PSU items in Case category. Moving them...`);
-        const ids = psusInCase.map(r => r.id);
+        const ids = psusInCase.map((r: any) => r.id);
         await sql`UPDATE components SET category = 'psu' WHERE id IN ${sql(ids)}`;
         console.log('✅ Moved to PSU.');
     }

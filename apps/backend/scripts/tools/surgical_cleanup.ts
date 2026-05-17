@@ -14,7 +14,7 @@ async function finalCleanup() {
           AND (name ~* 'freezer|liquid|aqua|assassin|spirit|ak400|ak620|t120|wraith')
     `;
     if (toCooling.length > 0) {
-        await sql`UPDATE components SET category = 'cooling' WHERE id IN ${sql(toCooling.map(r => r.id))}`;
+        await sql`UPDATE components SET category = 'cooling' WHERE id IN ${sql(toCooling.map((r: any) => r.id))}`;
     }
 
     // 3. One more for "Nova Glacial" (Arctic/Nova)

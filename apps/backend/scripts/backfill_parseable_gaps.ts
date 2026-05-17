@@ -15,7 +15,7 @@
  * Run: bun run scripts/backfill_parseable_gaps.ts
  */
 
-import { getSql } from '../src/db/index.js';
+import { getSql } from '../src/core/db/index.js';
 
 const sql = getSql();
 let total = 0;

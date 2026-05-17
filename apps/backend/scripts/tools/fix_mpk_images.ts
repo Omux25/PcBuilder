@@ -2,7 +2,7 @@
  * Fix MPK/Bundle images by finding better alternatives from other retailers
  */
 
-import { getSql } from '../../src/db/index.js';
+import { getSql } from '../../src/core/db/index.js';
 import { scoreImageQuality } from '@shared/image-utils';
 
 const sql = getSql();

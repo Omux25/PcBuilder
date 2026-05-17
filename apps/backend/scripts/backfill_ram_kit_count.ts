@@ -9,7 +9,7 @@
  *   bun run scripts/backfill_ram_kit_count.ts
  */
 
-import { getSql } from '../src/db/index.js';
+import { getSql } from '../src/core/db/index.js';
 import { extractRamSpecs } from '@shared/component-utils';
 
 const sql = getSql();

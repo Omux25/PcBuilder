@@ -3,8 +3,8 @@
  *
  * Usage: bun scripts/tools/run_all_scrapes.ts
  */
-import { runScrapingSession } from '../../scraper/session.js';
-import { getSql } from '../../src/db/index.js';
+import { runScrapingSession } from '../../src/modules/scraping/engine/session.js';
+import { getSql } from '../../src/core/db/index.js';
 
 console.log('🚀 Starting full price scrape for all retailers...\n');
 

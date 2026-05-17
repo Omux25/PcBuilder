@@ -142,8 +142,9 @@ async function runAudit() {
   } else {
     md += "| ID | Name | Suggested Category | Issue |\n";
     md += "|----|------|--------------------|-------|\n";
-    problematicUnmatched.forEach(u => {
-      md += `| ${u.id} | ${u.name} | ${u.suggested_category} | ${u.issue} |\n`;
+    problematicUnmatched.forEach((u: any) => {
+      const displayCat = u.new_suggestion || u.current_suggestion;
+      md += `| ${u.id} | ${u.name} | ${displayCat} | ${u.issue} |\n`;
     });
   }
 
