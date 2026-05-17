@@ -39,7 +39,7 @@ await sql`
   );
 `;
 
-const migrationsDir = join(import.meta.dirname, 'src/db/migrations');
+const migrationsDir = join(import.meta.dirname, 'src/core/db/migrations');
 const files = (await readdir(migrationsDir))
   .filter(f => f.endsWith('.sql'))
   .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));

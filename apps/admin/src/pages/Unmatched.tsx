@@ -22,7 +22,6 @@ import { SearchOverrideView } from '../components/SearchOverrideView';
 import type {
   CategorySummaryEntry,
   CategoryState,
-  CanonicalGroup,
   ToastState,
 } from '../api';
 import {
@@ -166,7 +165,7 @@ export function Unmatched() {
   }
 
   // ── Category assigned from Unknown section ────────────────────────────────
-  function handleCategoryAssigned(listingId: number, category: string) {
+  function handleCategoryAssigned(_listingId: number, category: string) {
     setCategoryState((prev) => {
       const next = new Map(prev);
       next.delete(category);
@@ -450,7 +449,6 @@ export function Unmatched() {
         ) : activeCategory === null ? (
           <UnknownSection
             onCategoryAssigned={handleCategoryAssigned}
-            onToast={showToast}
             refreshTrigger={unknownRefresh}
           />
         ) : (

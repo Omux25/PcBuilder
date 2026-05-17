@@ -17,8 +17,6 @@ import { ConfidenceBadge } from './ConfidenceBadge';
 import { ScrapedListingRow } from './ScrapedListingRow';
 import type { CanonicalGroup, CanonicalGroupListing } from '../api';
 import { getErrorMessage, rejectUnmatchedListings } from '../api';
-import { CATEGORY_LABELS } from '@shared/types';
-import type { ComponentCategory } from '@shared/types';
 import { fmtPriceRange } from '../utils/fmt';
 
 type Confidence = 'high' | 'medium' | 'low' | 'unknown';

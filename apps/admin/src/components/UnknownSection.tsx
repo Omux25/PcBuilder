@@ -30,12 +30,10 @@ interface UnknownListing extends CanonicalGroupListing {
 interface Props {
     /** Called when a listing is assigned a category — parent refreshes that accordion. */
     onCategoryAssigned: (listingId: number, category: string) => void;
-    onToast: (toast: ToastState) => void;
-    /** Increment to trigger a re-fetch (e.g. after reprocess). */
     refreshTrigger?: number;
 }
 
-export function UnknownSection({ onCategoryAssigned, onToast, refreshTrigger }: Props) {
+export function UnknownSection({ onCategoryAssigned, refreshTrigger }: Props) {
     const [listings, setListings] = useState<UnknownListing[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
