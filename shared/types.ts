@@ -15,7 +15,7 @@ export interface Component {
   id: number;
   slug: string;
   name: string;
-  brand?: string;
+  brand?: string | null;
   category: ComponentCategory;
   description?: string;
   specs?: Record<string, unknown>;
@@ -52,7 +52,7 @@ export interface Component {
   // RAM kit fields
   kit_count?: number;             // number of physical sticks in the kit (default 1)
   cas_latency?: number;           // CAS latency (e.g. 16 for CL16)
-  capacity_gb?: number;           // RAM: capacity per stick in GB; Storage: total capacity in GB
+  capacity_gb?: number;           // Total capacity in GB (RAM kit total or Storage total)
   // CPU-specific fields
   core_count?: number;            // CPU: number of physical cores
   thread_count?: number;          // CPU: number of threads
@@ -133,6 +133,7 @@ export interface PresetBuild {
   use_case: 'gaming' | 'workstation' | 'office' | 'budget';
   total_price_estimate?: number;
   is_active: boolean;
+  is_featured?: boolean;
   incomplete: boolean;
   components: Record<string, PresetComponent>;
   created_at: string;
@@ -291,3 +292,39 @@ export const CATEGORY_ORDER: ComponentCategory[] = [
   ...CATEGORY_GROUPS.flatMap(g => g.categories)
 ];
 
+
+export interface ComponentInput extends Omit<Component, 'id' | 'slug' | 'is_active' | 'created_at' | 'updated_at' | 'lowest_price'> {
+  name: string;
+  category: ComponentCategory;
+}
+
+export interface ComponentFilters {
+  category?: string;
+  socket?: string;
+  ram_type?: string;
+  brand?: string;
+  search?: string;
+  sort?: string;
+  vram_gb?: number;
+  in_stock?: boolean;
+  min_price?: number;
+  max_price?: number;
+  min_wattage?: number;
+  max_wattage?: number;
+  min_capacity_gb?: number;
+  max_capacity_gb?: number;
+  min_frequency_mhz?: number;
+  max_frequency_mhz?: number;
+  chipset?: string;
+  form_factor?: string;
+  interface_type?: string;
+  efficiency_rating?: string;
+  modular?: string;
+  core_count?: number;
+  include_inactive?: boolean;
+  is_active?: boolean;
+  // Compatibility Hints (for sorting)
+  compat_socket?: string;
+  compat_ram_type?: string;
+  compat_form_factors?: string[];
+}

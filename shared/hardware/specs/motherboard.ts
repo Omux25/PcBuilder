@@ -10,7 +10,7 @@
 //
 // Sources: Intel ARK, AMD product pages, PCPartPicker chipset specs.
 
-type DdrPolicy = 'DDR4_ONLY' | 'DDR5_ONLY' | 'BOTH';
+type DdrPolicy = 'DDR3_ONLY' | 'DDR4_ONLY' | 'DDR5_ONLY' | 'BOTH';
 
 interface ChipsetInfo {
   socket: string;
@@ -54,6 +54,24 @@ const CHIPSET_MAP: Record<string, ChipsetInfo> = {
   H370: { socket: 'LGA1151', ddr: 'DDR4_ONLY', defaultMaxMhz: 2666 },
   Z370: { socket: 'LGA1151', ddr: 'DDR4_ONLY', defaultMaxMhz: 4000 },
   Z390: { socket: 'LGA1151', ddr: 'DDR4_ONLY', defaultMaxMhz: 4266 },
+  B150: { socket: 'LGA1151', ddr: 'DDR4_ONLY', defaultMaxMhz: 2133 },
+  B250: { socket: 'LGA1151', ddr: 'DDR4_ONLY', defaultMaxMhz: 2400 },
+  H110: { socket: 'LGA1151', ddr: 'DDR4_ONLY', defaultMaxMhz: 2133 },
+  H170: { socket: 'LGA1151', ddr: 'DDR4_ONLY', defaultMaxMhz: 2133 },
+  H270: { socket: 'LGA1151', ddr: 'DDR4_ONLY', defaultMaxMhz: 2400 },
+  Z170: { socket: 'LGA1151', ddr: 'DDR4_ONLY', defaultMaxMhz: 3466 },
+  Z270: { socket: 'LGA1151', ddr: 'DDR4_ONLY', defaultMaxMhz: 3800 },
+  // ── Intel LGA1150 (4th/5th gen, DDR3 only) ──────────────────────
+  H81: { socket: 'LGA1150', ddr: 'DDR3_ONLY', defaultMaxMhz: 1600 },
+  B85: { socket: 'LGA1150', ddr: 'DDR3_ONLY', defaultMaxMhz: 1600 },
+  H87: { socket: 'LGA1150', ddr: 'DDR3_ONLY', defaultMaxMhz: 1600 },
+  Z87: { socket: 'LGA1150', ddr: 'DDR3_ONLY', defaultMaxMhz: 2800 },
+  H97: { socket: 'LGA1150', ddr: 'DDR3_ONLY', defaultMaxMhz: 1600 },
+  Z97: { socket: 'LGA1150', ddr: 'DDR3_ONLY', defaultMaxMhz: 3200 },
+  // ── Intel LGA1155 (2nd/3rd gen, DDR3 only) ──────────────────────
+  H61: { socket: 'LGA1155', ddr: 'DDR3_ONLY', defaultMaxMhz: 1333 },
+  B75: { socket: 'LGA1155', ddr: 'DDR3_ONLY', defaultMaxMhz: 1600 },
+  Z77: { socket: 'LGA1155', ddr: 'DDR3_ONLY', defaultMaxMhz: 2400 },
   // \u2500\u2500 Intel LGA1200 (10th/11th gen, DDR4 only) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   B460: { socket: 'LGA1200', ddr: 'DDR4_ONLY', defaultMaxMhz: 2933 },
   B560: { socket: 'LGA1200', ddr: 'DDR4_ONLY', defaultMaxMhz: 4800 },
@@ -100,19 +118,24 @@ export function extractMotherboardSpecs(name: string): {
   const upper = name.toUpperCase();
 
   // \u2500\u2500 Layer 1: explicit DDR suffix anywhere in the name \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  const hasExplicitDdr3 = /\bDDR3\b/.test(upper) || /\bD3\b/.test(upper);
   const hasExplicitDdr4 = /\bDDR4\b/.test(upper) || /\bD4\b/.test(upper);
   const hasExplicitDdr5 = /\bDDR5\b/.test(upper) || /\bD5\b/.test(upper);
 
   // \u2500\u2500 Extract chipset token \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-  // Match patterns like: B650, B650E, B650M, X670E, Z790, H610M, X570S, TRX40, WRX80, X399
+  // Match patterns like: B650, B650E, B650M, X670E, Z790, H610M, X570S, TRX40, WRX80, X399, H81, Z97, H61
   const chipsetMatch = upper.match(
-    /\b(TRX\d{2}|WRX\d{2}|X399|[ABXZH]\d{3}(?:[EIM]|S(?=\b))?)\b/
+    /\b(TRX\d{2}|WRX\d{2}|X399|[ABXZH]\d{2,3}(?:[EIM]|S(?=\b))?)\b/
   );
   if (!chipsetMatch) {
-    // Named series fallback: ROG MAXIMUS XII/XIII \u2192 Z490/Z590, Zenith II \u2192 TRX40
+    // Named series fallback: ROG MAXIMUS XII/XIII/XIV/XV/XVI \u2192 Z490/Z590/Z690/Z790/Z890, Zenith II \u2192 TRX40
     if (/MAXIMUS\s+XII\b/.test(upper)) return extractMotherboardSpecs('Z490');
     if (/MAXIMUS\s+XIII\b/.test(upper)) return extractMotherboardSpecs('Z590');
+    if (/MAXIMUS\s+XIV\b/.test(upper)) return extractMotherboardSpecs('Z690');
+    if (/MAXIMUS\s+XV\b/.test(upper)) return extractMotherboardSpecs('Z790');
+    if (/MAXIMUS\s+XVI\b/.test(upper)) return extractMotherboardSpecs('Z890');
     if (/ZENITH\s+II\b/.test(upper)) return extractMotherboardSpecs('TRX40');
+    if (/ZENITH\s+III\b/.test(upper)) return extractMotherboardSpecs('TRX50');
     // Biostar boards
     const biostarMatch = upper.match(/\b([ABXZH]\d{3})/);
     if (biostarMatch) return extractMotherboardSpecs(biostarMatch[1]);
@@ -136,7 +159,10 @@ export function extractMotherboardSpecs(name: string): {
   let ramTypes: string[];
   let maxMhz: number;
 
-  if (info.ddr === 'DDR4_ONLY') {
+  if (info.ddr === 'DDR3_ONLY') {
+    ramTypes = ['DDR3'];
+    maxMhz = info.defaultMaxMhz;
+  } else if (info.ddr === 'DDR4_ONLY') {
     ramTypes = ['DDR4'];
     maxMhz = info.defaultMaxMhz;
   } else if (info.ddr === 'DDR5_ONLY') {
@@ -158,25 +184,58 @@ export function extractMotherboardSpecs(name: string): {
     ramTypes = ['DDR4'];
   } else if (hasExplicitDdr5 && ramTypes[0] !== 'DDR5') {
     ramTypes = ['DDR5'];
+  } else if (hasExplicitDdr3 && ramTypes[0] !== 'DDR3') {
+    ramTypes = ['DDR3'];
   }
 
   // \u2500\u2500 Resolve Form Factor & Slots \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   let form_factor = 'ATX';
-  if (upper.match(/\b(ITX|MINI-ITX)\b/) || upper.match(/[ABXZH]\d{3}I/)) {
+  if (upper.match(/\b(ITX|MINI-ITX)\b/) || upper.match(/[ABXZH]\d{2,3}I/)) {
     form_factor = 'ITX';
-  } else if (upper.match(/\b(MATX|MICRO-ATX|M-ATX)\b/) || upper.match(/[ABXZH]\d{3}M/)) {
+  } else if (upper.match(/\b(MATX|MICRO-ATX|M-ATX)\b/) || upper.match(/[ABXZH]\d{2,3}M/)) {
     form_factor = 'mATX';
   } else if (upper.match(/\b(EATX|E-ATX)\b/)) {
     form_factor = 'E-ATX';
   }
 
   let ram_slots = 4;
-  if (form_factor === 'ITX') {
-    ram_slots = 2;
-  } else if (upper.match(/\b(M-K|M-H|M-V|M-R|M-E|PRO-V?H|DS2H|DS2V)\b/)) {
-    ram_slots = 2; 
-  } else if (info.socket === 'sTR5' || info.socket === 'sWRX8' || info.socket === 'sWRX9' || info.socket === 'TR4' || info.socket === 'sTRX4') {
+
+  // 1. High-end Platforms (Threadripper, etc.)
+  if (info.socket === 'sTR5' || info.socket === 'sWRX8' || info.socket === 'sWRX9' || info.socket === 'TR4' || info.socket === 'sTRX4') {
     ram_slots = 8;
+  } else if (form_factor === 'ITX') {
+    // 2. Form Factor based defaults
+    ram_slots = 2;
+  } else {
+    // 3. Chipset and Name based logic
+    const entryChipsets = [
+      'H610', 'H510', 'H410', 'H310', 'H110', 
+      'A320', 'A520',
+      'B250', 'B150', 'H270', 'H170',
+      'H81', 'B85', 'H61', 'B75'
+    ];
+    const isEntryChipset = entryChipsets.includes(rawChipset.replace(/[EIMS]$/, ''));
+    
+    if (isEntryChipset) {
+      // Entry chipsets default to 2 slots unless they have keywords indicating 4
+      if (!upper.match(/\b(DS3H|PLUS|STEEL|PHANTOM|MORTAR|TOMAHAWK|ELITE|MASTER|AORUS|MAX)\b/)) {
+        ram_slots = 2;
+      }
+    } else {
+      // Mainstream chipsets (B, X, Z) default to 4 slots.
+      // We only override to 2 for specific budget series and suffixes on B-series boards.
+      const isHighEndChipset = upper.match(/\b([XZ]\d{3})\b/);
+      const isBudgetSeries = !isHighEndChipset && upper.match(/\b(PRIME|PRO|GAMING|S2H|DS2H|DS2V|S2|H|K|V|R|E)\b/) 
+         && !upper.match(/\b(X|AX|PLUS|WIFI|AC|AORUS|ROG|STRIX|TUF|MAG|MPG|MEG|MORTAR|TOMAHAWK|STEEL|PHANTOM|LEGEND|4)\b/i);
+      
+      if (isBudgetSeries) {
+        if (upper.match(/[- ](K|H|V|R|E|M-K|M-H|M-V|M-R|M-E)\b/) || upper.match(/\b(PRO-V?H|DS2H|DS2V|S2H|S2V)\b/)) {
+          ram_slots = 2;
+        } else if (upper.match(/\bGAMING\b/) && form_factor === 'mATX') {
+          ram_slots = 2;
+        }
+      }
+    }
   }
 
   return {

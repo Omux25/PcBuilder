@@ -1,9 +1,10 @@
 export const extractStorageSpecs = (n: string) => {
-  const capMatch = n.match(/\b(\d+)\s*(?:gb|go|tb|to)\b/i);
+  const capMatch = n.match(/\b(\d+)\s*(?:gb|go|tb|to|g|t)\b/i);
   let capacity_gb: number | null = null;
   if (capMatch) {
     const val = parseInt(capMatch[1]);
-    capacity_gb = capMatch[0].toLowerCase().includes('t') ? val * 1000 : val;
+    const unit = capMatch[0].toLowerCase();
+    capacity_gb = (unit.includes('t')) ? val * 1000 : val;
   }
   return {
     capacity_gb,

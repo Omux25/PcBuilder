@@ -1,56 +1,88 @@
-import type { Component, CompatibilityIssue, CompatibilityResult } from './types.js';
+/**
+ * PC Builder Compatibility Engine
+ * 
+ * Logic shared between Backend (for smart search results) and Frontend (for build validation).
+ * 
+ * DESIGN GOALS:
+ * 1. Unified: Single source of truth for all compatibility rules.
+ * 2. Surgical: Targeted rules that only run when relevant components are present.
+ * 3. Robust: Handles missing data gracefully (returns null/no issues).
+ * 4. Performant: Minimal overhead, uses fast lookups and caches if needed.
+ */
 
-export type BuildInput = Partial<Record<string, Partial<Component>>>;
+import type { Component, CompatibilityIssue, CompatibilityResult, ComponentCategory } from './types.js';
 
-export function isRamKey(key: string): boolean {
-  return key === 'ram' || /^ram_\d+$/.test(key);
+export type BuildInput = Partial<Record<ComponentCategory, Partial<Component>>> & Record<string, any>;
+
+/**
+ * Normalizes socket strings for robust comparison.
+ */
+function normalizeSocket(socket: string | undefined): string {
+  if (!socket) return '';
+  return socket.toLowerCase().replace(/[\s-]/g, '');
 }
 
-export function isStorageKey(key: string): boolean {
-  return key === 'storage' || /^storage_\d+$/.test(key);
+/**
+ * Checks if a socket (or list of sockets) is compatible with a target socket.
+ */
+export function checkSocketCompatibility(source: string | string[] | undefined, target: string | undefined): boolean {
+  if (!source || !target) return true;
+  const normalizedTarget = normalizeSocket(target);
+  const sources = Array.isArray(source) ? source : [source];
+  return sources.some(s => normalizeSocket(s) === normalizedTarget);
 }
 
-export function getRamComponents(build: BuildInput): Partial<Component>[] {
+// ── Component Accessors ──────────────────────────────────────────────────────
+
+export const isRamKey = (k: string) => k === 'ram' || /^ram_\d+$/.test(k);
+export const isStorageKey = (k: string) => k === 'storage' || /^storage_\d+$/.test(k);
+export const isGpuKey = (k: string) => k === 'gpu' || /^gpu_\d+$/.test(k);
+export const isFanKey = (k: string) => k === 'fan' || /^fan_\d+$/.test(k);
+
+function getComponentsByPrefix(build: BuildInput, predicate: (k: string) => boolean): Partial<Component>[] {
   return Object.entries(build)
-    .filter(([k]) => isRamKey(k))
-    .map(([, v]) => v!)
+    .filter(([k]) => predicate(k))
+    .map(([, v]) => v as Partial<Component>)
     .filter(Boolean);
 }
 
-export function getStorageComponents(build: BuildInput): Partial<Component>[] {
-  return Object.entries(build)
-    .filter(([k]) => isStorageKey(k))
-    .map(([, v]) => v!)
-    .filter(Boolean);
-}
+export const getRamComponents = (b: BuildInput) => getComponentsByPrefix(b, isRamKey);
+export const getStorageComponents = (b: BuildInput) => getComponentsByPrefix(b, isStorageKey);
+export const getGpuComponents = (b: BuildInput) => getComponentsByPrefix(b, isGpuKey);
+export const getFanComponents = (b: BuildInput) => getComponentsByPrefix(b, isFanKey);
 
 interface Rule {
   name: string;
   type: 'error' | 'warning';
-  components: string[];
+  components: ComponentCategory[];
   validate: (build: BuildInput) => string | null;
 }
 
 const RULES: Rule[] = [
+  // ── CPU & Motherboard ──────────────────────────────────────────────────────
   {
     name: 'socket_mismatch',
     type: 'error',
     components: ['cpu', 'motherboard'],
-    validate: ({ cpu, motherboard }) =>
-      (cpu?.socket && motherboard?.socket && cpu.socket !== motherboard.socket)
+    validate: ({ cpu, motherboard }) => {
+      if (!cpu?.socket || !motherboard?.socket) return null;
+      return !checkSocketCompatibility(cpu.socket, motherboard.socket)
         ? `CPU socket (${cpu.socket}) incompatible with motherboard (${motherboard.socket}).`
-        : null,
+        : null;
+    },
   },
+
+  // ── RAM & Motherboard ──────────────────────────────────────────────────────
   {
     name: 'ram_type_mismatch',
     type: 'error',
     components: ['ram', 'motherboard'],
     validate: (build) => {
-      const mb = build.motherboard;
-      if (!mb?.supported_ram_types) return null;
+      const supported = build.motherboard?.supported_ram_types;
+      if (!supported) return null;
       for (const ram of getRamComponents(build)) {
-        if (ram.ram_type && !mb.supported_ram_types.includes(ram.ram_type)) {
-          return `RAM type (${ram.ram_type}) not supported by motherboard.`;
+        if (ram.ram_type && !supported.includes(ram.ram_type)) {
+          return `RAM type (${ram.ram_type}) not supported by motherboard (supports: ${supported.join(', ')}).`;
         }
       }
       return null;
@@ -61,48 +93,14 @@ const RULES: Rule[] = [
     type: 'warning',
     components: ['ram', 'motherboard'],
     validate: (build) => {
-      const mb = build.motherboard;
-      if (!mb?.max_ram_frequency) return null;
+      const max = build.motherboard?.max_ram_frequency;
+      if (!max) return null;
       for (const ram of getRamComponents(build)) {
-        if (ram.frequency_mhz && ram.frequency_mhz > mb.max_ram_frequency) {
-          return `RAM (${ram.frequency_mhz}MHz) exceeds motherboard max (${mb.max_ram_frequency}MHz).`;
+        if (ram.frequency_mhz && ram.frequency_mhz > max) {
+          return `RAM (${ram.frequency_mhz}MHz) exceeds motherboard max (${max}MHz). Will run at lower speed.`;
         }
       }
       return null;
-    },
-  },
-  {
-    name: 'gpu_too_long',
-    type: 'error',
-    components: ['gpu', 'case'],
-    validate: ({ gpu, case: pcCase }) =>
-      (gpu?.length_mm && pcCase?.max_gpu_length_mm && gpu.length_mm > pcCase.max_gpu_length_mm)
-        ? `GPU (${gpu.length_mm}mm) too long for case (${pcCase.max_gpu_length_mm}mm).`
-        : null,
-  },
-  {
-    name: 'form_factor_mismatch',
-    type: 'error',
-    components: ['motherboard', 'case'],
-    validate: ({ motherboard, case: pcCase }) => {
-      const mbFormat = motherboard?.form_factor;
-      const supported = pcCase?.supported_motherboards;
-      if (mbFormat && Array.isArray(supported) && !supported.includes(mbFormat)) {
-        return `Motherboard format (${mbFormat}) not supported by case.`;
-      }
-      return null;
-    },
-  },
-  {
-    name: 'cooler_too_tall',
-    type: 'error',
-    components: ['cooling', 'case'],
-    validate: ({ cooling, case: pcCase }) => {
-      const height = cooling?.height_mm;
-      const max = pcCase?.max_cooler_height_mm;
-      return (height && max && height > max)
-        ? `Cooler (${height}mm) too high for case (${max}mm).`
-        : null;
     },
   },
   {
@@ -112,37 +110,9 @@ const RULES: Rule[] = [
     validate: (build) => {
       const slots = build.motherboard?.ram_slots;
       if (!slots) return null;
-      const totalSticks = getRamComponents(build)
-        .reduce((sum, r) => sum + (r.kit_count ?? 1), 0);
+      const totalSticks = getRamComponents(build).reduce((sum, r) => sum + (r.kit_count ?? 1), 0);
       return totalSticks > slots
-        ? `Build uses ${totalSticks} DIMM slot${totalSticks > 1 ? 's' : ''} but motherboard only has ${slots}.`
-        : null;
-    },
-  },
-  {
-    name: 'storage_slots_exceeded',
-    type: 'error',
-    components: ['storage', 'motherboard'],
-    validate: (build) => {
-      const mb = build.motherboard;
-      if (mb?.m2_slots == null && mb?.sata_ports == null) return null;
-      const totalSlots = (mb.m2_slots ?? 0) + (mb.sata_ports ?? 0);
-      const count = getStorageComponents(build).length;
-      return count > totalSlots
-        ? `Build has ${count} storage drives but motherboard only has ${totalSlots} storage slot${totalSlots > 1 ? 's' : ''} (${mb.m2_slots ?? 0} M.2 + ${mb.sata_ports ?? 0} SATA).`
-        : null;
-    },
-  },
-  {
-    name: 'cooler_socket_mismatch',
-    type: 'error',
-    components: ['cooling', 'cpu'],
-    validate: ({ cooling, cpu }) => {
-      const supported = cooling?.supported_sockets;
-      const cpuSocket = cpu?.socket;
-      if (!supported || !cpuSocket) return null;
-      return !supported.includes(cpuSocket)
-        ? `Cooler does not support CPU socket (${cpuSocket}). Supported: ${supported.join(', ')}.`
+        ? `Build uses ${totalSticks} DIMM slots but motherboard only has ${slots}.`
         : null;
     },
   },
@@ -151,25 +121,48 @@ const RULES: Rule[] = [
     type: 'error',
     components: ['ram'],
     validate: (build) => {
-      const sticks = getRamComponents(build);
-      if (sticks.length < 2) return null;
-      const types = [...new Set(sticks.map(r => r.ram_type).filter(Boolean))];
-      return types.length > 1
-        ? `Mixed RAM types in build (${types.join(' + ')}). All sticks must be the same type.`
+      const types = [...new Set(getRamComponents(build).map(r => r.ram_type).filter(Boolean))];
+      return types.length > 1 ? `Mixed RAM types (${types.join(' + ')}). All sticks must be the same type.` : null;
+    },
+  },
+
+  // ── GPU & Case ──────────────────────────────────────────────────────────────
+  {
+    name: 'gpu_too_long',
+    type: 'error',
+    components: ['gpu', 'case'],
+    validate: (build) => {
+      const max = build.case?.max_gpu_length_mm;
+      if (!max) return null;
+      for (const gpu of getGpuComponents(build)) {
+        if (gpu.length_mm && gpu.length_mm > max) {
+          return `GPU (${gpu.length_mm}mm) too long for case (${max}mm).`;
+        }
+      }
+      return null;
+    },
+  },
+
+  // ── Cooling & CPU/Case ─────────────────────────────────────────────────────
+  {
+    name: 'cooler_socket_mismatch',
+    type: 'error',
+    components: ['cooling', 'cpu'],
+    validate: ({ cooling, cpu }) => {
+      if (!cooling?.supported_sockets || !cpu?.socket) return null;
+      return !checkSocketCompatibility(cooling.supported_sockets, cpu.socket)
+        ? `Cooler does not support CPU socket (${cpu.socket}).`
         : null;
     },
   },
   {
-    name: 'mixed_ram_frequencies',
-    type: 'warning',
-    components: ['ram'],
-    validate: (build) => {
-      const sticks = getRamComponents(build);
-      if (sticks.length < 2) return null;
-      const freqs = [...new Set(sticks.map(r => r.frequency_mhz).filter(Boolean))];
-      if (freqs.length <= 1) return null;
-      const min = Math.min(...(freqs as number[]));
-      return `RAM sticks have different frequencies (${(freqs as number[]).join(', ')} MHz). System will run at ${min} MHz.`;
+    name: 'cooler_too_tall',
+    type: 'error',
+    components: ['cooling', 'case'],
+    validate: ({ cooling, case: pcCase }) => {
+      const h = cooling?.height_mm;
+      const m = pcCase?.max_cooler_height_mm;
+      return (h && m && h > m) ? `Cooler (${h}mm) too high for case (${m}mm).` : null;
     },
   },
   {
@@ -177,37 +170,58 @@ const RULES: Rule[] = [
     type: 'warning',
     components: ['cooling', 'cpu'],
     validate: ({ cooling, cpu }) => {
-      const coolerMax = cooling?.max_tdp;
-      const cpuTdp = cpu?.tdp;
-      if (!coolerMax || !cpuTdp) return null;
-      return cpuTdp > coolerMax
-        ? `CPU TDP (${cpuTdp}W) exceeds cooler rating (${coolerMax}W). System may thermal throttle.`
-        : null;
+      const cMax = cooling?.max_tdp;
+      const cTdp = cpu?.tdp;
+      return (cMax && cTdp && cTdp > cMax) ? `CPU TDP (${cTdp}W) exceeds cooler rating (${cMax}W).` : null;
     },
   },
+
+  // ── Motherboard & Case ─────────────────────────────────────────────────────
   {
-    name: 'dual_channel_warning',
-    type: 'warning',
-    components: ['ram'],
-    validate: (build) => {
-      const totalSticks = getRamComponents(build)
-        .reduce((sum, r) => sum + (r.kit_count ?? 1), 0);
-      if (totalSticks === 0) return null;
-      return totalSticks % 2 !== 0
-        ? `${totalSticks} DIMM slot${totalSticks > 1 ? 's' : ''} used. Use an even number (2 or 4) for dual-channel performance.`
+    name: 'form_factor_mismatch',
+    type: 'error',
+    components: ['motherboard', 'case'],
+    validate: ({ motherboard, case: pcCase }) => {
+      const format = motherboard?.form_factor;
+      const supported = pcCase?.supported_motherboards;
+      return (format && Array.isArray(supported) && !supported.includes(format))
+        ? `Motherboard format (${format}) not supported by case.`
         : null;
     },
   },
+
+  // ── Storage & Motherboard ──────────────────────────────────────────────────
+  {
+    name: 'storage_slots_exceeded',
+    type: 'error',
+    components: ['storage', 'motherboard'],
+    validate: (build) => {
+      const mb = build.motherboard;
+      if (!mb) return null;
+      const storage = getStorageComponents(build);
+      const m2Count = storage.filter(s => s.interface_type === 'NVMe').length;
+      const sataCount = storage.filter(s => s.interface_type === 'SATA' || s.interface_type === 'HDD').length;
+      
+      if (mb.m2_slots != null && m2Count > mb.m2_slots) {
+        return `Too many NVMe drives (${m2Count}) for motherboard M.2 slots (${mb.m2_slots}).`;
+      }
+      if (mb.sata_ports != null && sataCount > mb.sata_ports) {
+        return `Too many SATA drives (${sataCount}) for motherboard SATA ports (${mb.sata_ports}).`;
+      }
+      return null;
+    },
+  },
+
+  // ── PSU & Case ─────────────────────────────────────────────────────────────
   {
     name: 'psu_form_factor_mismatch',
     type: 'error',
     components: ['psu', 'case'],
     validate: ({ psu, case: pcCase }) => {
-      const psuFormat = psu?.psu_form_factor;
+      const format = psu?.psu_form_factor;
       const supported = pcCase?.supported_psu_form_factors;
-      if (!psuFormat || !Array.isArray(supported) || supported.length === 0) return null;
-      return !supported.includes(psuFormat)
-        ? `PSU form factor (${psuFormat}) not supported by case. Accepted: ${supported.join(', ')}.`
+      return (format && Array.isArray(supported) && supported.length > 0 && !supported.includes(format))
+        ? `PSU form factor (${format}) not supported by case.`
         : null;
     },
   },
@@ -225,33 +239,33 @@ export function validateCompatibility(build: BuildInput): CompatibilityResult {
     }
   }
 
-  const singleSlotKeys: string[] = ['cpu', 'motherboard', 'gpu', 'cooling'];
-  let total_tdp = singleSlotKeys.reduce((sum, key) => sum + ((build[key] as any)?.tdp ?? 0), 0);
+  // ── Power Calculation ──
+  const fixedComponents: ComponentCategory[] = ['cpu', 'motherboard', 'cooling'];
+  let total_tdp = fixedComponents.reduce((sum, k) => sum + ((build[k] as any)?.tdp ?? 0), 0);
   
-  // Add base load (MB/Fans/SSDs)
-  if (Object.keys(build).length > 0) total_tdp += 50;
+  total_tdp += getGpuComponents(build).reduce((sum, g) => sum + (g.tdp ?? 0), 0);
+  total_tdp += getRamComponents(build).reduce((sum, r) => sum + (r.tdp ?? 0), 0);
+  total_tdp += getStorageComponents(build).reduce((sum, s) => sum + (s.tdp ?? 0), 0);
+  total_tdp += getFanComponents(build).reduce((sum, f) => sum + ((f as any).tdp ?? 0), 0);
 
-  for (const ram of getRamComponents(build)) {
-    total_tdp += (ram as any).tdp ?? 0;
-  }
-  for (const storage of getStorageComponents(build)) {
-    total_tdp += (storage as any).tdp ?? 0;
-  }
+  if (Object.keys(build).length > 0) total_tdp += 50; // Base load
 
   const recommended_psu_wattage = Math.ceil((total_tdp * 1.5) / 50) * 50;
 
-  if (build.psu?.wattage && build.psu.wattage < total_tdp) {
-    errors.push({
-      rule: 'psu_underpowered',
-      components: ['psu'],
-      message: `Estimated load (${total_tdp}W) exceeds PSU capacity (${build.psu.wattage}W).`,
-    });
-  } else if (build.psu?.wattage && build.psu.wattage < total_tdp * 1.1) {
-      warnings.push({
-          rule: 'psu_tight',
-          components: ['psu'],
-          message: `PSU capacity (${build.psu.wattage}W) is very close to estimated load (${total_tdp}W).`,
+  if (build.psu?.wattage) {
+    if (build.psu.wattage < total_tdp) {
+      errors.push({
+        rule: 'psu_underpowered',
+        components: ['psu'],
+        message: `Estimated load (${total_tdp}W) exceeds PSU capacity (${build.psu.wattage}W).`,
       });
+    } else if (build.psu.wattage < total_tdp * 1.1) {
+      warnings.push({
+        rule: 'psu_tight',
+        components: ['psu'],
+        message: `PSU capacity (${build.psu.wattage}W) is very close to estimated load (${total_tdp}W).`,
+      });
+    }
   }
 
   return {
@@ -262,3 +276,5 @@ export function validateCompatibility(build: BuildInput): CompatibilityResult {
     warnings,
   };
 }
+
+

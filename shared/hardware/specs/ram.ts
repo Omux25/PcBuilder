@@ -2,17 +2,28 @@ export const extractRamSpecs = (n: string) => {
   const typeMatch = n.match(/\b(DDR[45])\b/i);
   const freqMatch = n.match(/\b(\d{4})\s*(MHz|MT\/s)\b/i);
 
-  // 1. Detect Kit Notation: "2x8GB", "2 x 16GB", "2\u00d78Go", etc.
-  const kitMatch = n.match(/(\d+)\s*[xX\u00d7*]\s*(\d+)\s*[Gg][BbOo]/);
-  const kit_count_from_notation = kitMatch ? Math.min(8, Math.max(1, parseInt(kitMatch[1]))) : 1;
-  const stick_capacity = kitMatch ? parseInt(kitMatch[2]) : undefined;
+  // 1. Detect Kit Notation: "2x8GB", "2 x 16GB", "32Gx2", "16Go*2", etc.
+  const kitMatch = n.match(/(\d+)\s*[xX\u00d7*]\s*(\d+)\s*[Gg][BbOoGg]|(\d+)\s*[Gg][BbOoGg]\s*[xX\u00d7*]\s*(\d+)/);
+  let kit_count = 1;
+  let stick_capacity: number | undefined;
 
-  // 2. Detect Standalone Capacity: "16GB", "32Go", etc.
-  const standaloneMatches = [...n.matchAll(/\b(\d+)\s*[Gg][BbOo]\b/g)];
+  if (kitMatch) {
+    if (kitMatch[1] && kitMatch[2]) {
+      // "2x8GB"
+      kit_count = Math.min(8, Math.max(1, parseInt(kitMatch[1])));
+      stick_capacity = parseInt(kitMatch[2]);
+    } else if (kitMatch[3] && kitMatch[4]) {
+      // "32Gx2"
+      stick_capacity = parseInt(kitMatch[3]);
+      kit_count = Math.min(8, Math.max(1, parseInt(kitMatch[4])));
+    }
+  }
+
+  // 2. Detect Standalone Capacity: "16GB", "32Go", "64G", etc.
+  const standaloneMatches = [...n.matchAll(/\b(\d+)\s*[Gg][BbOoGg]?\b/g)];
   const capacities = standaloneMatches.map(m => parseInt(m[1]));
   
   let total_capacity = capacities.length > 0 ? Math.max(...capacities) : undefined;
-  let kit_count = kit_count_from_notation;
 
   // If we have notation (2x8GB) but total is same as stick (8GB), fix it to 16GB
   if (stick_capacity && kit_count > 1) {
@@ -26,8 +37,8 @@ export const extractRamSpecs = (n: string) => {
   const mpnMatch = n.match(/\b(KF\d[A-Z0-9-]+|HX\d[A-Z0-9-]+|CM[A-Z0-9-]+|F[45]-[A-Z0-9-]+|CT\d+[A-Z0-9-]+|LD[A-Z0-9-]+)\b/i);
   const mpn = mpnMatch ? mpnMatch[1].toUpperCase() : undefined;
 
-  // CAS latency: "CL16", "CL36", "CL40"
-  const clMatch = n.match(/\b[Cc][Ll](\d+)\b/);
+  // CAS latency: "CL16", "CL36", "C40", "C18", etc.
+  const clMatch = n.match(/\b[Cc][Ll]?(\d{2})\b/);
   const cas_latency = clMatch ? parseInt(clMatch[1]) : undefined;
 
   // Aesthetic Guardrails (Prevent variant fusion)
