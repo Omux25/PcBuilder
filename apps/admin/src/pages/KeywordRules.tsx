@@ -7,7 +7,7 @@
  * Requirements: 12.1–12.5, 13.1–13.7, 14.1–14.8
  */
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { getKeywordRules, deleteKeywordRule, getErrorMessage} from '../api';
 import type { KeywordRuleResponse } from '../api';
@@ -34,15 +34,15 @@ export function KeywordRules() {
     const [deleteTarget, setDeleteTarget] = useState<KeywordRuleResponse | null>(null);
     const [showAddModal, setShowAddModal] = useState(false);
 
-    function load() {
+    const load = useCallback(() => {
         setLoading(true);
         getKeywordRules()
             .then(data => setRules(data))
             .catch(e => setError(e.message))
             .finally(() => setLoading(false));
-    }
+    }, []);
 
-    useEffect(() => { load(); }, []);
+    useEffect(() => { load(); }, [load]);
 
     // Client-side filter
     const filtered = useMemo(() => {

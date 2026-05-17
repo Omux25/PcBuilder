@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Unit tests for recalculateConfidence pure function.
  *
@@ -8,6 +7,7 @@
 
 import { describe, test, expect } from 'bun:test';
 import { recalculateConfidence } from '../CanonicalGroupRow';
+import type { CanonicalGroupListing } from '../../api';
 
 describe('recalculateConfidence', () => {
     test('all-high listings → high', () => {
@@ -16,11 +16,11 @@ describe('recalculateConfidence', () => {
             { id: 2, confidence: 'high' },
             { id: 3, confidence: 'high' },
         ];
-        expect(recalculateConfidence(listings as any)).toBe('high');
+        expect(recalculateConfidence(listings as CanonicalGroupListing[])).toBe('high');
     });
 
     test('single high listing → high', () => {
-        expect(recalculateConfidence([{ id: 1, confidence: 'high' }] as any)).toBe('high');
+        expect(recalculateConfidence([{ id: 1, confidence: 'high' }] as CanonicalGroupListing[])).toBe('high');
     });
 
     test('mix of high and low → medium', () => {
@@ -28,7 +28,7 @@ describe('recalculateConfidence', () => {
             { id: 1, confidence: 'high' },
             { id: 2, confidence: 'low' },
         ];
-        expect(recalculateConfidence(listings as any)).toBe('medium');
+        expect(recalculateConfidence(listings as CanonicalGroupListing[])).toBe('medium');
     });
 
     test('mix of high and medium → medium', () => {
@@ -36,7 +36,7 @@ describe('recalculateConfidence', () => {
             { id: 1, confidence: 'high' },
             { id: 2, confidence: 'medium' },
         ];
-        expect(recalculateConfidence(listings as any)).toBe('medium');
+        expect(recalculateConfidence(listings as CanonicalGroupListing[])).toBe('medium');
     });
 
     test('all-medium listings → medium', () => {
@@ -44,7 +44,7 @@ describe('recalculateConfidence', () => {
             { id: 1, confidence: 'medium' },
             { id: 2, confidence: 'medium' },
         ];
-        expect(recalculateConfidence(listings as any)).toBe('medium');
+        expect(recalculateConfidence(listings as CanonicalGroupListing[])).toBe('medium');
     });
 
     test('mix of medium and low → medium', () => {
@@ -52,7 +52,7 @@ describe('recalculateConfidence', () => {
             { id: 1, confidence: 'medium' },
             { id: 2, confidence: 'low' },
         ];
-        expect(recalculateConfidence(listings as any)).toBe('medium');
+        expect(recalculateConfidence(listings as CanonicalGroupListing[])).toBe('medium');
     });
 
     test('all-low listings → low', () => {
@@ -60,11 +60,11 @@ describe('recalculateConfidence', () => {
             { id: 1, confidence: 'low' },
             { id: 2, confidence: 'low' },
         ];
-        expect(recalculateConfidence(listings as any)).toBe('low');
+        expect(recalculateConfidence(listings as CanonicalGroupListing[])).toBe('low');
     });
 
     test('single low listing → low', () => {
-        expect(recalculateConfidence([{ id: 1, confidence: 'low' }] as any)).toBe('low');
+        expect(recalculateConfidence([{ id: 1, confidence: 'low' }] as CanonicalGroupListing[])).toBe('low');
     });
 
     test('all-unknown listings → unknown', () => {
@@ -72,7 +72,7 @@ describe('recalculateConfidence', () => {
             { id: 1, confidence: 'unknown' },
             { id: 2, confidence: 'unknown' },
         ];
-        expect(recalculateConfidence(listings as any)).toBe('unknown');
+        expect(recalculateConfidence(listings as CanonicalGroupListing[])).toBe('unknown');
     });
 
     test('empty array → unknown', () => {
@@ -85,7 +85,7 @@ describe('recalculateConfidence', () => {
             { id: 2, confidence: 'unknown' },
         ];
         // low takes precedence over unknown
-        expect(recalculateConfidence(listings as any)).toBe('low');
+        expect(recalculateConfidence(listings as CanonicalGroupListing[])).toBe('low');
     });
 
     test('removing the only high listing from mixed group → medium', () => {
@@ -94,7 +94,7 @@ describe('recalculateConfidence', () => {
             { id: 2, confidence: 'low' },
         ];
         const after = before.filter((l) => l.id !== 1); // remove high
-        expect(recalculateConfidence(after as any)).toBe('low');
+        expect(recalculateConfidence(after as CanonicalGroupListing[])).toBe('low');
     });
 
     test('removing a low outlier from all-high group preserves high', () => {
@@ -104,6 +104,6 @@ describe('recalculateConfidence', () => {
             { id: 3, confidence: 'low' }, // the outlier
         ];
         const after = before.filter((l) => l.id !== 3); // remove outlier
-        expect(recalculateConfidence(after as any)).toBe('high');
+        expect(recalculateConfidence(after as CanonicalGroupListing[])).toBe('high');
     });
 });
