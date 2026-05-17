@@ -54,3 +54,8 @@ plantuml.jar
 
 .gemini/
 gha-creds-*.json
+
+# Local development scripts
+apps/backend/scripts/sync_catalog.ts
+apps/backend/scripts/tools/check_logs.ts
+
