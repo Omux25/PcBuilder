@@ -1,6 +1,7 @@
 import { decodeHtml } from '../decode-html.js';
 import { extractRamSpecs } from './specs/ram.js';
-import { extractStorageSpecs } from './specs/storage.js';
+import { extractPsuSpecs } from './specs/psu.js';
+
 
 /**
  * Standard category keywords used for stripping prefixes/suffixes.
@@ -67,6 +68,10 @@ export function cleanName(rawName: string, brand: string, category?: string): st
   // Strip marketing/promo noise at the start
   name = name.replace(/^(PROMO\s*!+\s*|SOLDES?\s*!+\s*|NEW\s*!+\s*)/gi, '');
 
+  // Strip common French marketing phrases globally
+  name = name.replace(/\s*[\-\u2013]?\s*Am\u00e9liorez\s*vos\s*performances\s*PC\b/gi, ' ');
+  name = name.replace(/\s*[\-\u2013]?\s*M\u00e9moire\s*Vive\s*pour\s*PC\b/gi, ' ');
+
   // Strip marketing noise in parentheses anywhere
   name = name.replace(/\s*\((Livraison\s*Gratuite|Promo|Solde|New|Nouveau|Gratuit)[^)]*\)\s*/gi, ' ');
 
@@ -100,9 +105,8 @@ export function cleanName(rawName: string, brand: string, category?: string): st
     .replace(/\s+\d+\.?\d*\s*GHz\s*\/\s*\d+\.?\d*\s*GHz\s*/gi, ' ') // 3.7 GHz / 4.6 GHz
     .replace(/\s+\d+\.?\d*\s*GHz\s*$/i, '') // Trailing GHz
     .replace(/\s*[\-\u2013]\s*ed\s*$/i, '') // "- Ed"
-    // Strip trailing cache/socket noise
+    // Strip trailing cache noise
     .replace(/\s+\d+\s*MB\s*$/i, '') // e.g. "6MB"
-    .replace(/\s+\d{4}\s*$/i, '') // e.g. "1200", "1700"
     // Strip trailing ellipsis
     .replace(/\s*\.{2,}\s*$/, '')
     // Strip spec text appended after em-dash: "\u2013 32 C\u0153urs / 64 threads"
@@ -131,8 +135,8 @@ export function cleanName(rawName: string, brand: string, category?: string): st
   }
 
   // Strip socket suffix leaked from retailer names
-  name = name.replace(/\s*Socket\s*(AM[45]|LGA\s*\d{4}|\d{4})\s*$/i, '');
-  name = name.replace(/\s*(AM[45]|LGA\d{4})\s*$/i, '');
+  name = name.replace(/\s*Socket\s*(AM[45]|LGA\s*(1151|1200|1700|1851))\s*$/i, '');
+  name = name.replace(/\s*(AM[45]|LGA(1151|1200|1700|1851))\s*$/i, '');
 
   // Normalize capitalization
   {
@@ -219,11 +223,13 @@ export function cleanName(rawName: string, brand: string, category?: string): st
     // Strip other specs
     name = name
       .replace(/\bCL\d+\b/gi, ' ')
+      .replace(/\bC\d{2}\b/gi, ' ') // Catch standalone 'C' prefix like C40
       .replace(/\bDDR[45]\b/gi, ' ')
       .replace(/\b\d{4}\s*MHz\b/gi, ' ');
 
     // Standard noise cleaning
     name = name
+      .replace(/\s*[\-\u2013]\s*(Am\u00e9liorez\s*vos\s*performances\s*PC|M\u00e9moire\s*Vive\s*pour\s*PC|Performance\s*optimis\u00e9e).*$/gi, '')
       .replace(/\s*[\-\u2013]\s*[A-Z]\d[\-\u2013A-Za-z0-9]+(?:[\-\u2013][A-Za-z0-9]+)*/g, '')
       .replace(/\s*[\-\u2013]\s*[A-Z][a-z][a-z0-9A-Z]{4,}[-\w]*\s*$/g, '')
       .replace(/\s+[A-Z][a-z][a-z0-9A-Z]{4,}[/\-][\w]+\s*$/g, '')
@@ -282,6 +288,63 @@ export function cleanName(rawName: string, brand: string, category?: string): st
       .replace(/\s+[\-\u2013]\s+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  // ── PSU-specific normalization ────────────────────────────────────────────
+  if (category === 'psu') {
+    // 1. Strip branding from the name again (aggressive)
+    if (brand) {
+      const bRegex = new RegExp(`\\b(${brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\b`, 'gi');
+      name = name.replace(bRegex, '');
+    }
+    
+    // 2. Strip standard PSU noise
+    name = name
+      .replace(/\s*\(\s*\d+\s*(ans?|mois)\s*garantie\s*\)\s*/gi, ' ')
+      .replace(/\s*garantie\s*constructeur\s*\d+\s*ans?\s*/gi, ' ')
+      .replace(/\s*garantie\s*\d+\s*(ans?|mois)\s*/gi, ' ')
+      .replace(/\s*Entre\s*(\d+\s*W\s*)?Et\s*\d+\s*W\s*/gi, ' ')
+      .replace(/\s*Plus\s*De\s*\d+\s*W\s*/gi, ' ')
+      .replace(/\balimentation\b/gi, ' ')
+      .replace(/\befficacit[\u00e9e]\b/gi, ' ')
+      .replace(/\b85%\b/gi, ' ')
+      .replace(/\b100%\b/gi, ' ')
+      .replace(/\bmodulaire\b/gi, ' ')
+      .replace(/\bmodular\b/gi, ' ')
+      .replace(/\bsemi\b/gi, ' ')
+      .replace(/\bfull\b/gi, ' ')
+      .replace(/\bnon\b/gi, ' ')
+      .replace(/\bATX\s*\d+\.?\d*[a-z]?\s*/gi, ' ')
+      .replace(/\bGen\s*\d\b/gi, ' ')
+      .replace(/\bPg\d\b/gi, ' ')
+      .replace(/\bPCIe\s*\d\.?0?\b/gi, ' ')
+      .replace(/\bPC\s+Core\b/gi, ' ');
+
+    // 3. Extract specs before stripping from model name
+    const psuSpecs = extractPsuSpecs(name);
+    const { wattage, efficiency } = psuSpecs;
+
+    // 4. Strip wattage and efficiency markers from the base name to isolate the model
+    // We use a global match to catch all duplicates
+    name = name
+      .replace(/\b\d{2,4}\s*W\b/gi, ' ')
+      .replace(/\b80\s*Plus\s*(Titanium|Platinum|Gold|Silver|Bronze|White|Standard)?\b/gi, ' ')
+      .replace(/\b(Titanium|Platinum|Gold|Silver|Bronze|White)\b/gi, ' ')
+      .replace(/\b80\+\b/g, ' ');
+
+    // 5. Final cleaning of the model part
+    name = name
+      .replace(/\s+[\-\u2013]\s+/g, ' ')
+      .replace(/[\-\u2013]\s*$/, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // 6. Reconstruct canonical name
+    const specParts = [];
+    if (wattage) specParts.push(`${wattage}W`);
+    if (efficiency) specParts.push(efficiency);
+
+    name = name ? `${name} ${specParts.join(' ')}` : specParts.join(' ');
   }
 
   if (name.length < 2) name = rawName;

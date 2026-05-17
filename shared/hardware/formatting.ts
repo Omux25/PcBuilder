@@ -6,41 +6,60 @@ import type { Component } from '../types.js';
  * Rules:
  * - Omits fields that are null or zero.
  * - Prioritizes Brand + Model (the 'name' column is now treated as 'model').
+ * - Avoids duplicating information already present in the model name.
  */
-export function formatComponentName(c: Partial<Component>): string {
+export function formatComponentName(c: Partial<Component>, options: { excludeBrand?: boolean } = {}): string {
   if (!c.name) return 'Unknown Component';
   
   const brand = c.brand ? c.brand.trim() : '';
   const model = c.name.trim();
+  const lowerModel = model.toLowerCase();
   
-  // Base name is always Brand + Model (if brand isn't already in model)
+  // Base name
   let base = model;
-  if (brand && !model.toLowerCase().startsWith(brand.toLowerCase())) {
+  if (!options.excludeBrand && brand && !lowerModel.includes(brand.toLowerCase())) {
     base = `${brand} ${model}`;
   }
 
   const parts: string[] = [base];
 
+  // Helper to append a spec if it's not already in the string
+  const appendIfMissing = (spec: string | number | null | undefined, suffix: string = '') => {
+    if (!spec) return;
+    const str = `${spec}${suffix}`;
+    if (!lowerModel.includes(str.toLowerCase().trim())) {
+      parts.push(str);
+    }
+  };
+
   switch (c.category) {
     case 'cpu':
-      // Usually brand + model is enough for CPU (e.g. Intel Core i9 14900K)
-      // but we could add core count if we want more detail.
       break;
 
     case 'gpu':
-      if (c.vram_gb) parts.push(`${c.vram_gb}GB`);
+      appendIfMissing(c.vram_gb, 'GB');
       break;
 
     case 'ram':
       if (c.capacity_gb) {
-        const totalCap = c.kit_count && c.kit_count > 1 
-            ? `${c.kit_count * c.capacity_gb}GB (${c.kit_count}x${c.capacity_gb}GB)`
-            : `${c.capacity_gb}GB`;
-        parts.push(totalCap);
+        const totalCap = `${c.capacity_gb}GB`;
+        
+        if (!lowerModel.includes(totalCap.toLowerCase())) {
+          const stickCap = (c.kit_count && c.kit_count > 1) 
+            ? Math.round(c.capacity_gb / c.kit_count)
+            : c.capacity_gb;
+            
+          const detail = c.kit_count && c.kit_count > 1 
+            ? `${totalCap} (${c.kit_count}x${stickCap}GB)`
+            : totalCap;
+          parts.push(detail);
+        }
       }
-      if (c.ram_type) parts.push(c.ram_type);
-      if (c.frequency_mhz) parts.push(`${c.frequency_mhz}MHz`);
-      if (c.cas_latency) parts.push(`CL${c.cas_latency}`);
+      appendIfMissing(c.ram_type);
+      appendIfMissing(c.frequency_mhz, 'MHz');
+      if (c.cas_latency && !lowerModel.includes(`cl${c.cas_latency}`)) {
+        parts.push(`CL${c.cas_latency}`);
+      }
       break;
 
     case 'storage':
@@ -48,48 +67,46 @@ export function formatComponentName(c: Partial<Component>): string {
         const cap = c.capacity_gb >= 1000 
             ? `${(c.capacity_gb / 1000).toFixed(0)}TB` 
             : `${c.capacity_gb}GB`;
-        parts.push(cap);
+        if (!lowerModel.includes(cap.toLowerCase())) {
+          parts.push(cap);
+        }
       }
-      if (c.interface_type) parts.push(c.interface_type);
+      appendIfMissing(c.interface_type);
       break;
 
-    case 'psu': {
-      if (c.wattage) parts.push(`${c.wattage}W`);
-      if (c.efficiency_rating) {
+    case 'psu':
+      appendIfMissing(c.wattage, 'W');
+      if (c.efficiency_rating && !lowerModel.includes(c.efficiency_rating.toLowerCase())) {
         parts.push(c.efficiency_rating);
-        // Remove the rating from the model name to avoid duplicates
-        const ratingWord = c.efficiency_rating.replace('80+ ', '').toLowerCase();
-        parts[0] = parts[0]
-            .replace(new RegExp(`\\b80\\+\\s*${ratingWord}\\b`, 'gi'), '')
-            .replace(new RegExp(`\\b${ratingWord}\\b`, 'gi'), '')
-            .replace(/\s+/g, ' ').trim();
       }
-      if (c.modular && c.modular !== 'Non') parts.push(`${c.modular} Modular`);
+      if (c.modular && c.modular !== 'Non' && !lowerModel.includes('modulaire') && !lowerModel.includes('modular')) {
+        parts.push(`${c.modular} Modular`);
+      }
       break;
-    }
 
     case 'motherboard':
       if (c.chipset) {
-        // Only add chipset if not already in model name
-        if (!model.toLowerCase().includes(c.chipset.toLowerCase())) {
+        if (!lowerModel.includes(c.chipset.toLowerCase())) {
             parts.push(c.chipset);
         }
       }
-      if (c.form_factor) parts.push(c.form_factor);
+      appendIfMissing(c.form_factor);
       break;
 
     case 'case':
-      if (c.form_factor) parts.push(c.form_factor);
+      appendIfMissing(c.form_factor);
       break;
 
     case 'cooling':
-      if (c.size_mm) parts.push(`${c.size_mm}mm`);
-      else if (c.height_mm) parts.push(`${c.height_mm}mm`);
+      if (c.size_mm) appendIfMissing(c.size_mm, 'mm');
+      else if (c.height_mm) appendIfMissing(c.height_mm, 'mm');
       break;
 
     case 'fan':
-      if (c.size_mm) parts.push(`${c.size_mm}mm`);
-      if (c.pack_size && c.pack_size > 1) parts.push(`Pack of ${c.pack_size}`);
+      appendIfMissing(c.size_mm, 'mm');
+      if (c.pack_size && c.pack_size > 1 && !lowerModel.includes('pack')) {
+        parts.push(`Pack of ${c.pack_size}`);
+      }
       break;
   }
 

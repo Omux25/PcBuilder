@@ -131,6 +131,9 @@ const BRAND_CATEGORIES: Record<string, Set<Category>> = {
     'M.RED': new Set(['case']),
     'Yeyian': new Set(['case']),
     '1stPlayer': new Set(['case', 'psu']),
+    'Connect': new Set(['case', 'cooling', 'psu', 'fan']),
+    'Infinity': new Set(['case', 'cooling', 'fan']),
+    'Nova': new Set(['case', 'cooling', 'fan']),
 };
 
 // ── Brand Aliases (wrong brand → canonical brand) ─────────────────────────────
@@ -194,6 +197,18 @@ const GPU_SIGNALS = [
     /\bgt\s*\d{3}/i,
 ];
 
+const PSU_SIGNALS = [
+    /\b(80\s*plus|80plus|gold|bronze|platinum|titanium)\b/i,
+    /\b\d{3,4}\s*w\b/i,
+    /\balimentation\b/i,
+    /\bpsu\b/i,
+];
+
+const CASE_SIGNALS = [
+    /\b(boitier|boîtier|chassis|mid-tower|tower|case)\b/i,
+    /\b(atx|matx|itx)\s*chassis\b/i,
+];
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export interface BrandAuthorityResult {
@@ -227,14 +242,24 @@ export function validateBrandAuthority(
     // Also dismiss if explicitly identified as a 'build' by the inference engine.
     const hasCpuSignal = CPU_SIGNALS.some(r => r.test(name));
     const hasGpuSignal = GPU_SIGNALS.some(r => r.test(name));
+    const hasPsuSignal = PSU_SIGNALS.some(r => r.test(name));
+    const hasCaseSignal = CASE_SIGNALS.some(r => r.test(name));
+
     const isWorkstation = /\b(workstation|station\s*de\s*travail|pc\s*professionnel)\b/i.test(name) && hasCpuSignal;
-    if (hasCpuSignal && hasGpuSignal || inferredCategory === 'build' || (inferredCategory as string) === 'bundle' || isWorkstation) {
+    
+    const isBundleProduct = (hasCpuSignal && hasGpuSignal) || 
+                           (hasPsuSignal && hasCaseSignal && name.includes('+')) ||
+                           inferredCategory === 'build' || 
+                           (inferredCategory as string) === 'bundle' || 
+                           isWorkstation;
+
+    if (isBundleProduct) {
         return { 
             brand: inferredBrand, 
             dismiss: true, 
             dismissReason: inferredCategory === 'build' ? 'explicit build detection' : 
                           (inferredCategory as string) === 'bundle' ? 'explicit bundle detection' :
-                          (isWorkstation ? 'workstation detection' : 'bundle: contains both CPU and GPU signals') 
+                          (isWorkstation ? 'workstation detection' : 'bundle detection') 
         };
     }
 
