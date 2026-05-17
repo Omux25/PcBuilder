@@ -177,6 +177,13 @@ export class UnmatchedRepository {
     return rows[0] || null;
   }
 
+  async getListingsByIds(ids: number[]) {
+    if (ids.length === 0) return [];
+    return (await this.sql`
+      SELECT * FROM unmatched_listings WHERE id IN ${bunSql(ids)}
+    `) as any[];
+  }
+
   async updateManualCategory(id: number, category: string | null) {
     const rows = await this.sql`
       UPDATE unmatched_listings 

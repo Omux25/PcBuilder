@@ -1,10 +1,10 @@
-import { ComponentRepository, ComponentFilters } from '../repositories/componentRepository.js';
+import { ComponentRepository } from '../repositories/componentRepository.js';
 import { PriceRepository } from '../repositories/priceRepository.js';
-import { generateUniqueSlug as getUniqueSlug } from '../../../core/utils/slugify.js';
+import { getUniqueSlug } from './slugService.js';
 import { AppError } from '../../../core/errors/errors.js';
 
-import { Component, PriceOffer, ComponentInput } from '@shared/types';
-import { validateCompatibility } from '../../builds/services/compatibilityService.js';
+import { Component, PriceOffer, ComponentInput, ComponentFilters } from '@shared/types';
+import { checkSocketCompatibility, validateCompatibility, type BuildInput } from '../../builds/services/compatibilityService.js';
 import { getSql } from '../../../core/db/index.js';
 import { getPriceHistory } from './priceHistoryService.js';
 
@@ -137,7 +137,7 @@ export class ComponentService {
       category,
       search: search || undefined,
       brand: brand || undefined,
-      socket: socket || (compatibleOnly ? compatHints.compat_socket : undefined),
+      socket: (category === 'cooling') ? undefined : (socket || (compatibleOnly ? compatHints.compat_socket : undefined)),
       ram_type: ram_type || (compatibleOnly ? compatHints.compat_ram_type : undefined),
       sort: sort || undefined,
       vram_gb: vramGb,
@@ -172,11 +172,11 @@ export class ComponentService {
 
       if (hasOtherComponents) {
         try {
-          const result = validateCompatibility(testBuild as any);
-          const relevantErrors = result.errors.filter((e: any) => e.components.includes(category));
+          const result = validateCompatibility(testBuild as BuildInput);
+          const relevantErrors = result.errors.filter((e) => e.components.includes(category));
           if (relevantErrors.length > 0) {
             compatibility = 'incompatible';
-            compatibility_issues = relevantErrors.map((e: any) => e.message);
+            compatibility_issues = relevantErrors.map((e) => e.message);
           } else {
             compatibility = 'compatible';
           }
@@ -192,14 +192,29 @@ export class ComponentService {
 
     // 4. Filter by compatibility if requested
     if (compatibleOnly) {
+        if (category === 'motherboard' || category === 'cooling') {
+            const cpu = currentBuild.cpu;
+            if (cpu?.socket) {
+                enriched = enriched.filter(c => {
+                    const source = category === 'cooling' ? c.supported_sockets : c.socket;
+                    return checkSocketCompatibility(source, cpu.socket);
+                });
+            }
+        }
+        if (category === 'cpu') {
+            const mb = currentBuild.motherboard;
+            if (mb?.socket) {
+                enriched = enriched.filter(c => checkSocketCompatibility(c.socket, mb.socket));
+            }
+        }
         enriched = enriched.filter(c => c.compatibility !== 'incompatible');
     }
 
     const availableBrands = [...new Set(components.map(c => c.brand).filter(Boolean) as string[])].sort();
-    const availableSockets = [...new Set(components.map(c => (c as any).socket).filter(Boolean) as string[])].sort();
-    const availableVram = [...new Set(components.map(c => (c as any).vram_gb).filter(Boolean) as number[])].sort((a, b) => a - b);
-    const availableChipsets = [...new Set(components.map(c => (c as any).chipset).filter(Boolean) as string[])].sort();
-    const availableFormFactors = [...new Set(components.map(c => (c as any).form_factor).filter(Boolean) as string[])].sort();
+    const availableSockets = [...new Set(components.map(c => c.socket).filter(Boolean) as string[])].sort();
+    const availableVram = [...new Set(components.map(c => c.vram_gb).filter(Boolean) as number[])].sort((a, b) => a - b);
+    const availableChipsets = [...new Set(components.map(c => c.chipset).filter(Boolean) as string[])].sort();
+    const availableFormFactors = [...new Set(components.map(c => c.form_factor).filter(Boolean) as string[])].sort();
 
     return {
       components: enriched,
@@ -304,7 +319,7 @@ export class ComponentService {
   }
 
   private extractComponentFields(data: ComponentInput) {
-    const d = data as any;
+    const d = data as Partial<Component>;
     return {
       category: d.category,
       description: d.description ?? null,

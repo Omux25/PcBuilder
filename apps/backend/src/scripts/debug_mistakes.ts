@@ -15,13 +15,13 @@ async function testCases() {
   }
 
   const sql = getSql();
-  const sgRows = await sql`
+  const sgRows = (await sql`
     SELECT id, name, brand, category
     FROM components
     WHERE brand = 'Setup Game' AND name = 'Sg'
-  `;
+  `) as { id: number; name: string; brand: string; category: string }[];
   for (const row of sgRows) {
-    const mappings = await sql`SELECT product_identifier, product_url FROM scraper_mappings WHERE component_id = ${row.id}`;
+    const mappings = (await sql`SELECT product_identifier, product_url FROM scraper_mappings WHERE component_id = ${row.id}`) as { product_identifier: string; product_url: string }[];
     console.log(`\nComponent ID ${row.id} Mappings:`);
     for (const m of mappings) {
       console.log(`- ${m.product_identifier} (${m.product_url})`);

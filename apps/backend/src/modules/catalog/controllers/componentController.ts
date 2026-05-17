@@ -96,6 +96,7 @@ export class ComponentController {
 
   async getComponentBySlug(c: Context) {
     const slug = c.req.param('slug');
+    if (!slug) return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Missing slug' } }, 400);
     const component = await this.componentService.getComponentBySlug(slug);
     return c.json(component);
   }
@@ -176,17 +177,19 @@ export class ComponentController {
     return c.json(component);
   }
 
-  async deleteComponent(id: number) {
-    const idNum = Number(id);
+  async deleteComponent(c: Context) {
+    const id = Number(c.req.param('id'));
+    if (!id) return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid id' } }, 400);
+
     const admin = c.get('admin') as { id: number } | undefined;
 
-    await this.componentService.deleteComponent(idNum);
+    await this.componentService.deleteComponent(id);
 
     if (admin?.id) {
-      await logActivity(admin.id, 'component_deleted', 'component', idNum);
+      await logActivity(admin.id, 'component_deleted', 'component', id);
     }
 
-    return c.json({ message: `Component ${idNum} deleted successfully.` });
+    return c.json({ message: `Component ${id} deleted successfully.` });
   }
 
   async deactivateComponent(c: Context) {
@@ -310,14 +313,14 @@ export class ComponentController {
         const schema = componentSchemas[category];
         const validated = schema.safeParse(coercedRow);
         if (!validated.success) {
-          const msg = validated.error.issues.map((e) => `${String(e.path.join('.'))}: ${e.message}`).join(', ');
+          const msg = validated.error.issues.map((e: any) => `${String(e.path.join('.'))}: ${e.message}`).join(', ');
           throw new Error(`Validation failed: ${msg}`);
         }
 
         await this.componentService.createComponent(validated.data as any);
         results.imported++;
       } catch (err: any) {
-        const isUniqueError = err instanceof Error && (err.message.toLowerCase().includes('unique') || err.code === '23505');
+        const isUniqueError = err instanceof Error && (err.message.toLowerCase().includes('unique') || (err as any).code === '23505');
         if (isUniqueError) {
           results.skipped++;
         } else {

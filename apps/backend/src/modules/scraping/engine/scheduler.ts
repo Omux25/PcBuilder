@@ -10,7 +10,7 @@
 
 import { logger } from './utils/logger.js';
 import { runScrapingSession } from './session.js';
-import { getSql } from '../../../../core/db/index.js';
+import { getSql } from '../../../core/db/index.js';
 
 // ── Mutex ─────────────────────────────────────────────────────────────────────
 // Prevents concurrent scraping sessions if the cron fires while a previous
@@ -30,7 +30,7 @@ async function runDueRetailers(): Promise<void> {
   try {
     const sql = getSql();
     // Use parameterized interval calculation to avoid string concatenation (P147)
-    retailers = await sql`
+    retailers = (await sql`
       SELECT id, name, scraping_interval_hours
       FROM retailers
       WHERE is_active = true
@@ -39,7 +39,7 @@ async function runDueRetailers(): Promise<void> {
           last_scrape_at IS NULL
           OR last_scrape_at < NOW() - (scraping_interval_hours * INTERVAL '1 hour')
         )
-    `;
+    `) as { id: number; name: string; scraping_interval_hours: number }[];
   } catch (err) {
     await logger.error(`Failed to query retailers for scheduling: ${(err as Error).message}`);
     return;
@@ -61,7 +61,7 @@ async function runDueRetailers(): Promise<void> {
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
-let cronHandle: ReturnType<typeof Bun.cron> | null = null;
+let cronHandle: any | null = null;
 
 /**
  * Starts the hourly cron job. Safe to call multiple times — subsequent calls

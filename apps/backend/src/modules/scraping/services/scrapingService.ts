@@ -77,14 +77,20 @@ export class ScrapingService {
     let failed = 0;
 
     for (const [retailerId, targetUrls] of byRetailer) {
-      const config = RETAILER_SCRAPERS.find((s) => s.retailer_id === retailerId);
+      const retailer = (await this.repo.getRetailerById(retailerId)) as { id: number; name: string; base_url: string } | undefined;
+      if (!retailer) {
+        failed += targetUrls.length;
+        continue;
+      }
+
+      const config = RETAILER_SCRAPERS.find((s) => s.baseUrl === retailer.base_url);
       if (!config) {
         failed += targetUrls.length;
         continue;
       }
 
       try {
-        const prices = await config.run();
+        const prices = await config.run(retailerId);
         const targetSet = new Set(targetUrls);
         const filtered = prices.filter((p) => targetSet.has(p.product_url));
         allPrices.push(...filtered);

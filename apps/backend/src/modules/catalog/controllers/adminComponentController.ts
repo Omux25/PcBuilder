@@ -1,12 +1,12 @@
 import { Context } from 'hono';
 import Papa from 'papaparse';
-import { ComponentService } from '../../services/componentService.js';
-import { logActivity } from '../../services/adminService.js';
-import { AppError } from '../../core/errors/errors.js';
-import { componentSchemas } from '../../schemas/componentSchemas.js';
-import type { ComponentInput } from '../../schemas/componentSchemas.js';
-import { runSuggestionPreprocessing } from '../../services/suggestionPreprocessor.js';
-import { parseId } from '../types.js';
+import { ComponentService } from '../services/componentService.js';
+import { logActivity } from '../../admin/services/adminService.js';
+import { AppError } from '../../../core/errors/errors.js';
+import { componentSchemas } from '../../../core/schemas/componentSchemas.js';
+import type { ComponentInput } from '../../../core/schemas/componentSchemas.js';
+import { runSuggestionPreprocessing } from '../../scraping/services/suggestionPreprocessor.js';
+import { parseId } from '../../../core/errors/errors.js';
 
 export class AdminComponentController {
   private componentService = new ComponentService();
@@ -185,7 +185,7 @@ export class AdminComponentController {
       try {
         const category = row.category as keyof typeof componentSchemas;
         if (!category || !componentSchemas[category]) {
-          throw new Error(`Invalid or missing category: ${category}`);
+          throw new Error(`Invalid or missing category: ${String(category)}`);
         }
 
         const coercedRow = { ...row };
@@ -210,14 +210,14 @@ export class AdminComponentController {
         const schema = componentSchemas[category];
         const validated = schema.safeParse(coercedRow);
         if (!validated.success) {
-          const msg = validated.error.issues.map((e) => `${String(e.path.join('.'))}: ${e.message}`).join(', ');
+          const msg = validated.error.issues.map((e: any) => `${String(e.path.join('.'))}: ${e.message}`).join(', ');
           throw new Error(`Validation failed: ${msg}`);
         }
 
         await this.componentService.createComponent(validated.data as any);
         results.imported++;
       } catch (err: any) {
-        const isUniqueError = err instanceof Error && (err.message.toLowerCase().includes('unique') || err.code === '23505');
+        const isUniqueError = err instanceof Error && (err.message.toLowerCase().includes('unique') || (err as any).code === '23505');
         if (isUniqueError) {
           results.skipped++;
         } else {

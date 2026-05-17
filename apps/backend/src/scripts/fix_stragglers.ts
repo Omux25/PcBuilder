@@ -19,13 +19,13 @@ async function fixStragglers() {
   await sql`UPDATE components SET brand = 'Setup Game' WHERE brand = 'SG'`;
   
   // Also strip "Sg" or "Sg " from the beginning of Setup Game component names.
-  const setupGameItems = await sql`SELECT id, name FROM components WHERE brand = 'Setup Game' AND name ILIKE 'Sg %'`;
+  const setupGameItems = (await sql`SELECT id, name FROM components WHERE brand = 'Setup Game' AND name ILIKE 'Sg %'`) as { id: number; name: string }[];
   for (const item of setupGameItems) {
     const newName = item.name.replace(/^Sg\s+/i, '').trim();
     await sql`UPDATE components SET name = ${newName} WHERE id = ${item.id}`;
   }
   
-  const setupGameItems2 = await sql`SELECT id, name FROM components WHERE brand = 'Setup Game' AND name ILIKE '% Setup Game%'`;
+  const setupGameItems2 = (await sql`SELECT id, name FROM components WHERE brand = 'Setup Game' AND name ILIKE '% Setup Game%'`) as { id: number; name: string }[];
   for (const item of setupGameItems2) {
     const newName = item.name.replace(/Setup Game/gi, '').replace(/\s+/g, ' ').trim();
     await sql`UPDATE components SET name = ${newName} WHERE id = ${item.id}`;

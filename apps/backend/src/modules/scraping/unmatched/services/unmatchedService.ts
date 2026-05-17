@@ -8,6 +8,7 @@ import {
   extractRamSpecs, extractCpuSpecs, extractGpuSpecs,
   extractMotherboardSpecs, extractPsuSpecs, extractCoolingSpecs,
   extractCaseSpecs, extractFanSpecs, extractThermalPasteSpecs,
+  extractStorageSpecs,
 } from '@shared/component-utils.js';
 import { AppError } from '../../../../core/errors/errors.js';
 
@@ -236,6 +237,7 @@ export class UnmatchedService {
           ram_slots, m2_slots, sata_ports,
           size_mm, airflow_cfm, noise_db, rgb, pack_size,
           weight_grams, thermal_conductivity, paste_type,
+          tags,
           is_active
         ) VALUES (
           ${slug}, ${canonicalName}, ${brandVal}, ${category},
@@ -269,6 +271,7 @@ export class UnmatchedService {
           ${(s.weight_grams) ?? null},
           ${(s.thermal_conductivity) ?? null},
           ${(s.paste_type) ?? null},
+          ${(s.tags && s.tags.length > 0) ? `{${s.tags.join(',')}}` : null},
           true
         )
         RETURNING id
@@ -326,6 +329,7 @@ export class UnmatchedService {
     } else if (category === 'cooling') {
       const extracted = extractCoolingSpecs(name);
       if (!s.tdp && extracted?.tdp) s.tdp = extracted.tdp;
+      if (!s.tags && extracted?.tags) s.tags = extracted.tags;
     } else if (category === 'case') {
       const extracted = extractCaseSpecs(name);
       if (!s.max_gpu_length_mm && extracted?.max_gpu_length_mm) s.max_gpu_length_mm = extracted.max_gpu_length_mm;

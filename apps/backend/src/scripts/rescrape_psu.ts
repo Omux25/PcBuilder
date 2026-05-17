@@ -6,7 +6,7 @@ async function mockUnmatchedAndBuild() {
   const sql = getSql();
   console.log('--- INSERTING UNMATCHED LISTINGS ---');
   
-  const setupGame = await sql`SELECT id FROM retailers LIMIT 1`;
+  const setupGame = (await sql`SELECT id FROM retailers LIMIT 1`) as { id: number }[];
   const retailerId = setupGame[0].id;
 
   const products = [

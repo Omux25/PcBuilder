@@ -18,7 +18,11 @@ export class ScrapingController {
   }
 
   async runRetailer(c: Context) {
-    const retailerId = parseInt(c.req.param('retailerId'), 10);
+    const rawId = c.req.param('retailerId');
+    if (!rawId) {
+      return c.json({ error: { code: 'VALIDATION_ERROR', message: 'retailerId is required' } }, 400);
+    }
+    const retailerId = parseInt(rawId, 10);
     if (isNaN(retailerId)) {
       return c.json({ error: { code: 'VALIDATION_ERROR', message: 'retailerId must be a positive integer' } }, 400);
     }

@@ -62,10 +62,11 @@ export class KeywordRuleController {
 
   async deleteRule(c: Context) {
     const id = parseId(c.req.param('id'));
+    if (id === null) {
+      return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid id' } }, 400);
+    }
     const admin = c.get('admin') as { id: number } | undefined;
 
-    // Need to get rule info for logging before delete
-    // Actually, the service could return it, but for now let's just delete
     await this.service.deleteRule(id);
 
     if (admin?.id) {

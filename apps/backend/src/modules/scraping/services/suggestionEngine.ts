@@ -134,27 +134,14 @@ const KNOWN_BRANDS = [
 ];
 
 /**
- * Extracts the brand from a scraped product name using the known brand list.
- * Falls back to the existing extractBrand() from component-utils.
+ * Extracts the brand from a scraped product name.
+ * Relies on the centralized extractBrand() from shared hardware utils.
  * Pure function.
  */
 export function extractBrandFromName(scrapedName: string): string | null {
     const n = scrapedName.trim();
-
-    // Check multi-word brands first (e.g. "be quiet!", "Mars Gaming", "Thermal Grizzly")
-    const sorted = [...KNOWN_BRANDS].sort((a, b) => b.length - a.length);
-    for (const brand of sorted) {
-        if (n.toLowerCase().startsWith(brand.toLowerCase())) {
-            return brand;
-        }
-    }
-
-    // Fall back to shared extractBrand
-    const fallback = extractBrand(n);
-    // Only return if it looks like a real brand (not just the first word of a generic name)
-    if (fallback && fallback.length > 1) return fallback;
-
-    return null;
+    const brand = extractBrand(n);
+    return (brand && brand.length > 1) ? brand : null;
 }
 
 // ── Keyword scorer ────────────────────────────────────────────────────────────

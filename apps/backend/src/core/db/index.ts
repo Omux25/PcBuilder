@@ -12,6 +12,7 @@ import { sql as bunSql } from 'bun';
 
 export type SqlFn = {
   (strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
+  (value: unknown): any; // Support for sql(array) or sql(object)
   begin<T>(cb: (tx: SqlFn) => Promise<T>): Promise<T>;
   unsafe(query: string, params?: unknown[]): Promise<unknown[]>;
 };
