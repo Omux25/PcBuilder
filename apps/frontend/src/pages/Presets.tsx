@@ -89,9 +89,12 @@ export function Presets({ onLoadPreset }: Props) {
 function PresetCard({ preset, onLoad }: { preset: PresetBuild; onLoad: (p: PresetBuild) => void }) {
   const componentCount = Object.keys(preset.components).length;
   return (
-    <div className={`${styles.card} ${preset.incomplete ? styles.incomplete : ''}`}>
+    <div className={`${styles.card} ${preset.incomplete ? styles.incomplete : ''} ${preset.is_featured ? styles.featured : ''}`}>
       <div className={styles.cardHeader}>
-        <h3 className={styles.cardName}>{preset.name}</h3>
+        <div className={styles.nameWrap}>
+          <h3 className={styles.cardName}>{preset.name}</h3>
+          {preset.is_featured && <span className={styles.featuredBadge}>Elite Config</span>}
+        </div>
         {preset.incomplete && (
           <span className={styles.incompleteBadge} title={UI.presets.incompleteTitle}>
             {UI.presets.incomplete}

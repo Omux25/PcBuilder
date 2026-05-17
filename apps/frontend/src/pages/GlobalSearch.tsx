@@ -39,6 +39,7 @@ export function GlobalSearch() {
 
   useEffect(() => {
     if (!query.trim()) { setResults([]); setSearched(false); return; }
+    const abort = new AbortController();
     setLoading(true);
     setSearched(false);
     Promise.all(
@@ -48,9 +49,13 @@ export function GlobalSearch() {
           .catch(() => ({ category: cat, components: [], total: 0 }))
       )
     ).then(all => {
+      if (abort.signal.aborted) return;
       setResults(all.filter(r => r.total > 0));
       setSearched(true);
-    }).finally(() => setLoading(false));
+    }).finally(() => {
+      if (!abort.signal.aborted) setLoading(false);
+    });
+    return () => abort.abort();
   }, [query]);
 
   function handleInput(val: string) {
