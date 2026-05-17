@@ -147,14 +147,18 @@ export async function aggregate(
     for (const rule of adminRules) {
       if (matchesRule(rule, name)) return rule.category as ComponentCategory;
     }
+    
     const catByName = inferCategory(name);
-    if (catByName && DB_CATEGORIES.has(catByName)) return catByName as ComponentCategory;
+    const catByUrl = url ? inferCategoryFromUrl(url) : null;
 
-    if (url) {
-      const catByUrl = inferCategoryFromUrl(url);
-      if (catByUrl && DB_CATEGORIES.has(catByUrl)) return catByUrl as ComponentCategory;
-    }
-    return null;
+    if (!catByName && !catByUrl) return null;
+    if (!catByName) return (catByUrl && DB_CATEGORIES.has(catByUrl)) ? catByUrl as ComponentCategory : null;
+    if (!catByUrl) return (catByName && DB_CATEGORIES.has(catByName)) ? catByName as ComponentCategory : null;
+
+    // Arbitration: High specific indicators win over generic retailer categories
+    const resolved = getCategoryPriority(catByName as any) >= getCategoryPriority(catByUrl as any) ? catByName : catByUrl;
+    
+    return (resolved && DB_CATEGORIES.has(resolved)) ? resolved as ComponentCategory : null;
   }
 
   // ── PROCESSING ─────────────────────────────────────────────────────────────
@@ -172,7 +176,7 @@ export async function aggregate(
   //   get back IDs, then push everything into finalResolved.
 
   const finalResolved: (ScrapedPrice & { component_id: number; category: string })[] = [];
-  const unmatchedListingsToUpsert: { retailer_id: number; product_url: string; scraped_name: string; scraped_price: number; image_url: string | null; image_urls: string[] | null }[] = [];
+  const unmatchedListingsToUpsert: { retailer_id: number; product_url: string; scraped_name: string; scraped_price: number; image_url: string | null; image_urls: string | null }[] = [];
   const dismissedListingsToUpdate: { retailer_id: number; product_url: string }[] = [];
 
   // Items that need a new component row — keyed by slug to deduplicate
@@ -188,11 +192,14 @@ export async function aggregate(
 
 
   // Categories the DB components table accepts (matches components_category_check constraint).
-  // Peripherals and accessories inferred by inferCategory() are intentionally excluded —
-  // they go to unmatched_listings instead of being auto-created as components.
   const DB_CATEGORIES = new Set([
     'cpu', 'motherboard', 'gpu', 'ram', 'storage',
     'psu', 'case', 'cooling', 'fan', 'thermal_paste',
+    'fan_controller', 'case_accessory', 'accessory',
+    'monitor', 'keyboard', 'mouse', 'headphones', 'speakers', 'webcam',
+    'wired_network_adapter', 'wireless_network_adapter', 'sound_card',
+    'external_storage', 'optical_drive', 'ups', 'os', 'software',
+    'build', 'bundle'
   ]);
 
   // ── Phase A: classify all items in memory ──────────────────────────────────
@@ -254,7 +261,9 @@ export async function aggregate(
           scraped_name: scrapedName,
           scraped_price: p.price,
           image_url: p.image_url ?? null,
-          image_urls: (p.image_urls && p.image_urls.length > 0) ? p.image_urls : null
+          image_urls: (p.image_urls && p.image_urls.length > 0) 
+            ? `{${p.image_urls.map(u => `"${u.replace(/"/g, '\\"')}"`).join(',')}}`
+            : null
         });
         unmatched++;
         continue;
@@ -291,8 +300,8 @@ export async function aggregate(
         // Step 3b: Bundle detection (Safety Guard)
         // If the product matches 2+ major categories, it's a bundle/PC build.
         // e.g. "PC Gamer Ryzen 5 7600X RTX 4070" matches both CPU and GPU.
-        // We only check major categories (cpu, gpu, motherboard) to avoid false positives.
-        const MAJOR_CATEGORIES = new Set(['cpu', 'gpu', 'motherboard']);
+        // We only check major categories (cpu, gpu, motherboard, psu, case) to avoid false positives.
+        const MAJOR_CATEGORIES = new Set(['cpu', 'gpu', 'motherboard', 'psu', 'case']);
         if (MAJOR_CATEGORIES.has(resolvedCategory)) {
           let otherCategoryMatch = false;
           for (const otherCat of MAJOR_CATEGORIES) {
@@ -316,7 +325,9 @@ export async function aggregate(
               scraped_name: scrapedName,
               scraped_price: p.price,
               image_url: p.image_url ?? null,
-              image_urls: (p.image_urls && p.image_urls.length > 0) ? (sql as any).array(p.image_urls) : null
+              image_urls: (p.image_urls && p.image_urls.length > 0) 
+                ? `{${p.image_urls.map(u => `"${u.replace(/"/g, '\\"')}"`).join(',')}}`
+                : null
             });
             unmatched++;
             continue;
@@ -348,7 +359,9 @@ export async function aggregate(
           scraped_name: scrapedName,
           scraped_price: p.price,
           image_url: p.image_url ?? null,
-          image_urls: (p.image_urls && p.image_urls.length > 0) ? (sql as any).array(p.image_urls) : null
+          image_urls: (p.image_urls && p.image_urls.length > 0) 
+            ? `{${p.image_urls.map(u => `"${u.replace(/"/g, '\\"')}"`).join(',')}}`
+            : null
         });
         unmatched++;
         continue;
@@ -417,15 +430,17 @@ export async function aggregate(
           : null
       };
 
+      const compositeText = `${nameForExtraction} ${item.prices[0].product_description || ''}`.trim();
+
       if (category === 'cpu') {
-        const s = extractCpuSpecs(nameForExtraction);
+        const s = extractCpuSpecs(compositeText);
         row = { ...row, socket: s?.socket ?? null, tdp: s?.tdp ?? null };
       } else if (category === 'gpu') {
-        const s = extractGpuSpecs(nameForExtraction);
+        const s = extractGpuSpecs(compositeText);
         row = { ...row, length_mm: s?.length_mm ?? null, tdp: s?.tdp ?? null };
       } else if (category === 'ram') {
-        const s = extractRamSpecs(nameForExtraction);
-        const ramType = s?.ram_type ?? (nameForExtraction.toLowerCase().includes('ddr5') ? 'DDR5' : 'DDR4');
+        const s = extractRamSpecs(compositeText);
+        const ramType = s?.ram_type ?? (compositeText.toLowerCase().includes('ddr5') ? 'DDR5' : 'DDR4');
         row = { 
           ...row, 
           ram_type: ramType, 
@@ -435,22 +450,28 @@ export async function aggregate(
           cas_latency: s?.cas_latency ?? null
         };
       } else if (category === 'motherboard') {
-        const s = extractMotherboardSpecs(nameForExtraction);
+        const s = extractMotherboardSpecs(compositeText);
         row = { ...row, socket: s?.socket ?? null, supported_ram_types: s ? `{${s.supported_ram_types.join(',')}}` : null, max_ram_frequency: s?.max_ram_frequency ?? null };
       } else if (category === 'psu') {
-        const s = extractPsuSpecs(nameForExtraction);
-        row = { ...row, wattage: s?.wattage ?? null };
+        const s = extractPsuSpecs(compositeText);
+        row = { 
+          ...row, 
+          wattage: s?.wattage ?? null,
+          efficiency_rating: s?.efficiency ?? null,
+          modular: s?.modularity ?? null
+        };
       } else if (category === 'cooling') {
-        const s = extractCoolingSpecs(nameForExtraction);
-        row = { ...row, tdp: s?.tdp ?? null };
+        const s = extractCoolingSpecs(compositeText);
+        const tags = s?.tags || [];
+        row = { ...row, tdp: s?.tdp ?? null, tags: tags.length > 0 ? `{${tags.join(',')}}` : null };
       } else if (category === 'case') {
-        const s = extractCaseSpecs(nameForExtraction);
-        row = { ...row, max_gpu_length_mm: s?.max_gpu_length_mm ?? null };
+        const s = extractCaseSpecs(compositeText);
+        row = { ...row, max_gpu_length_mm: s?.max_gpu_length_mm ?? null, max_cooler_height_mm: s?.max_cooler_height_mm ?? null };
       } else if (category === 'fan') {
-        const s = extractFanSpecs(nameForExtraction);
+        const s = extractFanSpecs(compositeText);
         row = { ...row, size_mm: s?.size_mm ?? null, rgb: s?.rgb ?? null, pack_size: s?.pack_size ?? null };
       } else if (category === 'thermal_paste') {
-        const s = extractThermalPasteSpecs(nameForExtraction);
+        const s = extractThermalPasteSpecs(compositeText);
         row = { ...row, weight_grams: s?.weight_grams ?? null, paste_type: s?.paste_type ?? null };
       }
       // storage + misc categories: just slug/name/brand/category/is_active
@@ -517,7 +538,9 @@ export async function aggregate(
                   scraped_name: decodeHtml(p.product_name ?? ''),
                   scraped_price: p.price,
                   image_url: p.image_url ?? null,
-                  image_urls: (p.image_urls && p.image_urls.length > 0) ? (sql as any).array(p.image_urls) : null
+                  image_urls: (p.image_urls && p.image_urls.length > 0) 
+                    ? `{${p.image_urls.map(u => `"${u.replace(/"/g, '\\"')}"`).join(',')}}`
+                    : null
                 });
                 unmatched++;
               }

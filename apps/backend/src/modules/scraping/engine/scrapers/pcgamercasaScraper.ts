@@ -59,6 +59,7 @@ interface PsProduct {
     id_product: number;
     name: string;
     price_amount: number;
+    description_short?: string;
     add_to_cart_url?: string;
     url: string;
     cover?: {
@@ -155,12 +156,17 @@ export class PcGamerCasaScraper {
                     p.cover?.bySize?.home_default?.url ??
                     undefined;
 
+                const product_description = p.description_short
+                    ? p.description_short.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+                    : undefined;
+
                 prices.push({
                     retailer_id: this.retailerId,
                     price: p.price_amount,
                     in_stock,
                     product_url: p.url,
                     product_name: p.name,
+                    product_description,
                     image_url,
                 });
             }

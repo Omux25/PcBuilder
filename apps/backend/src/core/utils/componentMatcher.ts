@@ -140,11 +140,25 @@ function extractCpuDna(name: string): string[] {
     tokens.push(match[1]);
   }
 
-  // Threadripper / EPYC
+  // Threadripper / EPYC / Xeon / Pentium
   if (n.includes('threadripper')) tokens.push('threadripper');
   if (n.includes('epyc')) tokens.push('epyc');
+  if (n.includes('xeon')) tokens.push('xeon');
+  if (n.includes('pentium')) tokens.push('pentium');
 
-  return [...new Set(tokens.filter(Boolean))]; // Dedup
+  const uniqueTokens = [...new Set(tokens.filter(Boolean))];
+
+  // Enforce that a CPU DNA *must* contain a model number (at least 3 digits)
+  // Exception: Threadripper/EPYC/Xeon/Pentium might not have standard \d{3} models in some scraping edge cases,
+  // but for Ryzen and Core iX, a model number is strictly required to prevent "Ryzen 5" from acting as a wildcard.
+  const hasModelNumber = uniqueTokens.some(t => /\d{3}/.test(t));
+  const isSpecialFamily = uniqueTokens.some(t => ['threadripper', 'epyc', 'xeon', 'pentium'].includes(t));
+  
+  if (!hasModelNumber && !isSpecialFamily) {
+    return []; // Invalid DNA for a CPU
+  }
+
+  return uniqueTokens;
 }
 
 /**
@@ -251,9 +265,6 @@ function extractPsuDna(name: string): string[] {
   const tokens: string[] = [];
 
   // Guard: if the name looks like a motherboard chipset AND has no wattage indicator, skip.
-  // A motherboard name like "B650 GAMING PLUS" has no W suffix and no PSU brand.
-  // A PSU like "Seasonic A650BN" has a known PSU brand, so the brand check below
-  // will succeed and we proceed normally.
   const hasAnyWattageHint = n.match(/\b\d{3,4}\s*w\b/) ||
     n.match(/\b(cv|rm|tx|cx|hx|sf|ax|vs|cp|lp|gx|gm|gd|focus|prime|straight|dark|a|p|g|v|mwe|strix|tuf|rog)(\d{3,4})[a-z]{0,3}\b/);
   if (!hasAnyWattageHint && n.match(/\b[abxhz]\d{3,4}[ei]?\b/)) return [];
@@ -262,7 +273,8 @@ function extractPsuDna(name: string): string[] {
   const PSU_BRANDS = new Set([
     'corsair', 'seasonic', 'evga', 'bequiet', 'be', 'coolermaster', 'thermaltake',
     'antec', 'fractal', 'silverstone', 'fsp', 'superflower', 'xpg', 'asus',
-    'gigabyte', 'msi', 'deepcool', 'aerocool', 'cougar', 'chieftec', 'lc', 'nox', 'setupgame'
+    'gigabyte', 'msi', 'deepcool', 'aerocool', 'cougar', 'chieftec', 'lc', 'nox', 'setupgame',
+    'connect', 'nova', 'lian', 'hybrok', 'tacens', 'gamdias', 'nzxt', 'mars', 'sg'
   ]);
   const firstWord = n.split(' ')[0];
   if (PSU_BRANDS.has(firstWord)) {
@@ -271,26 +283,37 @@ function extractPsuDna(name: string): string[] {
     tokens.push('bequiet');
   } else if (n.includes('setup game') || n.includes('setup-game') || n.match(/\bsg\b/)) {
     tokens.push('setupgame');
+  } else if (n.includes('lian li')) {
+    tokens.push('lian');
+  } else if (n.includes('cooler master')) {
+    tokens.push('coolermaster');
+  } else if (n.includes('mars gaming')) {
+    tokens.push('mars');
   }
 
-  // Wattage — explicit "850W" takes priority (must have W suffix)
+  // Wattage
   const wattMatch = n.match(/\b(\d{3,4})\s*w\b/);
+  let wattageValue = '';
   if (wattMatch) {
-    tokens.push(`${wattMatch[1]}w`);
+    wattageValue = `${wattMatch[1]}w`;
+    tokens.push(wattageValue);
   } else {
-    // Wattage with efficiency suffix: "850G" (Gold), "850X" (Platinum), "850P" etc.
-    // Only match if NOT preceded by a letter (avoids B850, X870 chipset patterns)
     const wattSuffixMatch = n.match(/(?<![a-z])(\d{3,4})[gxpbt]\b/);
     if (wattSuffixMatch) {
       const w = parseInt(wattSuffixMatch[1]);
-      if (w >= 300 && w <= 2000) tokens.push(`${w}w`);
+      if (w >= 300 && w <= 2000) {
+        wattageValue = `${w}w`;
+        tokens.push(wattageValue);
+      }
     } else {
-      // Model number contains wattage (e.g. CV550, RM750, TX850, CX650, A650BN)
       const PSU_MODEL_PREFIXES = /\b(cv|rm|tx|cx|hx|sf|ax|vs|cp|lp|gx|gm|gd|a|p|g|v|mwe|strix|tuf|rog)(\d{3,4})[a-z]{0,3}\b/;
       const modelWattMatch = n.match(PSU_MODEL_PREFIXES);
       if (modelWattMatch) {
         const w = parseInt(modelWattMatch[2]);
-        if (w >= 300 && w <= 2000) tokens.push(`${w}w`);
+        if (w >= 300 && w <= 2000) {
+          wattageValue = `${w}w`;
+          tokens.push(wattageValue);
+        }
       }
     }
   }
@@ -300,12 +323,30 @@ function extractPsuDna(name: string): string[] {
   else if (n.includes('platinum')) tokens.push('platinum');
   else if (n.includes('gold')) tokens.push('gold');
   else if (n.includes('bronze')) tokens.push('bronze');
+  else if (n.includes('silver')) tokens.push('silver');
 
-  // Require at least brand + wattage — brand alone is too weak
+  // Require at least brand + wattage
   const hasWattage = tokens.some(t => t.endsWith('w'));
-  if (!hasWattage) return []; // can't reliably match without wattage
+  if (!hasWattage) return [];
 
-  return tokens.filter(Boolean);
+  // Model name tokens to prevent collisions between different lines
+  // e.g. "RM850e" vs "RM850x", "MAG A850GL" vs "MPG A850G"
+  const noise = new Set(['psu', 'alimentation', 'power', 'supply', 'modulaire', 'modular', 'semi', 'full', 'non', 'atx', 'sfx', 'pcie', 'gen', 'plus', 'white', 'black', 'noir', 'blanc', 'rgb', 'argb', 'edition', 'v2', 'v3', '3.0', '3.1', '80plus', '80+', '80']);
+  
+  const modelTokens = n.split(' ').filter(t => {
+    if (t.length <= 1) return false;
+    if (noise.has(t)) return false;
+    if (PSU_BRANDS.has(t)) return false;
+    if (t === 'master' || t === 'quiet' || t === 'game' || t === 'li' || t === 'gaming') return false;
+    if (t === 'gold' || t === 'bronze' || t === 'platinum' || t === 'titanium' || t === 'silver') return false;
+    if (t === wattageValue) return false;
+    if (/^\d{3,4}w$/.test(t)) return false;
+    return true;
+  });
+
+  tokens.push(...modelTokens.slice(0, 3)); // Add up to 3 model-specific tokens
+
+  return [...new Set(tokens)];
 }
 
 /**
@@ -627,7 +668,7 @@ export function findBestMatch(
   // Bundle detection: count how many distinct MAJOR categories have a perfect DNA match.
   // Use brand-agnostic scoring here — a bundle like "PC Gamer Ryzen 5 7600X RTX 4090" should
   // be detected even if the product brand doesn't match the catalog brand.
-  const MAJOR_CATEGORIES = new Set(['cpu', 'gpu', 'motherboard']);
+  const MAJOR_CATEGORIES = new Set(['cpu', 'gpu', 'motherboard', 'psu', 'case']);
   const matchingCategories = new Set<string>();
   for (const component of components) {
     const fullName = component.brand ? `${component.brand} ${component.name}` : component.name;

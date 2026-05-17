@@ -56,7 +56,7 @@ function getSecret(): string {
 }
 
 function makeAccessToken(adminId: number, username: string): string {
-  return jwt.sign({ id: adminId, username }, getSecret(), { expiresIn: ACCESS_TOKEN_EXPIRY });
+  return jwt.sign({ id: adminId, username }, getSecret(), { expiresIn: ACCESS_TOKEN_EXPIRY as any });
 }
 
 function refreshTokenExpiry(): Date {

@@ -12,7 +12,7 @@
 // @ts-nocheck
 import { describe, test } from 'bun:test';
 import * as fc from 'fast-check';
-import { validateCompatibility } from '../../../modules/builds/services/compatibilityService.js';
+import { validateCompatibility } from '../../modules/builds/services/compatibilityService.js';
 
 // ── Arbitraries ───────────────────────────────────────────────────────────────
 
@@ -172,7 +172,9 @@ describe('PBT 2.4 — ram_frequency_exceeded rule', () => {
 // ── Task 2.5 — Total TDP + PSU recommendation ────────────────────────────────
 
 describe('PBT 2.5 — TDP calculation', () => {
-  test('total_tdp equals sum of all non-null component TDPs', () => {
+  const BASE_LOAD = 50;
+
+  test('total_tdp equals sum of all non-null component TDPs + base load', () => {
     fc.assert(fc.property(
       tdpArb, tdpArb, tdpArb,
       (cpuTdp, gpuTdp, ramTdp) => {
@@ -181,12 +183,12 @@ describe('PBT 2.5 — TDP calculation', () => {
           gpu: { length_mm: 300, tdp: gpuTdp },
           ram: { ram_type: 'DDR5', frequency_mhz: 4800, tdp: ramTdp },
         });
-        return result.total_tdp === cpuTdp + gpuTdp + ramTdp;
+        return result.total_tdp === cpuTdp + gpuTdp + ramTdp + BASE_LOAD;
       },
     ));
   });
 
-  test('recommended_psu_wattage = ceil(total_tdp * 1.5)', () => {
+  test('recommended_psu_wattage = ceil((total_tdp * 1.5) / 50) * 50', () => {
     fc.assert(fc.property(
       tdpArb, tdpArb,
       (cpuTdp, gpuTdp) => {
@@ -194,13 +196,14 @@ describe('PBT 2.5 — TDP calculation', () => {
           cpu: { socket: 'AM5', tdp: cpuTdp },
           gpu: { length_mm: 300, tdp: gpuTdp },
         });
-        const expected = Math.ceil((cpuTdp + gpuTdp) * 1.5);
+        const total = cpuTdp + gpuTdp + BASE_LOAD;
+        const expected = Math.ceil((total * 1.5) / 50) * 50;
         return result.recommended_psu_wattage === expected;
       },
     ));
   });
 
-  test('total_tdp is always non-negative', () => {
+  test('total_tdp is always >= base load when build not empty', () => {
     fc.assert(fc.property(
       tdpArb, tdpArb, tdpArb,
       (a, b, c) => {
@@ -209,18 +212,18 @@ describe('PBT 2.5 — TDP calculation', () => {
           gpu:     { length_mm: 300, tdp: b },
           storage: { tdp: c },
         });
-        return result.total_tdp >= 0;
+        return result.total_tdp >= BASE_LOAD;
       },
     ));
   });
 
-  test('null/undefined TDP components contribute 0 to total_tdp', () => {
+  test('null/undefined TDP components contribute 0 to total_tdp (still has base load)', () => {
     fc.assert(fc.property(tdpArb, (gpuTdp) => {
       const result = validateCompatibility({
         cpu: { socket: 'AM5', tdp: null },
         gpu: { length_mm: 300, tdp: gpuTdp },
       });
-      return result.total_tdp === gpuTdp;
+      return result.total_tdp === gpuTdp + BASE_LOAD;
     }));
   });
 });
@@ -228,7 +231,7 @@ describe('PBT 2.5 — TDP calculation', () => {
 // ── Task 2.6 — Underpowered PSU warning ──────────────────────────────────────
 
 describe('PBT 2.6 — psu_underpowered rule', () => {
-  test('psu_underpowered fires iff psu.wattage < recommended_psu_wattage', () => {
+  test('psu_underpowered fires iff psu.wattage < total_tdp', () => {
     fc.assert(fc.property(
       tdpArb, wattageArb,
       (gpuTdp, psuWattage) => {
@@ -237,16 +240,16 @@ describe('PBT 2.6 — psu_underpowered rule', () => {
           psu: { wattage: psuWattage },
         });
 
-        const recommended = result.recommended_psu_wattage;
-        const hasWarning = result.warnings.some(w => w.rule === 'psu_underpowered');
-        const shouldHaveWarning = psuWattage < recommended;
+        const total = result.total_tdp;
+        const hasError = result.errors.some(e => e.rule === 'psu_underpowered');
+        const shouldHaveError = psuWattage < total;
 
-        return hasWarning === shouldHaveWarning;
+        return hasError === shouldHaveError;
       },
     ));
   });
 
-  test('psu_underpowered is a warning, never an error', () => {
+  test('psu_underpowered is an error', () => {
     fc.assert(fc.property(
       tdpArb, wattageArb,
       (gpuTdp, psuWattage) => {
@@ -255,7 +258,11 @@ describe('PBT 2.6 — psu_underpowered rule', () => {
           psu: { wattage: psuWattage },
         });
         const inErrors = result.errors.some(e => e.rule === 'psu_underpowered');
-        return !inErrors;
+        const total = result.total_tdp;
+        if (psuWattage < total) {
+            return inErrors;
+        }
+        return true;
       },
     ));
   });
@@ -263,7 +270,7 @@ describe('PBT 2.6 — psu_underpowered rule', () => {
   test('psu_underpowered never fires when psu is absent', () => {
     fc.assert(fc.property(tdpArb, (gpuTdp) => {
       const result = validateCompatibility({ gpu: { length_mm: 300, tdp: gpuTdp } });
-      return !result.warnings.some(w => w.rule === 'psu_underpowered');
+      return !result.errors.some(e => e.rule === 'psu_underpowered');
     }));
   });
 });

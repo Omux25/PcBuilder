@@ -16,6 +16,7 @@ import type { ResolvedRetailerScraperConfig } from './config/retailers.config.js
 import { importBenchmarks } from './benchmarkImporter.js';
 import type { ScrapedPrice } from './scrapers/baseScraper.js';
 import { runSmartBackfill, runDeepRetailerBackfill } from '../services/enrichmentService.js';
+import { runSpecMiningSession } from '../services/specMiningService.js';
 
 // ── Data Quality Pass ─────────────────────────────────────────────────────────
 
@@ -328,11 +329,11 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
     })()
   ]);
 
-  // 3. Deep Backfill: Non-blocking (runs in background)
-  console.log('Starting background enrichment for product specs and galleries...');
-  runDeepRetailerBackfill()
-    .then(() => logger.info('[SESSION] Background enrichment task finished successfully'))
-    .catch((err) => logger.error(`[SESSION] Background enrichment task failed: ${err instanceof Error ? err.message : String(err)}`));
+  // 3. Automated Spec Mining: Non-blocking (runs in background)
+  console.log('Starting automated spec mining (Retailers -> Manufacturers -> Datasets)...');
+  runSpecMiningSession()
+    .then(() => logger.info('[SESSION] Spec mining task finished successfully'))
+    .catch((err) => logger.error(`[SESSION] Spec mining task failed: ${err instanceof Error ? err.message : String(err)}`));
 }
 
 

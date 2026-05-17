@@ -12,7 +12,7 @@
  */
 
 import { componentSlug, generateUniqueSlug } from '@shared/slugify';
-import { scoreDnaMatch, type CatalogComponent } from '../../../core/utils/componentMatcher.js';
+import { scoreDnaMatch, extractDna, type CatalogComponent } from '../../../core/utils/componentMatcher.js';
 import { logger } from './utils/logger.js';
 import { getSql, setSql, resetSql } from '../../../core/db/index.js';
 import {
@@ -64,7 +64,9 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         return rule.category as ComponentCategory;
       }
     }
-    return inferCategory(name);
+    const cat = inferCategory(name);
+    if (cat === 'build' || cat === 'bundle') return null;
+    return cat as ComponentCategory | null;
   }
 
   const pending = (await sql`
@@ -106,7 +108,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
     const category = (listing.suggestion_category as ComponentCategory | null)
       ?? resolveCategory(scrapedName)
       ?? resolveCategory(nameForExtraction);
-    if (!category || category === 'build' as any) { skipped++; onProgress?.(created + skipped, pending.length); continue; }
+    if (!category || (category as string) === 'build') { skipped++; onProgress?.(created + skipped, pending.length); continue; }
 
     const brand = prefixAsBrand ?? extractBrand(nameForExtraction);
     const cleanedName = cleanName(nameForExtraction, brand, category);
@@ -119,6 +121,15 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
       onProgress?.(created + skipped, pending.length);
       continue;
     }
+
+    // NEW: Reject names with no DNA tokens (too generic to match reliably)
+    const productDna = extractDna(nameForExtraction, category);
+    if (productDna.length === 0) {
+        skipped++;
+        onProgress?.(created + skipped, pending.length);
+        continue;
+    }
+
     const dnaMatch = existingComponents.find(c => {
       if (c.category !== category) return false;
       const { score } = scoreDnaMatch(nameForExtraction, `${c.brand ?? ''} ${c.name}`, category);
@@ -248,8 +259,8 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         // Use extracted specs or create with null fields — better to have the component than skip it
         const ramTypes = specs ? specs.supported_ram_types : null;
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, socket, supported_ram_types, max_ram_frequency, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'motherboard', ${specs?.socket ?? null}, ${ramTypes}, ${specs?.max_ram_frequency ?? null}, ${listing.image_url}, true)
+          INSERT INTO components (slug, name, brand, category, socket, supported_ram_types, max_ram_frequency, ram_slots, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'motherboard', ${specs?.socket ?? null}, ${ramTypes}, ${specs?.max_ram_frequency ?? null}, ${specs?.ram_slots ?? null}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
@@ -265,10 +276,10 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         newId = rows[0]?.id;
       } else if (category === 'cooling') {
         const specs = extractCoolingSpecs(nameForExtraction);
-        // Create cooling component even if specs can't be extracted — tdp is optional
+        const tags = specs?.tags || [];
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, tdp, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'cooling', ${specs?.tdp ?? null}, ${listing.image_url}, true)
+          INSERT INTO components (slug, name, brand, category, tdp, tags, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'cooling', ${specs?.tdp ?? null}, ${tags.length > 0 ? `{${tags.join(',')}}` : null}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;

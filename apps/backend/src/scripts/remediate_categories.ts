@@ -16,8 +16,8 @@ async function remediateCategories() {
 
   let moved = 0;
   for (const c of components) {
-    const mappings = await sql`SELECT product_identifier FROM scraper_mappings WHERE component_id = ${c.id}`;
-    const identifiers = mappings.map(m => m.product_identifier);
+    const mappings = (await sql`SELECT product_identifier FROM scraper_mappings WHERE component_id = ${c.id}`) as { product_identifier: string }[];
+    const identifiers = mappings.map((m: any) => m.product_identifier);
     
     const namesToTest = [c.name, `${c.brand} ${c.name}`, ...identifiers];
     let newCategory: string | null = null;
@@ -44,7 +44,7 @@ async function remediateCategories() {
       try {
         await sql`UPDATE components SET category = ${newCategory}, updated_at = NOW() WHERE id = ${c.id}`;
         moved++;
-      } catch (err) {
+      } catch (err: any) {
         console.error(`  [ERROR] Failed to move ID ${c.id} to ${newCategory}: ${err.message}`);
       }
     }

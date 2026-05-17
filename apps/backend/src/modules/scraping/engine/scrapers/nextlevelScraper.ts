@@ -144,7 +144,7 @@ export class NextLevelScraper {
         const image_urls = p.images
           ?.map(img => img.bySize?.large_default?.url)
           .filter((url): url is string => !!url)
-          .slice(0, 3) || [];
+          .slice(0, 5) || [];
 
         prices.push({
           retailer_id: this.retailerId,

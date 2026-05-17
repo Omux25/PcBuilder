@@ -57,11 +57,11 @@ export async function validateComponent(c: Context, next: Next): Promise<Respons
     );
   }
 
-  const schema = componentSchemas[category as ComponentCategory];
+  const schema = (componentSchemas as any)[category];
   const result = schema.safeParse(body);
 
   if (!result.success) {
-    const fields = result.error.issues.map((issue) => issue.path.join('.') || issue.message);
+    const fields = result.error.issues.map((issue: any) => issue.path.join('.') || issue.message);
 
     return c.json(
       {

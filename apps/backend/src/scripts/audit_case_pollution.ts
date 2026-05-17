@@ -5,7 +5,7 @@ async function auditCases() {
   const sql = getSql();
   console.log('--- AUDITING CASE CATEGORY FOR POLLUTION ---');
 
-  const problematicCases = await sql`
+  const problematicCases = (await sql`
     SELECT id, name, brand, category
     FROM components
     WHERE category = 'case'
@@ -14,7 +14,7 @@ async function auditCases() {
       OR brand IN ('SG', 'XTRMLAB', 'XTMLAB')
     )
     ORDER BY brand, name;
-  `;
+  `) as { id: number; name: string; brand: string; category: string }[];
 
   console.log(`Found ${problematicCases.length} potentially miscategorized components in 'case':`);
   problematicCases.forEach(c => {

@@ -1,34 +1,5 @@
 import { getSql } from '../../../core/db/index.js';
-import { Component } from '@shared/types';
-
-export interface ComponentFilters {
-  category?: string;
-  socket?: string;
-  ram_type?: string;
-  brand?: string;
-  search?: string;
-  sort?: string;
-  vram_gb?: number;
-  in_stock?: boolean;
-  min_wattage?: number;
-  max_wattage?: number;
-  min_capacity_gb?: number;
-  max_capacity_gb?: number;
-  min_frequency_mhz?: number;
-  max_frequency_mhz?: number;
-  chipset?: string;
-  form_factor?: string;
-  interface_type?: string;
-  efficiency_rating?: string;
-  modular?: string;
-  core_count?: number;
-  include_inactive?: boolean;
-  is_active?: boolean;
-  // Compatibility Hints (for sorting)
-  compat_socket?: string;
-  compat_ram_type?: string;
-  compat_form_factors?: string[];
-}
+import { Component, ComponentFilters } from '@shared/types';
 
 export interface ComponentListResult {
   components: (Component & { lowest_price: number | null; in_stock: boolean })[];
@@ -46,6 +17,10 @@ export class ComponentRepository {
       min_frequency_mhz, max_frequency_mhz,
       include_inactive, is_active 
     } = filters;
+
+    const params: any[] = [];
+    let pIdx = 1;
+    const addParam = (val: any) => { params.push(val); return `$${pIdx++}`; };
 
     // 1. Parse Sort
     let field = 'smart';
@@ -68,49 +43,54 @@ export class ComponentRepository {
 
     const whereClauses: string[] = [
         include_inactive ? '1=1' : 'is_active = true',
-        is_active !== undefined ? `is_active = ${is_active}` : null,
-        category ? `category = ${this.escape(category)}` : null,
-        socket ? `socket = ${this.escape(socket)}` : null,
-        ram_type ? `(ram_type = ${this.escape(ram_type)} OR ${this.escape(ram_type)} = ANY(supported_ram_types))` : null,
-        brand ? `LOWER(brand) = LOWER(${this.escape(brand)})` : null,
-        vram_gb ? `vram_gb = ${vram_gb}` : null,
-        min_wattage ? `wattage >= ${min_wattage}` : null,
-        max_wattage ? `wattage <= ${max_wattage}` : null,
-        min_capacity_gb ? `capacity_gb >= ${min_capacity_gb}` : null,
-        max_capacity_gb ? `capacity_gb <= ${max_capacity_gb}` : null,
-        min_frequency_mhz ? `frequency_mhz >= ${min_frequency_mhz}` : null,
-        max_frequency_mhz ? `frequency_mhz <= ${max_frequency_mhz}` : null,
-        filters.chipset ? `chipset = ${this.escape(filters.chipset)}` : null,
-        filters.form_factor ? `form_factor = ${this.escape(filters.form_factor)}` : null,
-        filters.interface_type ? `interface_type = ${this.escape(filters.interface_type)}` : null,
-        filters.efficiency_rating ? `efficiency_rating = ${this.escape(filters.efficiency_rating)}` : null,
-        filters.modular ? `modular = ${this.escape(filters.modular)}` : null,
-        filters.core_count ? `core_count = ${filters.core_count}` : null,
+        is_active !== undefined ? `is_active = ${addParam(is_active)}` : null,
+        category ? `category = ${addParam(category)}` : null,
+        socket ? `socket = ${addParam(socket)}` : null,
+        ram_type ? `(ram_type = ${addParam(ram_type)} OR ${addParam(ram_type)} = ANY(supported_ram_types))` : null,
+        brand ? `LOWER(brand) = LOWER(${addParam(brand)})` : null,
+        vram_gb ? `vram_gb = ${addParam(vram_gb)}` : null,
+        min_wattage ? `wattage >= ${addParam(min_wattage)}` : null,
+        max_wattage ? `wattage <= ${addParam(max_wattage)}` : null,
+        min_capacity_gb ? `capacity_gb >= ${addParam(min_capacity_gb)}` : null,
+        max_capacity_gb ? `capacity_gb <= ${addParam(max_capacity_gb)}` : null,
+        min_frequency_mhz ? `frequency_mhz >= ${addParam(min_frequency_mhz)}` : null,
+        max_frequency_mhz ? `frequency_mhz <= ${addParam(max_frequency_mhz)}` : null,
+        filters.chipset ? `chipset = ${addParam(filters.chipset)}` : null,
+        filters.form_factor ? `form_factor = ${addParam(filters.form_factor)}` : null,
+        filters.interface_type ? `interface_type = ${addParam(filters.interface_type)}` : null,
+        filters.efficiency_rating ? `efficiency_rating = ${addParam(filters.efficiency_rating)}` : null,
+        filters.modular ? `modular = ${addParam(filters.modular)}` : null,
+        filters.core_count ? `core_count = ${addParam(filters.core_count)}` : null,
     ].filter(Boolean) as string[];
 
     if (search && search.trim() !== '') {
         const tokens = search.toLowerCase().split(' ').filter(Boolean);
         for (const t of tokens) {
-            whereClauses.push(`(LOWER(COALESCE(brand, '') || ' ' || name) LIKE ${this.escape('%' + t + '%')})`);
+            whereClauses.push(`(LOWER(COALESCE(brand, '') || ' ' || name) LIKE ${addParam('%' + t + '%')})`);
         }
     }
 
     const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
+    // Capture the number of parameters used strictly for the WHERE clause
+    const whereParamsCount = params.length;
+
     // 3. Define Compatibility Prioritization
     const compatParts: string[] = [];
     if (compat_socket) {
-        // For CPU/MB: match socket. For Coolers: socket in supported_sockets
-        compatParts.push(`(CASE WHEN socket = ${this.escape(compat_socket)} OR ${this.escape(compat_socket)} = ANY(supported_sockets) THEN 1 ELSE 0 END)`);
+        if (category === 'cooling') {
+            compatParts.push(`(CASE WHEN ${addParam(compat_socket)}::text = ANY(supported_sockets) THEN 1 ELSE 0 END)`);
+        } else {
+            compatParts.push(`(CASE WHEN socket = ${addParam(compat_socket)}::text THEN 1 ELSE 0 END)`);
+        }
     }
     if (compat_ram_type) {
-        // For RAM: match ram_type. For MB: ram_type in supported_ram_types
-        compatParts.push(`(CASE WHEN ram_type = ${this.escape(compat_ram_type)} OR ${this.escape(compat_ram_type)} = ANY(supported_ram_types) THEN 1 ELSE 0 END)`);
+        compatParts.push(`(CASE WHEN ram_type = ${addParam(compat_ram_type)}::text OR ${addParam(compat_ram_type)}::text = ANY(supported_ram_types) THEN 1 ELSE 0 END)`);
     }
     if (compat_form_factors && compat_form_factors.length > 0) {
-        const ffList = compat_form_factors.map(f => this.escape(f)).join(', ');
-        // For MB: match form_factor. For Cases: form_factor in supported_motherboards
-        compatParts.push(`(CASE WHEN form_factor IN (${ffList}) OR EXISTS (SELECT 1 FROM unnest(supported_motherboards) AS sm WHERE sm IN (${ffList})) THEN 1 ELSE 0 END)`);
+        // Need to param each array element individually
+        const ffParams = compat_form_factors.map(f => `${addParam(f)}::text`).join(', ');
+        compatParts.push(`(CASE WHEN form_factor IN (${ffParams}) OR EXISTS (SELECT 1 FROM unnest(supported_motherboards) AS sm WHERE sm IN (${ffParams})) THEN 1 ELSE 0 END)`);
     }
 
     const compatSort = compatParts.length > 0 ? `${compatParts.join(' + ')} DESC, ` : '';
@@ -161,7 +141,13 @@ export class ComponentRepository {
     }
 
     const finalSql = `
-        SELECT * FROM (
+        SELECT id, name, category, brand, is_active, image_url, lowest_in_stock, lowest_any, is_in_stock, final_price,
+               slug, updated_at, created_at, vram_gb, wattage, capacity_gb, frequency_mhz,
+               chipset, form_factor, interface_type, efficiency_rating, modular, core_count, thread_count, ram_slots, socket,
+               ram_type, max_tdp, benchmark_score, kit_count, cas_latency, tdp, length_mm, max_gpu_length_mm, max_cooler_height_mm,
+               base_clock_ghz, boost_clock_ghz, airflow_cfm, noise_db, pack_size, weight_grams, thermal_conductivity, supported_sockets,
+               supported_ram_types, supported_motherboards
+        FROM (
             SELECT 
                 *,
                 (SELECT MIN(price) FROM prices WHERE component_id = components.id AND in_stock = true) as lowest_in_stock,
@@ -173,11 +159,11 @@ export class ComponentRepository {
         CROSS JOIN LATERAL (SELECT COALESCE(lowest_in_stock, lowest_any) as final_price) p_calc
         WHERE (${in_stock === true ? 'is_in_stock = true' : in_stock === false ? 'is_in_stock = false' : '1=1'})
         ORDER BY ${compatSort}${orderExpr} NULLS LAST
-        LIMIT ${limit} OFFSET ${offset}
+        LIMIT ${addParam(limit)} OFFSET ${addParam(offset)}
     `;
 
 
-    const rows = await this.sql.unsafe(finalSql) as any[];
+    const rows = await this.sql.unsafe(finalSql, params) as any[];
     
     const countSql = `
         SELECT COUNT(*) as cnt FROM (
@@ -189,7 +175,7 @@ export class ComponentRepository {
         ) sub
         WHERE (${in_stock === true ? 'is_in_stock = true' : in_stock === false ? 'is_in_stock = false' : '1=1'})
     `;
-    const total_rows = (await this.sql.unsafe(countSql)) as { cnt: string }[];
+    const total_rows = (await this.sql.unsafe(countSql, params.slice(0, whereParamsCount))) as { cnt: string }[];
     const total = parseInt(total_rows[0].cnt, 10);
 
     const inStockCountSql = `
@@ -202,7 +188,7 @@ export class ComponentRepository {
         ) sub
         WHERE is_in_stock = true
     `;
-    const in_stock_rows = (await this.sql.unsafe(inStockCountSql)) as { cnt: string }[];
+    const in_stock_rows = (await this.sql.unsafe(inStockCountSql, params.slice(0, whereParamsCount))) as { cnt: string }[];
     const inStockTotal = parseInt(in_stock_rows[0].cnt, 10);
 
     return { 
@@ -281,7 +267,7 @@ export class ComponentRepository {
     };
   }
 
-  async insertComponent(data: any): Promise<Component> {
+  async createComponent(data: any): Promise<Component> {
     const columns = Object.keys(data);
     const rows = (await this.sql`
       INSERT INTO components ${this.sql(data, ...columns)}

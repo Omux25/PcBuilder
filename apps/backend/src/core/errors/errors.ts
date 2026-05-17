@@ -41,7 +41,8 @@ export class AppError extends Error {
  *   const id = parseId(c.req.param('id'));
  *   if (id === null) return c.json({ error: { code: 'VALIDATION_ERROR', message: 'id must be a positive integer' } }, 400);
  */
-export function parseId(raw: string): number | null {
+export function parseId(raw: string | undefined): number | null {
+  if (raw === undefined) return null;
   const id = Number(raw);
   return Number.isInteger(id) && id > 0 ? id : null;
 }

@@ -6,13 +6,13 @@ async function checkUrlPatterns() {
 
   for (const cat of categories) {
     console.log(`\n--- ${cat.toUpperCase()} URLs ---`);
-    const urls = await sql`
+    const urls = (await sql`
       SELECT DISTINCT sm.product_url 
       FROM scraper_mappings sm
       JOIN components c ON c.id = sm.component_id
       WHERE c.category = ${cat}
       LIMIT 10;
-    `;
+    `) as { product_url: string }[];
     urls.forEach(u => console.log(u.product_url));
   }
 }

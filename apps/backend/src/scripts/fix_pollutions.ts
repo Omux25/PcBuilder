@@ -84,8 +84,8 @@ async function fixPollutions() {
       console.log(`   Splitting ${members.length} listings into new component for ${specKey}...`);
 
       const sampleName = members[0].original_name || c.name;
-      const brand = c.brand || extractBrand(sampleName);
-      const newCleanName = cleanName(sampleName, brand, c.category);
+      const brand = c.brand || extractBrand(sampleName) || 'Unknown';
+      const newCleanName = cleanName(sampleName, brand, c.category as any);
       const specs = c.category === 'ram' ? extractRamSpecs(sampleName) : extractStorageSpecs(sampleName);
       
       const baseSlug = newCleanName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -93,10 +93,15 @@ async function fixPollutions() {
       existingSlugs.add(uniqueSlug);
 
       try {
-        const ramSpecs = c.category === 'ram' ? (specs as ReturnType<typeof extractRamSpecs>) : null;
+        const rs = c.category === 'ram' ? (specs as ReturnType<typeof extractRamSpecs>) : null;
         const [newComp] = await sql`
-          INSERT INTO components (name, brand, category, capacity_gb, slug, is_active, image_url, image_urls, ram_type, frequency_mhz)
-          SELECT ${newCleanName}, brand, category, ${specs.capacity_gb}, ${uniqueSlug}, true, image_url, image_urls, ${ramSpecs?.ram_type}, ${ramSpecs?.frequency_mhz}
+          INSERT INTO components (
+            name, brand, category, capacity_gb, slug, is_active, image_url, image_urls, 
+            ram_type, frequency_mhz, kit_count, cas_latency, mpn
+          )
+          SELECT 
+            ${newCleanName}, brand, category, ${specs.capacity_gb}, ${uniqueSlug}, true, image_url, image_urls, 
+            ${rs?.ram_type ?? null}, ${rs?.frequency_mhz ?? null}, ${rs?.kit_count ?? 1}, ${rs?.cas_latency ?? null}, ${rs?.mpn ?? null}
           FROM components WHERE id = ${c.component_id}
           RETURNING id
         ` as { id: number }[];
@@ -116,15 +121,18 @@ async function fixPollutions() {
     // Update original
     const sampleForTarget = targetMembers[0];
     const targetSpecs = c.category === 'ram' ? extractRamSpecs(sampleForTarget.original_name) : extractStorageSpecs(sampleForTarget.original_name);
-    const newOfficialName = cleanName(sampleForTarget.original_name || c.name, c.brand, c.category);
+    const newOfficialName = cleanName(sampleForTarget.original_name || c.name, c.brand, c.category as any);
     
-    const targetRamSpecs = c.category === 'ram' ? (targetSpecs as ReturnType<typeof extractRamSpecs>) : null;
+    const trs = c.category === 'ram' ? (targetSpecs as ReturnType<typeof extractRamSpecs>) : null;
     await sql`
       UPDATE components 
       SET name = ${newOfficialName}, 
           capacity_gb = ${targetSpecs.capacity_gb},
-          ram_type = ${targetRamSpecs?.ram_type ?? null},
-          frequency_mhz = ${targetRamSpecs?.frequency_mhz ?? null}
+          ram_type = ${trs?.ram_type ?? null},
+          frequency_mhz = ${trs?.frequency_mhz ?? null},
+          kit_count = ${trs?.kit_count ?? 1},
+          cas_latency = ${trs?.cas_latency ?? null},
+          mpn = ${trs?.mpn ?? null}
       WHERE id = ${c.component_id}
     `;
     console.log(`   Updated original component ID ${c.component_id} to ${targetSpecKey} (${newOfficialName}).`);

@@ -37,7 +37,7 @@ export async function importBenchmarks(): Promise<BenchmarkImportResult> {
     let updated = 0;
     let missed = 0;
 
-    const jsonPath = join(import.meta.dirname, '../../../../../scripts/data/benchmarks.json');
+    const jsonPath = join(import.meta.dirname, '../../../../scripts/data/benchmarks.json');
     let data: BenchmarkData;
     try {
         data = JSON.parse(await readFile(jsonPath, 'utf-8')) as BenchmarkData;
