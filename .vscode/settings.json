@@ -4,7 +4,7 @@
   // Suppress red squiggles on test files — bun:test is only available in WSL2/Bun,
   // not in VS Code's Windows TypeScript server. Tests run fine via WSL2.
   "typescript.validate.enable": true,
-  "typescript.tsserver.experimental.enableProjectDiagnostics": true,
+  "typescript.tsserver.experimental.enableProjectDiagnostics": false,
   "eslint.workingDirectories": [
     "./apps/frontend",
     "./apps/admin",

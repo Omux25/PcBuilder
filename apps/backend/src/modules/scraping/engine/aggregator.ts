@@ -451,7 +451,7 @@ export async function aggregate(
         };
       } else if (category === 'motherboard') {
         const s = extractMotherboardSpecs(compositeText);
-        row = { ...row, socket: s?.socket ?? null, supported_ram_types: s ? `{${s.supported_ram_types.join(',')}}` : null, max_ram_frequency: s?.max_ram_frequency ?? null };
+        row = { ...row, socket: s?.socket ?? null, supported_ram_types: s ? `{${s.supported_ram_types.map(t => t.replace(/"/g, '')).join(',')}}` : null, max_ram_frequency: s?.max_ram_frequency ?? null };
       } else if (category === 'psu') {
         const s = extractPsuSpecs(compositeText);
         row = { 
@@ -463,7 +463,7 @@ export async function aggregate(
       } else if (category === 'cooling') {
         const s = extractCoolingSpecs(compositeText);
         const tags = s?.tags || [];
-        row = { ...row, tdp: s?.tdp ?? null, tags: tags.length > 0 ? `{${tags.join(',')}}` : null };
+        row = { ...row, tdp: s?.tdp ?? null, tags: tags.length > 0 ? `{${tags.map(t => t.replace(/"/g, '')).join(',')}}` : null };
       } else if (category === 'case') {
         const s = extractCaseSpecs(compositeText);
         row = { ...row, max_gpu_length_mm: s?.max_gpu_length_mm ?? null, max_cooler_height_mm: s?.max_cooler_height_mm ?? null };
