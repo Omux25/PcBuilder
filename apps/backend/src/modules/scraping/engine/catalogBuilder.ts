@@ -225,8 +225,8 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
       } else if (category === 'gpu') {
         const specs = extractGpuSpecs(nameForExtraction);
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, length_mm, tdp, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'gpu', ${specs.length_mm}, ${specs.tdp}, ${listing.image_url}, true)
+          INSERT INTO components (slug, name, brand, category, length_mm, tdp, chipset, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'gpu', ${specs.length_mm}, ${specs.tdp}, ${specs.chipset}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
