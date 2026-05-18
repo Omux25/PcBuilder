@@ -9,6 +9,7 @@ import {
   Zap,
   Share2,
   Check,
+  Tag,
 } from 'lucide-react';
 import { InlinePrices } from './InlinePrices';
 import { CategoryIcon } from './CategoryIcon';
@@ -205,8 +206,7 @@ export function Configurator() {
             <div key={slotKey} className={styles.rowWrap}>
               <div
                 className={styles.row}
-                onClick={() => selected && setExpandedKey(isExpanded ? null : slotKey)}
-                style={{ cursor: selected ? 'pointer' : 'default' }}
+                style={{ cursor: 'default' }}
               >
                 <div className={styles.catCol}>
                   <div className={styles.catIconWrap}>
@@ -218,9 +218,15 @@ export function Configurator() {
                 <div className={styles.pickerCol}>
                   {selected ? (
                     <div className={styles.filledState}>
-                      {selected.image_url && (
-                        <img src={selected.image_url} alt="" className={styles.compThumb} referrerPolicy="no-referrer" />
-                      )}
+                      {selected.image_url ? (
+                        <Link
+                          to={`/product/${selected.slug}`}
+                          className={styles.compThumbLink}
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <img src={selected.image_url} alt="" className={styles.compThumb} referrerPolicy="no-referrer" />
+                        </Link>
+                      ) : null}
                       <div className={styles.compInfo}>
                         <span className={styles.compBrand}>{selected.brand}</span>
                         <Link
@@ -231,6 +237,19 @@ export function Configurator() {
                           {selected.name}
                         </Link>
                         <span className={styles.compSpecs}>{getSpecLine(selected)}</span>
+                        
+                        <button
+                          type="button"
+                          className={`${styles.offersBtn} ${isExpanded ? styles.offersBtnActive : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedKey(isExpanded ? null : slotKey);
+                          }}
+                        >
+                          <Tag size={12} className={styles.tagIcon} />
+                          <span>{isExpanded ? 'Masquer les offres' : 'Voir les offres'}</span>
+                          <span className={`${styles.chevronIcon} ${isExpanded ? styles.chevronIconOpen : ''}`}>▼</span>
+                        </button>
                       </div>
                     </div>
                   ) : (

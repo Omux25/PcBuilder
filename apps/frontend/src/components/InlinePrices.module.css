@@ -10,43 +10,57 @@
 }
 
 .count {
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.05em;
 }
 
 .list {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  background: var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
+  gap: 0.5rem;
 }
 
 .row {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 0.6rem 0.75rem;
-  background: var(--surface);
+  padding: 0.75rem 1.25rem;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
   font-size: 0.85rem;
-  transition: background 0.1s;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
 }
 
 .row:hover {
-  background: var(--surface-2);
+  background: var(--bg-surface-hover);
+  border-color: var(--border-focus);
+  transform: translateX(4px);
 }
 
 .best {
-  background: var(--success-tint);
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.02) 0%, rgba(34, 197, 94, 0) 100%);
+  border-color: var(--border-subtle);
+}
+
+.best::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--success);
 }
 
 .best:hover {
-  background: var(--success-tint);
-  filter: brightness(0.97);
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.05) 0%, rgba(34, 197, 94, 0.01) 100%);
+  border-color: var(--border-focus);
 }
 
 .oos {
@@ -56,93 +70,158 @@
 .retailer {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  min-width: 130px;
+  gap: 0.75rem;
+  min-width: 180px;
 }
 
 .avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  background: var(--surface-3);
-  color: var(--text-2);
-  border-radius: 6px;
-  font-size: 0.65rem;
-  font-weight: 700;
+  width: 32px;
+  height: 32px;
+  background: var(--bg-surface-3);
+  color: var(--text-primary);
+  border-radius: 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 800;
   flex-shrink: 0;
+  border: 1px solid var(--border-subtle);
+}
+
+.retailerDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  align-items: flex-start;
 }
 
 .retailerName {
   font-weight: 600;
-  color: var(--text);
-  white-space: nowrap;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.bestBadge {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--success-soft);
+  background: var(--success-tint);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  display: inline-flex;
+  align-items: center;
 }
 
 .variant {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  padding: 0.1rem 0.45rem;
+  background: var(--bg-surface-3);
+  border: 1px solid var(--border-subtle);
+  padding: 0.15rem 0.5rem;
   border-radius: 4px;
   white-space: nowrap;
 }
 
 .price {
-  font-weight: 700;
-  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  color: var(--text-primary);
   white-space: nowrap;
   margin-left: auto;
-  font-variant-numeric: tabular-nums;
+  font-size: 1.05rem;
 }
 
 .inStock {
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 700;
   color: var(--success-soft);
+  background: var(--success-tint);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .outOfStock {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
+  font-weight: 700;
   color: var(--text-dim);
+  background: var(--bg-surface-3);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .buyBtn {
   display: inline-flex;
   align-items: center;
-  padding: 0.3rem 0.75rem;
-  background: var(--text-primary);
-  color: var(--bg-app) !important;
-  border-radius: var(--radius);
+  gap: 0.35rem;
+  padding: 0.4rem 0.95rem;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary) !important;
+  border-radius: var(--radius-sm);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
   text-decoration: none !important;
-  transition: all 0.15s;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0;
 }
 
 .buyBtn:hover {
-  opacity: 0.85;
-  text-decoration: none !important;
+  background: var(--text-primary);
   color: var(--bg-app) !important;
-  transform: translateY(-1px);
+  border-color: var(--text-primary);
+  transform: scale(1.03) translateY(-1px);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
+}
+
+.buyBtn:hover .buyIcon {
+  stroke: var(--bg-app) !important;
+  color: var(--bg-app) !important;
+}
+
+.buyIcon {
+  flex-shrink: 0;
+  stroke: currentColor;
+  transition: stroke 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .loading,
 .empty {
-  padding: 0.75rem 0.5rem;
-  font-size: 0.85rem;
+  padding: 1.5rem 1rem;
+  font-size: 0.88rem;
   color: var(--text-muted);
   font-style: italic;
-  min-height: 80px;
-  /* prevent layout shift when prices load into expansion panel */
   display: flex;
   align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius);
+  min-height: 80px;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-subtle);
+  border-top-color: var(--accent-blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 0.75rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ── OOS collapse ────────────────────────────────────────────────────────── */
@@ -162,28 +241,32 @@
 .oosToggle {
   display: inline-flex;
   align-items: center;
-  padding: 0.2rem 0.6rem;
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-size: 0.75rem;
+  justify-content: center;
+  margin-top: 0.75rem;
+  padding: 0.4rem 1rem;
+  background: transparent;
+  border: 1px dashed var(--border-focus);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
+  transition: all 0.2s;
+  width: 100%;
 }
 
 .oosToggle:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-glow);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  background: var(--accent-blue-tint);
+  border-style: solid;
 }
 
 @media (max-width: 640px) {
   .row {
     flex-wrap: wrap;
     gap: 0.5rem;
+    padding: 1rem;
   }
 
   .retailer {

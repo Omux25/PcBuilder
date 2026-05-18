@@ -39,8 +39,8 @@
 }
 
 .card:hover {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-md), 0 0 0 1px var(--accent-glow);
+  border-color: var(--accent-blue);
+  box-shadow: var(--shadow-lg), 0 0 15px var(--accent-blue-tint);
   transform: translateY(-2px);
   text-decoration: none;
 }
@@ -60,9 +60,9 @@
 }
 
 .card:hover .cardIcon {
-  background: var(--accent);
-  color: white;
-  border-color: var(--accent);
+  background: var(--accent-blue-tint);
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
 }
 
 .cardInfo {
@@ -93,7 +93,7 @@
 }
 
 .card:hover .cardArrow {
-  color: var(--accent);
+  color: var(--accent-blue);
   transform: translateX(3px);
 }
 
