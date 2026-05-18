@@ -124,7 +124,7 @@ export function inferCategory(name: string): Category | null {
   if (n.match(/\b(\d+)\s*(gb|go|tb|to)\b/i) && !n.match(/\b(ram|ddr[45]|mhz|cl\d{1,2}|dimm|vram|graphics|video|gpu|rtx|gtx|rx|radeon)\b/i)) return 'storage';
 
   // 6. RAM
-  if (n.match(/\b(dimm|ddr[2-5]|sdram|lpx|vengeance|dominator|trident|ripjaws|fury\s*beast|renegade|vengance|t-force|t-create|delta\s*rgb|vulcan|zeus|expert|flare\s*x|elite\s*plus|elite\s*ii|gaming\s*ram|memory\s*module|m\u00e9moire\s*ram|patriot|viper\s*steel|viper\s*venom|viper\s*rgb|apacer)\b/) &&
+  if (n.match(/\b(dimm|ddr[2-5]|sdram|lpx|vengeance|dominator|trident|ripjaws|fury|renegade|vengance|t-force|t-create|delta\s*rgb|vulcan|zeus|expert|flare\s*x|elite\s*plus|elite\s*ii|gaming\s*ram|memory\s*module|m\u00e9moire\s*ram|patriot|viper\s*steel|viper\s*venom|viper\s*rgb|apacer)\b/) &&
     !n.match(/\b(motherboard|psu|case|boitier|tower|cpu|gpu|storage|ssd|nvme|hdd|fan|cooler|souris|mouse|sata|2\.5|tb|to|to\b|[abxhz]\d{3,4}|maximus|zenith|crosshair|godlike|dominus)\b/)) return 'ram';
 
   // 7. Peripherals & Networking

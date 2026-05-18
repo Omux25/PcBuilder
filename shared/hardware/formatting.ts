@@ -37,6 +37,11 @@ export function formatComponentName(c: Partial<Component>, options: { excludeBra
       break;
 
     case 'gpu':
+      if (c.chipset) {
+        if (!lowerModel.includes(c.chipset.toLowerCase())) {
+          parts.push(c.chipset);
+        }
+      }
       appendIfMissing(c.vram_gb, 'GB');
       break;
 

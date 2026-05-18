@@ -1,3 +1,135 @@
+// Canonical GPU chipset lookup patterns — maps names containing any variant to the clean, uniform chipset string
+const CHIPSET_PATTERNS: [RegExp, string][] = [
+  // ── NVIDIA RTX 50 series ──────────────────────────────────────────────
+  [/\b(?:rtx\s*)?5090\b/i, 'RTX 5090'],
+  [/\b(?:rtx\s*)?5080\b/i, 'RTX 5080'],
+  [/\b(?:rtx\s*)?5070\s*ti\b/i, 'RTX 5070 Ti'],
+  [/\b(?:rtx\s*)?5070\b/i, 'RTX 5070'],
+  [/\b(?:rtx\s*)?5060\s*ti\b/i, 'RTX 5060 Ti'],
+  [/\b(?:rtx\s*)?5060\b/i, 'RTX 5060'],
+  [/\b(?:rtx\s*)?5050\b/i, 'RTX 5050'],
+
+  // ── NVIDIA RTX 40 series ──────────────────────────────────────────────
+  [/\b(?:rtx\s*)?4090\b/i, 'RTX 4090'],
+  [/\b(?:rtx\s*)?4080\s*super\b/i, 'RTX 4080 SUPER'],
+  [/\b(?:rtx\s*)?4080\b/i, 'RTX 4080'],
+  [/\b(?:rtx\s*)?4070\s*ti\s*super\b/i, 'RTX 4070 Ti SUPER'],
+  [/\b(?:rtx\s*)?4070\s*ti\b/i, 'RTX 4070 Ti'],
+  [/\b(?:rtx\s*)?4070\s*super\b/i, 'RTX 4070 SUPER'],
+  [/\b(?:rtx\s*)?4070\b/i, 'RTX 4070'],
+  [/\b(?:rtx\s*)?4060\s*ti\b/i, 'RTX 4060 Ti'],
+  [/\b(?:rtx\s*)?4060\b/i, 'RTX 4060'],
+
+  // ── NVIDIA RTX 30 series ──────────────────────────────────────────────
+  [/\b(?:rtx\s*)?3090\s*ti\b/i, 'RTX 3090 Ti'],
+  [/\b(?:rtx\s*)?3090\b/i, 'RTX 3090'],
+  [/\b(?:rtx\s*)?3080\s*ti\b/i, 'RTX 3080 Ti'],
+  [/\b(?:rtx\s*)?3080\b/i, 'RTX 3080'],
+  [/\b(?:rtx\s*)?3070\s*ti\b/i, 'RTX 3070 Ti'],
+  [/\b(?:rtx\s*)?3070\b/i, 'RTX 3070'],
+  [/\b(?:rtx\s*)?3060\s*ti\b/i, 'RTX 3060 Ti'],
+  [/\b(?:rtx\s*)?3060\b/i, 'RTX 3060'],
+  [/\b(?:rtx\s*)?3050\b/i, 'RTX 3050'],
+
+  // ── NVIDIA RTX 20 series ──────────────────────────────────────────────
+  [/\b(?:rtx\s*)?2080\s*ti\b/i, 'RTX 2080 Ti'],
+  [/\b(?:rtx\s*)?2080\s*super\b/i, 'RTX 2080 SUPER'],
+  [/\b(?:rtx\s*)?2080\b/i, 'RTX 2080'],
+  [/\b(?:rtx\s*)?2070\s*super\b/i, 'RTX 2070 SUPER'],
+  [/\b(?:rtx\s*)?2070\b/i, 'RTX 2070'],
+  [/\b(?:rtx\s*)?2060\s*super\b/i, 'RTX 2060 SUPER'],
+  [/\b(?:rtx\s*)?2060\b/i, 'RTX 2060'],
+
+  // ── NVIDIA GTX 16 series ──────────────────────────────────────────────
+  [/\b(?:gtx\s*)?1660\s*ti\b/i, 'GTX 1660 Ti'],
+  [/\b(?:gtx\s*)?1660\s*super\b/i, 'GTX 1660 SUPER'],
+  [/\b(?:gtx\s*)?1660\b/i, 'GTX 1660'],
+  [/\b(?:gtx\s*)?1650\s*super\b/i, 'GTX 1650 SUPER'],
+  [/\b(?:gtx\s*)?1650\b/i, 'GTX 1650'],
+
+  // ── NVIDIA GTX 10 series ──────────────────────────────────────────────
+  [/\b(?:gtx\s*)?1080\s*ti\b/i, 'GTX 1080 Ti'],
+  [/\b(?:gtx\s*)?1080\b/i, 'GTX 1080'],
+  [/\b(?:gtx\s*)?1070\s*ti\b/i, 'GTX 1070 Ti'],
+  [/\b(?:gtx\s*)?1070\b/i, 'GTX 1070'],
+  [/\b(?:gtx\s*)?1060\b/i, 'GTX 1060'],
+  [/\b(?:gtx\s*)?1050\s*ti\b/i, 'GTX 1050 Ti'],
+  [/\b(?:gtx\s*)?1050\b/i, 'GTX 1050'],
+
+  // ── NVIDIA Pro / Quadro series ────────────────────────────────────────
+  [/\b(?:rtx\s*)?(?:pro\s*)?6000\b/i, 'RTX 6000'],
+  [/\b(?:rtx\s*)?a6000\b/i, 'RTX A6000'],
+  [/\b(?:rtx\s*)?a5000\b/i, 'RTX A5000'],
+  [/\b(?:rtx\s*)?a4000\b/i, 'RTX A4000'],
+  [/\b(?:rtx\s*)?a2000\b/i, 'RTX A2000'],
+  [/\bquadro\s*m4000\b/i, 'Quadro M4000'],
+  [/\brtx\s*5000\s*(?:ada)?\b/i, 'RTX 5000 Ada'],
+
+  // ── NVIDIA GT series ──────────────────────────────────────────────────
+  [/\bgt\s*1030\b/i, 'GT 1030'],
+  [/\bgt\s*730\b/i, 'GT 730'],
+  [/\bgt\s*710\b/i, 'GT 710'],
+
+  // ── AMD RX 9000 series ────────────────────────────────────────────────
+  [/\b(?:rx\s*)?9070\s*xt\b/i, 'RX 9070 XT'],
+  [/\b(?:rx\s*)?9070\b/i, 'RX 9070'],
+  [/\b(?:rx\s*)?9060\s*xt\b/i, 'RX 9060 XT'],
+
+  // ── AMD RX 7000 series ────────────────────────────────────────────────
+  [/\b(?:rx\s*)?7900\s*xtx\b/i, 'RX 7900 XTX'],
+  [/\b(?:rx\s*)?7900\s*gre\b/i, 'RX 7900 GRE'],
+  [/\b(?:rx\s*)?7900\s*xt\b/i, 'RX 7900 XT'],
+  [/\b(?:rx\s*)?7800\s*xt\b/i, 'RX 7800 XT'],
+  [/\b(?:rx\s*)?7800\b/i, 'RX 7800'],
+  [/\b(?:rx\s*)?7700\s*xt\b/i, 'RX 7700 XT'],
+  [/\b(?:rx\s*)?7700\b/i, 'RX 7700'],
+  [/\b(?:rx\s*)?7600\s*xt\b/i, 'RX 7600 XT'],
+  [/\b(?:rx\s*)?7600\b/i, 'RX 7600'],
+
+  // ── AMD RX 6000 series ────────────────────────────────────────────────
+  [/\b(?:rx\s*)?6950\s*xt\b/i, 'RX 6950 XT'],
+  [/\b(?:rx\s*)?6900\s*xt\b/i, 'RX 6900 XT'],
+  [/\b(?:rx\s*)?6800\s*xt\b/i, 'RX 6800 XT'],
+  [/\b(?:rx\s*)?6800\b/i, 'RX 6800'],
+  [/\b(?:rx\s*)?6750\s*xt\b/i, 'RX 6750 XT'],
+  [/\b(?:rx\s*)?6700\s*xt\b/i, 'RX 6700 XT'],
+  [/\b(?:rx\s*)?6700\b/i, 'RX 6700'],
+  [/\b(?:rx\s*)?6650\s*xt\b/i, 'RX 6650 XT'],
+  [/\b(?:rx\s*)?6600\s*xt\b/i, 'RX 6600 XT'],
+  [/\b(?:rx\s*)?6600\b/i, 'RX 6600'],
+  [/\b(?:rx\s*)?6500\s*xt\b/i, 'RX 6500 XT'],
+  [/\b(?:rx\s*)?6400\b/i, 'RX 6400'],
+
+  // ── AMD RX 5000 series ────────────────────────────────────────────────
+  [/\b(?:rx\s*)?5700\s*xt\b/i, 'RX 5700 XT'],
+  [/\b(?:rx\s*)?5700\b/i, 'RX 5700'],
+  [/\b(?:rx\s*)?5600\s*xt\b/i, 'RX 5600 XT'],
+  [/\b(?:rx\s*)?5500\s*xt\b/i, 'RX 5500 XT'],
+
+  // ── AMD RX 500 series ─────────────────────────────────────────────────
+  [/\b(?:rx\s*)?590\b/i, 'RX 590'],
+  [/\b(?:rx\s*)?580\b/i, 'RX 580'],
+  [/\b(?:rx\s*)?570\b/i, 'RX 570'],
+  [/\b(?:rx\s*)?560\b/i, 'RX 560'],
+  [/\b(?:rx\s*)?550\b/i, 'RX 550'],
+  [/\b(?:rx\s*)?550\b/i, 'RX 550'],
+  
+  // Custom shorthand fallbacks (like "Rx550")
+  [/\brx\s*550\b/i, 'RX 550'],
+  [/\brx\s*560\b/i, 'RX 560'],
+  [/\brx\s*570\b/i, 'RX 570'],
+  [/\brx\s*580\b/i, 'RX 580'],
+  [/\brx\s*590\b/i, 'RX 590'],
+
+  // ── Intel Arc ─────────────────────────────────────────────────────────
+  [/\barc\s*b580\b/i, 'Arc B580'],
+  [/\barc\s*b570\b/i, 'Arc B570'],
+  [/\barc\s*a770\b/i, 'Arc A770'],
+  [/\barc\s*a750\b/i, 'Arc A750'],
+  [/\barc\s*a580\b/i, 'Arc A580'],
+  [/\barc\s*a380\b/i, 'Arc A380'],
+];
+
 export const extractGpuSpecs = (n: string) => {
   const lengthMatch = n.match(/\b(\d{3})\s*mm\b/i);
   const vramMatch = n.match(/\b(\d+)\s*(?:gb|go|g)\b/i);
@@ -118,9 +250,18 @@ export const extractGpuSpecs = (n: string) => {
     if (pattern.test(n)) { tdp = watts; break; }
   }
 
+  let chipset: string | null = null;
+  for (const [pattern, canonical] of CHIPSET_PATTERNS) {
+    if (pattern.test(n)) {
+      chipset = canonical;
+      break;
+    }
+  }
+
   return {
     length_mm: lengthMatch ? parseInt(lengthMatch[1]) : 300,
     vram_gb: vramMatch ? parseInt(vramMatch[1]) : null,
     tdp,
+    chipset,
   };
 };

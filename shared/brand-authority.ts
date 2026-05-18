@@ -283,9 +283,6 @@ export function validateBrandAuthority(
     if (canonicalBrand && inferredCategory) {
         const allowedCategories = BRAND_CATEGORIES[canonicalBrand];
         if (allowedCategories && !allowedCategories.has(inferredCategory)) {
-            // Brand is known but category is wrong.
-            // Try to find the correct category from the brand's allowed set.
-            // Use the first allowed category as a hint, but only if it's unambiguous.
             if (allowedCategories.size === 1) {
                 const correctCategory = [...allowedCategories][0];
                 return {
@@ -293,8 +290,27 @@ export function validateBrandAuthority(
                     dismiss: false,
                     categoryOverride: correctCategory,
                 };
+            } else {
+                // Brand has multiple allowed categories (e.g. Kingston makes RAM and Storage).
+                // Probe the product name for indicators of these specific categories.
+                for (const cat of allowedCategories) {
+                    if (cat === 'ram' && name.toLowerCase().match(/\b(dimm|ddr[2-5]|sdram|lpx|vengeance|dominator|trident|ripjaws|fury|renegade|vengance|t-force|t-create|delta\s*rgb|vulcan|zeus|expert|flare\s*x|elite\s*plus|elite\s*ii|gaming\s*ram|memory|mhz)\b/i)) {
+                        return {
+                            brand: canonicalBrand,
+                            dismiss: false,
+                            categoryOverride: 'ram',
+                        };
+                    }
+                    if (cat === 'storage' && name.toLowerCase().match(/\b(nvme|m\.?2|ssd|hdd|disque|sata|sata\s*iii|sata\s*2\.5|firecuda|barracuda|ironwolf|skyhawk|exos|sn\d{3,4}|bx\d{3}|mx\d{3}|su\d{3})\b/i)) {
+                        return {
+                            brand: canonicalBrand,
+                            dismiss: false,
+                            categoryOverride: 'storage',
+                        };
+                    }
+                }
             }
-            // Multiple allowed categories — can't auto-correct, send to unmatched
+            // Multiple allowed categories but no match — can't auto-correct, send to unmatched
             return {
                 brand: canonicalBrand,
                 dismiss: false,
