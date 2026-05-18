@@ -58,4 +58,17 @@ gha-creds-*.json
 # Local development scripts
 apps/backend/scripts/sync_catalog.ts
 apps/backend/scripts/tools/check_logs.ts
-
+apps/backend/scripts/check_naming.ts
+apps/backend/scripts/check_other_naming.ts
+apps/backend/scripts/clean_gpu_data.ts
+apps/backend/scripts/inspect_gpu_chipsets.ts
+apps/backend/scripts/revamp_all_names.ts
+apps/backend/scripts/revamp_gpu_names.ts
+apps/backend/scripts/sample_gpus.ts
+apps/backend/scripts/verify_fixes.ts
+apps/backend/src/scripts/find_listing_source.ts
+apps/backend/src/scripts/find_polluted_gpus.ts
+apps/backend/src/scripts/recover_gpu_categories.ts
+apps/backend/src/scripts/remediate_gpu_pollution.ts
+apps/backend/src/scripts/trace_classification.ts
+apps/backend/src/scripts/trace_each_polluted.ts
