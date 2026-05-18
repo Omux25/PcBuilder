@@ -112,6 +112,52 @@
   gap: 0.75rem;
 }
 
+.cardImageWrapper {
+  position: relative;
+  width: calc(100% + 3rem);
+  margin: -1.5rem -1.5rem 1.25rem -1.5rem;
+  height: 180px;
+  background: rgba(0, 0, 0, 0.2);
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 1rem;
+  transition: transform 0.4s ease;
+}
+
+.card:hover .cardImage {
+  transform: scale(1.05);
+}
+
+.featuredBadgeImage {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #89b4fa;
+  background: rgba(30, 30, 46, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(137, 180, 250, 0.4);
+  padding: 0.3rem 0.7rem;
+  border-radius: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
 .cardName {
   font-size: 1.15rem;
   font-weight: 700;
@@ -297,6 +343,35 @@
   border-radius: var(--radius);
   width: fit-content;
   box-shadow: 0 0 10px rgba(137, 180, 250, 0.05);
+}
+
+/* ── White Showcase Card Image Wrapper ────────────────────────────────────── */
+
+.cardImageWrapper {
+  background: #ffffff; /* Solid white background for perfect blending */
+  width: 100%;
+  height: 190px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top-left-radius: calc(var(--radius-lg) - 1px);
+  border-top-right-radius: calc(var(--radius-lg) - 1px);
+  overflow: hidden;
+  padding: 1.25rem;
+  position: relative;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cardImage {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.06)); /* Sleek drop shadow overlay on the white bg */
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card:hover .cardImage {
+  transform: scale(1.05); /* Premium hover scale-up */
 }
 
 @media (max-width: 640px) {

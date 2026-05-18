@@ -88,12 +88,20 @@ export function Presets({ onLoadPreset }: Props) {
 
 function PresetCard({ preset, onLoad }: { preset: PresetBuild; onLoad: (p: PresetBuild) => void }) {
   const componentCount = Object.keys(preset.components).length;
+  
+  // Strictly display the case component to represent the visual build, using a premium placeholder if not defined
+  const caseComponent = preset.components['case'] || Object.entries(preset.components).find(([key]) => key.startsWith('case'))?.[1];
+  const heroImage = caseComponent?.image_url || '/premium_pc_hero.png';
+
   return (
-    <div className={`${styles.card} ${preset.incomplete ? styles.incomplete : ''} ${preset.is_featured ? styles.featured : ''}`}>
+    <div className={`${styles.card} ${preset.incomplete ? styles.incomplete : ''}`}>
+      <div className={styles.cardImageWrapper}>
+        <img src={heroImage} alt={preset.name} className={styles.cardImage} />
+      </div>
+
       <div className={styles.cardHeader}>
         <div className={styles.nameWrap}>
           <h3 className={styles.cardName}>{preset.name}</h3>
-          {preset.is_featured && <span className={styles.featuredBadge}>Elite Config</span>}
         </div>
         {preset.incomplete && (
           <span className={styles.incompleteBadge} title={UI.presets.incompleteTitle}>
