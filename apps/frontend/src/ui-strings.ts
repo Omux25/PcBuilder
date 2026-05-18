@@ -288,7 +288,7 @@ export const UI = {
     offerCount: (n: number) => `${n} offre${n > 1 ? 's' : ''}`,
     inStock: 'En stock',
     outOfStock: 'Épuisé',
-    buy: 'Acheter →',
+    buy: 'Acheter',
   },
 
   // ── Price history chart ───────────────────────────────────────────────────

@@ -10,6 +10,7 @@ import { getPrices } from '../api';
 import type { PriceOffer } from '../types';
 import { UI } from '../ui-strings';
 import { formatPrice } from '../utils/format';
+import { ExternalLink } from 'lucide-react';
 import styles from './InlinePrices.module.css';
 
 interface Props {
@@ -36,7 +37,14 @@ export function InlinePrices({ componentId }: Props) {
       .finally(() => setLoading(false));
   }, [componentId]);
 
-  if (loading) return <div className={styles.loading}>{UI.inlinePrices.loading}</div>;
+  if (loading) {
+    return (
+      <div className={styles.loading}>
+        <div className={styles.spinner}></div>
+        <span>{UI.inlinePrices.loading}</span>
+      </div>
+    );
+  }
   if (offers.length === 0) return <div className={styles.empty}>{UI.inlinePrices.empty}</div>;
 
   const inStock = offers.filter(o => o.in_stock);
@@ -77,13 +85,24 @@ export function InlinePrices({ componentId }: Props) {
               >
                 <div className={styles.retailer}>
                   <div className={styles.avatar}>{getInitials(offer.retailer_name)}</div>
-                  <span className={styles.retailerName}>{offer.retailer_name}</span>
+                  <div className={styles.retailerDetails}>
+                    <span className={styles.retailerName}>{offer.retailer_name}</span>
+                    {isBest && (
+                      <span className={styles.bestBadge}>
+                        Meilleur Prix
+                      </span>
+                    )}
+                  </div>
                 </div>
+                
                 {offer.variant_label && <span className={styles.variant}>{offer.variant_label}</span>}
+                
                 <span className={styles.price}>{formatPrice(offer.price)}</span>
+                
                 <span className={offer.in_stock ? styles.inStock : styles.outOfStock}>
                   {offer.in_stock ? UI.inlinePrices.inStock : UI.inlinePrices.outOfStock}
                 </span>
+                
                 <a
                   href={offer.product_url}
                   target="_blank"
@@ -91,7 +110,8 @@ export function InlinePrices({ componentId }: Props) {
                   className={styles.buyBtn}
                   onClick={e => e.stopPropagation()}
                 >
-                  {UI.inlinePrices.buy}
+                  <span>{UI.inlinePrices.buy}</span>
+                  <ExternalLink size={12} className={styles.buyIcon} />
                 </a>
               </div>
             );

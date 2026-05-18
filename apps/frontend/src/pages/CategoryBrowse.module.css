@@ -63,6 +63,8 @@
   display: flex;
   gap: 1.5rem;
   align-items: flex-start;
+  width: 100%;
+  max-width: 100%;
 }
 
 .sidebar {
@@ -85,6 +87,8 @@
 .mainSection {
   flex: 1;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -296,6 +300,8 @@
   overflow-x: auto;
   box-shadow: var(--shadow-sm);
   -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 100%;
 }
 
 .table {
@@ -369,7 +375,7 @@
 }
 
 .thAction {
-  width: 115px;
+  width: 120px;
 }
 
 /* ── Data cells ─────────────────────────────────────────────────────────── */
@@ -415,6 +421,7 @@
 .tdAction {
   text-align: right;
   white-space: nowrap;
+  width: 120px;
 }
 
 /* ── Component image ────────────────────────────────────────────────────── */
@@ -567,15 +574,15 @@
 }
 
 .iconBtn:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: var(--accent-glow);
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+  background: var(--accent-blue-tint);
 }
 
 .iconBtnActive {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: var(--accent-glow);
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+  background: var(--accent-blue-tint);
 }
 
 .iconBtnDisabled {
@@ -735,6 +742,18 @@
 }
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 992px) {
+  .layout {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .sidebar {
+    width: 100%;
+    position: static;
+    max-height: none;
+  }
+}
 
 @media (max-width: 768px) {
   .pageHeader {

@@ -268,7 +268,71 @@
   border-radius: 8px;
   border: 1px solid var(--border-subtle);
   box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease;
 }
+
+.compThumbLink {
+  display: flex;
+  flex-shrink: 0;
+  border-radius: 8px;
+}
+
+.compThumbLink:hover .compThumb {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-md), 0 0 10px rgba(59, 130, 246, 0.15);
+  border-color: var(--accent-blue);
+}
+
+.offersBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+  padding: 0.3rem 0.75rem;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  width: fit-content;
+}
+
+.offersBtn:hover {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.1);
+}
+
+.offersBtnActive {
+  background: rgba(59, 130, 246, 0.12) !important;
+  border-color: var(--accent-blue) !important;
+  color: var(--accent-blue) !important;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.15);
+}
+
+.offersBtnActive:hover {
+  background: rgba(59, 130, 246, 0.18) !important;
+  opacity: 1;
+}
+
+.tagIcon {
+  flex-shrink: 0;
+}
+
+.chevronIcon {
+  font-size: 0.55rem;
+  transition: transform 0.2s ease;
+  margin-left: 0.2rem;
+}
+
+.chevronIconOpen {
+  transform: rotate(180deg);
+}
+
 
 .compInfo {
   flex: 1;
@@ -451,9 +515,12 @@
 /* ── Expansion ────────────────────────────────────────────────────────────── */
 
 .expandContent {
-  background: var(--bg-surface-2);
-  padding: 1rem 1.5rem;
+  background: rgba(13, 13, 13, 0.45);
+  backdrop-filter: blur(10px);
+  padding: 1.25rem 1.5rem 1.25rem 2rem;
   border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--accent-blue);
   animation: slideDown 0.2s ease-out;
 }
 

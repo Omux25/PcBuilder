@@ -146,7 +146,8 @@
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
-  background: rgba(0, 0, 0, 0.03);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-subtle);
   color: var(--text-dim);
   border-radius: 50%;
   width: 24px;
@@ -155,11 +156,14 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  cursor: pointer;
+  z-index: 5;
 }
 
 .removeBtn:hover {
-  background: var(--danger-tint);
-  color: var(--danger);
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: var(--danger) !important;
+  color: var(--danger) !important;
 }
 
 .imgWrap {
