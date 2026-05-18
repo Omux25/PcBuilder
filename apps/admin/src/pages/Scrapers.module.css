@@ -261,3 +261,139 @@
   font-size: 0.75rem;
   padding: 0.3rem 0.5rem;
 }
+
+/* ── Card Grid Layout ────────────────────────────────────────────────────── */
+
+.gridContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2.5rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25), 0 0 15px rgba(99, 102, 241, 0.1);
+  border-color: var(--accent-h) !important;
+}
+
+.cardDisabled {
+  border-color: var(--border) !important;
+  opacity: 0.75;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.brandInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.brandIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  border: 2px solid var(--border);
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.brandIconActive {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(137, 180, 250, 0.2) 100%);
+  border-color: var(--accent);
+  color: var(--accent-h);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
+}
+
+.cardTitle {
+  font-size: 0.975rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.cardSubtitle {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  font-weight: 500;
+  margin-top: 1px;
+}
+
+.cardStatus {
+  flex-shrink: 0;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 0.85rem 0;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.metaLabel {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.metaValue {
+  font-size: 0.78rem;
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.scheduleControl {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.intervalSelect {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+}
+
+.cardFooter {
+  margin-top: auto;
+}
+

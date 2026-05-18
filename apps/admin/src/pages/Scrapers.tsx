@@ -253,82 +253,101 @@ export function Scrapers() {
       {mutationError && <p className="admin-error">{mutationError}</p>}
 
       {!loading && (
-        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
-          <thead>
-            <tr style={{ textAlign: 'left' }}>
-              <th style={{ padding: '0 1rem', fontSize: '11px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Revendeur</th>
-              <th style={{ padding: '0 1rem', fontSize: '11px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Dernier scraping</th>
-              <th style={{ padding: '0 1rem', fontSize: '11px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Statut</th>
-              <th style={{ padding: '0 1rem', fontSize: '11px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Planification</th>
-              <th style={{ padding: '0 1rem', fontSize: '11px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Intervalle</th>
-              <th style={{ padding: '0 1rem', fontSize: '11px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {retailers.map((r) => (
-              <tr 
+        <div className={styles.gridContainer}>
+          {retailers.map((r) => {
+            const isJobRunning = fullSessionRunning || runningJobs.has(r.id);
+            return (
+              <div 
                 key={r.id} 
-                className={!r.scraping_enabled ? styles.rowDisabled : ''}
-                style={{ 
-                  background: 'var(--surface)', 
-                  boxShadow: 'var(--shadow-sm)',
-                  transition: 'transform 0.2s, box-shadow 0.2s'
+                className={`${styles.card} ${!r.scraping_enabled ? styles.cardDisabled : ''}`}
+                style={{
+                  borderTop: `4px solid ${r.scraping_enabled ? 'var(--accent)' : 'var(--border)'}`
                 }}
-                onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
-                onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
               >
-                <td style={{ padding: '1rem', borderRadius: 'var(--radius) 0 0 var(--radius)', borderLeft: `3px solid ${r.scraping_enabled ? 'var(--accent)' : 'transparent'}` }}>
-                  <div className={styles.retailerName}>{r.name}</div>
-                </td>
-                <td className={styles.dateCell} style={{ padding: '1rem' }}>
-                  {fmtDate(r.last_scrape_at as string)}
-                </td>
-                <td style={{ padding: '1rem' }}>
-                  {r.last_scrape_status ? (
-                    <span className={`badge badge-${(r.last_scrape_status as string).toLowerCase()}`} style={{ fontWeight: 700 }}>
-                      {r.last_scrape_status as string}
-                    </span>
-                  ) : '—'}
-                </td>
-                <td style={{ padding: '1rem' }}>
-                  <div className={styles.scheduleCell}>
-                    <button
-                      className={`${styles.toggle} ${r.scraping_enabled ? styles.toggleOn : styles.toggleOff}`}
-                      onClick={() => handleToggleEnabled(r)}
-                      title={r.scraping_enabled ? 'Désactiver la planification' : 'Activer la planification'}
-                    >
-                      <span className={styles.toggleThumb} />
-                    </button>
-                    <span className={styles.nextScrape}>{nextScrapeLabel(r)}</span>
+                <div className={styles.cardHeader}>
+                  <div className={styles.brandInfo}>
+                    <div className={`${styles.brandIcon} ${r.scraping_enabled ? styles.brandIconActive : ''}`}>
+                      {r.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h3 className={styles.cardTitle}>{r.name}</h3>
+                      <div className={styles.cardSubtitle}>
+                        {r.scraping_enabled ? 'Planification active' : 'Scraping manuel'}
+                      </div>
+                    </div>
                   </div>
-                </td>
-                <td style={{ padding: '1rem' }}>
-                  <select
-                    className={styles.intervalSelect}
-                    value={r.scraping_interval_hours}
-                    onChange={(e) => handleIntervalChange(r, Number(e.target.value))}
-                    disabled={!r.scraping_enabled}
-                  >
-                    {INTERVAL_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </td>
-                <td style={{ padding: '1rem', textAlign: 'right', borderRadius: '0 var(--radius) var(--radius) 0' }}>
+                  <div className={styles.cardStatus}>
+                    {r.last_scrape_status ? (
+                      <span className={`badge badge-${(r.last_scrape_status as string).toLowerCase()}`} style={{ fontWeight: 700 }}>
+                        {r.last_scrape_status as string}
+                      </span>
+                    ) : (
+                      <span className="badge badge-accent">—</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className={styles.cardBody}>
+                  <div className={styles.metaRow}>
+                    <span className={styles.metaLabel}>Dernier passage</span>
+                    <span className={styles.metaValue}>
+                      {r.last_scrape_at ? fmtDate(r.last_scrape_at as string) : 'Jamais'}
+                    </span>
+                  </div>
+
+                  <div className={styles.metaRow}>
+                    <span className={styles.metaLabel}>Planification</span>
+                    <div className={styles.scheduleControl}>
+                      <button
+                        className={`${styles.toggle} ${r.scraping_enabled ? styles.toggleOn : styles.toggleOff}`}
+                        onClick={() => handleToggleEnabled(r)}
+                        title={r.scraping_enabled ? 'Désactiver la planification' : 'Activer la planification'}
+                      >
+                        <span className={styles.toggleThumb} />
+                      </button>
+                      <span className={styles.nextScrape}>{nextScrapeLabel(r)}</span>
+                    </div>
+                  </div>
+
+                  <div className={styles.metaRow}>
+                    <span className={styles.metaLabel}>Fréquence</span>
+                    <select
+                      className={styles.intervalSelect}
+                      value={r.scraping_interval_hours}
+                      onChange={(e) => handleIntervalChange(r, Number(e.target.value))}
+                      disabled={!r.scraping_enabled}
+                    >
+                      {INTERVAL_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className={styles.cardFooter}>
                   <button
                     className="admin-btn-secondary"
-                    style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', borderRadius: 'var(--radius-lg)' }}
+                    style={{ width: '100%', justifyContent: 'center', padding: '0.55rem', borderRadius: 'var(--radius)' }}
                     onClick={() => handleRunOne(r.id)}
-                    disabled={fullSessionRunning || runningJobs.has(r.id) || !r.is_active}
+                    disabled={isJobRunning || !r.is_active}
                   >
-                    <Play size={14} />
-                    {(fullSessionRunning || runningJobs.has(r.id)) ? 'En cours' : 'Lancer'}
+                    {isJobRunning ? (
+                      <>
+                        <RefreshCw size={14} className="spin" />
+                        Scraping en cours...
+                      </>
+                    ) : (
+                      <>
+                        <Play size={14} />
+                        Lancer le scraper
+                      </>
+                    )}
                   </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {/* Log viewer */}
