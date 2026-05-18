@@ -9,7 +9,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
 import { getComponents } from '../api';
-import { formatComponentName } from '@shared/component-utils';
+import { formatComponentName } from '@shared/formatting/component-name.formatter';
 import { CategoryIcon } from '../components/CategoryIcon';
 import type { Component, ComponentCategory } from '../types';
 import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';

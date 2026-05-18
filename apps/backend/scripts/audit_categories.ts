@@ -1,6 +1,7 @@
 // apps/backend/scripts/audit_categories.ts
 import { getSql } from '../src/core/db/index.js';
-import { inferCategory, inferCategoryFromUrl, getCategoryPriority, extractBrand } from '@shared/component-utils';
+import { inferCategory, inferCategoryFromUrl, getCategoryPriority } from '@shared/hardware/categories';
+import { extractBrand } from '@shared/hardware/brands';
 import { deriveCanonicalName } from '../src/modules/scraping/services/suggestionEngine.js';
 import { logger } from '../src/modules/scraping/engine/utils/logger.js';
 

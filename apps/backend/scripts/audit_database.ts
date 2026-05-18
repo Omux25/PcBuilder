@@ -1,6 +1,6 @@
 import { sql } from 'bun';
 import fs from 'fs';
-import { inferCategory } from '@shared/component-utils';
+import { inferCategory } from '@shared/hardware/categories';
 
 async function runAudit() {
   console.log("--- Starting Comprehensive Database Integrity Audit ---");

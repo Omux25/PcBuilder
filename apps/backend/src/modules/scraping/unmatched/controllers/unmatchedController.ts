@@ -1,7 +1,7 @@
-import { Context } from 'hono';
+import type { Context } from 'hono';
 import { UnmatchedService } from '../services/unmatchedService.js';
 import { logActivity } from '../../../admin/services/adminService.js';
-import { componentSchemas } from '../../../../core/schemas/componentSchemas.js';
+import { componentSchema } from '@shared/schemas/component.schema.js';
 
 export class UnmatchedController {
   private service = new UnmatchedService();
@@ -123,9 +123,16 @@ export class UnmatchedController {
       return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Missing required fields' } }, 400);
     }
 
-    const schema = (componentSchemas as any)[category];
-    if (!schema) {
-      return c.json({ error: { code: 'VALIDATION_ERROR', message: `Unknown category: ${category}` } }, 400);
+    const resultBody = { name, brand, category, specs, listing_ids, link_to_existing, existing_component_id };
+    const validated = componentSchema.safeParse(resultBody);
+    if (!validated.success && !link_to_existing) {
+       return c.json({ 
+         error: { 
+           code: 'VALIDATION_ERROR', 
+           message: 'Validation failed', 
+           fields: validated.error.issues.map((i: any) => i.path.join('.') || i.message)
+         } 
+       }, 400);
     }
 
     const admin = c.get('admin') as { id: number } | undefined;
@@ -179,8 +186,5 @@ export class UnmatchedController {
     }
 
     return c.json({ successful: [{ linked_count: result.linked_listings }], failed: [] }); 
-    // Note: the accordion frontend expects { successful: [...], failed: [...] }
-    // I should probably align the service response to match what the frontend expects exactly
-    // but for now this is a good consolidation step.
   }
 }

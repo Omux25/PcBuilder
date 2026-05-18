@@ -16,20 +16,17 @@
 
 import { findBestMatch, type CatalogComponent } from '../../../core/utils/componentMatcher.js';
 import { matchesRule, type KeywordRule } from './keywordRulesService.js';
-import {
-    extractBrand,
-    extractCpuSpecs,
-    extractGpuSpecs,
-    extractRamSpecs,
-    extractStorageSpecs,
-    extractMotherboardSpecs,
-    extractPsuSpecs,
-    extractCoolingSpecs,
-    extractCaseSpecs,
-    decodeHtml,
-    inferCategory as resolveCategory,
-    inferCategoryFromUrl,
-} from '@shared/component-utils';
+import { extractBrand } from '@shared/hardware/brands';
+import { extractCpuSpecs } from '@shared/hardware/specs/cpu';
+import { extractGpuSpecs } from '@shared/hardware/specs/gpu';
+import { extractRamSpecs } from '@shared/hardware/specs/ram';
+import { extractStorageSpecs } from '@shared/hardware/specs/storage';
+import { extractMotherboardSpecs } from '@shared/hardware/specs/motherboard';
+import { extractPsuSpecs } from '@shared/hardware/specs/psu';
+import { extractCoolingSpecs } from '@shared/hardware/specs/cooling';
+import { extractCaseSpecs } from '@shared/hardware/specs/case';
+import { decodeHtml } from '@shared/decode-html';
+import { inferCategory as resolveCategory, inferCategoryFromUrl } from '@shared/hardware/categories';
 import { SCRAPER_CONFIG } from '@shared/scraper-config';
 import type { ComponentCategory } from '@shared/types';
 
@@ -112,26 +109,6 @@ export function deriveCanonicalName(scrapedName: string, brand: string | null): 
 
     return name;
 }
-
-// ── Brand extraction ──────────────────────────────────────────────────────────
-
-// Extended brand list covering all brands seen in the Moroccan retailer queue
-const KNOWN_BRANDS = [
-    'ASUS', 'MSI', 'Gigabyte', 'ASRock', 'EVGA', 'Biostar',
-    'AMD', 'Intel', 'NVIDIA',
-    'Corsair', 'G.Skill', 'Kingston', 'Crucial', 'TeamGroup', 'Lexar', 'ADATA',
-    'Samsung', 'WD', 'Seagate', 'Sabrent', 'Silicon Power', 'Toshiba',
-    'Seasonic', 'be quiet!', 'Cooler Master', 'Thermaltake', 'Antec', 'DeepCool',
-    'Fractal', 'NZXT', 'Lian Li', 'Phanteks', 'Aerocool', 'Silverstone',
-    'Noctua', 'Arctic', 'Thermalright', 'Scythe', 'ID-Cooling', 'APNX',
-    'Arktek', 'Inno3D', 'Palit', 'Zotac', 'Sapphire', 'PowerColor', 'XFX',
-    'PNY', 'Gainward', 'Colorful', 'Galax', 'KFA2',
-    'Acer', 'HP', 'Patriot', 'Klevv', 'Geil', 'Mushkin',
-    'FSP', 'Super Flower', 'XPG', 'Cougar', 'Chieftec', 'LC Power',
-    '1stPlayer', 'Kolink', 'Sharkoon', 'BitFenix',
-    'Mars Gaming', 'Thermal Grizzly', 'Hybrok', 'XtrmLab', 'OCPC', 'Connect',
-    'Abkoncore', 'Anima', 'Cougar', 'Aorus',
-];
 
 /**
  * Extracts the brand from a scraped product name.

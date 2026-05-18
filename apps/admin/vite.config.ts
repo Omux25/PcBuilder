@@ -11,6 +11,9 @@ export default defineConfig({
     },
   },
   server: {
+    fs: {
+      allow: ['.', '../../shared', '../../backend/src'],
+    },
     port: 5174,
     watch: {
       usePolling: true,

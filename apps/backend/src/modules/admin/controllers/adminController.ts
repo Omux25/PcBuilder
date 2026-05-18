@@ -2,7 +2,7 @@
  * Admin Controller — Handles dashboard and log requests.
  */
 
-import { Context } from 'hono';
+import type { Context } from 'hono';
 import { AdminService } from '../services/adminService.js';
 import { LogRepository } from '../repositories/logRepository.js';
 

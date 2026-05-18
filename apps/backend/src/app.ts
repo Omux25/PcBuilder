@@ -57,22 +57,20 @@ app.use('/api/*', cors({
   credentials: true,
 }));
 
-// ── Public routes ─────────────────────────────────────────────────────────────
-
-app.route('/api/auth', authRouter);
-app.route('/api/builds', buildsRouter);
-app.route('/api/compatibility', compatibilityRouter);
-app.route('/api', catalogRouter);
-app.route('/api/health', healthRouter);
-
-// ── Protected routes ──────────────────────────────────────────────────────────
-
-app.route('/api/admin', adminRouter);
-app.route('/api/admin', adminCatalogRouter);
-app.route('/api/admin', adminBuildsRouter);
-app.route('/api/admin/scrapers', scrapingRouter);
-app.route('/api/admin/unmatched-listings', unmatchedRouter);
-app.route('/api/admin/keyword-rules', rulesRouter);
+const routes = app
+  // ── Public routes ─────────────────────────────────────────────────────────────
+  .route('/api/auth', authRouter)
+  .route('/api/builds', buildsRouter)
+  .route('/api/compatibility', compatibilityRouter)
+  .route('/api', catalogRouter)
+  .route('/api/health', healthRouter)
+  // ── Protected routes ──────────────────────────────────────────────────────────
+  .route('/api/admin', adminRouter)
+  .route('/api/admin', adminCatalogRouter)
+  .route('/api/admin', adminBuildsRouter)
+  .route('/api/admin/scrapers', scrapingRouter)
+  .route('/api/admin/unmatched-listings', unmatchedRouter)
+  .route('/api/admin/keyword-rules', rulesRouter);
 
 // ── Global 404 ───────────────────────────────────────────────────────────────
 
@@ -126,4 +124,5 @@ if (process.env.NODE_ENV === 'production' && process.env.SERVE_STATIC === 'true'
   app.use('/*', serveStatic({ path: '../frontend/dist/index.html' }));
 }
 
+export type AppRouter = typeof routes;
 export { app };

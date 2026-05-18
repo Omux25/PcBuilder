@@ -11,10 +11,10 @@ import { getPrices } from '../api';
 import type { Component, PriceOffer } from '../types';
 import { CATEGORY_LABELS } from '../types';
 import { SkeletonText } from './Skeleton';
-import { formatDate } from '../utils/date';
-import { formatComponentName } from '@shared/component-utils';
+import { formatDate } from '@shared/formatting/date.formatter';
+import { formatComponentName } from '@shared/formatting/component-name.formatter';
 import { UI } from '../ui-strings';
-import { formatPrice } from '../utils/format';
+import { formatPrice } from '@shared/formatting/price.formatter';
 import styles from './PriceComparison.module.css';
 
 interface Props {

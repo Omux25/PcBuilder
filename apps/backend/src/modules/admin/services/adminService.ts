@@ -3,7 +3,7 @@
  */
 
 import { AdminRepository } from '../repositories/adminRepository.js';
-import { DashboardData } from '@shared/types';
+import type { DashboardData } from '@shared/types';
 
 export class AdminService {
   private adminRepo: AdminRepository;

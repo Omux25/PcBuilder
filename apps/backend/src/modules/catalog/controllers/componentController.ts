@@ -1,9 +1,8 @@
-import { Context } from 'hono';
+import type { Context } from 'hono';
 import Papa from 'papaparse';
 import { ComponentService } from '../services/componentService.js';
 import { logActivity } from '../../admin/services/adminService.js';
-import { AppError } from '../../../core/errors/errors.js';
-import { componentSchemas, type ComponentInput } from '../../../core/schemas/componentSchemas.js';
+import { componentSchema, type ComponentInput, type ComponentCategory } from '@shared/schemas/component.schema.js';
 import { runSuggestionPreprocessing } from '../../scraping/services/suggestionPreprocessor.js';
 
 export class ComponentController {
@@ -149,7 +148,7 @@ export class ComponentController {
   }
 
   async createComponent(c: Context) {
-    const data = c.get('validatedBody') as ComponentInput;
+    const data = c.req.valid('json' as never) as ComponentInput;
     const admin = c.get('admin') as { id: number } | undefined;
 
     const component = await this.componentService.createComponent(data);
@@ -165,7 +164,7 @@ export class ComponentController {
     const id = Number(c.req.param('id'));
     if (!id) return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid id' } }, 400);
 
-    const data = c.get('validatedBody') as ComponentInput;
+    const data = c.req.valid('json' as never) as ComponentInput;
     const admin = c.get('admin') as { id: number } | undefined;
 
     const component = await this.componentService.updateComponent(id, data);
@@ -286,8 +285,8 @@ export class ComponentController {
       const rowNum = i + 1;
 
       try {
-        const category = row.category as keyof typeof componentSchemas;
-        if (!category || !componentSchemas[category]) {
+        const category = row.category as ComponentCategory;
+        if (!category) {
           throw new Error(`Invalid or missing category: ${category}`);
         }
 
@@ -310,8 +309,7 @@ export class ComponentController {
           coercedRow.supported_motherboards = row.supported_motherboards.split('|').map((s: string) => s.trim()).filter(Boolean);
         }
 
-        const schema = componentSchemas[category];
-        const validated = schema.safeParse(coercedRow);
+        const validated = componentSchema.safeParse(coercedRow);
         if (!validated.success) {
           const msg = validated.error.issues.map((e: any) => `${String(e.path.join('.'))}: ${e.message}`).join(', ');
           throw new Error(`Validation failed: ${msg}`);

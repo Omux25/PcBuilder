@@ -1,3 +1,6 @@
+import { hc } from 'hono/client';
+import type { AppRouter } from '../apps/backend/src/app';
+
 /**
  * Shared API request factory for Frontend and Admin.
  * Handles base URL, common headers, and standard error parsing.
@@ -13,6 +16,26 @@ export interface ApiError {
   message: string;
   status: number;
   code?: string;
+}
+
+/**
+ * Creates a type-safe Hono RPC client.
+ * Import type AppRouter from backend is safe as it's type-only.
+ */
+export function createClient(baseUrl: string, options: RequestInit = {}) {
+  return hc<AppRouter>(baseUrl, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers as any,
+    },
+    ...options,
+    fetch: (input, init) => {
+      return fetch(input, {
+        ...init,
+        credentials: options.credentials ?? 'include',
+      });
+    },
+  });
 }
 
 /**

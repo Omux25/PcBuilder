@@ -1,5 +1,5 @@
 import { getSql } from '../../../../core/db/index.js';
-import { KeywordRule } from '../../services/keywordRulesService.js';
+import type { KeywordRule } from '../../services/keywordRulesService.js';
 
 export class KeywordRuleRepository {
   private sql = getSql();

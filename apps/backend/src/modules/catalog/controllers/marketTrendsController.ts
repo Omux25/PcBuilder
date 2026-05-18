@@ -1,4 +1,4 @@
-import { Context } from 'hono';
+import type { Context } from 'hono';
 import { getSql } from '../../../core/db/index.js';
 
 export class MarketTrendsController {

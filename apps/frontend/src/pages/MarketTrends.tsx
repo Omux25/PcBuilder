@@ -13,7 +13,7 @@ import type { ComponentCategory } from '../types';
 import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
 import { useBuild } from '../context/BuildContext';
 import { UI } from '../ui-strings';
-import { formatPrice } from '../utils/format';
+import { formatPrice } from '@shared/formatting/price.formatter';
 import styles from './MarketTrends.module.css';
 
 const DAY_OPTIONS = [3, 7, 14, 30];

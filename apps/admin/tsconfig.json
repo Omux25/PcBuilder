@@ -3,6 +3,9 @@
     "paths": {
       "@shared/*": [
         "../../shared/*"
+      ],
+      "@backend-types/*": [
+        "../../backend/src/*"
       ]
     }
   },

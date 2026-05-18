@@ -11,10 +11,11 @@
 
 import { getSql } from '../../../core/db/index.js';
 import { logger } from '../engine/utils/logger.js';
-import { 
-    extractCaseSpecs, extractCoolingSpecs, extractGpuSpecs, extractPsuSpecs, extractRamSpecs 
-} from '@shared/component-utils';
-import PQueue from 'p-queue';
+import { extractCaseSpecs } from '@shared/hardware/specs/case';
+import { extractCoolingSpecs } from '@shared/hardware/specs/cooling';
+import { extractGpuSpecs } from '@shared/hardware/specs/gpu';
+
+// Spec mining logic...
 import * as cheerio from 'cheerio';
 import { matchFromDataset } from './pcppDatasetService.js';
 
@@ -139,7 +140,7 @@ function hasRequiredSpecs(updates: any, category: string): boolean {
     return true;
 }
 
-async function discoverManufacturerUrl(name: string, brand: string | null): Promise<string | null> {
+async function discoverManufacturerUrl(_name: string, brand: string | null): Promise<string | null> {
     if (!brand) return null;
     return null; // Logic to be expanded with search API
 }

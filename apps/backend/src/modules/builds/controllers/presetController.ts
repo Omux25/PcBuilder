@@ -1,7 +1,6 @@
-import { Context } from 'hono';
+import type { Context } from 'hono';
 import { PresetService } from '../services/presetService.js';
 import { logActivity } from '../../admin/services/adminService.js';
-import { AppError } from '../../../core/errors/errors.js';
 
 export class PresetController {
   private service = new PresetService();

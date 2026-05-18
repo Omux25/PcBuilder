@@ -10,7 +10,7 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import type { BuildConfig, Component, ComponentCategory, CompatibilityResult } from '../types';
-import { validateCompatibility } from '@shared/compatibility-engine';
+import { validateCompatibility } from '@shared/engine/compatibility.engine';
 import { getComponentsByIds } from '../api';
 import {
   saveBuildToStorage,
@@ -18,7 +18,7 @@ import {
   clearBuildStorage,
   decodeBuildFromUrl,
 } from '../utils/buildUrl';
-import { pruneExcessSlots } from '../utils/buildUtils';
+import { pruneExcessSlots } from '@shared/engine/build.engine';
 
 interface BuildContextValue {
   build: BuildConfig;

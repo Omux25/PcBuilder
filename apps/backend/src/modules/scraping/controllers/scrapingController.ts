@@ -2,7 +2,7 @@
  * Scraping Controller — Handles scraping status and manual trigger requests.
  */
 
-import { Context } from 'hono';
+import type { Context } from 'hono';
 import { ScrapingService } from '../services/scrapingService.js';
 
 export class ScrapingController {

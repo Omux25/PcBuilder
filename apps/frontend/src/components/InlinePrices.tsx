@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { getPrices } from '../api';
 import type { PriceOffer } from '../types';
 import { UI } from '../ui-strings';
-import { formatPrice } from '../utils/format';
+import { formatPrice } from '@shared/formatting/price.formatter';
 import { ExternalLink } from 'lucide-react';
 import styles from './InlinePrices.module.css';
 

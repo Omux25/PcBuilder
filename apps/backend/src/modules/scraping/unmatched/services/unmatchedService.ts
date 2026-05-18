@@ -1,15 +1,19 @@
-import { UnmatchedRepository, UnmatchedListingFilter } from '../repositories/unmatchedRepository.js';
+import { UnmatchedRepository } from '../repositories/unmatchedRepository.js';
+import type { UnmatchedListingFilter } from '../repositories/unmatchedRepository.js';
 import { runSuggestionPreprocessing } from '../../services/suggestionPreprocessor.js';
 import { logger } from '../../engine/utils/logger.js';
 import { getSql } from '../../../../core/db/index.js';
 import { getUniqueSlug } from '../../../catalog/services/slugService.js';
-import { componentSchemas } from '../../../../core/schemas/componentSchemas.js';
-import {
-  extractRamSpecs, extractCpuSpecs, extractGpuSpecs,
-  extractMotherboardSpecs, extractPsuSpecs, extractCoolingSpecs,
-  extractCaseSpecs, extractFanSpecs, extractThermalPasteSpecs,
-  extractStorageSpecs,
-} from '@shared/component-utils.js';
+import { extractCpuSpecs } from '@shared/hardware/specs/cpu.js';
+import { extractGpuSpecs } from '@shared/hardware/specs/gpu.js';
+import { extractRamSpecs } from '@shared/hardware/specs/ram.js';
+import { extractMotherboardSpecs } from '@shared/hardware/specs/motherboard.js';
+import { extractPsuSpecs } from '@shared/hardware/specs/psu.js';
+import { extractCaseSpecs } from '@shared/hardware/specs/case.js';
+import { extractCoolingSpecs } from '@shared/hardware/specs/cooling.js';
+import { extractFanSpecs } from '@shared/hardware/specs/fan.js';
+import { extractThermalPasteSpecs } from '@shared/hardware/specs/thermal-paste.js';
+import { extractStorageSpecs } from '@shared/hardware/specs/storage.js';
 import { AppError } from '../../../../core/errors/errors.js';
 
 export class UnmatchedService {

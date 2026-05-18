@@ -1,10 +1,9 @@
-import { Context } from 'hono';
+import type { Context } from 'hono';
 import Papa from 'papaparse';
 import { ComponentService } from '../services/componentService.js';
 import { logActivity } from '../../admin/services/adminService.js';
 import { AppError } from '../../../core/errors/errors.js';
-import { componentSchemas } from '../../../core/schemas/componentSchemas.js';
-import type { ComponentInput } from '../../../core/schemas/componentSchemas.js';
+import { componentSchema, type ComponentInput, type ComponentCategory } from '@shared/schemas/component.schema.js';
 import { runSuggestionPreprocessing } from '../../scraping/services/suggestionPreprocessor.js';
 import { parseId } from '../../../core/errors/errors.js';
 
@@ -107,7 +106,6 @@ export class AdminComponentController {
 
     const admin = c.get('admin') as { id: number } | undefined;
     
-    // Using service for activation (new method needed)
     const component = await this.componentService.activateComponent(id);
 
     if (admin?.id) {
@@ -183,8 +181,8 @@ export class AdminComponentController {
       const rowNum = i + 1;
 
       try {
-        const category = row.category as keyof typeof componentSchemas;
-        if (!category || !componentSchemas[category]) {
+        const category = row.category as ComponentCategory;
+        if (!category) {
           throw new Error(`Invalid or missing category: ${String(category)}`);
         }
 
@@ -207,8 +205,7 @@ export class AdminComponentController {
           coercedRow.supported_motherboards = row.supported_motherboards.split('|').map((s: string) => s.trim()).filter(Boolean);
         }
 
-        const schema = componentSchemas[category];
-        const validated = schema.safeParse(coercedRow);
+        const validated = componentSchema.safeParse(coercedRow);
         if (!validated.success) {
           const msg = validated.error.issues.map((e: any) => `${String(e.path.join('.'))}: ${e.message}`).join(', ');
           throw new Error(`Validation failed: ${msg}`);

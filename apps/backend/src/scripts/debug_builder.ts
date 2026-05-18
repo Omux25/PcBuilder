@@ -1,5 +1,7 @@
 
-import { inferCategory, extractBrand, cleanName } from '@shared/component-utils';
+import { inferCategory } from '@shared/hardware/categories';
+import { extractBrand } from '@shared/hardware/brands';
+import { cleanName } from '@shared/hardware/cleaning';
 
 const scrapedName = 'SG 750W 80 PLUS BRONZE ( 2 ANS GARANTIE )';
 const category = inferCategory(scrapedName);

@@ -1,5 +1,5 @@
 /**
- * specLine.ts — Category-aware spec line generator for the Configurator.
+ * spec-line.formatter.ts — Category-aware spec line generator.
  *
  * getSpecLine(component) returns a compact, cleanly formatted string of key
  * specs for a given component. Each category has its own handler that builds
@@ -8,7 +8,7 @@
  * This is a pure function — no side effects, deterministic output.
  */
 
-import type { Component } from '../../../../shared/types';
+import type { Component } from '../types.js';
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 

@@ -1,6 +1,9 @@
 
 import { getSql } from '../core/db/index.js';
-import { extractRamSpecs, extractStorageSpecs, cleanName, extractBrand } from '@shared/component-utils';
+import { extractRamSpecs } from '@shared/hardware/specs/ram';
+import { extractStorageSpecs } from '@shared/hardware/specs/storage';
+import { extractBrand } from '@shared/hardware/brands';
+import { cleanName } from '@shared/hardware/cleaning';
 import { generateUniqueSlug } from '@shared/slugify';
 
 async function fixPollutions() {

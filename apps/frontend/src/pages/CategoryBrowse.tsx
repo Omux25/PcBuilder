@@ -8,8 +8,8 @@ import type { Component, ComponentCategory } from '../types';
 import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
 import { useBuild } from '../context/BuildContext';
 import { useCompare } from '../context/CompareContext';
-import { formatComponentName } from '@shared/component-utils';
-import { formatPrice } from '../utils/format';
+import { formatComponentName } from '@shared/formatting/component-name.formatter';
+import { formatPrice } from '@shared/formatting/price.formatter';
 import styles from './CategoryBrowse.module.css';
 
 const LIMIT = 20;

@@ -16,8 +16,8 @@ import { useCompare } from '../context/CompareContext';
 import type { Component, PriceOffer, PriceHistoryEntry, ComponentCategory } from '../types';
 import { CATEGORY_LABELS } from '../types';
 import { UI } from '../ui-strings';
-import { formatPrice } from '../utils/format';
-import { formatComponentName } from '@shared/component-utils';
+import { formatPrice } from '@shared/formatting/price.formatter';
+import { formatComponentName } from '@shared/formatting/component-name.formatter';
 import styles from './ComponentDetail.module.css';
 
 interface Props {

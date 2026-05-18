@@ -21,9 +21,10 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@shared/*": ["../../shared/*"]
+      "@shared/*": ["../../shared/*"],
+      "@backend-types/*": ["../../backend/src/*"]
     }
   },
-  "include": ["src", "../../shared"],
+  "include": ["src", "../../shared/**/*"],
   "exclude": ["node_modules", "src/**/__tests__/**", "src/**/*.test.ts", "src/**/*.test.tsx"]
 }
