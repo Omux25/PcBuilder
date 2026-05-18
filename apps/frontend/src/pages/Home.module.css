@@ -137,9 +137,10 @@
 }
 
 .ctaPrimary:hover {
-  background: #ffffff;
+  background: var(--cta-primary-hover);
+  color: var(--bg-app);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lg), 0 0 20px rgba(255,255,255,0.15);
+  box-shadow: var(--shadow-lg), 0 0 25px var(--accent-blue-glow);
 }
 
 .ctaSecondary {
