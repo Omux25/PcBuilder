@@ -8,7 +8,7 @@
     "start": "bun src/server.ts",
     "dev": "bun --hot src/server.ts",
     "test": "bun test",
-    "migrate": "bun src/db/migrate.ts",
+    "migrate": "bun src/core/db/migrate.ts",
     "sync": "bun scripts/sync_catalog.ts"
   },
   "dependencies": {
