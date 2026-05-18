@@ -22,7 +22,8 @@
  * while \b word boundaries prevent "rx7900xt" from matching "rx7900xtx".
  */
 
-import { extractBrand, CATEGORY_WORDS } from '@shared/component-utils';
+import { extractBrand } from '@shared/hardware/brands';
+import { CATEGORY_WORDS } from '@shared/hardware/cleaning';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

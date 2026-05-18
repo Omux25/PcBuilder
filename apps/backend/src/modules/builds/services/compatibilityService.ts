@@ -1,10 +1,9 @@
-import type { CompatibilityResult, Component } from '@shared/types';
-import { 
-  validateCompatibility as sharedValidate, 
+import type { CompatibilityResult } from '@shared/types';
+import {
+  validateCompatibility as sharedValidate,
   checkSocketCompatibility as sharedCheckSocket,
-  type BuildInput 
-} from '@shared/compatibility-engine';
-
+  type BuildInput
+} from '@shared/engine/compatibility.engine.js';
 export { type BuildInput };
 
 export class CompatibilityService {

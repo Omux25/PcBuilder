@@ -1,7 +1,7 @@
 // @ts-nocheck
-import { describe, it, expect } from 'bun:test';
+import { describe, it } from 'vitest';
 import * as fc from 'fast-check';
-import { getSpecLine } from '../specLine';
+import { getSpecLine } from '@shared/formatting/spec-line.formatter';
 
 // ── Arbitraries ───────────────────────────────────────────────────────────────
 

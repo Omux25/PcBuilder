@@ -15,8 +15,8 @@ import { getComponentById, getPrices } from '../api';
 import type { Component, PriceOffer, ComponentCategory } from '../types';
 import { CATEGORY_LABELS } from '../types';
 import { MAX_COMPARE } from '../context/CompareContext';
-import { formatComponentName } from '@shared/component-utils';
-import { formatPrice } from '../utils/format';
+import { formatComponentName } from '@shared/formatting/component-name.formatter';
+import { formatPrice } from '@shared/formatting/price.formatter';
 import { UI } from '../ui-strings';
 import styles from './Compare.module.css';
 

@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Modal } from './Modal';
 import { FanSpecFields } from './FanSpecFields';
 import { ThermalPasteSpecFields } from './ThermalPasteSpecFields';
-import type { FanSpecValues } from './FanSpecFields';
-import type { ThermalPasteSpecValues } from './ThermalPasteSpecFields';
-import { createAdminComponent, updateAdminComponent, getErrorMessage} from '../api';
+import { createAdminComponent, updateAdminComponent, getErrorMessage } from '../api';
 import type { AdminComponent } from '../api';
 import { CATEGORY_ORDER } from '@shared/types';
+import { componentSchema, type ComponentInput } from '@shared/schemas/component.schema.js';
 import styles from './Form.module.css';
 import formLayout from './FormLayout.module.css';
 
@@ -21,13 +22,16 @@ const CATEGORY_FIELDS: Record<string, { key: string; label: string; type: 'text'
     { key: 'sata_ports', label: 'Ports SATA', type: 'number', placeholder: 'Ex: 4' },
   ],
   gpu: [{ key: 'length_mm', label: 'Longueur (mm)', type: 'number', placeholder: 'Ex: 320' }],
-  ram: [{ key: 'frequency_mhz', label: 'Fréquence (MHz)', type: 'number', placeholder: 'Ex: 6000' }],
+  ram: [
+    { key: 'frequency_mhz', label: 'Fréquence (MHz)', type: 'number', placeholder: 'Ex: 6000' },
+    { key: 'capacity_gb', label: 'Capacité (GB)', type: 'number', placeholder: 'Ex: 16' },
+  ],
   psu: [{ key: 'wattage', label: 'Puissance (W)', type: 'number', placeholder: 'Ex: 850' }],
   case: [{ key: 'max_gpu_length_mm', label: 'GPU max (mm)', type: 'number', placeholder: 'Ex: 380' }],
-  storage: [],
+  storage: [{ key: 'capacity_gb', label: 'Capacité (GB)', type: 'number', placeholder: 'Ex: 1000' }],
   cooling: [],
-  fan: [],        // handled by FanSpecFields
-  thermal_paste: [], // handled by ThermalPasteSpecFields
+  fan: [],
+  thermal_paste: [],
 };
 
 interface Props {
@@ -37,189 +41,66 @@ interface Props {
   component: AdminComponent | null;
 }
 
-type FormData = {
-  name: string;
-  brand: string;
-  category: string;
-  description: string;
-  release_year: number;
-  specs: string;
-  is_active: boolean;
-  socket: string;
-  max_ram_frequency: string;
-  length_mm: string;
-  frequency_mhz: string;
-  wattage: string;
-  max_gpu_length_mm: string;
-  ram_slots: string;
-  m2_slots: string;
-  sata_ports: string;
-};
-
-const emptyForm = (): FormData => ({
-  name: '',
-  brand: '',
-  category: 'cpu',
-  description: '',
-  release_year: new Date().getFullYear(),
-  specs: '{}',
-  is_active: true,
-  socket: '',
-  max_ram_frequency: '',
-  length_mm: '',
-  frequency_mhz: '',
-  wattage: '',
-  max_gpu_length_mm: '',
-  ram_slots: '',
-  m2_slots: '',
-  sata_ports: '',
-});
-
 export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
-  const [formData, setFormData] = useState<FormData>(emptyForm());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [fanSpecs, setFanSpecs] = useState<FanSpecValues>({ size_mm: '', airflow_cfm: '', noise_db: '', rgb: false, pack_size: '' });
-  const [thermalSpecs, setThermalSpecs] = useState<ThermalPasteSpecValues>({ weight_grams: '', thermal_conductivity: '', paste_type: '' });
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<ComponentInput>({
+    resolver: zodResolver(componentSchema),
+    defaultValues: {
+      category: 'cpu',
+      is_active: true,
+      specs: {},
+      release_year: new Date().getFullYear(),
+    },
+  });
+
+  const category = watch('category');
 
   useEffect(() => {
-    if (component) {
-      const c = component as unknown as Record<string, unknown>;
-      setFormData({
-        name: component.name,
-        brand: String(component.brand ?? ''),
-        category: component.category,
-        description: String(component.description ?? ''),
-        release_year: Number(component.release_year ?? new Date().getFullYear()),
-        specs: JSON.stringify(component.specs ?? {}, null, 2),
-        is_active: component.is_active,
-        socket: String(c.socket ?? ''),
-        max_ram_frequency: String(c.max_ram_frequency ?? ''),
-        length_mm: String(c.length_mm ?? ''),
-        frequency_mhz: String(c.frequency_mhz ?? ''),
-        wattage: String(c.wattage ?? ''),
-        max_gpu_length_mm: String(c.max_gpu_length_mm ?? ''),
-        ram_slots: String(c.ram_slots ?? ''),
-        m2_slots: String(c.m2_slots ?? ''),
-        sata_ports: String(c.sata_ports ?? ''),
-      });
-      // Pre-fill fan/thermal specs when editing
-      if (component.category === 'fan') {
-        setFanSpecs({
-          size_mm: (c.size_mm as number) ?? '',
-          airflow_cfm: (c.airflow_cfm as number) ?? '',
-          noise_db: (c.noise_db as number) ?? '',
-          rgb: (c.rgb as boolean) ?? false,
-          pack_size: (c.pack_size as number) ?? '',
+    if (isOpen) {
+      if (component) {
+        // Map component data to form input shape
+        const formData: ComponentInput = {
+          name: component.name,
+          brand: component.brand ?? null,
+          category: component.category,
+          description: component.description ?? undefined,
+          release_year: component.release_year ?? new Date().getFullYear(),
+          specs: (component.specs as Record<string, unknown>) ?? {},
+          is_active: component.is_active,
+        };
+        reset(formData);
+      } else {
+        reset({
+          name: '',
+          brand: null,
+          category: 'cpu',
+          is_active: true,
+          specs: {},
+          release_year: new Date().getFullYear(),
         });
       }
-      if (component.category === 'thermal_paste') {
-        setThermalSpecs({
-          weight_grams: (c.weight_grams as number) ?? '',
-          thermal_conductivity: (c.thermal_conductivity as number) ?? '',
-          paste_type: (c.paste_type as ThermalPasteSpecValues['paste_type']) ?? '',
-        });
-      }
-    } else {
-      setFormData(emptyForm());
-      setFanSpecs({ size_mm: '', airflow_cfm: '', noise_db: '', rgb: false, pack_size: '' });
-      setThermalSpecs({ weight_grams: '', thermal_conductivity: '', paste_type: '' });
+      setError(null);
     }
-    setError(null);
-    setValidationErrors({});
-  }, [component, isOpen]);
+  }, [component, isOpen, reset]);
 
-  function set(key: keyof FormData, value: unknown) {
-    setFormData(prev => ({ ...prev, [key]: value }));
-  }
-
-  function setCategory(cat: string) {
-    setFormData(prev => ({
-      ...prev,
-      category: cat,
-      socket: '',
-      max_ram_frequency: '',
-      length_mm: '',
-      frequency_mhz: '',
-      wattage: '',
-      max_gpu_length_mm: '',
-      ram_slots: '',
-      m2_slots: '',
-      sata_ports: '',
-    }));
-    setFanSpecs({ size_mm: '', airflow_cfm: '', noise_db: '', rgb: false, pack_size: '' });
-    setThermalSpecs({ weight_grams: '', thermal_conductivity: '', paste_type: '' });
-  }
-
-  function validate() {
-    const errors: Record<string, string> = {};
-    if (!formData.name.trim()) errors.name = 'Le nom est requis.';
-    if (!(CATEGORY_ORDER as readonly string[]).includes(formData.category)) {
-      errors.category = 'Catégorie invalide.';
-    }
-    try {
-      if (formData.specs.trim()) {
-        const parsed = JSON.parse(formData.specs);
-        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-          errors.specs = 'Doit être un objet JSON valide ({}).';
-        }
-      }
-    } catch {
-      errors.specs = 'JSON invalide.';
-    }
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!validate()) return;
+  const onSubmit = async (data: ComponentInput) => {
     setLoading(true);
     setError(null);
 
-    const payload: Record<string, unknown> = {
-      name: formData.name,
-      brand: formData.brand || undefined,
-      category: formData.category,
-      description: formData.description || undefined,
-      release_year: formData.release_year || undefined,
-      specs: formData.specs.trim() ? JSON.parse(formData.specs) : {},
-      is_active: formData.is_active,
-    };
-
-    // Category-specific fields
-    if (formData.socket) payload.socket = formData.socket;
-    if (formData.max_ram_frequency) payload.max_ram_frequency = Number(formData.max_ram_frequency);
-    if (formData.length_mm) payload.length_mm = Number(formData.length_mm);
-    if (formData.frequency_mhz) payload.frequency_mhz = Number(formData.frequency_mhz);
-    if (formData.wattage) payload.wattage = Number(formData.wattage);
-    if (formData.max_gpu_length_mm) payload.max_gpu_length_mm = Number(formData.max_gpu_length_mm);
-    if (formData.ram_slots) payload.ram_slots = Number(formData.ram_slots);
-    if (formData.m2_slots) payload.m2_slots = Number(formData.m2_slots);
-    if (formData.sata_ports) payload.sata_ports = Number(formData.sata_ports);
-
-    // Fan-specific fields
-    if (formData.category === 'fan') {
-      if (fanSpecs.size_mm !== '') payload.size_mm = Number(fanSpecs.size_mm);
-      if (fanSpecs.airflow_cfm !== '') payload.airflow_cfm = Number(fanSpecs.airflow_cfm);
-      if (fanSpecs.noise_db !== '') payload.noise_db = Number(fanSpecs.noise_db);
-      payload.rgb = fanSpecs.rgb;
-      if (fanSpecs.pack_size !== '') payload.pack_size = Number(fanSpecs.pack_size);
-    }
-
-    // Thermal paste-specific fields
-    if (formData.category === 'thermal_paste') {
-      if (thermalSpecs.weight_grams !== '') payload.weight_grams = Number(thermalSpecs.weight_grams);
-      if (thermalSpecs.thermal_conductivity !== '') payload.thermal_conductivity = Number(thermalSpecs.thermal_conductivity);
-      if (thermalSpecs.paste_type) payload.paste_type = thermalSpecs.paste_type;
-    }
-
     try {
       if (component) {
-        await updateAdminComponent(component.id, payload);
+        await updateAdminComponent(component.id, data);
       } else {
-        await createAdminComponent(payload);
+        await createAdminComponent(data);
       }
       onSaved();
       onClose();
@@ -228,9 +109,9 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  const catFields = CATEGORY_FIELDS[formData.category] ?? [];
+  const catFields = CATEGORY_FIELDS[category] ?? [];
 
   return (
     <Modal
@@ -238,20 +119,19 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
       isOpen={isOpen}
       onClose={onClose}
     >
-      <form className={styles.form} onSubmit={handleSubmit}>
+      <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
         {error && <div className={styles.errorText}>{error}</div>}
 
         {/* Name */}
         <div className={styles.formGroup}>
           <label>Nom du composant</label>
           <input
+            {...register('name')}
             className={styles.input}
             type="text"
-            value={formData.name}
-            onChange={e => set('name', e.target.value)}
             placeholder="Ex: Ryzen 5 7600"
           />
-          {validationErrors.name && <span className={styles.errorText}>{validationErrors.name}</span>}
+          {errors.name && <span className={styles.errorText}>{errors.name.message}</span>}
         </div>
 
         {/* Brand + Category */}
@@ -259,22 +139,22 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
           <div className={styles.formGroup}>
             <label>Marque</label>
             <input
+              {...register('brand')}
               className={styles.input}
               type="text"
-              value={formData.brand}
-              onChange={e => set('brand', e.target.value)}
               placeholder="Ex: AMD"
             />
+            {errors.brand && <span className={styles.errorText}>{errors.brand.message}</span>}
           </div>
           <div className={styles.formGroup}>
             <label>Catégorie</label>
             <select
+              {...register('category')}
               className={styles.select}
-              value={formData.category}
-              onChange={e => setCategory(e.target.value)}
             >
               {CATEGORY_ORDER.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
+            {errors.category && <span className={styles.errorText}>{errors.category.message}</span>}
           </div>
         </div>
 
@@ -285,48 +165,69 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
               <div key={field.key} className={`${styles.formGroup} ${formLayout.flexItem}`}>
                 <label>{field.label}</label>
                 <input
+                  {...register(field.key as any, { valueAsNumber: field.type === 'number' })}
                   className={styles.input}
                   type={field.type}
-                  value={formData[field.key as keyof FormData] as string}
-                  onChange={e => set(field.key as keyof FormData, e.target.value)}
                   placeholder={field.placeholder}
                 />
+                {(errors as any)[field.key] && (
+                  <span className={styles.errorText}>{(errors as any)[field.key].message}</span>
+                )}
               </div>
             ))}
           </div>
         )}
 
         {/* Fan-specific spec fields */}
-        {formData.category === 'fan' && (
-          <FanSpecFields values={fanSpecs} onChange={setFanSpecs} />
+        {category === 'fan' && (
+          <FanSpecFields
+            values={{
+              size_mm: (watch() as any).size_mm || '',
+              airflow_cfm: (watch() as any).airflow_cfm || '',
+              noise_db: (watch() as any).noise_db || '',
+              rgb: !!(watch() as any).rgb,
+              pack_size: (watch() as any).pack_size || '',
+            }}
+            onChange={(vals) => {
+              Object.entries(vals).forEach(([key, val]) => setValue(key as any, val));
+            }}
+          />
         )}
 
         {/* Thermal paste-specific spec fields */}
-        {formData.category === 'thermal_paste' && (
-          <ThermalPasteSpecFields values={thermalSpecs} onChange={setThermalSpecs} />
+        {category === 'thermal_paste' && (
+          <ThermalPasteSpecFields
+            values={{
+              weight_grams: (watch() as any).weight_grams || '',
+              thermal_conductivity: (watch() as any).thermal_conductivity || '',
+              paste_type: ((watch() as any).paste_type) || '',
+            }}
+            onChange={(vals) => {
+              Object.entries(vals).forEach(([key, val]) => setValue(key as any, val));
+            }}
+          />
         )}
 
         {/* Description */}
         <div className={styles.formGroup}>
           <label>Description</label>
           <textarea
+            {...register('description')}
             className={styles.textarea}
-            value={formData.description}
-            onChange={e => set('description', e.target.value)}
             placeholder="Description courte..."
           />
+          {errors.description && <span className={styles.errorText}>{errors.description.message}</span>}
         </div>
 
-        {/* Specs JSON */}
+        {/* Specs JSON - Simplified for now to just show and not edit complex JSON easily in flat form */}
         <div className={styles.formGroup}>
           <label>Spécifications (JSON)</label>
           <textarea
             className={`${styles.textarea} ${formLayout.mono}`}
-            value={formData.specs}
-            onChange={e => set('specs', e.target.value)}
+            value={JSON.stringify(watch('specs'), null, 2)}
+            readOnly
             placeholder='{ "cores": 6, "tdp": 65 }'
           />
-          {validationErrors.specs && <span className={styles.errorText}>{validationErrors.specs}</span>}
         </div>
 
         {/* Year + Active */}
@@ -334,17 +235,16 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
           <div className={styles.formGroup}>
             <label>Année de sortie</label>
             <input
+              {...register('release_year', { valueAsNumber: true })}
               className={`${styles.input} ${formLayout.yearInput}`}
               type="number"
-              value={formData.release_year}
-              onChange={e => set('release_year', parseInt(e.target.value, 10) || new Date().getFullYear())}
             />
+            {errors.release_year && <span className={styles.errorText}>{errors.release_year.message}</span>}
           </div>
           <label className={`${styles.checkboxGroup} ${formLayout.checkboxTop}`}>
             <input
+              {...register('is_active')}
               type="checkbox"
-              checked={formData.is_active}
-              onChange={e => set('is_active', e.target.checked)}
             />
             Actif
           </label>

@@ -16,12 +16,27 @@ import { scoreDnaMatch, extractDna, type CatalogComponent } from '../../../core/
 import { logger } from './utils/logger.js';
 import { getSql, setSql, resetSql } from '../../../core/db/index.js';
 import {
-  decodeHtml, inferCategory, inferCategoryFromUrl, extractBrand, cleanName, CATEGORY_WORDS,
-  extractCpuSpecs, extractGpuSpecs, extractRamSpecs,
-  extractMotherboardSpecs, extractPsuSpecs, extractCoolingSpecs, extractCaseSpecs,
-  extractFanSpecs, extractThermalPasteSpecs
-} from '@shared/component-utils';
-import { ComponentCategory } from '@shared/types';
+  decodeHtml
+} from '@shared/decode-html';
+import {
+  inferCategory, inferCategoryFromUrl
+} from '@shared/hardware/categories';
+import {
+  extractBrand
+} from '@shared/hardware/brands';
+import {
+  cleanName, CATEGORY_WORDS
+} from '@shared/hardware/cleaning';
+import { extractCpuSpecs } from '@shared/hardware/specs/cpu';
+import { extractGpuSpecs } from '@shared/hardware/specs/gpu';
+import { extractRamSpecs } from '@shared/hardware/specs/ram';
+import { extractMotherboardSpecs } from '@shared/hardware/specs/motherboard';
+import { extractPsuSpecs } from '@shared/hardware/specs/psu';
+import { extractCoolingSpecs } from '@shared/hardware/specs/cooling';
+import { extractCaseSpecs } from '@shared/hardware/specs/case';
+import { extractFanSpecs } from '@shared/hardware/specs/fan';
+import { extractThermalPasteSpecs } from '@shared/hardware/specs/thermal-paste';
+import type { ComponentCategory } from '@shared/types';
 import { loadAdminRules, matchesRule, type KeywordRule } from '../services/keywordRulesService.js';
 
 // Re-export DI helpers so tests can inject a mock SQL function.

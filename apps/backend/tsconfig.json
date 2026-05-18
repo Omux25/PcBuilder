@@ -8,10 +8,12 @@
     "strict": true,
     "skipLibCheck": true,
     "downlevelIteration": true,
+    "ignoreDeprecations": "6.0",
     "types": ["node"],
     "baseUrl": ".",
     "paths": {
-      "@shared/*": ["../../shared/*"]
+      "@shared/*": ["../../shared/*"],
+      "@backend-types/*": ["./src/*"]
     }
   },
   "include": [

@@ -10,6 +10,9 @@ export default defineConfig({
     },
   },
   server: {
+    fs: {
+      allow: ['.', '../../shared', '../../backend/src'],
+    },
     watch: {
       usePolling: true,
     },

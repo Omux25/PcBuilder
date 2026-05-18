@@ -1,4 +1,4 @@
-import { Context } from 'hono';
+import type { Context } from 'hono';
 import { KeywordRuleService } from '../services/keywordRuleService.js';
 import { logActivity } from '../../../admin/services/adminService.js';
 import { parseId } from '../../../../core/errors/errors.js';

@@ -1,6 +1,6 @@
 // apps/backend/scripts/heal_catalog.ts
 import { getSql } from '../src/core/db/index.js';
-import { inferCategory, inferCategoryFromUrl, getCategoryPriority } from '@shared/component-utils';
+import { inferCategory, inferCategoryFromUrl, getCategoryPriority } from '@shared/hardware/categories';
 import { logger } from '../src/modules/scraping/engine/utils/logger.js';
 
 function resolveCategory(name: string, url?: string) {

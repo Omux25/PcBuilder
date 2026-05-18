@@ -6,7 +6,8 @@
   ],
   "compilerOptions": {
     "paths": {
-      "@shared/*": ["../../shared/*"]
+      "@shared/*": ["../../shared/*"],
+      "@backend-types/*": ["../../backend/src/*"]
     }
   }
 }

@@ -19,7 +19,7 @@ import type { FanSpecValues } from './FanSpecFields';
 import type { ThermalPasteSpecValues } from './ThermalPasteSpecFields';
 import { CATEGORY_ORDER, CATEGORY_LABELS } from '@shared/types';
 import type { ComponentCategory } from '@shared/types';
-import { cleanName } from '@shared/component-utils';
+import { cleanName } from '@shared/hardware/cleaning';
 import styles from './Form.module.css';
 import { getKeywordRules, reprocessSuggestions, getErrorMessage, scrapeUrls, createAndLinkComponent } from '../api';
 import type { CanonicalGroup, KeywordRuleResponse, CreateAndLinkPayload } from '../api';

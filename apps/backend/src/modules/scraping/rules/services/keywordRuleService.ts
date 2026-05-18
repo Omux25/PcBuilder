@@ -1,5 +1,5 @@
 import { KeywordRuleRepository } from '../repositories/keywordRuleRepository.js';
-import { matchesRule, clearRegexCache, type KeywordRule } from '../../services/keywordRulesService.js';
+import { matchesRule, clearRegexCache } from '../../services/keywordRulesService.js';
 import { runSuggestionPreprocessing } from '../../services/suggestionPreprocessor.js';
 import { AppError } from '../../../../core/errors/errors.js';
 

@@ -8,10 +8,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { getPresets } from '../api';
 import type { PresetBuild } from '../types';
 import { CATEGORY_LABELS, slotKeyToCategory } from '../types';
-import { formatComponentName } from '@shared/component-utils';
+import { formatComponentName } from '@shared/formatting/component-name.formatter';
 import { SkeletonCard } from '../components/Skeleton';
 import { UI } from '../ui-strings';
-import { formatPrice } from '../utils/format';
+import { formatPrice } from '@shared/formatting/price.formatter';
 import styles from './Presets.module.css';
 
 interface Props {

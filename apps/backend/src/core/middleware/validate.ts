@@ -11,7 +11,7 @@
  */
 
 import type { Context, Next } from 'hono';
-import { componentSchemas, type ComponentCategory } from '../schemas/componentSchemas.js';
+import { componentSchema } from '@shared/schemas/component.schema.js';
 
 /**
  * Middleware factory — validates the request body against the Zod schema
@@ -38,27 +38,7 @@ export async function validateComponent(c: Context, next: Next): Promise<Respons
     );
   }
 
-  // Determine category
-  const category =
-    body !== null && typeof body === 'object' && 'category' in body
-      ? (body as Record<string, unknown>).category
-      : undefined;
-
-  if (typeof category !== 'string' || !Object.hasOwn(componentSchemas, category)) {
-    return c.json(
-      {
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: `Field 'category' is required and must be one of: ${Object.keys(componentSchemas).join(', ')}`,
-          fields: ['category'],
-        },
-      },
-      400,
-    );
-  }
-
-  const schema = (componentSchemas as any)[category];
-  const result = schema.safeParse(body);
+  const result = componentSchema.safeParse(body);
 
   if (!result.success) {
     const fields = result.error.issues.map((issue: any) => issue.path.join('.') || issue.message);

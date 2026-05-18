@@ -3,7 +3,7 @@
  * All requests go to /api (proxied to http://localhost:3000 by Vite in dev).
  */
 
-import { createRequest } from '@shared/api-client';
+import { createRequest, createClient } from '@shared/api-client';
 import type {
   Component, ComponentCategory, PriceOffer, PriceHistoryEntry,
   CompatibilityResult, BuildConfig, PresetBuild,
@@ -11,6 +11,7 @@ import type {
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
 const request = createRequest(BASE);
+const client = createClient(BASE);
 
 // ── Components ────────────────────────────────────────────────────────────────
 
@@ -169,15 +170,21 @@ export async function getPriceHistory(
 // ── Compatibility ─────────────────────────────────────────────────────────────
 
 /** Validate a build configuration. */
-export function validateBuild(build: BuildConfig): Promise<CompatibilityResult> {
+export async function validateBuild(build: BuildConfig): Promise<CompatibilityResult> {
   const payload: Record<string, number> = {};
   for (const [category, component] of Object.entries(build)) {
     if (component) payload[category] = component.id;
   }
-  return request<CompatibilityResult>('/compatibility/validate', {
-    method: 'POST',
-    body: JSON.stringify(payload),
+
+  const res = await client.api.compatibility.validate.$post({
+    json: payload,
   });
+
+  if (!res.ok) {
+    throw new Error('Failed to validate build');
+  }
+
+  return res.json() as Promise<CompatibilityResult>;
 }
 
 // ── Market Trends ─────────────────────────────────────────────────────────────
@@ -220,7 +227,14 @@ export async function getMarketTrends(params: {
 
 /** Fetch preset builds, optionally filtered by use case. */
 export async function getPresets(useCase?: string): Promise<PresetBuild[]> {
-  const qs = useCase ? `?use_case=${useCase}` : '';
-  const data = await request<{ presets: PresetBuild[] }>(`/builds/presets${qs}`);
-  return data.presets;
+  const res = await client.api.builds.presets.$get({
+    query: useCase ? { use_case: useCase } : undefined,
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to fetch presets');
+  }
+
+  const data = await res.json();
+  return data.presets as unknown as PresetBuild[];
 }

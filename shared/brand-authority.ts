@@ -20,7 +20,7 @@
  * - Returns null to dismiss, or { brand, category } to override
  */
 
-import type { Category } from './component-utils.js';
+import type { Category } from './hardware/categories.js';
 
 // ── Brand → Allowed Categories ────────────────────────────────────────────────
 //

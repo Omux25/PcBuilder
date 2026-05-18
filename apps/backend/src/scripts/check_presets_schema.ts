@@ -8,7 +8,7 @@ async function check() {
     FROM information_schema.columns 
     WHERE table_name = 'preset_builds'
   `;
-  console.log('preset_builds columns:', cols.map(c => c.column_name).join(', '));
+  console.log('preset_builds columns:', cols.map((c: any) => c.column_name).join(', '));
   process.exit(0);
 }
 

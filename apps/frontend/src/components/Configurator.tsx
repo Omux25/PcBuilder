@@ -16,10 +16,10 @@ import { CategoryIcon } from './CategoryIcon';
 import type { ComponentCategory } from '../types';
 import { CATEGORY_LABELS, RULE_LABELS, slotKeyToCategory, CATEGORY_ORDER, CORE_CATEGORIES } from '../types';
 import { useBuild } from '../context/BuildContext';
-import { calculateBuildTotalPrice } from '../utils/buildUtils';
+import { calculateBuildTotalPrice } from '@shared/engine/pricing.engine';
 import { encodeBuildToUrl } from '../utils/buildUrl';
-import { getSpecLine } from '../utils/specLine';
-import { formatPrice } from '../utils/format';
+import { getSpecLine } from '@shared/formatting/spec-line.formatter';
+import { formatPrice } from '@shared/formatting/price.formatter';
 import styles from './Configurator.module.css';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

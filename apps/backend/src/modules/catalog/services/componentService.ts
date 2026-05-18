@@ -3,7 +3,7 @@ import { PriceRepository } from '../repositories/priceRepository.js';
 import { getUniqueSlug } from './slugService.js';
 import { AppError } from '../../../core/errors/errors.js';
 
-import { Component, PriceOffer, ComponentInput, ComponentFilters } from '@shared/types';
+import type { Component, PriceOffer, ComponentInput, ComponentFilters } from '@shared/types';
 import { checkSocketCompatibility, validateCompatibility, type BuildInput } from '../../builds/services/compatibilityService.js';
 import { getSql } from '../../../core/db/index.js';
 import { getPriceHistory } from './priceHistoryService.js';

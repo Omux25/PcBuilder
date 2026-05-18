@@ -10,7 +10,8 @@
  * 4. Performant: Minimal overhead, uses fast lookups and caches if needed.
  */
 
-import type { Component, CompatibilityIssue, CompatibilityResult, ComponentCategory } from './types.js';
+import type { Component, CompatibilityIssue, CompatibilityResult, ComponentCategory } from '../types.js';
+import { BASE_SYSTEM_LOAD_WATTS, PSU_SAFETY_MULTIPLIER, PSU_ROUNDING_STEP } from '../constants/build.constants.js';
 
 export type BuildInput = Partial<Record<ComponentCategory, Partial<Component>>> & Record<string, any>;
 
@@ -248,9 +249,9 @@ export function validateCompatibility(build: BuildInput): CompatibilityResult {
   total_tdp += getStorageComponents(build).reduce((sum, s) => sum + (s.tdp ?? 0), 0);
   total_tdp += getFanComponents(build).reduce((sum, f) => sum + ((f as any).tdp ?? 0), 0);
 
-  if (Object.keys(build).length > 0) total_tdp += 50; // Base load
+  if (Object.keys(build).length > 0) total_tdp += BASE_SYSTEM_LOAD_WATTS; // Base load
 
-  const recommended_psu_wattage = Math.ceil((total_tdp * 1.5) / 50) * 50;
+  const recommended_psu_wattage = Math.ceil((total_tdp * PSU_SAFETY_MULTIPLIER) / PSU_ROUNDING_STEP) * PSU_ROUNDING_STEP;
 
   if (build.psu?.wattage) {
     if (build.psu.wattage < total_tdp) {
@@ -276,5 +277,3 @@ export function validateCompatibility(build: BuildInput): CompatibilityResult {
     warnings,
   };
 }
-
-

@@ -15,7 +15,7 @@ import { RETAILER_SCRAPERS } from './config/retailers.config.js';
 import type { ResolvedRetailerScraperConfig } from './config/retailers.config.js';
 import { importBenchmarks } from './benchmarkImporter.js';
 import type { ScrapedPrice } from './scrapers/baseScraper.js';
-import { runSmartBackfill, runDeepRetailerBackfill } from '../services/enrichmentService.js';
+import { runSmartBackfill } from '../services/enrichmentService.js';
 import { runSpecMiningSession } from '../services/specMiningService.js';
 
 // ── Data Quality Pass ─────────────────────────────────────────────────────────

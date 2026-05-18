@@ -1,5 +1,5 @@
 // apps/backend/scripts/inspect_url.ts
-import { inferCategory, inferCategoryFromUrl } from '@shared/component-utils';
+import { inferCategory, inferCategoryFromUrl } from '@shared/hardware/categories';
 
 const urls = [
   'https://nextlevelpc.ma/composants/78870-hybrok-hl360b-noir.html',

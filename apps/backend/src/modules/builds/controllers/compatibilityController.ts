@@ -1,4 +1,4 @@
-import { Context } from 'hono';
+import type { Context } from 'hono';
 import { z } from 'zod';
 import { CompatibilityService } from '../services/compatibilityService.js';
 import { ComponentService } from '../../catalog/services/componentService.js';

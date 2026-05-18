@@ -21,15 +21,30 @@ import { getSql, setSql, resetSql } from '../../../core/db/index.js';
 import { logger } from './utils/logger.js';
 import { SCRAPER_CONFIG } from '@shared/scraper-config';
 import {
-  decodeHtml, inferCategory, inferCategoryFromUrl, getCategoryPriority, extractBrand, cleanName, CATEGORY_WORDS,
-  extractCpuSpecs, extractGpuSpecs, extractRamSpecs,
-  extractMotherboardSpecs, extractPsuSpecs, extractCoolingSpecs, extractCaseSpecs,
-  extractFanSpecs, extractThermalPasteSpecs
-} from '@shared/component-utils';
+  decodeHtml
+} from '@shared/decode-html';
+import {
+  inferCategory, inferCategoryFromUrl, getCategoryPriority
+} from '@shared/hardware/categories';
+import {
+  extractBrand
+} from '@shared/hardware/brands';
+import {
+  cleanName, CATEGORY_WORDS
+} from '@shared/hardware/cleaning';
+import { extractCpuSpecs } from '@shared/hardware/specs/cpu';
+import { extractGpuSpecs } from '@shared/hardware/specs/gpu';
+import { extractRamSpecs } from '@shared/hardware/specs/ram';
+import { extractMotherboardSpecs } from '@shared/hardware/specs/motherboard';
+import { extractPsuSpecs } from '@shared/hardware/specs/psu';
+import { extractCoolingSpecs } from '@shared/hardware/specs/cooling';
+import { extractCaseSpecs } from '@shared/hardware/specs/case';
+import { extractFanSpecs } from '@shared/hardware/specs/fan';
+import { extractThermalPasteSpecs } from '@shared/hardware/specs/thermal-paste';
 import { componentSlug, generateUniqueSlug } from '@shared/slugify';
 import { scoreDnaMatch, extractDna, type CatalogComponent } from '../../../core/utils/componentMatcher.js';
 import { loadAdminRules, matchesRule, type KeywordRule } from '../services/keywordRulesService.js';
-import { ComponentCategory } from '@shared/types';
+import type { ComponentCategory } from '@shared/types';
 import { scoreImageQuality } from '@shared/image-utils';
 import { validateBrandAuthority } from '@shared/brand-authority';
 
@@ -48,7 +63,7 @@ export interface AggregateResult {
 
 export async function aggregate(
   prices: ScrapedPrice[],
-  retailerNameToId?: Map<string, number>,
+  _retailerNameToId?: Map<string, number>,
   options: { skipStockSync?: boolean } = {},
   onProgress?: (done: number, total: number) => void | Promise<void>
 ): Promise<AggregateResult & { autoMapped: number; autoCreated: number }> {
@@ -62,16 +77,6 @@ export async function aggregate(
   if (prices.length === 0) return { updated, unmatched, errors, autoMapped, autoCreated };
 
   const sql = getSql();
-
-  // Normalize a URL to just its origin (scheme + hostname).
-  function normalizeUrl(url: string): string {
-    try {
-      const { origin } = new URL(url.startsWith('http') ? url : `https://${url}`);
-      return origin;
-    } catch {
-      return url.replace(/\/+$/, '');
-    }
-  }
 
   const isRealSql = (sql as unknown) === (bunSql as unknown);
 
@@ -285,10 +290,9 @@ export async function aggregate(
       const resolvedBrand = authority.brand ?? brand;
       const resolvedCategory = (authority.categoryOverride ?? category) as ComponentCategory;
 
-      // Step 3: DNA Match against existing components
+      // DNA Match against existing components
       const catComponents = componentsByCategory.get(resolvedCategory) || [];
-      const sourceDna = extractDna(nameForExtraction, resolvedCategory);
-      
+
       const dnaMatch = catComponents.find(c => {
         const fullName = c.brand ? `${c.brand} ${c.name}` : c.name;
         const { score } = scoreDnaMatch(nameForExtraction, fullName, resolvedCategory);
@@ -307,7 +311,6 @@ export async function aggregate(
           for (const otherCat of MAJOR_CATEGORIES) {
             if (otherCat === resolvedCategory) continue;
             const otherCatComponents = componentsByCategory.get(otherCat) || [];
-            const otherCatSourceDna = extractDna(nameForExtraction, otherCat as any);
             const hasMatchInOtherCat = otherCatComponents.some(oc => {
               const ocFullName = oc.brand ? `${oc.brand} ${oc.name}` : oc.name;
               const { score } = scoreDnaMatch(nameForExtraction, ocFullName, otherCat as any, true /* skipBrandCheck for bundles */);

@@ -19,7 +19,7 @@
  */
 
 import { sql } from 'bun';
-import { extractMotherboardSpecs } from '@shared/component-utils';
+import { extractMotherboardSpecs } from '@shared/hardware/specs/motherboard';
 
 console.log('🔧 Fixing motherboard category\n');
 

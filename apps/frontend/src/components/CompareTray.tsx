@@ -10,7 +10,7 @@ import { useCompare } from '../context/CompareContext';
 import { getComponentById } from '../api';
 import type { Component, ComponentCategory } from '../types';
 import { CATEGORY_LABELS } from '../types';
-import { formatComponentName } from '@shared/component-utils';
+import { formatComponentName } from '@shared/formatting/component-name.formatter';
 import { UI } from '../ui-strings';
 import styles from './CompareTray.module.css';
 

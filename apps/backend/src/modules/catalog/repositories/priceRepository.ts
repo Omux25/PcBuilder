@@ -4,7 +4,7 @@
  */
 
 import { getSql } from '../../../core/db/index.js';
-import { PriceOffer } from '@shared/types';
+import type { PriceOffer } from '@shared/types';
 
 export interface LowestPriceRow {
   component_id: number;

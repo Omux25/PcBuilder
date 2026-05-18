@@ -1,6 +1,7 @@
 // @ts-nocheck — runs in Bun (WSL2); bun:test types not available on Windows
 import { describe, test, expect } from 'bun:test';
-import { calculateBuildTotalPrice, getConfiguratorSlots } from '../buildUtils';
+import { calculateBuildTotalPrice } from '@shared/engine/pricing.engine';
+import { getConfiguratorSlots } from '@shared/engine/build.engine';
 import type { BuildConfig } from '../../types';
 
 function makeComponent(id: number, category: string, lowest_price: number | null = null, extra: Record<string, unknown> = {}) {

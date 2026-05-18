@@ -14,33 +14,32 @@
 import { Hono } from 'hono';
 import { getSql } from '../../core/db/index.js';
 
-const healthRouter = new Hono();
+const healthRouter = new Hono()
+  .get('/', async (c) => {
+    let dbStatus: 'ok' | 'error' = 'ok';
+    let dbError: string | undefined;
 
-healthRouter.get('/', async (c) => {
-  let dbStatus: 'ok' | 'error' = 'ok';
-  let dbError: string | undefined;
+    try {
+      const sql = getSql();
+      await sql`SELECT 1`;
+    } catch (err) {
+      dbStatus = 'error';
+      dbError = err instanceof Error ? err.message : String(err);
+    }
 
-  try {
-    const sql = getSql();
-    await sql`SELECT 1`;
-  } catch (err) {
-    dbStatus = 'error';
-    dbError = err instanceof Error ? err.message : String(err);
-  }
+    const healthy = dbStatus === 'ok';
 
-  const healthy = dbStatus === 'ok';
-
-  return c.json(
-    {
-      status: healthy ? 'ok' : 'degraded',
-      timestamp: new Date().toISOString(),
-      checks: {
-        database: dbStatus,
-        ...(dbError ? { database_error: dbError } : {}),
+    return c.json(
+      {
+        status: healthy ? 'ok' : 'degraded',
+        timestamp: new Date().toISOString(),
+        checks: {
+          database: dbStatus,
+          ...(dbError ? { database_error: dbError } : {}),
+        },
       },
-    },
-    200, // Always 200 — let monitoring tools interpret the status field
-  );
-});
+      200, // Always 200 — let monitoring tools interpret the status field
+    );
+  });
 
 export { healthRouter };

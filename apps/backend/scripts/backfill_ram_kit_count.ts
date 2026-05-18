@@ -10,7 +10,7 @@
  */
 
 import { getSql } from '../src/core/db/index.js';
-import { extractRamSpecs } from '@shared/component-utils';
+import { extractRamSpecs } from '@shared/hardware/specs/ram';
 
 const sql = getSql();
 
