@@ -12,7 +12,7 @@
 
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import type { CanonicalGroupListing, ToastState } from '../api';
+import type { CanonicalGroupListing } from '../api';
 import {
     getGroupedUnmatched,
     updateUnmatchedCategory,

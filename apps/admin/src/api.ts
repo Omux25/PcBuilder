@@ -349,6 +349,7 @@ export interface PresetPayload {
   name: string;
   description?: string;
   use_case: 'gaming' | 'workstation' | 'office' | 'budget';
+  is_featured?: boolean;
   /** Map of category → component_id */
   components: Record<string, number>;
 }
