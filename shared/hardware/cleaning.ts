@@ -2,8 +2,7 @@ import { decodeHtml } from '../decode-html.js';
 import { extractGpuSpecs } from './specs/gpu.js';
 import { extractRamSpecs } from './specs/ram.js';
 import { extractPsuSpecs } from './specs/psu.js';
-import { extractStorageSpecs } from './specs/storage.js';
-import { extractMotherboardSpecs } from './specs/motherboard.js';
+
 
 
 /**

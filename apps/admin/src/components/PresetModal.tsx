@@ -29,6 +29,7 @@ interface FormData {
     name: string;
     description: string;
     use_case: UseCase;
+    is_featured: boolean;
     components: ComponentSlots;
 }
 
@@ -36,6 +37,7 @@ const emptyForm = (): FormData => ({
     name: '',
     description: '',
     use_case: 'gaming',
+    is_featured: false,
     components: {},
 });
 
@@ -86,6 +88,7 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
                 name: preset.name,
                 description: preset.description ?? '',
                 use_case: preset.use_case as UseCase,
+                is_featured: preset.is_featured ?? false,
                 components: slots,
             });
         } else {
@@ -164,6 +167,7 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
             name: formData.name.trim(),
             description: formData.description.trim() || undefined,
             use_case: formData.use_case,
+            is_featured: formData.is_featured,
             components: componentsMap,
         };
 
@@ -216,6 +220,19 @@ export function PresetModal({ isOpen, onClose, onSaved, preset }: Props) {
                             <option key={u.value} value={u.value}>{u.label}</option>
                         ))}
                     </select>
+                </div>
+
+                {/* Featured / Populaire */}
+                <div className={styles.checkboxGroup}>
+                    <input
+                        id="is_featured"
+                        type="checkbox"
+                        checked={formData.is_featured}
+                        onChange={e => set('is_featured', e.target.checked)}
+                    />
+                    <label htmlFor="is_featured" style={{ cursor: 'pointer', fontSize: '0.9rem', color: 'var(--text-2)', fontWeight: 500 }}>
+                        Mettre en vedette (Afficher le contour bleu glow "Populaire")
+                    </label>
                 </div>
 
                 {/* Description */}
