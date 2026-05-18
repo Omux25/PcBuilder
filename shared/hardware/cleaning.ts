@@ -1,6 +1,9 @@
 import { decodeHtml } from '../decode-html.js';
+import { extractGpuSpecs } from './specs/gpu.js';
 import { extractRamSpecs } from './specs/ram.js';
 import { extractPsuSpecs } from './specs/psu.js';
+import { extractStorageSpecs } from './specs/storage.js';
+import { extractMotherboardSpecs } from './specs/motherboard.js';
 
 
 /**
@@ -17,7 +20,8 @@ export const CATEGORY_WORDS = new Set([
   'aircooler', 'air cooler',
   'carte m\u00e8re', 'carte mere', 'cartes m\u00e8res', 'cartes meres',
   'disque', 'disques',
-  'pate thermique', 'p\u00e2te thermique'
+  'pate thermique', 'p\u00e2te thermique',
+  'refroidisseur', 'refroidisseurs'
 ]);
 
 export function cleanName(rawName: string, brand: string, category?: string): string {
@@ -32,6 +36,8 @@ export function cleanName(rawName: string, brand: string, category?: string): st
     .replace(/les\s+cartes\s+graphiques\s+/gi, '')
     .replace(/la\s+carte\s*m[e\u00e8]re\s+/gi, '')
     .replace(/les\s+cartes\s*m[e\u00e8]re\s+/gi, '')
+    .replace(/la\s+m[e\u00e9]moire\s+/gi, '')
+    .replace(/le\s+disque\s+/gi, '')
     .replace(/carte\s*m[e\u00e8]re\s+/gi, '');
 
   // Strip leading em-dash prefix (retailer category prefix artifact)
@@ -165,6 +171,7 @@ export function cleanName(rawName: string, brand: string, category?: string): st
       'oc': 'OC', 'soc': 'SOC', 'lhr': 'LHR',
       'xmp': 'XMP', 'expo': 'EXPO',
       'cpu': 'CPU', 'gpu': 'GPU', 'psu': 'PSU', 'ram': 'RAM',
+      'masterliquid': 'MasterLiquid',
     };
 
     name = name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
@@ -201,6 +208,13 @@ export function cleanName(rawName: string, brand: string, category?: string): st
     name = name.replace(/\((\d+)\s+X\s+(\d+)/g, '($1x$2');
     name = name.replace(/\b([1-9][0-9]?)X\b(?!\s*[A-Z]{2})/g, '$1x');
   }
+
+  // ── Punctuation & Artifact Cleanup (Post-normalization) ───────────────────
+  name = name
+    .replace(/^[\s\-\u2013\|\/]+/, '') // Leading dashes/slashes
+    .replace(/[\s\-\u2013\|\/]+$/, '') // Trailing dashes/slashes
+    .replace(/\s+/g, ' ')
+    .trim();
 
   // \u2500\u2500 RAM-specific normalization \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   if (category === 'ram') {
@@ -266,6 +280,151 @@ export function cleanName(rawName: string, brand: string, category?: string): st
       .replace(/\s*[\-\u2013]\s*Or\b/gi, ' Or')
       .replace(/^[\-\u2013]\s*/, '')
       .replace(/\s+[\-\u2013]\s+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // ── GPU-specific normalization ────────────────────────────────────────────
+  if (category === 'gpu') {
+    // 1. Extract specs
+    const gpuSpecs = extractGpuSpecs(name);
+    const { vram_gb, chipset } = gpuSpecs;
+
+    // 2. Strip tech specs and noise
+    name = name
+      .replace(/\b\d+\s*[Gg][BbOo]\b/gi, ' ') // Strip "12GB", "12Go"
+      .replace(/\b\d+G\b/gi, ' ')             // Strip "12G"
+      .replace(/\bGDDR[567]X?\b/gi, ' ')      // Strip "GDDR6"
+      .replace(/\bLHR\b/gi, ' ')               // Strip "LHR"
+      .replace(/\bOC\s+Edition\b/gi, 'OC')     // Simplify "OC Edition" to "OC"
+      .replace(/\bEdition\b/gi, ' ')
+      .replace(/\s+v\d+(\.\d+)?\b/gi, ' ')     // Strip "V2", "V2.0"
+      .replace(/\b(DDR[345]|HBM\d?)\b/gi, ' ') // Strip leaked RAM types
+      .replace(/[™®©]/g, '')                   // Strip trademark symbols
+      .replace(/\s*[\-\u2013]\s*$/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // 3. Normalize Chipset naming
+    if (chipset) {
+      // Create a regex that matches the chipset parts even if slightly different
+      // e.g. "RTX3060" or "RTX 3060TI" or just "3060 Ti"
+      const seriesMatch = chipset.match(/^(RTX|GTX|RX|Arc|GT|Quadro)\s+/i);
+      const series = seriesMatch ? seriesMatch[1] : '';
+      const modelNum = chipset.replace(new RegExp(`^${series}\\s*`, 'i'), '');
+      
+      const fullChipsetRegex = new RegExp(chipset.replace(/\s+/g, '\\s*'), 'gi');
+      const modelNumRegex = new RegExp(modelNum.replace(/\s+/g, '\\s*'), 'gi');
+
+      if (fullChipsetRegex.test(name)) {
+        name = name.replace(fullChipsetRegex, chipset);
+      } else if (modelNumRegex.test(name)) {
+        // If "4060 Ti" is there but "RTX" is missing, replace "4060 Ti" with "RTX 4060 Ti"
+        name = name.replace(modelNumRegex, chipset);
+      } else {
+        // If chipset not found in name, append it
+        name = `${name} ${chipset}`;
+      }
+    }
+
+    // 4. Ensure VRAM is appended at the end
+    if (vram_gb && !name.includes(`${vram_gb}GB`)) {
+      name = `${name} ${vram_gb}GB`;
+    }
+
+    // 5. Final pass: ensure canonical casing for series and specs
+    name = name
+      .replace(/\bGTX\s*(\d{4})\b/gi, 'GTX $1')
+      .replace(/\bRTX\s*(\d{4})\b/gi, 'RTX $1')
+      .replace(/\bRX\s*(\d{3,4})\b/gi, 'RX $1')
+      .replace(/\bTi\b/gi, 'Ti')
+      .replace(/\bSuper\b/gi, 'SUPER')
+      .replace(/\bGe[Ff]orce\b/g, 'GeForce')
+      .replace(/\b[Rr]adeon\b/g, 'Radeon');
+
+    // 6. Cleanup duplicate words (carefully)
+    const words = name.split(/\s+/);
+    const seen = new Set<string>();
+    const resultWords = [];
+    for (const word of words) {
+        const lower = word.toLowerCase();
+        // Deduplicate words longer than 2 chars, or specific markers like "Ti", "OC"
+        if (seen.has(lower) && (lower.length > 2 || lower === 'ti' || lower === 'oc')) continue;
+        resultWords.push(word);
+        seen.add(lower);
+    }
+    name = resultWords.join(' ');
+    
+    name = name.replace(/\s+/g, ' ').trim();
+  }
+
+  // ── MOTHERBOARD-specific normalization ─────────────────────────────────────
+  if (category === 'motherboard') {
+    // 1. Strip redundant tech markers
+    name = name
+      .replace(/\s*Socket\s*(AM[45]|LGA\s*(1151|1200|1700|1851))\s*/gi, ' ')
+      .replace(/\b(LGA\d+|AM[45])\b/gi, ' ')
+      .replace(/\b(DDR[45]|D[45])\b/gi, ' ')
+      .replace(/\b(Wi-?Fi\s*\d*[Ee]?|Wlan)\b/gi, ' ')
+      .replace(/\b(Bluetooth|BT)\b/gi, ' ')
+      .replace(/\b(ATX|mATX|Micro-?ATX|Mini-?ITX|ITX)\b/gi, ' ')
+      .replace(/\b(Usb-?C|Gen\s*\d|Wifi\d[Ee]?)\b/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // 2. Normalize chipset casing in the model name (e.g. b650 -> B650)
+    name = name.replace(/\b([ABXZH]\d{2,3}(?:[EIM]|S(?=\b))?)\b/gi, m => m.toUpperCase());
+    
+    // 3. Deduplicate
+    const words = name.split(/\s+/);
+    name = Array.from(new Set(words)).join(' ');
+  }
+
+  // ── STORAGE-specific normalization ─────────────────────────────────────────
+  if (category === 'storage') {
+    name = name
+      .replace(/\b(SSD|HDD|Disque\s+Dur|Solid\s+State\s+Drive|Sshd|Hard\s*Disk)\b/gi, ' ')
+      .replace(/\b(NVMe|PCIe|SATA|SATA\s*I{1,3}|Interface)\b/gi, ' ')
+      .replace(/\b(M\.2|2\.5\s*(Inch|Pouces)?|3\.5\s*(Inch|Pouces)?)\b/gi, ' ')
+      .replace(/\b(Internal|Interne|External|Externe|Portable)\b/gi, ' ')
+      .replace(/\d+\s*(GB|Go|TB|To)\b/gi, ' ') // No \b at start to catch 1TB
+      .replace(/\d+\s*(GB|Go|TB|To)\b/gi, ' ') // Run twice
+      .replace(/\b(Iii|Sata3)\b/gi, ' ')
+      .replace(/\b(Buffer|Cache|Rpm|Trs\/Mn)\b/gi, ' ')
+      .replace(/[™®©]/g, '')
+      .replace(/["'”″″″]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const words = name.split(/\s+/);
+    name = Array.from(new Set(words)).join(' ');
+    
+    if (name.length < 2) {
+      name = decodeHtml(rawName)
+        .replace(/\b(SSD|HDD|Disque\s+Dur)\b/gi, '')
+        .replace(/[™®©]/g, '')
+        .trim();
+    }
+  }
+
+  // ── COOLING-specific normalization ─────────────────────────────────────────
+  if (category === 'cooling') {
+    name = name
+      .replace(/\b(Watercooling|Watercooler|Aio|Liquid\s+Cooler|Refroidisseur\s+Liquide)\b/gi, ' ')
+      .replace(/\b(Aircooler|Air\s+Cooler|Refroidisseur\s+Air|Ventirad|Refroidisseur)\b/gi, ' ')
+      .replace(/\b(Radiateur|Heatsink|Fan|Ventilateur|Cooler|Kits)\b/gi, ' ')
+      .replace(/\b\d{2,3}\s*mm\b/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // ── FAN-specific normalization ─────────────────────────────────────────────
+  if (category === 'fan') {
+    name = name
+      .replace(/\b(Fan|Ventilateur|Case\s+Fan|Pwm)\b/gi, ' ')
+      .replace(/\b\d{2,3}\s*mm\b/gi, ' ')
+      .replace(/\b(Pack\s+De\s+\d+|Pack\s+\d+|Pack\s+\d+In\d+|Triple\s+Pack|Single\s+Pack)\b/gi, ' ')
+      .replace(/\s*[\-\u2013]\s*$/g, '')
       .replace(/\s+/g, ' ')
       .trim();
   }

@@ -8,10 +8,11 @@ export function extractBrand(name: string): string {
     'rog': 'ASUS', 'tuf': 'ASUS', 'strix': 'ASUS', 'proart': 'ASUS', 'prime': 'ASUS',
     'mpg': 'MSI', 'mag': 'MSI', 'meg': 'MSI', 'optix': 'MSI',
     'aorus': 'Gigabyte', 'gaming oc': 'Gigabyte', 'eagle': 'Gigabyte', 'windforce': 'Gigabyte',
-    'masterliquid': 'Cooler Master', 'masterbox': 'Cooler Master', 'masterfan': 'Cooler Master', 'hyper': 'Cooler Master',
+    'masterliquid': 'Cooler Master', 'masterbox': 'Cooler Master', 'masterfan': 'Cooler Master', 'hyper ': 'Cooler Master',
+    'hyper212': 'Cooler Master',
     'vengance': 'Corsair', 'dominator': 'Corsair', 'icue': 'Corsair', 'hydroshift': 'Lian Li', 'titan': 'Corsair',
     'trident': 'G.Skill', 'ripjaws': 'G.Skill',
-    'fury': 'Kingston', 'renegade': 'Kingston',
+    'fury': 'Kingston', 'renegade': 'Kingston', 'hyperx': 'Kingston',
     't-force': 'TeamGroup', 't.force': 'TeamGroup', 'vulcan': 'TeamGroup', 'delta': 'TeamGroup', 'team': 'TeamGroup',
     'sn550': 'WD', 'sn570': 'WD', 'sn580': 'WD', 'sn770': 'WD', 'sn850': 'WD',
     '970 evo': 'Samsung', '980 pro': 'Samsung', '990 pro': 'Samsung',
@@ -33,15 +34,16 @@ export function extractBrand(name: string): string {
     'Connect', 'Corsair', 'Cougar', 'Crucial', 'DeepCool', 'Dell', 'Deskooze', 'EKWB', 'Enermax', 'EVGA', 'FANXIANG', 'Fractal',
     'FSP', 'G.Skill', 'Gainward', 'Galax', 'Geil', 'Gigabyte', 'Goodram', 'HIKSEMI', 'Hikvision', 'HP', 'HAVN', 'Hybrok', 'Hyte',
     'ID-Cooling', 'Infinity', 'Inno3D', 'Innovation IT', 'Intel', 'Intenso', 'Itek', 'KFA2', 'Kingston', 'Klevv',
-    'Kolink', 'LC Power', 'Lenovo', 'Lexar', 'Lian Li', 'M.RED', 'Mars Gaming', 'Montech', 'MSI', 'Mushkin',
+    'Kolink', 'LC Power', 'Leadtek', 'Lenovo', 'Lexar', 'Lian Li', 'M.RED', 'Manli', 'Mars Gaming', 'Matrox', 'Montech', 'MSI', 'Mushkin',
     'Noctua', 'Nova', 'Nox', 'NVIDIA', 'NZXT', 'OCPC', 'Palit', 'Patriot', 'Phanteks', 'Philips', 'PNY',
     'PowerColor', 'Razer', 'Reletech', 'Sabrent', 'Samsung', 'Sapphire', 'Scythe', 'Seagate', 'Seasonic',
-    'Setup Game', 'Sharkoon', 'Silicon Power', 'Silverstone', 'Spirit of Gamer', 'Super Flower',
+    'Setup Game', 'Sharkoon', 'Silicon Power', 'Silverstone', 'Sparkle', 'Spirit of Gamer', 'Super Flower',
     'Symphony', 'Team Group', 'TeamGroup', 'Thermal Grizzly', 'Thermalright', 'Thermaltake', 'Tooq', 'Toshiba', 'Transcend', 'Twinmos', 'Verbatim',
     'Viper', 'WD', 'Western Digital', 'XFX', 'Xigmatek', 'XPG', 'XTRMLAB', 'Yeyian', 'Zotac'
   ];
 
   let bestMatch: { brand: string; index: number } | null = null;
+  const CHIP_BRANDS = new Set(['Intel', 'AMD', 'NVIDIA']);
 
   for (const brand of BRANDS) {
     const bLower = brand.toLowerCase();
@@ -52,7 +54,12 @@ export function extractBrand(name: string): string {
 
     const match = lower.match(regex);
     if (match && match.index !== undefined) {
-      if (bestMatch === null || match.index < bestMatch.index) {
+      const isChipBrand = CHIP_BRANDS.has(brand);
+      const currentIsChipBrand = bestMatch ? CHIP_BRANDS.has(bestMatch.brand) : false;
+
+      // Prefer non-chip brands (manufacturers) over chip brands (Intel/AMD/NVIDIA),
+      // or pick the one that appears earlier in the string if both are of same type.
+      if (bestMatch === null || (currentIsChipBrand && !isChipBrand) || (match.index < bestMatch.index && !(isChipBrand && !currentIsChipBrand))) {
         bestMatch = { brand, index: match.index };
       }
     }
