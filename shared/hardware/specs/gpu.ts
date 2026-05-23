@@ -1,3 +1,5 @@
+import { enrichGpuSpecs } from './enrichment.js';
+
 // Canonical GPU chipset lookup patterns — maps names containing any variant to the clean, uniform chipset string
 const CHIPSET_PATTERNS: [RegExp, string][] = [
   // ── NVIDIA RTX 50 series ──────────────────────────────────────────────
@@ -66,9 +68,9 @@ const CHIPSET_PATTERNS: [RegExp, string][] = [
   [/\brtx\s*5000\s*(?:ada)?\b/i, 'RTX 5000 Ada'],
 
   // ── NVIDIA GT series ──────────────────────────────────────────────────
-  [/\bgt\s*1030\b/i, 'GT 1030'],
-  [/\bgt\s*730\b/i, 'GT 730'],
-  [/\bgt\s*710\b/i, 'GT 710'],
+  [/\b(?:gt\s*|geforce\s+|n)?1030\b/i, 'GT 1030'],
+  [/\b(?:gt\s*|geforce\s+|n)?730\b/i, 'GT 730'],
+  [/\b(?:gt\s*|geforce\s+|n)?710\b/i, 'GT 710'],
 
   // ── AMD RX 9000 series ────────────────────────────────────────────────
   [/\b(?:rx\s*)?9070\s*xt\b/i, 'RX 9070 XT'],
@@ -122,17 +124,17 @@ const CHIPSET_PATTERNS: [RegExp, string][] = [
   [/\brx\s*590\b/i, 'RX 590'],
 
   // ── Intel Arc ─────────────────────────────────────────────────────────
-  [/\barc\s*b580\b/i, 'Arc B580'],
-  [/\barc\s*b570\b/i, 'Arc B570'],
-  [/\barc\s*a770\b/i, 'Arc A770'],
-  [/\barc\s*a750\b/i, 'Arc A750'],
-  [/\barc\s*a580\b/i, 'Arc A580'],
-  [/\barc\s*a380\b/i, 'Arc A380'],
+  [/\b(?:arc\s*)?b580\b/i, 'Arc B580'],
+  [/\b(?:arc\s*)?b570\b/i, 'Arc B570'],
+  [/\b(?:arc\s*)?a770\b/i, 'Arc A770'],
+  [/\b(?:arc\s*)?a750\b/i, 'Arc A750'],
+  [/\b(?:arc\s*)?a580\b/i, 'Arc A580'],
+  [/\b(?:arc\s*)?a380\b/i, 'Arc A380'],
 ];
 
 export const extractGpuSpecs = (n: string) => {
   const lengthMatch = n.match(/\b(\d{3})\s*mm\b/i);
-  const vramMatch = n.match(/\b(\d+)\s*(?:gb|go|g)\b/i);
+  const vramMatch = n.match(/\b(\d+)\s*(?:gb|go|g)(?:d?dr\d|d\d)?\b/i);
 
   // TDP lookup by GPU chipset — official NVIDIA/AMD TDP values (board power)
   // Ordered longest-match first to avoid "4070" matching "4070 Ti Super"
@@ -195,9 +197,9 @@ export const extractGpuSpecs = (n: string) => {
     [/(?:rtx\s*)?a2000/i, 70],
     [/quadro\s*m4000/i, 120],
     // ── NVIDIA GT series ──────────────────────────────────────────────────
-    [/gt\s*1030/i, 30],
-    [/gt\s*730/i, 25],
-    [/gt\s*710/i, 19],
+    [/(?:gt\s*|geforce\s+|n)?1030/i, 30],
+    [/(?:gt\s*|geforce\s+|n)?730/i, 25],
+    [/(?:gt\s*|geforce\s+|n)?710/i, 19],
     // ── AMD RX 9000 series ────────────────────────────────────────────────
     [/(?:rx\s*)?9070\s*xt/i, 304],
     [/(?:rx\s*)?9070/i, 220],
@@ -237,12 +239,12 @@ export const extractGpuSpecs = (n: string) => {
     [/(?:rx\s*)?560/i, 80],
     [/(?:rx\s*)?550/i, 50],
     // ── Intel Arc ─────────────────────────────────────────────────────────
-    [/arc\s*b580/i, 190],
-    [/arc\s*b570/i, 150],
-    [/arc\s*a770/i, 225],
-    [/arc\s*a750/i, 225],
-    [/arc\s*a580/i, 185],
-    [/arc\s*a380/i, 75],
+    [/(?:arc\s*)?b580/i, 190],
+    [/(?:arc\s*)?b570/i, 150],
+    [/(?:arc\s*)?a770/i, 225],
+    [/(?:arc\s*)?a750/i, 225],
+    [/(?:arc\s*)?a580/i, 185],
+    [/(?:arc\s*)?a380/i, 75],
   ];
 
   let tdp: number | null = null;
@@ -258,10 +260,17 @@ export const extractGpuSpecs = (n: string) => {
     }
   }
 
-  return {
-    length_mm: lengthMatch ? parseInt(lengthMatch[1]) : 300,
+  const rawSpecs = {
+    length_mm: lengthMatch ? parseInt(lengthMatch[1]) : null,
     vram_gb: vramMatch ? parseInt(vramMatch[1]) : null,
     tdp,
     chipset,
   };
+
+  // Sanity check for GPU length: must be between 140mm and 400mm
+  if (rawSpecs.length_mm !== null && (rawSpecs.length_mm < 140 || rawSpecs.length_mm > 400)) {
+    rawSpecs.length_mm = null;
+  }
+
+  return enrichGpuSpecs(n, rawSpecs);
 };

@@ -2,6 +2,7 @@ import { decodeHtml } from '../decode-html.js';
 import { extractGpuSpecs } from './specs/gpu.js';
 import { extractRamSpecs } from './specs/ram.js';
 import { extractPsuSpecs } from './specs/psu.js';
+import { extractStorageSpecs } from './specs/storage.js';
 
 
 
@@ -381,6 +382,11 @@ export function cleanName(rawName: string, brand: string, category?: string): st
 
   // ── STORAGE-specific normalization ─────────────────────────────────────────
   if (category === 'storage') {
+    // 1. Extract specs from name before stripping
+    const storageSpecs = extractStorageSpecs(name);
+    const { capacity_gb, interface_type } = storageSpecs;
+
+    // 2. Clean the base model name
     name = name
       .replace(/\b(SSD|HDD|Disque\s+Dur|Solid\s+State\s+Drive|Sshd|Hard\s*Disk)\b/gi, ' ')
       .replace(/\b(NVMe|PCIe|SATA|SATA\s*I{1,3}|Interface)\b/gi, ' ')
@@ -404,6 +410,21 @@ export function cleanName(rawName: string, brand: string, category?: string): st
         .replace(/[™®©]/g, '')
         .trim();
     }
+
+    // 3. Reconstruct canonical name with preserved specs
+    const specParts = [];
+    if (capacity_gb) {
+      if (capacity_gb >= 1000) {
+        specParts.push(`${capacity_gb / 1000}TB`);
+      } else {
+        specParts.push(`${capacity_gb}GB`);
+      }
+    }
+    if (interface_type) {
+      specParts.push(interface_type);
+    }
+    const model = name.replace(/\s*[\-\u2013]\s*$/, '').trim();
+    name = model ? `${model} ${specParts.join(' ')}` : specParts.join(' ');
   }
 
   // ── COOLING-specific normalization ─────────────────────────────────────────

@@ -29,7 +29,7 @@ export function createClient(baseUrl: string, options: RequestInit = {}) {
       ...options.headers as any,
     },
     ...options,
-    fetch: (input, init) => {
+    fetch: (input: any, init: any) => {
       return fetch(input, {
         ...init,
         credentials: options.credentials ?? 'include',

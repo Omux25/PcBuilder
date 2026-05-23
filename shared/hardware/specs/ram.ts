@@ -1,5 +1,5 @@
 export const extractRamSpecs = (n: string) => {
-  const typeMatch = n.match(/\b(DDR[45])\b/i);
+  const typeMatch = n.match(/\b(DDR[345])\b/i);
   const freqMatch = n.match(/\b(\d{4})\s*(MHz|MT\/s)\b/i);
 
   // 1. Detect Kit Notation: "2x8GB", "2 x 16GB", "32Gx2", "16Go*2", etc.
@@ -30,6 +30,40 @@ export const extractRamSpecs = (n: string) => {
     if (!total_capacity || total_capacity === stick_capacity) {
       total_capacity = stick_capacity * kit_count;
     }
+  } else if (stick_capacity && !total_capacity) {
+    total_capacity = stick_capacity * kit_count;
+  }
+
+  // Fallback: If frequency is missing, look for standard RAM frequency values in the string
+  let frequency_mhz = freqMatch ? parseInt(freqMatch[1]) : undefined;
+  if (!frequency_mhz) {
+    const stdFreqMatch = n.match(/\b(800|1066|1333|1600|1866|2133|2400|2666|2933|3000|3200|3600|4000|4400|4800|5200|5600|6000|6200|6400|6600|6800|7200|7600|8000)\b/);
+    if (stdFreqMatch) {
+      frequency_mhz = parseInt(stdFreqMatch[1]);
+    }
+  }
+
+  // Fallback: If ram_type is missing, infer it from frequency
+  let ram_type = typeMatch ? typeMatch[1].toUpperCase() : undefined;
+  if (!ram_type && frequency_mhz) {
+    if (frequency_mhz >= 4800) {
+      ram_type = 'DDR5';
+    } else if (frequency_mhz >= 2133 && frequency_mhz <= 4600) {
+      ram_type = 'DDR4';
+    } else if (frequency_mhz >= 800 && frequency_mhz <= 1866) {
+      ram_type = 'DDR3';
+    }
+  }
+
+  // Default capacity if completely missing in name string
+  if (!total_capacity) {
+    if (ram_type === 'DDR5') total_capacity = 16;
+    else total_capacity = 8;
+  }
+
+  // Sanity Bounds: Forcefully reject capacities > 128GB (likely storage miscategorized as RAM)
+  if (total_capacity > 128) {
+    total_capacity = undefined;
   }
 
   // 3. Manufacturer Part Number (MPN) Extraction — The "No Guessing" Token
@@ -49,8 +83,8 @@ export const extractRamSpecs = (n: string) => {
   const is_rgb = /\bRGB\b/i.test(n);
 
   return {
-    ram_type: typeMatch ? typeMatch[1].toUpperCase() : undefined,
-    frequency_mhz: freqMatch ? parseInt(freqMatch[1]) : undefined,
+    ram_type,
+    frequency_mhz,
     capacity_gb: total_capacity,
     kit_count,
     cas_latency,
