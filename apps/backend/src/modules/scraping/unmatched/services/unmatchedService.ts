@@ -266,7 +266,7 @@ export class UnmatchedService {
         ) VALUES (
           ${slug}, ${canonicalName}, ${brandVal}, ${category},
           ${(s.socket) ?? null},
-          ${(s.supported_ram_types && s.supported_ram_types.length > 0) ? `{${s.supported_ram_types.map((t: string) => t.replace(/"/g, '')).join(',')}}` : null}::text[],
+          ${(s.supported_ram_types && s.supported_ram_types.length > 0) ? `{${s.supported_ram_types.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}::text[],
           ${(s.max_ram_frequency) ?? null},
           ${(s.ram_type) ?? null},
           ${(s.frequency_mhz) ?? null},
@@ -278,7 +278,7 @@ export class UnmatchedService {
           ${(s.thread_count) ?? null},
           ${(s.length_mm) ?? null},
           ${(s.max_gpu_length_mm) ?? null},
-          ${(s.supported_motherboards && s.supported_motherboards.length > 0) ? `{${s.supported_motherboards.map((t: string) => t.replace(/"/g, '')).join(',')}}` : null}::text[],
+          ${(s.supported_motherboards && s.supported_motherboards.length > 0) ? `{${s.supported_motherboards.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}::text[],
           ${(s.max_cooler_height_mm) ?? null},
           ${(s.form_factor) ?? null},
           ${(s.height_mm) ?? null},
@@ -295,7 +295,7 @@ export class UnmatchedService {
           ${(s.weight_grams) ?? null},
           ${(s.thermal_conductivity) ?? null},
           ${(s.paste_type) ?? null},
-          ${(s.tags && s.tags.length > 0) ? `{${s.tags.map((t: string) => t.replace(/"/g, '')).join(',')}}` : null}::text[],
+          ${(s.tags && s.tags.length > 0) ? `{${s.tags.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}::text[],
           ${(s.chipset) ?? null},
           ${specsPayload ? JSON.stringify(specsPayload) : null},
           true
