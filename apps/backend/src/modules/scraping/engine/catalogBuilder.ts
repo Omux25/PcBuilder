@@ -401,7 +401,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
           VALUES (
             ${slug}, ${cleanedName}, ${brand}, 'motherboard', 
             ${specs?.socket ?? null}, 
-            ${ramTypes && ramTypes.length > 0 ? `{${ramTypes.map(t => t.replace(/"/g, '')).join(',')}}` : null}::text[], 
+            ${ramTypes && ramTypes.length > 0 ? `{${ramTypes.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}::text[], 
             ${specs?.max_ram_frequency ?? null}, 
             ${specs?.ram_slots ?? null}, 
             ${specs?.form_factor ?? null}, 
@@ -446,7 +446,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         const tags = specs?.tags || [];
         const rows = await sql`
           INSERT INTO components (slug, name, brand, category, tdp, tags, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'cooling', ${specs?.tdp ?? null}, ${tags.length > 0 ? `{${tags.join(',')}}` : null}, ${listing.image_url}, true)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'cooling', ${specs?.tdp ?? null}, ${tags.length > 0 ? `{${tags.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
@@ -480,7 +480,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
             const cSlug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
             const cRows = await sql`
               INSERT INTO components (slug, name, brand, category, tdp, tags, image_url, is_active)
-              VALUES (${cSlug}, ${cleanedName}, ${brand}, 'cooling', ${cSpecs?.tdp ?? null}, ${cTags.length > 0 ? `{${cTags.join(',')}}` : null}, ${listing.image_url}, true)
+              VALUES (${cSlug}, ${cleanedName}, ${brand}, 'cooling', ${cSpecs?.tdp ?? null}, ${cTags.length > 0 ? `{${cTags.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}, ${listing.image_url}, true)
               RETURNING id
             ` as { id: number }[];
             newId = cRows[0]?.id;
@@ -520,7 +520,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
 
           const rows = await sql`
             INSERT INTO components (slug, name, brand, category, max_gpu_length_mm, max_cooler_height_mm, supported_motherboards, specs, image_url, is_active)
-            VALUES (${slug}, ${cleanedName}, ${brand}, 'case', ${max_gpu_length_mm}, ${max_cpu_cooler_height_mm}, ${(form_factors && form_factors.length > 0) ? `{${form_factors.map((t: string) => t.replace(/"/g, '')).join(',')}}` : null}::text[], ${JSON.stringify(specsPayload)}, ${listing.image_url}, true)
+            VALUES (${slug}, ${cleanedName}, ${brand}, 'case', ${max_gpu_length_mm}, ${max_cpu_cooler_height_mm}, ${(form_factors && form_factors.length > 0) ? `{${form_factors.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}::text[], ${JSON.stringify(specsPayload)}, ${listing.image_url}, true)
             RETURNING id
           ` as { id: number }[];
           newId = rows[0]?.id;

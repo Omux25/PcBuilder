@@ -55,20 +55,21 @@ export class UnmatchedRepository {
   }
 
   async bulkDismiss(listingIds: number[]) {
-    const idList = listingIds.join(',');
-    const updated = (await this.sql.unsafe(`
+    if (listingIds.length === 0) return 0;
+
+    const updated = (await this.sql`
       UPDATE unmatched_listings
       SET status = 'dismissed'
-      WHERE id IN (${idList}) AND status = 'pending'
+      WHERE id IN ${bunSql(listingIds)} AND status = 'pending'
       RETURNING id
-    `)) as { id: number }[];
+    `) as { id: number }[];
 
     if (updated.length > 0) {
-      const dismissedIds = updated.map((r) => r.id).join(',');
-      await this.sql.unsafe(`
+      const dismissedIds = updated.map((r) => r.id);
+      await this.sql`
         DELETE FROM unmatched_suggestions
-        WHERE unmatched_listing_id IN (${dismissedIds})
-      `);
+        WHERE unmatched_listing_id IN ${bunSql(dismissedIds)}
+      `;
     }
 
     return updated.length;

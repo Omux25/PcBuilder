@@ -474,7 +474,7 @@ export async function aggregate(
         row = { 
           ...row, 
           socket: s?.socket ?? null, 
-          supported_ram_types: s ? `{${s.supported_ram_types.map(t => t.replace(/"/g, '')).join(',')}}` : null, 
+          supported_ram_types: s ? `{${s.supported_ram_types.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null, 
           max_ram_frequency: s?.max_ram_frequency ?? null,
           ram_slots: s?.ram_slots ?? null,
           form_factor: s?.form_factor ?? null,
@@ -492,7 +492,7 @@ export async function aggregate(
       } else if (category === 'cooling') {
         const s = extractCoolingSpecs(compositeText);
         const tags = s?.tags || [];
-        row = { ...row, tdp: s?.tdp ?? null, tags: tags.length > 0 ? `{${tags.map(t => t.replace(/"/g, '')).join(',')}}` : null };
+        row = { ...row, tdp: s?.tdp ?? null, tags: tags.length > 0 ? `{${tags.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null };
       } else if (category === 'case') {
         const s = extractCaseSpecs(compositeText);
         row = { ...row, max_gpu_length_mm: s?.max_gpu_length_mm ?? null, max_cooler_height_mm: s?.max_cooler_height_mm ?? null };
