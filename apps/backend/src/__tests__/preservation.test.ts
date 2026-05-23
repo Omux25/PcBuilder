@@ -34,7 +34,7 @@ describe('Preservation: Migration files 001–015 are untouched', () => {
   ];
 
   test('all original migrations 001–015 still exist', async () => {
-    const migrationsDir = join(import.meta.dirname, '../db/migrations');
+    const migrationsDir = join(import.meta.dirname, '../core/db/migrations');
     const files = await readdir(migrationsDir);
     for (const expected of EXPECTED_ORIGINAL_MIGRATIONS) {
       expect(files).toContain(expected);
@@ -42,7 +42,7 @@ describe('Preservation: Migration files 001–015 are untouched', () => {
   });
 
   test('migration files are sorted in correct order (no gaps in 001–015)', async () => {
-    const migrationsDir = join(import.meta.dirname, '../db/migrations');
+    const migrationsDir = join(import.meta.dirname, '../core/db/migrations');
     const files = await readdir(migrationsDir);
     const sqlFiles = files.filter(f => f.endsWith('.sql')).sort();
     const prefixes = sqlFiles.map(f => parseInt(f.match(/^(\d+)_/)?.[1] ?? '0'));
@@ -58,7 +58,7 @@ describe('Preservation: Migration files 001–015 are untouched', () => {
 describe('Preservation: Production scraper IDs match actual retailer IDs', () => {
   test('UltraPC is registered by name (dynamic ID resolution)', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
+      join(import.meta.dirname, '../modules/scraping/engine/config/retailers.config.ts'),
       'utf-8'
     );
     expect(src).toMatch(/baseUrl:\s*['"]https:\/\/www\.ultrapc\.ma['"]/);
@@ -66,7 +66,7 @@ describe('Preservation: Production scraper IDs match actual retailer IDs', () =>
 
   test('NextLevel PC is registered by name (dynamic ID resolution)', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
+      join(import.meta.dirname, '../modules/scraping/engine/config/retailers.config.ts'),
       'utf-8'
     );
     expect(src).toMatch(/baseUrl:\s*['"]https:\/\/nextlevelpc\.ma['"]/);
@@ -74,7 +74,7 @@ describe('Preservation: Production scraper IDs match actual retailer IDs', () =>
 
   test('SetupGame is registered by name (dynamic ID resolution)', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
+      join(import.meta.dirname, '../modules/scraping/engine/config/retailers.config.ts'),
       'utf-8'
     );
     expect(src).toMatch(/baseUrl:\s*['"]https:\/\/setupgame\.ma['"]/);
@@ -106,7 +106,7 @@ describe('Preservation: app.ts never imported the dead route files', () => {
 describe('Preservation: Bulk import per-row error handling is intact', () => {
   test('admin/components.ts import handler still has per-row try/catch', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../routes/admin/components.ts'),
+      join(import.meta.dirname, '../modules/catalog/controllers/adminComponentController.ts'),
       'utf-8'
     );
     expect(src).toContain('results.imported++');
@@ -129,7 +129,7 @@ describe('Preservation: Existing compatibility rules still work after PSU TDP fi
   });
 
   test('psu_underpowered still fires when PSU wattage is below recommended', async () => {
-    const { validateCompatibility } = await import('../services/compatibilityService.js');
+    const { validateCompatibility } = await import('../modules/builds/services/compatibilityService.js');
     const result = validateCompatibility({
       gpu: { length_mm: 300, tdp: 300 },
       psu: { wattage: 400 }, // recommended = ceil(300 * 1.5) = 450
@@ -144,15 +144,15 @@ describe('Preservation: Existing compatibility rules still work after PSU TDP fi
 describe('Preservation: Existing schema fields are unchanged', () => {
   test('cpuSchema still requires socket', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../schemas/componentSchemas.ts'),
+      join(import.meta.dirname, '../../../../shared/schemas/component.schema.ts'),
       'utf-8'
     );
-    expect(src).toContain("socket: z.string().min(1)");
+    expect(src).toContain("socket: z.string().min(1");
   });
 
   test('caseSchema still requires max_gpu_length_mm', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../schemas/componentSchemas.ts'),
+      join(import.meta.dirname, '../../../../shared/schemas/component.schema.ts'),
       'utf-8'
     );
     expect(src).toContain("max_gpu_length_mm: z.number()");

@@ -17,7 +17,7 @@ import * as fc from 'fast-check';
 
 import { Hono } from 'hono';
 import jwt from 'jsonwebtoken';
-import { adminLogsRouter } from '../../routes/admin/logs.js';
+import { adminRouter } from '../../modules/admin/admin.routes.js';
 
 const TEST_SECRET = 'pbt-logs-test-secret';
 
@@ -26,7 +26,7 @@ afterAll(()  => { delete process.env.JWT_SECRET; });
 
 function makeApp() {
   const app = new Hono();
-  app.route('/api/admin/logs', adminLogsRouter);
+  app.route('/api/admin', adminRouter);
   return app;
 }
 

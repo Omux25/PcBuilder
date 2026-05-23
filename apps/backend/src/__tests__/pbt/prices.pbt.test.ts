@@ -10,8 +10,8 @@
 // @ts-nocheck
 import { describe, test, beforeEach, afterAll } from 'bun:test';
 import * as fc from 'fast-check';
-import { getPricesByComponentId } from '../../services/componentService.js';
-import { setSql, resetSql } from '../../db/index.js';
+import { getPricesByComponentId } from '../../modules/catalog/services/componentService.js';
+import { setSql, resetSql } from '../../core/db/index.js';
 
 afterAll(() => resetSql());
 

@@ -12,7 +12,7 @@ import { describe, test, beforeAll, afterAll } from 'bun:test';
 import * as fc from 'fast-check';
 import { Hono } from 'hono';
 import jwt from 'jsonwebtoken';
-import { authMiddleware } from '../../middleware/auth.js';
+import { authMiddleware } from '../../core/middleware/auth.js';
 
 const TEST_SECRET = 'pbt-auth-test-secret';
 

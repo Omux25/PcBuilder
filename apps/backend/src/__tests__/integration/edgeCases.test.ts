@@ -146,7 +146,7 @@ describe('Admin routes — 400 validation errors', () => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${makeToken()}`,
       },
-      body: JSON.stringify({ category: 'keyboard', name: 'Test' }),
+      body: JSON.stringify({ category: 'invalid-category', name: 'Test' }),
     });
     expect(res.status).toBe(400);
   });

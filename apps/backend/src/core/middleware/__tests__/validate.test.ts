@@ -279,6 +279,7 @@ describe('validateComponent middleware', () => {
         brand: 'Corsair',
         ram_type: 'DDR5',
         frequency_mhz: 6000,
+        capacity_gb: 16,
         tdp: 10,
       }),
     });

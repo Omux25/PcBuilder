@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import fc from 'fast-check';
-import { componentSlug, generateUniqueSlug } from '../../utils/slugify.js';
+import { componentSlug, generateUniqueSlug } from '../../core/utils/slugify.js';
 
 describe('PBT 13.1 — Slug uniqueness', () => {
   test('For any set of component names, all generated slugs are unique', () => {

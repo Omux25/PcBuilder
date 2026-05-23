@@ -7,12 +7,12 @@
  *
  * import.meta.dirname = backend/src/__tests__/
  * Paths:
- *   ../../routes/admin/   → backend/src/routes/admin/
- *   ../../routes/         → backend/src/routes/
- *   ../../db/             → backend/src/db/
- *   ../../db/migrations/  → backend/src/db/migrations/
- *   ../../app.ts          → backend/src/app.ts
- *   ../../../scraper/     → backend/scraper/
+ *   ../modules/admin/   → backend/src/modules/admin/
+ *   ../modules/         → backend/src/modules/
+ *   ../core/db/         → backend/src/core/db/
+ *   ../core/db/migrations/  → backend/src/core/db/migrations/
+ *   ../app.ts          → backend/src/app.ts
+ *   ../modules/scraping/ → backend/src/modules/scraping/
  */
 
 import { describe, test, expect } from 'bun:test';
@@ -24,7 +24,7 @@ import { join } from 'node:path';
 describe('Bug Condition: Scraper registry IDs match actual retailer IDs', () => {
   test('UltraPC is registered with retailerName (dynamic ID resolution)', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
+      join(import.meta.dirname, '../modules/scraping/engine/config/retailers.config.ts'),
       'utf-8'
     );
     expect(src).toMatch(/baseUrl:\s*['"]https:\/\/www\.ultrapc\.ma['"]/);
@@ -33,7 +33,7 @@ describe('Bug Condition: Scraper registry IDs match actual retailer IDs', () => 
 
   test('NextLevel PC is registered with retailerName (dynamic ID resolution)', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
+      join(import.meta.dirname, '../modules/scraping/engine/config/retailers.config.ts'),
       'utf-8'
     );
     expect(src).toMatch(/baseUrl:\s*['"]https:\/\/nextlevelpc\.ma['"]/);
@@ -42,7 +42,7 @@ describe('Bug Condition: Scraper registry IDs match actual retailer IDs', () => 
 
   test('SetupGame is registered with retailerName (dynamic ID resolution)', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
+      join(import.meta.dirname, '../modules/scraping/engine/config/retailers.config.ts'),
       'utf-8'
     );
     expect(src).toMatch(/baseUrl:\s*['"]https:\/\/setupgame\.ma['"]/);
@@ -51,7 +51,7 @@ describe('Bug Condition: Scraper registry IDs match actual retailer IDs', () => 
 
   test('PC Gamer Casa is registered with retailerName (dynamic ID resolution)', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
+      join(import.meta.dirname, '../modules/scraping/engine/config/retailers.config.ts'),
       'utf-8'
     );
     expect(src).toMatch(/baseUrl:\s*['"]https:\/\/www\.pcgamercasa\.ma['"]/);
@@ -60,7 +60,7 @@ describe('Bug Condition: Scraper registry IDs match actual retailer IDs', () => 
 
   test('RETAILER_SCRAPERS contains exactly 4 production scrapers', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../../scraper/config/retailers.config.ts'),
+      join(import.meta.dirname, '../modules/scraping/engine/config/retailers.config.ts'),
       'utf-8'
     );
     const matches = src.match(/baseUrl:\s*['"][^'"]+['"]/g) ?? [];
@@ -72,7 +72,7 @@ describe('Bug Condition: Scraper registry IDs match actual retailer IDs', () => 
 
 describe('Bug Condition: Migration files have unique numeric prefixes', () => {
   test('no two migration files share the same numeric prefix', async () => {
-    const migrationsDir = join(import.meta.dirname, '../db/migrations');
+    const migrationsDir = join(import.meta.dirname, '../core/db/migrations');
     const files = await readdir(migrationsDir);
     const sqlFiles = files.filter(f => f.endsWith('.sql'));
     const prefixes = sqlFiles.map(f => f.match(/^(\d+)_/)?.[1]).filter(Boolean);
@@ -81,25 +81,25 @@ describe('Bug Condition: Migration files have unique numeric prefixes', () => {
   });
 
   test('original 015_add_benchmark_score.sql still exists', async () => {
-    const migrationsDir = join(import.meta.dirname, '../db/migrations');
+    const migrationsDir = join(import.meta.dirname, '../core/db/migrations');
     const files = await readdir(migrationsDir);
     expect(files).toContain('015_add_benchmark_score.sql');
   });
 
   test('016_fix_ram_types_encoding.sql exists (renamed from 015)', async () => {
-    const migrationsDir = join(import.meta.dirname, '../db/migrations');
+    const migrationsDir = join(import.meta.dirname, '../core/db/migrations');
     const files = await readdir(migrationsDir);
     expect(files).toContain('016_fix_ram_types_encoding.sql');
   });
 
   test('017_add_trigram_index.sql exists (renamed from 016)', async () => {
-    const migrationsDir = join(import.meta.dirname, '../db/migrations');
+    const migrationsDir = join(import.meta.dirname, '../core/db/migrations');
     const files = await readdir(migrationsDir);
     expect(files).toContain('017_add_trigram_index.sql');
   });
 
   test('018_hash_refresh_tokens.sql exists (renamed from 017)', async () => {
-    const migrationsDir = join(import.meta.dirname, '../db/migrations');
+    const migrationsDir = join(import.meta.dirname, '../core/db/migrations');
     const files = await readdir(migrationsDir);
     expect(files).toContain('018_hash_refresh_tokens.sql');
   });
@@ -110,7 +110,7 @@ describe('Bug Condition: Migration files have unique numeric prefixes', () => {
 describe('Bug Condition: Admin routes use getSql() not direct bun sql import', () => {
   test('admin/logs.ts does NOT import sql directly from bun', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../routes/admin/logs.ts'),
+      join(import.meta.dirname, '../modules/admin/repositories/logRepository.ts'),
       'utf-8'
     );
     expect(src).not.toContain("import { sql } from 'bun'");
@@ -118,7 +118,7 @@ describe('Bug Condition: Admin routes use getSql() not direct bun sql import', (
 
   test('admin/logs.ts imports getSql from db/index', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../routes/admin/logs.ts'),
+      join(import.meta.dirname, '../modules/admin/repositories/logRepository.ts'),
       'utf-8'
     );
     expect(src).toContain('getSql');
@@ -126,7 +126,7 @@ describe('Bug Condition: Admin routes use getSql() not direct bun sql import', (
 
   test('admin/unmatched.ts does NOT import sql directly from bun', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../routes/admin/unmatched.ts'),
+      join(import.meta.dirname, '../modules/scraping/unmatched/repositories/unmatchedRepository.ts'),
       'utf-8'
     );
     expect(src).not.toContain("import { sql } from 'bun'");
@@ -134,7 +134,7 @@ describe('Bug Condition: Admin routes use getSql() not direct bun sql import', (
 
   test('admin/unmatched.ts imports getSql from db/index', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../routes/admin/unmatched.ts'),
+      join(import.meta.dirname, '../modules/scraping/unmatched/repositories/unmatchedRepository.ts'),
       'utf-8'
     );
     expect(src).toContain('getSql');
@@ -145,13 +145,13 @@ describe('Bug Condition: Admin routes use getSql() not direct bun sql import', (
 
 describe('Bug Condition: Dead route files do not exist', () => {
   test('backend/src/routes/smartSearch.ts does not exist', async () => {
-    const routesDir = join(import.meta.dirname, '../routes');
+    const routesDir = join(import.meta.dirname, '../modules');
     const files = await readdir(routesDir);
     expect(files).not.toContain('smartSearch.ts');
   });
 
   test('backend/src/routes/prices.ts does not exist', async () => {
-    const routesDir = join(import.meta.dirname, '../routes');
+    const routesDir = join(import.meta.dirname, '../modules');
     const files = await readdir(routesDir);
     expect(files).not.toContain('prices.ts');
   });
@@ -161,7 +161,7 @@ describe('Bug Condition: Dead route files do not exist', () => {
 
 describe('Bug Condition: Stale files do not exist', () => {
   test('backend/src/db/temp_migrate.ts does not exist', async () => {
-    const dbDir = join(import.meta.dirname, '../db');
+    const dbDir = join(import.meta.dirname, '../core/db');
     const files = await readdir(dbDir);
     expect(files).not.toContain('temp_migrate.ts');
   });
@@ -172,7 +172,7 @@ describe('Bug Condition: Stale files do not exist', () => {
 describe('Bug Condition: Bulk import has no broken sql.begin() wrapper', () => {
   test('admin/components.ts import handler does not use sql.begin()', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../routes/admin/components.ts'),
+      join(import.meta.dirname, '../modules/catalog/controllers/adminComponentController.ts'),
       'utf-8'
     );
     expect(src).not.toContain('sql.begin(');
@@ -180,7 +180,7 @@ describe('Bug Condition: Bulk import has no broken sql.begin() wrapper', () => {
 
   test('admin/components.ts does not import SqlFn type (only used by broken wrapper)', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../routes/admin/components.ts'),
+      join(import.meta.dirname, '../modules/catalog/controllers/adminComponentController.ts'),
       'utf-8'
     );
     expect(src).not.toContain('import type { SqlFn }');
@@ -192,7 +192,7 @@ describe('Bug Condition: Bulk import has no broken sql.begin() wrapper', () => {
 describe('Bug Condition: coolingSchema and caseSchema include compatibility fields', () => {
   test('coolingSchema includes height_mm field', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../schemas/componentSchemas.ts'),
+      join(import.meta.dirname, '../../../../shared/schemas/component.schema.ts'),
       'utf-8'
     );
     expect(src).toContain('height_mm');
@@ -200,7 +200,7 @@ describe('Bug Condition: coolingSchema and caseSchema include compatibility fiel
 
   test('caseSchema includes supported_motherboards field', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../schemas/componentSchemas.ts'),
+      join(import.meta.dirname, '../../../../shared/schemas/component.schema.ts'),
       'utf-8'
     );
     expect(src).toContain('supported_motherboards');
@@ -208,7 +208,7 @@ describe('Bug Condition: coolingSchema and caseSchema include compatibility fiel
 
   test('caseSchema includes max_cooler_height_mm field', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../schemas/componentSchemas.ts'),
+      join(import.meta.dirname, '../../../../shared/schemas/component.schema.ts'),
       'utf-8'
     );
     expect(src).toContain('max_cooler_height_mm');
@@ -220,7 +220,7 @@ describe('Bug Condition: coolingSchema and caseSchema include compatibility fiel
 describe('Bug Condition: PSU is excluded from TDP calculation', () => {
   test('compatibilityService TDP sum does not include psu key', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../services/compatibilityService.ts'),
+      join(import.meta.dirname, '../../../../shared/engine/compatibility.engine.ts'),
       'utf-8'
     );
     // The componentKeys array for TDP must NOT include 'psu'
@@ -233,13 +233,13 @@ describe('Bug Condition: PSU is excluded from TDP calculation', () => {
 
 describe('Bug Condition: Placeholder scraper files do not exist', () => {
   test('site1Scraper.ts does not exist', async () => {
-    const scrapersDir = join(import.meta.dirname, '../../scraper/scrapers');
+    const scrapersDir = join(import.meta.dirname, '../modules/scraping/engine/scrapers');
     const files = await readdir(scrapersDir);
     expect(files).not.toContain('site1Scraper.ts');
   });
 
   test('site2Scraper.ts does not exist', async () => {
-    const scrapersDir = join(import.meta.dirname, '../../scraper/scrapers');
+    const scrapersDir = join(import.meta.dirname, '../modules/scraping/engine/scrapers');
     const files = await readdir(scrapersDir);
     expect(files).not.toContain('site2Scraper.ts');
   });
@@ -250,7 +250,7 @@ describe('Bug Condition: Placeholder scraper files do not exist', () => {
 describe('Bug Condition: createPreset uses a transaction', () => {
   test('presetService.ts createPreset uses sql.begin()', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../services/presetService.ts'),
+      join(import.meta.dirname, '../modules/builds/services/presetService.ts'),
       'utf-8'
     );
     expect(src).toContain('sql.begin(');
@@ -259,20 +259,10 @@ describe('Bug Condition: createPreset uses a transaction', () => {
 
 // ── New issues: parseId helper extracted ─────────────────────────────────────
 
-describe('Bug Condition: parseId helper exists in admin/types.ts', () => {
-  test('admin/types.ts exports parseId function', async () => {
+describe('Bug Condition: parseId helper exists in core/errors/errors.ts', () => {
+  test('core/errors/errors.ts exports parseId function', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../routes/admin/types.ts'),
-      'utf-8'
-    );
-    // parseId is defined in utils/errors.ts and re-exported from admin/types.ts
-    // so admin routes only need one import. Check that it is exported from here.
-    expect(src).toContain('parseId');
-  });
-
-  test('parseId is defined in utils/errors.ts', async () => {
-    const src = await readFile(
-      join(import.meta.dirname, '../utils/errors.ts'),
+      join(import.meta.dirname, '../core/errors/errors.ts'),
       'utf-8'
     );
     expect(src).toContain('export function parseId');

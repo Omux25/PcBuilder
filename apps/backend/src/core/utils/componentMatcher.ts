@@ -69,22 +69,28 @@ function normalize(text: string): string {
  * The suffix (Ti, SUPER, Ti SUPER) is part of the DNA — without it, 4070 matches 4070 Ti.
  */
 function extractGpuDna(name: string): string[] {
-  const n = normalize(name);
+  const processed = name.toLowerCase()
+    .replace(/(\d+)\s*go\b/g, '$1gb')
+    .replace(/(\d+)\s*to\b/g, '$1tb');
+  const n = normalize(processed);
   const tokens: string[] = [];
 
+  // Extract VRAM token (e.g. 8gb, 16gb, 12gb, 24gb, 6gb, 4gb)
+  const vramMatch = n.match(/\b(\d{1,2})\s*gb\b/);
+  let vramToken = '';
+  if (vramMatch) {
+    vramToken = `${vramMatch[1]}gb`;
+  }
+
   // NVIDIA RTX/GTX — token-based suffix detection.
-  // Retailers insert noise tokens (OC, GAMING, DUAL, TRIPLE, etc.) between the model
-  // number and the suffix (Ti, SUPER). We scan the full string for suffix tokens
-  // rather than requiring them to appear immediately after the model number.
-  // e.g. "RTX 4070 OC SUPER" and "RTX 4070 SUPER OC" both resolve to "rtx4070super".
   const rtxMatch = n.match(/\b(rtx|gtx)\s*(\d{4})\b/);
   if (rtxMatch) {
     const base = `${rtxMatch[1]}${rtxMatch[2]}`;
-    // Check for suffix tokens anywhere in the string (order: ti super > ti > super)
     const hasTi = /\bti\b/.test(n);
     const hasSuper = /\bsuper\b/.test(n);
     const suffix = hasTi && hasSuper ? 'tisuper' : hasTi ? 'ti' : hasSuper ? 'super' : '';
     tokens.push(`${base}${suffix}`);
+    if (vramToken) tokens.push(vramToken);
     return tokens;
   }
 
@@ -98,6 +104,7 @@ function extractGpuDna(name: string): string[] {
     const hasM = /\b(\d{4})\s*m\b/.test(n); // only "m" directly after model number
     const suffix = hasXtx ? 'xtx' : hasXt ? 'xt' : hasGre ? 'gre' : hasM ? 'm' : '';
     tokens.push(`${base}${suffix}`);
+    if (vramToken) tokens.push(vramToken);
     return tokens;
   }
 
@@ -105,11 +112,16 @@ function extractGpuDna(name: string): string[] {
   const arcMatch = n.match(/\barc\s*([ab]\d{3})\b/);
   if (arcMatch) {
     tokens.push(`arc${arcMatch[1]}`);
+    if (vramToken) tokens.push(vramToken);
     return tokens;
   }
 
   // Fallback: use all numeric tokens (model numbers)
-  return n.split(' ').filter((t) => /\d/.test(t) && t.length >= 3);
+  const fallback = n.split(' ').filter((t) => /\d/.test(t) && t.length >= 3);
+  if (vramToken && !fallback.includes(vramToken)) {
+    fallback.push(vramToken);
+  }
+  return fallback;
 }
 
 /**
@@ -215,7 +227,10 @@ function extractRamDna(name: string): string[] {
  * e.g. ["970", "evo", "plus", "1tb", "nvme"] — model name prevents 970 matching 980.
  */
 function extractStorageDna(name: string): string[] {
-  const n = normalize(name);
+  const processedName = name.toLowerCase()
+    .replace(/(\d+)\s*go\b/g, '$1gb')
+    .replace(/(\d+)\s*to\b/g, '$1tb');
+  const n = normalize(processedName);
   const tokens: string[] = [];
 
   // Capacity: 500gb, 1tb, 2tb, 4tb
@@ -414,8 +429,7 @@ function extractMotherboardDna(name: string): string[] {
  * Case DNA: form factor + brand model
  * e.g. "atx", "matx", "itx" + model name tokens
  *
- * Color tokens (black, white, etc.) are intentionally kept — they are primary
- * differentiators for many cases (e.g. Lian Li O11 Dynamic Black vs White).
+ * Color tokens (black, white, etc.) and specific variants (mesh, flow, elite, pro) are kept because they distinguish product variants.
  */
 function extractCaseDna(name: string): string[] {
   const n = normalize(name);
@@ -426,12 +440,16 @@ function extractCaseDna(name: string): string[] {
   else if (n.includes('e atx') || n.includes('eatx')) tokens.push('eatx');
   else if (n.match(/\b(atx)\b/)) tokens.push('atx');
 
-  // Model name tokens — strip generic structural noise but keep color and model identifiers.
+  // Model name tokens — strip generic structural noise and common brands but keep color and model identifiers.
   // Colors (black, white, pink, etc.) are kept because they distinguish product variants.
-  const noise = new Set(['atx', 'matx', 'itx', 'eatx', 'tower', 'case', 'boitier', 'gaming',
+  const noise = new Set([
+    'atx', 'matx', 'itx', 'eatx', 'tower', 'case', 'boitier', 'gaming',
     'tempered', 'glass', 'tg', 'rgb', 'argb', 'mid', 'full', 'mini', 'moyen', 'tour', 'grand',
-    'chassis', 'black', 'white', 'noir', 'blanc', 'mesh', 'flow', 'elite', 'pro', 'dual', 'triple',
-    '120', '140', '200', '240', '280', '360', '420' // common fan/rad sizes to avoid as DNA
+    'chassis', 'dual', 'triple',
+    '120', '140', '200', '240', '280', '360', '420', // common fan/rad sizes to avoid as DNA
+    'be', 'quiet', 'bequiet', 'cooler', 'master', 'coolermaster', 'lian', 'li', 'lianli',
+    'nzxt', 'corsair', 'thermaltake', 'deepcool', 'msi', 'asus', 'gigabyte', 'asrock',
+    'fractal', 'design', 'phanteks', 'antec', 'aerocool', 'sharkoon', 'kolink', 'zalman'
   ]);
   const modelTokens = n.split(' ').filter((t) => {
     if (t.length < 2) return false;
@@ -473,7 +491,11 @@ function extractCoolingDna(name: string): string[] {
 
   // 3. Model tokens — ALWAYS include these to distinguish between different AIOs/Air coolers
   // e.g. "MasterLiquid", "Core", "ARGB", "Elite", "Halo", "NH-D15"
-  const noise = new Set(['cooler', 'cpu', 'air', 'tower', 'fan', 'rgb', 'argb', 'aio', 'liquid', 'water', 'refroidissement']);
+  const noise = new Set([
+    'cooler', 'cpu', 'air', 'tower', 'fan', 'rgb', 'argb', 'aio', 'liquid', 'water', 'refroidissement',
+    'be', 'quiet', 'bequiet', 'master', 'coolermaster', 'lian', 'li', 'lianli', 'nzxt', 'corsair',
+    'thermaltake', 'deepcool', 'msi', 'asus', 'gigabyte', 'asrock', 'noctua', 'thermalright', 'arctic'
+  ]);
   const modelTokens = n.split(' ').filter((t) => {
     if (t.length <= 2) return false;
     if (noise.has(t)) return false;
@@ -544,6 +566,45 @@ export function tokenToRegex(token: string): RegExp {
 
 // ── Matcher ───────────────────────────────────────────────────────────────────
 
+function isGenericToken(token: string, category: string): boolean {
+  const t = token.toLowerCase();
+
+  if (category === 'psu') {
+    if (/^\d{3,4}w$/.test(t)) return true;
+    if (['gold', 'bronze', 'platinum', 'titanium', 'silver'].includes(t)) return true;
+  }
+
+  if (category === 'case') {
+    if (['atx', 'matx', 'itx', 'eatx'].includes(t)) return true;
+  }
+
+  if (category === 'cooling') {
+    if (/^\d{3}mm$/.test(t)) return true;
+    if (t === 'aio') return true;
+  }
+
+  if (category === 'ram') {
+    if (/^\d+(gb|mb)$/.test(t)) return true;
+    if (['ddr4', 'ddr5'].includes(t)) return true;
+    if (/^\d{4}$/.test(t)) return true; // speed like 3200, 6000
+    if (/^cl\d{2}$/.test(t)) return true;
+    if (/^\d+x$/.test(t)) return true;
+    if (['black', 'white'].includes(t)) return true;
+  }
+
+  if (category === 'storage') {
+    if (/^\d+(gb|tb)$/.test(t)) return true;
+    if (['nvme', 'sata'].includes(t)) return true;
+  }
+
+  if (category === 'motherboard') {
+    if (['am4', 'am5', 'ddr4', 'ddr5'].includes(t)) return true;
+    if (/^lga\d{4}$/.test(t)) return true;
+  }
+
+  return false;
+}
+
 /**
  * Checks if all DNA tokens from the catalog component appear in the
  * scraped product name. Returns a score 0–1.
@@ -565,6 +626,15 @@ export function scoreDnaMatch(productName: string, catalogName: string, category
     return { score: 0, dnaTokens: [] };
   }
   if (!productName || !catalogName) return { score: 0, dnaTokens: [] };
+
+  if (category === 'storage' || category === 'ram' || category === 'gpu') {
+    productName = productName
+      .replace(/(\d+)\s*go\b/gi, '$1gb')
+      .replace(/(\d+)\s*to\b/gi, '$1tb');
+    catalogName = catalogName
+      .replace(/(\d+)\s*go\b/gi, '$1gb')
+      .replace(/(\d+)\s*to\b/gi, '$1tb');
+  }
 
   // 1. MPN Veto Logic (Highest Precision Guardrail)
   // If BOTH names contain a standard MPN pattern, they MUST match.
@@ -596,11 +666,11 @@ export function scoreDnaMatch(productName: string, catalogName: string, category
   const dnaTokens = extractDna(catalogName, category);
   if (dnaTokens.length === 0) return { score: 0, dnaTokens: [] };
 
-  // Guard: Reject single-token DNA for generic categories.
+  // Guard: Reject single-token DNA for generic categories when the token itself is generic.
   // A single token like "750w" (PSU) or "atx" (Case) or "120mm" (Fan) is too generic
   // and will act as a wildcard, absorbing any product that happens to share that token.
   // CPU and GPU are the only categories where 1 token (the specific model chip, e.g. "rtx4090") is sufficient.
-  if (dnaTokens.length === 1 && category !== 'cpu' && category !== 'gpu') {
+  if (dnaTokens.length === 1 && category !== 'cpu' && category !== 'gpu' && isGenericToken(dnaTokens[0], category)) {
     return { score: 0, dnaTokens };
   }
 
