@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { componentSchema } from '@shared/schemas/component.schema.js';
 import { authMiddleware } from '../../core/middleware/auth.js';
+import { validateComponent } from '../../core/middleware/validate.js';
 import { ComponentController } from './controllers/componentController.js';
 import { RetailerController } from './controllers/retailerController.js';
 import { MarketTrendsController } from './controllers/marketTrendsController.js';
@@ -14,6 +13,7 @@ const catalogRouter = new Hono()
   .get('/components', (c) => componentController.getComponents(c))
   .post('/components/smart-search', (c) => componentController.smartSearch(c))
   .get('/components/slug/:slug', (c) => componentController.getComponentBySlug(c))
+  .get('/components/mpn/:category/:identifier', (c) => componentController.getComponentByIdentifier(c))
   .get('/components/:id', (c) => componentController.getComponentById(c))
   .get('/components/:id/prices', (c) => componentController.getPrices(c))
   .get('/components/:id/price-history', (c) => componentController.getPriceHistory(c))
@@ -25,11 +25,11 @@ const adminRouter = new Hono()
   .use('/*', authMiddleware)
   .get('/components', (c) => componentController.getAdminComponents(c))
   .post('/components',
-    zValidator('json', componentSchema),
+    validateComponent,
     (c) => componentController.createComponent(c)
   )
   .put('/components/:id',
-    zValidator('json', componentSchema),
+    validateComponent,
     (c) => componentController.updateComponent(c)
   )
   .delete('/components/:id', (c) => componentController.deleteComponent(c))

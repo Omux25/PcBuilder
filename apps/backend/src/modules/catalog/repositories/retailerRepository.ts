@@ -19,7 +19,9 @@ export interface RetailerWithStats extends Retailer {
 }
 
 export class RetailerRepository {
-  private sql = getSql();
+  private get sql() {
+    return getSql();
+  }
 
   async findAll(includeInactive = false): Promise<RetailerWithStats[]> {
     return this.sql`

@@ -135,7 +135,7 @@ function mapSpecs(extracted: Record<string, string>, category: string, name: str
                 const s = val.replace(/\s+/g, '').toUpperCase().match(/(LGA\d+|AM[45]|STR\w+|TR4)/i)?.[1];
                 if (s) result.socket = s;
             }
-            if (key.match(/base.*ghz|frequence|clock/)) {
+            if (key.match(/base.*ghz|frequence|clock/) && !key.match(/turbo|boost/)) {
                 const m = cleanVal.match(/(\d+\.\d+)\s*ghz/);
                 if (m) result.base_clock_ghz = parseFloat(m[1]);
             }

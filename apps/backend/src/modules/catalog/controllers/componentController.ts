@@ -20,6 +20,8 @@ export class ComponentController {
     const inStock = c.req.query('in_stock') === 'true' ? true : c.req.query('in_stock') === 'false' ? false : undefined;
     const page = c.req.query('page') ? Number(c.req.query('page')) : 1;
     const limit = c.req.query('limit') ? Number(c.req.query('limit')) : 20;
+    const sortBy = c.req.query('sortBy');
+    const sortOrder = c.req.query('sortOrder');
 
     if (idsParam) {
       const ids = idsParam.split(',').map(Number).filter(n => Number.isInteger(n) && n > 0);
@@ -36,6 +38,7 @@ export class ComponentController {
 
     const { components, total } = await this.componentService.getComponents({
       category, socket, ram_type, brand, search, page, limit, in_stock: inStock,
+      sortBy, sortOrder
     });
 
     c.header('X-Total-Count', String(total));
@@ -45,9 +48,9 @@ export class ComponentController {
   async smartSearch(c: Context) {
     const category = c.req.query('category');
     const search = c.req.query('search');
-    const brand = c.req.query('brand');
-    const socket = c.req.query('socket');
-    const ram_type = c.req.query('ram_type');
+    const brand = c.req.query('brand') || c.req.query('brands');
+    const socket = c.req.query('socket') || c.req.query('sockets');
+    const ram_type = c.req.query('ram_type') || c.req.query('ram_types');
     const sort = c.req.query('sort') ?? 'smart';
     const minPrice = c.req.query('min_price') ? Number(c.req.query('min_price')) : null;
     const maxPrice = c.req.query('max_price') ? Number(c.req.query('max_price')) : null;
@@ -59,15 +62,18 @@ export class ComponentController {
     const max_frequency_mhz = c.req.query('max_freq') ? Number(c.req.query('max_freq')) : null;
     const inStockOnly = c.req.query('in_stock') === 'true';
     const compatibleOnly = c.req.query('compatible_only') === 'true';
-    const vramGb = c.req.query('vram_gb') ? Number(c.req.query('vram_gb')) : undefined;
-    const chipset = c.req.query('chipset');
-    const form_factor = c.req.query('form_factor');
-    const interface_type = c.req.query('interface_type');
-    const efficiency_rating = c.req.query('efficiency_rating');
-    const modular = c.req.query('modular');
+    const vramGbQuery = c.req.query('vram_gb') || c.req.query('vrams') || c.req.query('vram_gbs');
+    const vramGb = (vramGbQuery && !vramGbQuery.includes(',')) ? Number(vramGbQuery) : vramGbQuery;
+    const chipset = c.req.query('chipset') || c.req.query('chipsets');
+    const form_factor = c.req.query('form_factor') || c.req.query('form_factors');
+    const interface_type = c.req.query('interface_type') || c.req.query('interfaces');
+    const efficiency_rating = c.req.query('efficiency_rating') || c.req.query('efficiencies');
+    const modular = c.req.query('modular') || c.req.query('modulars');
     const core_count = c.req.query('core_count') ? Number(c.req.query('core_count')) : undefined;
     const page = c.req.query('page') ? Number(c.req.query('page')) : 1;
     const limit = Math.min(100, c.req.query('limit') ? Number(c.req.query('limit')) : 20);
+    const sortBy = c.req.query('sortBy');
+    const sortOrder = c.req.query('sortOrder');
 
     if (!category) {
       return c.json({ error: { code: 'VALIDATION_ERROR', message: 'The category parameter is required' } }, 400);
@@ -81,10 +87,16 @@ export class ComponentController {
       }
     } catch { }
 
+    console.log("CONTROLLER PARSED PARAMS:", {
+      category, search, brand, socket, ram_type, sort, minPrice, maxPrice, inStockOnly, compatibleOnly, vramGb, page, limit,
+      efficiency_rating, modular, sortBy, sortOrder
+    });
+
     const result = await this.componentService.smartSearch({
       category, search, brand, socket, ram_type, sort, minPrice, maxPrice, inStockOnly, compatibleOnly, vramGb, page, limit, currentBuild,
       min_wattage, max_wattage, min_capacity_gb, max_capacity_gb, min_frequency_mhz, max_frequency_mhz,
-      chipset, form_factor, interface_type, efficiency_rating, modular, core_count
+      chipset, form_factor, interface_type, efficiency_rating, modular, core_count,
+      sortBy, sortOrder
     });
 
 
@@ -100,6 +112,14 @@ export class ComponentController {
     return c.json(component);
   }
 
+  async getComponentByIdentifier(c: Context) {
+    const category = c.req.param('category');
+    const identifier = c.req.param('identifier');
+    if (!category || !identifier) return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Missing category or identifier' } }, 400);
+    const component = await this.componentService.getComponentByIdentifier(category, identifier);
+    return c.json(component);
+  }
+
   async getComponentById(c: Context) {
     const id = Number(c.req.param('id'));
     if (!id) return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid id' } }, 400);
@@ -110,6 +130,7 @@ export class ComponentController {
   async getPrices(c: Context) {
     const id = Number(c.req.param('id'));
     if (!id) return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid id' } }, 400);
+    await this.componentService.getComponentById(id);
     const prices = await this.componentService.getPricesByComponentId(id);
     return c.json({ offers: prices });
   }
@@ -130,6 +151,8 @@ export class ComponentController {
     const isActiveRaw = c.req.query('is_active');
     const page = c.req.query('page') ? Number(c.req.query('page')) : 1;
     const limit = c.req.query('limit') ? Number(c.req.query('limit')) : 20;
+    const sortBy = c.req.query('sortBy');
+    const sortOrder = c.req.query('sortOrder');
 
     const include_inactive = isActiveRaw === undefined ? true : undefined;
     const is_active_filter = isActiveRaw === 'true' ? true : isActiveRaw === 'false' ? false : undefined;
@@ -141,6 +164,8 @@ export class ComponentController {
       limit,
       include_inactive: include_inactive,
       is_active: is_active_filter,
+      sortBy,
+      sortOrder,
     });
 
     c.header('X-Total-Count', String(total));
@@ -148,7 +173,7 @@ export class ComponentController {
   }
 
   async createComponent(c: Context) {
-    const data = c.req.valid('json' as never) as ComponentInput;
+    const data = c.get('validatedBody') as ComponentInput;
     const admin = c.get('admin') as { id: number } | undefined;
 
     const component = await this.componentService.createComponent(data);
@@ -164,7 +189,7 @@ export class ComponentController {
     const id = Number(c.req.param('id'));
     if (!id) return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid id' } }, 400);
 
-    const data = c.req.valid('json' as never) as ComponentInput;
+    const data = c.get('validatedBody') as ComponentInput;
     const admin = c.get('admin') as { id: number } | undefined;
 
     const component = await this.componentService.updateComponent(id, data);

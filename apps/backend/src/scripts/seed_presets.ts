@@ -27,10 +27,10 @@ const MOROCCAN_PRESETS: PresetConfig[] = [
       cpu: 'Ryzen 5 5500',
       gpu: 'RTX 4060',
       motherboard: 'Prime B550M-K',
-      ram: '16GB 3200',
+      ram: '16GB DDR4 3200',
       storage: 'P300',
       psu: '550W 80Plus',
-      case: 'Master Mb511',
+      case: 'Td500 Mesh',
       cooling: 'Ag400'
     }
   },
@@ -94,7 +94,7 @@ const MOROCCAN_PRESETS: PresetConfig[] = [
       ram: 'Thor RGB 32GB',
       storage: '1To  NVMe',
       psu: '750W 80Plus Gold',
-      case: 'Be Quiet Pure Base',
+      case: 'Pure Base',
       cooling: 'Ag620'
     }
   }
