@@ -73,7 +73,7 @@ const ALL_SPEC_ROWS: Record<string, { label: string; unit?: string; highlight?: 
 };
 
 const CATEGORY_SPECS: Record<string, string[]> = {
-  cpu: ['socket', 'core_count', 'thread_count', 'base_clock_ghz', 'boost_clock_ghz', 'tdp'],
+  cpu: ['benchmark_score', 'socket', 'core_count', 'thread_count', 'base_clock_ghz', 'boost_clock_ghz', 'tdp'],
   gpu: ['benchmark_score', 'chipset', 'vram_gb', 'length_mm', 'tdp'],
   motherboard: ['socket', 'chipset', 'form_factor', 'supported_ram_types', 'max_ram_frequency', 'ram_slots', 'm2_slots'],
   ram: ['capacity_gb', 'ram_type', 'frequency_mhz', 'cas_latency'],
@@ -197,6 +197,74 @@ export function Compare() {
 
       {loading && <div className={styles.loadingBar} />}
 
+      {/* Versus Split Hero Card (Exactly 2 items) */}
+      {items.length === 2 && (
+        <div className={styles.vsContainer}>
+          <div className={styles.vsHeroInfo}>
+            <div className={styles.vsTitle}>
+              <span className={styles.vsBadge}>Versus Mode</span>
+              {formatComponentName(items[0].component)} <span style={{ opacity: 0.5 }}>vs</span> {formatComponentName(items[1].component)}
+            </div>
+            <div className={styles.vsSubtext}>
+              {(() => {
+                const scoreA = Number(getSpecValue(items[0].component, 'benchmark_score')) || 0;
+                const scoreB = Number(getSpecValue(items[1].component, 'benchmark_score')) || 0;
+                const priceA = items[0].lowestPrice || 0;
+                const priceB = items[1].lowestPrice || 0;
+
+                if (scoreA && scoreB) {
+                  const perfDiff = Math.round(((scoreA - scoreB) / scoreB) * 100);
+                  const priceDiff = priceA && priceB ? Math.round(((priceA - priceB) / priceB) * 100) : 0;
+
+                  if (perfDiff > 0 && priceDiff < 0) {
+                    return `Le ${formatComponentName(items[0].component)} est ${Math.abs(perfDiff)}% plus puissant et ${Math.abs(priceDiff)}% moins cher. C'est l'option recommandée de loin !`;
+                  }
+                  if (perfDiff < 0 && priceDiff > 0) {
+                    return `Le ${formatComponentName(items[1].component)} est ${Math.abs(perfDiff)}% plus puissant et ${Math.abs(priceDiff)}% moins cher. C'est l'option recommandée de loin !`;
+                  }
+                  if (perfDiff > 0 && priceDiff > 0) {
+                    return `Le ${formatComponentName(items[0].component)} est ${Math.abs(perfDiff)}% plus performant, mais coûte ${Math.abs(priceDiff)}% de plus.`;
+                  }
+                  if (perfDiff < 0 && priceDiff < 0) {
+                    return `Le ${formatComponentName(items[0].component)} est ${Math.abs(priceDiff)}% moins cher, mais offre ${Math.abs(perfDiff)}% de performances en moins.`;
+                  }
+                }
+                
+                // Fallback price-only comparison
+                if (priceA && priceB) {
+                  const priceDiff = Math.round(((priceA - priceB) / priceB) * 100);
+                  if (priceDiff < 0) return `Le ${formatComponentName(items[0].component)} est ${Math.abs(priceDiff)}% moins cher que son concurrent.`;
+                  if (priceDiff > 0) return `Le ${formatComponentName(items[1].component)} est ${Math.abs(priceDiff)}% moins cher que son concurrent.`;
+                }
+
+                return "Comparez les caractéristiques techniques détaillées et les prix en temps réel ci-dessous.";
+              })()}
+            </div>
+          </div>
+          {(() => {
+            const scoreA = Number(getSpecValue(items[0].component, 'benchmark_score')) || 0;
+            const scoreB = Number(getSpecValue(items[1].component, 'benchmark_score')) || 0;
+            const priceA = items[0].lowestPrice || 0;
+            const priceB = items[1].lowestPrice || 0;
+
+            if (scoreA && scoreB && priceA && priceB) {
+              const valA = scoreA / priceA;
+              const valB = scoreB / priceB;
+              const ratio = valA > valB ? Math.round((valA / valB - 1) * 100) : Math.round((valB / valA - 1) * 100);
+              const winner = valA > valB ? formatComponentName(items[0].component) : formatComponentName(items[1].component);
+              return (
+                <div className={styles.vsSummaryCard}>
+                  <span className={styles.vsSummaryLabel}>Meilleur Rapport Perf/Prix</span>
+                  <span className={styles.vsSummaryValue}>{winner}</span>
+                  <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>+{ratio}% d'efficacité d'achat</span>
+                </div>
+              );
+            }
+            return null;
+          })()}
+        </div>
+      )}
+
       <div className={styles.compareGrid} style={{ '--cols': totalCols } as any}>
         {/* Row 1: Headers */}
         <div className={styles.rowSticky}>
@@ -239,7 +307,7 @@ export function Compare() {
                     return (
                         <div key={item.component.id} className={`${styles.valCol} ${isLowest ? styles.isBest : ''}`}>
                             <span className={styles.primaryPrice}>{item.lowestPrice ? formatPrice(item.lowestPrice) : '—'}</span>
-                            {isLowest && <CheckCircle2 size={12} className={styles.bestIcon} />}
+                            {isLowest && <CheckCircle2 size={14} className={styles.bestIcon} />}
                         </div>
                     );
                 })}
@@ -259,6 +327,58 @@ export function Compare() {
                 ))}
             </div>
 
+            {/* Value for Money Row */}
+            {(() => {
+              const hasBenchmarks = items.some(item => Number(getSpecValue(item.component, 'benchmark_score')) > 0);
+              if (!hasBenchmarks) return null;
+
+              const valueScores = items.map(item => {
+                const score = Number(getSpecValue(item.component, 'benchmark_score')) || 0;
+                const price = item.lowestPrice || 0;
+                return score && price ? (score / price) : 0;
+              });
+              const maxScore = Math.max(...valueScores);
+
+              return (
+                <div className={styles.specRow}>
+                  <div className={styles.labelCol}>Rapport Perf/Prix</div>
+                  {items.map((item, idx) => {
+                    const currentScore = valueScores[idx];
+                    const isWinner = maxScore > 0 && currentScore === maxScore;
+                    const scorePct = maxScore > 0 ? Math.round((currentScore / maxScore) * 100) : 0;
+
+                    return (
+                      <div key={item.component.id} className={`${styles.valCol} ${isWinner ? styles.isBest : ''}`}>
+                        {isWinner && <CheckCircle2 size={14} className={styles.bestIcon} />}
+                        <div className={styles.performanceChartWrapper}>
+                          <div className={styles.chartValueRow}>
+                            <span style={{ fontWeight: isWinner ? 800 : 600 }}>
+                              {currentScore > 0 ? `${Math.round(currentScore * 10) / 10} pts/DH` : '—'}
+                            </span>
+                            <span className={styles.chartPct}>{scorePct}%</span>
+                          </div>
+                          <div className={styles.progressBarTrack}>
+                            <div 
+                              className={styles.progressBarFill} 
+                              style={{ 
+                                width: `${scorePct}%`,
+                                background: isWinner ? 'linear-gradient(90deg, #10b981, #34d399)' : undefined
+                              }} 
+                            />
+                          </div>
+                          {isWinner && (
+                            <span className={`${styles.valueBadge} ${styles.gagnant}`}>
+                              Meilleur Choix
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
             {/* Specs Section */}
             <div className={styles.sectionDivider}>Caractéristiques</div>
             {specKeys.map(key => {
@@ -271,10 +391,46 @@ export function Compare() {
                             const raw = getSpecValue(item.component, key);
                             const valToCompare = typeof raw === 'number' ? raw : (typeof raw === 'string' ? SPEC_RANKINGS[key]?.[raw] : null);
                             const isBest = bestVal !== null && valToCompare !== null && valToCompare === bestVal;
+
+                            const isNumeric = typeof raw === 'number' && raw > 0;
+                            const isRanked = typeof raw === 'string' && SPEC_RANKINGS[key]?.[raw];
+                            const showChart = row.highlight && (isNumeric || isRanked);
+
+                            let pct = 0;
+                            if (showChart && bestVal) {
+                              const currentVal = isNumeric ? raw : (isRanked ? SPEC_RANKINGS[key][raw as string] : 0);
+                              const maxVal = row.highlight === 'higher' 
+                                ? bestVal 
+                                : Math.max(...items.map(i => {
+                                    const r = getSpecValue(i.component, key);
+                                    return typeof r === 'number' ? r : (typeof r === 'string' ? SPEC_RANKINGS[key]?.[r] : 0);
+                                  }).filter(Boolean) as number[]);
+                              
+                              if (row.highlight === 'higher') {
+                                pct = maxVal > 0 ? Math.round((currentVal / maxVal) * 100) : 0;
+                              } else {
+                                const minVal = bestVal;
+                                pct = currentVal > 0 ? Math.round((minVal / currentVal) * 100) : 0;
+                              }
+                            }
+
                             return (
                                 <div key={item.component.id} className={`${styles.valCol} ${isBest ? styles.isBest : ''}`}>
-                                    {formatSpecVal(raw, row.unit)}
-                                    {isBest && <CheckCircle2 size={12} className={styles.bestIcon} />}
+                                    {isBest && <CheckCircle2 size={14} className={styles.bestIcon} />}
+                                    
+                                    {showChart ? (
+                                      <div className={styles.performanceChartWrapper}>
+                                          <div className={styles.chartValueRow}>
+                                              <span>{formatSpecVal(raw, row.unit)}</span>
+                                              <span className={styles.chartPct}>{pct}%</span>
+                                          </div>
+                                          <div className={styles.progressBarTrack}>
+                                              <div className={styles.progressBarFill} style={{ width: `${pct}%` }} />
+                                          </div>
+                                      </div>
+                                    ) : (
+                                      formatSpecVal(raw, row.unit)
+                                    )}
                                 </div>
                             );
                         })}
