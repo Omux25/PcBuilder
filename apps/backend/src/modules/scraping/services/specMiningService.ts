@@ -45,16 +45,24 @@ export async function runSpecMiningSession() {
 
     await logger.info(`[SPEC-MINER] Found ${hollowComponents.length} components requiring spec mining.`);
 
+    let gapsDetected = 0;
     for (const component of hollowComponents) {
         try {
-            await mineComponentSpecs(component);
+            const hasGap = await mineComponentSpecs(component);
+            if (hasGap) gapsDetected++;
         } catch (err) {
             await logger.error(`[SPEC-MINER] Failed for component ${component.id}: ${err}`);
         }
     }
+
+    if (gapsDetected > 0) {
+        await logger.info(`[SPEC-MINER] Spec mining session completed: detected ${gapsDetected} component gap(s) queued for enrichment.`);
+    } else {
+        await logger.info('[SPEC-MINER] Spec mining session completed: checked components are fully enriched.');
+    }
 }
 
-async function mineComponentSpecs(component: any) {
+async function mineComponentSpecs(component: any): Promise<boolean> {
     const fullName = `${component.brand ?? ''} ${component.name}`.trim();
     let manufacturerUrl = component.manufacturer_url;
     const updates: any = { specs_last_mined_at: new Date() };
@@ -83,23 +91,25 @@ async function mineComponentSpecs(component: any) {
     if (needsSpecs) {
         const datasetSpecs = await matchFromDataset(fullName, component.category);
         if (datasetSpecs) {
-            console.log(`[SPEC-MINER] Tier 3: Dataset match found for ${fullName}: ${JSON.stringify(datasetSpecs)}`);
+            await logger.info(`[SPEC-MINER] Tier 3: Dataset match found for ${fullName}: ${JSON.stringify(datasetSpecs)}`);
             for (const [key, val] of Object.entries(datasetSpecs)) {
                 if (!updates[key] && val != null) updates[key] = val;
             }
         } else {
-            console.log(`[SPEC-MINER] Tier 3: No dataset match for ${fullName}`);
+            await logger.info(`[SPEC-MINER] Tier 3: No dataset match for ${fullName}`);
         }
     }
 
     // --- Tier 4: LLM-Powered Discovery (Final Boss) ---
+    let hasGap = false;
     if (!hasRequiredSpecs(updates, component.category)) {
         await logger.info(`[SPEC-MINER] Tier 4: Gap detected for ${fullName}. Enrichment required.`);
+        hasGap = true;
     }
 
     // --- Tier 5: Heuristic Fallback (Safety Net) ---
     if (!hasRequiredSpecs(updates, component.category)) {
-        console.log(`[SPEC-MINER] Tier 5: Applying heuristic defaults for ${fullName}`);
+        await logger.info(`[SPEC-MINER] Tier 5: Applying heuristic defaults for ${fullName}`);
         if (component.category === 'case') {
             updates.max_gpu_length_mm = updates.max_gpu_length_mm || component.max_gpu_length_mm || 330;
             updates.max_cooler_height_mm = updates.max_cooler_height_mm || component.max_cooler_height_mm || 160;
@@ -116,21 +126,27 @@ async function mineComponentSpecs(component: any) {
     const updateKeys = Object.keys(updates).filter(k => k !== 'specs_last_mined_at');
     
     if (updateKeys.length > 0) {
-        console.log(`[SPEC-MINER] Found ${updateKeys.length} specs for ${fullName}: ${updateKeys.join(', ')}`);
+        await logger.info(`[SPEC-MINER] Found ${updateKeys.length} specs for ${fullName}: ${updateKeys.join(', ')}`);
         
         await sql.begin(async (tx) => {
             await tx`UPDATE components SET specs_last_mined_at = NOW() WHERE id = ${component.id}`;
             for (const key of updateKeys) {
+                // Prevent SQL injection by strictly validating the column name format
+                if (!/^[a-z_0-9]+$/.test(key)) {
+                    await logger.warn(`[SPEC-MINER] Skipping invalid column name for ${fullName}: ${key}`);
+                    continue;
+                }
                 const val = updates[key];
                 // Map height_mm to tower_height if needed? No, DB has height_mm
                 await tx.unsafe(`UPDATE components SET ${key} = $1 WHERE id = $2`, [val, component.id]);
             }
         });
-        console.log(`[SPEC-MINER] ✅ Successfully persisted specs for ${fullName}`);
+        await logger.info(`[SPEC-MINER] ✅ Successfully persisted specs for ${fullName}`);
     } else {
         // Still update the timestamp so we don't keep hitting it every session
         await sql`UPDATE components SET specs_last_mined_at = NOW() WHERE id = ${component.id}`;
     }
+    return hasGap;
 }
 
 function hasRequiredSpecs(updates: any, category: string): boolean {
@@ -147,7 +163,13 @@ async function discoverManufacturerUrl(_name: string, brand: string | null): Pro
 
 async function scrapeManufacturerSpecs(url: string, category: string): Promise<any> {
     try {
-        const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+        const res = await fetch(url, { 
+            headers: { 
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+            } 
+        });
         if (!res.ok) return null;
         const html = await res.text();
         const $ = cheerio.load(html);
