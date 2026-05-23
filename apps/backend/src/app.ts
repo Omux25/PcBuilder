@@ -29,6 +29,14 @@ app.use('*', secureHeaders());
 // ── Request logging ──────────────────────────────────────────────────────────
 app.use('*', logger());
 
+// ── Prevent browser caching on admin APIs ────────────────────────────────────
+app.use('/api/admin/*', async (c, next) => {
+  c.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  c.header('Pragma', 'no-cache');
+  c.header('Expires', '0');
+  await next();
+});
+
 // ── CORS ─────────────────────────────────────────────────────────────────────
 // Allow configured origins (comma-separated in ALLOWED_ORIGINS env var).
 // When credentials: true is used, a wildcard origin is not allowed by browsers
