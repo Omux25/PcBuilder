@@ -226,6 +226,24 @@ export class UnmatchedService {
     const slug = await getUniqueSlug(brandVal, canonicalName);
     const s = this.enrichSpecs(category, canonicalName, specs ?? {});
 
+    let specsPayload: Record<string, any> | null = null;
+    if (category === 'gpu') {
+      specsPayload = {
+        chipset: s.chipset ?? null,
+        vram_gb: s.vram_gb ?? null,
+        tdp: s.tdp ?? null,
+        length_mm: s.length_mm ?? null,
+      };
+    } else if (category === 'motherboard') {
+      specsPayload = {
+        socket: s.socket ?? null,
+        supported_ram_types: s.supported_ram_types ?? null,
+        max_ram_frequency: s.max_ram_frequency ?? null,
+        form_factor: s.form_factor ?? null,
+        ram_slots: s.ram_slots ?? null,
+      };
+    }
+
     let newComponentId: number;
     await sql.begin(async (tx) => {
       const inserted = (await tx`
@@ -242,6 +260,8 @@ export class UnmatchedService {
           size_mm, airflow_cfm, noise_db, rgb, pack_size,
           weight_grams, thermal_conductivity, paste_type,
           tags,
+          chipset,
+          specs,
           is_active
         ) VALUES (
           ${slug}, ${canonicalName}, ${brandVal}, ${category},
@@ -276,6 +296,8 @@ export class UnmatchedService {
           ${(s.thermal_conductivity) ?? null},
           ${(s.paste_type) ?? null},
           ${(s.tags && s.tags.length > 0) ? `{${s.tags.map((t: string) => t.replace(/"/g, '')).join(',')}}` : null}::text[],
+          ${(s.chipset) ?? null},
+          ${specsPayload ? JSON.stringify(specsPayload) : null},
           true
         )
         RETURNING id
@@ -311,6 +333,7 @@ export class UnmatchedService {
         if (!s.length_mm && extracted.length_mm) s.length_mm = extracted.length_mm;
         if (!s.vram_gb && extracted.vram_gb) s.vram_gb = extracted.vram_gb;
         if (!s.tdp && extracted.tdp) s.tdp = extracted.tdp;
+        if (!s.chipset && extracted.chipset) s.chipset = extracted.chipset;
       }
     } else if (category === 'motherboard') {
       const extracted = extractMotherboardSpecs(name);

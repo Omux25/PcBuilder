@@ -2,7 +2,9 @@ import { getSql } from '../../../../core/db/index.js';
 import type { KeywordRule } from '../../services/keywordRulesService.js';
 
 export class KeywordRuleRepository {
-  private sql = getSql();
+  private get sql() {
+    return getSql();
+  }
 
   async getAllRulesWithMatchCount() {
     return (await this.sql`

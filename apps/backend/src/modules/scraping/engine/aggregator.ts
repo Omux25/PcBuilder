@@ -19,7 +19,6 @@ import type { ScrapedPrice } from './scrapers/baseScraper.js';
 import { extractVariant } from '../../../core/utils/variantExtractor.js';
 import { getSql, setSql, resetSql } from '../../../core/db/index.js';
 import { logger } from './utils/logger.js';
-import { SCRAPER_CONFIG } from '@shared/scraper-config';
 import {
   decodeHtml
 } from '@shared/decode-html';
@@ -36,13 +35,14 @@ import { extractCpuSpecs } from '@shared/hardware/specs/cpu';
 import { extractGpuSpecs } from '@shared/hardware/specs/gpu';
 import { extractRamSpecs } from '@shared/hardware/specs/ram';
 import { extractMotherboardSpecs } from '@shared/hardware/specs/motherboard';
-import { extractPsuSpecs } from '@shared/hardware/specs/psu';
+import { extractPsuSpecs, normalizeEfficiencyRating, normalizeModularity, normalizePsuFormFactor } from '@shared/hardware/specs/psu';
 import { extractCoolingSpecs } from '@shared/hardware/specs/cooling';
 import { extractCaseSpecs } from '@shared/hardware/specs/case';
 import { extractFanSpecs } from '@shared/hardware/specs/fan';
 import { extractThermalPasteSpecs } from '@shared/hardware/specs/thermal-paste';
 import { componentSlug, generateUniqueSlug } from '@shared/slugify';
 import { scoreDnaMatch, extractDna, type CatalogComponent } from '../../../core/utils/componentMatcher.js';
+import { findStrictMatch } from '../../../core/utils/hardwareMatcher.js';
 import { loadAdminRules, matchesRule, type KeywordRule } from '../services/keywordRulesService.js';
 import type { ComponentCategory } from '@shared/types';
 import { scoreImageQuality } from '@shared/image-utils';
@@ -293,53 +293,50 @@ export async function aggregate(
       // DNA Match against existing components
       const catComponents = componentsByCategory.get(resolvedCategory) || [];
 
-      const dnaMatch = catComponents.find(c => {
-        const fullName = c.brand ? `${c.brand} ${c.name}` : c.name;
-        const { score } = scoreDnaMatch(nameForExtraction, fullName, resolvedCategory);
-        const threshold = SCRAPER_CONFIG.PARTIAL_MATCH_CATEGORIES.includes(resolvedCategory) ? SCRAPER_CONFIG.PARTIAL_THRESHOLD : SCRAPER_CONFIG.PERFECT_THRESHOLD;
-        return score >= threshold;
-      });
+      // Use the strict matching engine with a 95%+ confidence threshold
+      const strictMatch = findStrictMatch(nameForExtraction, catComponents, 95);
 
-      if (dnaMatch) {
-        // Step 3b: Bundle detection (Safety Guard)
-        // If the product matches 2+ major categories, it's a bundle/PC build.
-        // e.g. "PC Gamer Ryzen 5 7600X RTX 4070" matches both CPU and GPU.
-        // We only check major categories (cpu, gpu, motherboard, psu, case) to avoid false positives.
-        const MAJOR_CATEGORIES = new Set(['cpu', 'gpu', 'motherboard', 'psu', 'case']);
-        if (MAJOR_CATEGORIES.has(resolvedCategory)) {
-          let otherCategoryMatch = false;
-          for (const otherCat of MAJOR_CATEGORIES) {
-            if (otherCat === resolvedCategory) continue;
-            const otherCatComponents = componentsByCategory.get(otherCat) || [];
-            const hasMatchInOtherCat = otherCatComponents.some(oc => {
-              const ocFullName = oc.brand ? `${oc.brand} ${oc.name}` : oc.name;
-              const { score } = scoreDnaMatch(nameForExtraction, ocFullName, otherCat as any, true /* skipBrandCheck for bundles */);
-              return score >= 1.0;
-            });
-            if (hasMatchInOtherCat) {
-              otherCategoryMatch = true;
-              break;
+      if (strictMatch) {
+        const dnaMatch = catComponents.find(c => c.id === strictMatch.componentId);
+        if (dnaMatch) {
+          // Step 3b: Bundle detection (Safety Guard)
+          // If the product matches 2+ major categories, it's a bundle/PC build.
+          const MAJOR_CATEGORIES = new Set(['cpu', 'gpu', 'motherboard', 'psu', 'case']);
+          if (MAJOR_CATEGORIES.has(resolvedCategory)) {
+            let otherCategoryMatch = false;
+            for (const otherCat of MAJOR_CATEGORIES) {
+              if (otherCat === resolvedCategory) continue;
+              const otherCatComponents = componentsByCategory.get(otherCat) || [];
+              const hasMatchInOtherCat = otherCatComponents.some(oc => {
+                const ocFullName = oc.brand ? `${oc.brand} ${oc.name}` : oc.name;
+                const { score } = scoreDnaMatch(nameForExtraction, ocFullName, otherCat as any, true /* skipBrandCheck for bundles */);
+                return score >= 1.0;
+              });
+              if (hasMatchInOtherCat) {
+                otherCategoryMatch = true;
+                break;
+              }
+            }
+            if (otherCategoryMatch) {
+              unmatchedListingsToUpsert.push({
+                retailer_id: p.retailer_id,
+                product_url: p.product_url,
+                scraped_name: scrapedName,
+                scraped_price: p.price,
+                image_url: p.image_url ?? null,
+                image_urls: (p.image_urls && p.image_urls.length > 0) 
+                  ? `{${p.image_urls.map(u => `"${u.replace(/"/g, '\\"')}"`).join(',')}}`
+                  : null
+              });
+              unmatched++;
+              continue;
             }
           }
-          if (otherCategoryMatch) {
-            unmatchedListingsToUpsert.push({
-              retailer_id: p.retailer_id,
-              product_url: p.product_url,
-              scraped_name: scrapedName,
-              scraped_price: p.price,
-              image_url: p.image_url ?? null,
-              image_urls: (p.image_urls && p.image_urls.length > 0) 
-                ? `{${p.image_urls.map(u => `"${u.replace(/"/g, '\\"')}"`).join(',')}}`
-                : null
-            });
-            unmatched++;
-            continue;
-          }
-        }
 
-        finalResolved.push({ ...p, component_id: dnaMatch.id, category: resolvedCategory });
-        autoMapped++;
-        continue;
+          finalResolved.push({ ...p, component_id: dnaMatch.id, category: resolvedCategory });
+          autoMapped++;
+          continue;
+        }
       }
 
       // Step 4: Slug match (catches duplicates within this batch)
@@ -440,7 +437,20 @@ export async function aggregate(
         row = { ...row, socket: s?.socket ?? null, tdp: s?.tdp ?? null };
       } else if (category === 'gpu') {
         const s = extractGpuSpecs(compositeText);
-        row = { ...row, length_mm: s?.length_mm ?? null, tdp: s?.tdp ?? null };
+        const specsPayload = s ? {
+          chipset: s.chipset ?? null,
+          vram_gb: s.vram_gb ?? null,
+          tdp: s.tdp ?? null,
+          length_mm: s.length_mm ?? null,
+        } : null;
+        row = { 
+          ...row, 
+          length_mm: s?.length_mm ?? null, 
+          tdp: s?.tdp ?? null,
+          chipset: s?.chipset ?? null,
+          vram_gb: s?.vram_gb ?? null,
+          specs: specsPayload ? JSON.stringify(specsPayload) : null
+        };
       } else if (category === 'ram') {
         const s = extractRamSpecs(compositeText);
         const ramType = s?.ram_type ?? (compositeText.toLowerCase().includes('ddr5') ? 'DDR5' : 'DDR4');
@@ -454,14 +464,30 @@ export async function aggregate(
         };
       } else if (category === 'motherboard') {
         const s = extractMotherboardSpecs(compositeText);
-        row = { ...row, socket: s?.socket ?? null, supported_ram_types: s ? `{${s.supported_ram_types.map(t => t.replace(/"/g, '')).join(',')}}` : null, max_ram_frequency: s?.max_ram_frequency ?? null };
+        const specsPayload = s ? {
+          socket: s.socket ?? null,
+          supported_ram_types: s.supported_ram_types ?? null,
+          max_ram_frequency: s.max_ram_frequency ?? null,
+          form_factor: s.form_factor ?? null,
+          ram_slots: s.ram_slots ?? null,
+        } : null;
+        row = { 
+          ...row, 
+          socket: s?.socket ?? null, 
+          supported_ram_types: s ? `{${s.supported_ram_types.map(t => t.replace(/"/g, '')).join(',')}}` : null, 
+          max_ram_frequency: s?.max_ram_frequency ?? null,
+          ram_slots: s?.ram_slots ?? null,
+          form_factor: s?.form_factor ?? null,
+          specs: specsPayload ? JSON.stringify(specsPayload) : null
+        };
       } else if (category === 'psu') {
         const s = extractPsuSpecs(compositeText);
         row = { 
           ...row, 
           wattage: s?.wattage ?? null,
-          efficiency_rating: s?.efficiency ?? null,
-          modular: s?.modularity ?? null
+          efficiency_rating: normalizeEfficiencyRating(s?.efficiency),
+          modular: normalizeModularity(s?.modularity),
+          psu_form_factor: normalizePsuFormFactor(s?.form_factor)
         };
       } else if (category === 'cooling') {
         const s = extractCoolingSpecs(compositeText);

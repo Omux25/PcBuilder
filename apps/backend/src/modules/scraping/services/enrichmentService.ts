@@ -2,6 +2,10 @@ import { getSql } from '../../../core/db/index.js';
 import * as cheerio from 'cheerio';
 import PQueue from 'p-queue';
 import { logger } from '../engine/utils/logger.js';
+import { getDynamicEnrichment } from '@shared/hardware/services/dynamicEnrichment';
+import { dbHardwareCache } from './dynamicEnrichmentService.js';
+import { scrapeProductPage } from '../utils/deepScraper.js';
+import { normalizeEfficiencyRating, normalizeModularity, normalizePsuFormFactor } from '@shared/hardware/specs/psu';
 
 const sql = getSql();
 
@@ -75,17 +79,19 @@ export async function runSmartBackfill() {
  * Tier 2: Deep Scraper (Visit product pages for technical sheets & galleries)
  */
 export async function runDeepRetailerBackfill() {
-    const BATCH_SIZE = 500; // Increased batch to clear backlog faster
-    const queue = new PQueue({ concurrency: 3 });
+    const BATCH_SIZE = 100; // Controlled batch size for AI/Scraping
+    const queue = new PQueue({ concurrency: 2 }); // Lower concurrency to avoid bans
 
-    // 1. Count total pending to give user feedback
+    // 1. Count total pending
     const [{ count: totalPending }] = await sql`
         SELECT count(*)::int FROM components
         WHERE is_active = true
           AND (
             (category = 'storage' AND capacity_gb IS NULL) OR
             (category = 'cooling' AND tdp IS NULL) OR
-            (category = 'ram' AND capacity_gb IS NULL) OR
+            (category = 'ram' AND (capacity_gb IS NULL OR cas_latency IS NULL)) OR
+            (category = 'motherboard' AND (socket IS NULL OR supported_ram_types IS NULL)) OR
+            (category = 'psu' AND (wattage IS NULL OR efficiency_rating IS NULL OR modular IS NULL)) OR
             (image_urls IS NULL OR array_length(image_urls, 1) < 2)
           )
     ` as { count: number }[];
@@ -101,10 +107,12 @@ export async function runDeepRetailerBackfill() {
           AND (
             (category = 'storage' AND capacity_gb IS NULL) OR
             (category = 'cooling' AND tdp IS NULL) OR
-            (category = 'ram' AND capacity_gb IS NULL) OR
+            (category = 'ram' AND (capacity_gb IS NULL OR cas_latency IS NULL)) OR
+            (category = 'motherboard' AND (socket IS NULL OR supported_ram_types IS NULL)) OR
+            (category = 'psu' AND (wattage IS NULL OR efficiency_rating IS NULL OR modular IS NULL)) OR
             (image_urls IS NULL OR array_length(image_urls, 1) < 2)
           )
-        ORDER BY updated_at ASC -- Process oldest first
+        ORDER BY updated_at ASC
         LIMIT ${BATCH_SIZE}
     ` as { id: number; name: string; category: string; image_urls: string[] | null; product_urls: string[] }[];
 
@@ -116,66 +124,75 @@ export async function runDeepRetailerBackfill() {
 
         queue.add(async () => {
             try {
-                // Random delay between 500ms and 1500ms per component to be stealthy
-                await new Promise(r => setTimeout(r, 500 + Math.random() * 1000));
+                // Visit the first available URL for full spec extraction
+                const url = row.product_urls[0];
+                
+                // Use the new deterministic MPN-driven resolution service
+                const resolved = await getDynamicEnrichment(
+                    row.name,
+                    row.category,
+                    dbHardwareCache,
+                    url,
+                    scrapeProductPage
+                );
 
                 const updates: Record<string, any> = {};
-                const currentImages = new Set(row.image_urls || []);
-
-
-                for (const url of row.product_urls) {
-                    if (currentImages.size >= 3 && Object.keys(updates).length > 0) break;
-
-                    const controller = new AbortController();
-                    const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
-
-                    try {
-                        const res = await fetch(url, { 
-                            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
-                            signal: controller.signal
-                        });
-                        clearTimeout(timeout);
-                        if (!res.ok) continue;
-                        const html = await res.text();
-                        const $ = cheerio.load(html);
-
-                        // Image Gallery Extraction
-                        $('.product-images img, .js-modal-product-cover, #product-images-large img, .js-thumb, .woocommerce-product-gallery__image img, .product-image-container img').each((_, img) => {
-                            const src = $(img).attr('data-image-large-src') || $(img).attr('data-src') || $(img).attr('src') || $(img).attr('data-zoom-image');
-                            if (src && src.startsWith('http')) {
-                                const cleanSrc = src.replace(/-(small|home|medium|cart)_default\//, '-large_default/')
-                                                   .replace(/\?.*$/, '');
-                                currentImages.add(cleanSrc);
-                            }
-                        });
-                        if (currentImages.size > (row.image_urls?.length || 0)) {
-                            updates.image_urls = Array.from(currentImages).slice(0, 3);
-                        }
-
-                        // Specs Extraction
-                        const dataAttr = $('#product-details').attr('data-product');
-                        if (dataAttr) {
-                            const productData = JSON.parse(dataAttr);
-                            const features = productData.features || [];
-                            for (const f of features) {
-                                const fname = f.name.toLowerCase();
-                                const fval = f.value;
-                                if (row.category === 'storage' && (fname.includes('capacité') || fname.includes('capacity'))) {
-                                    const cap = parseInt(fval.match(/(\d+)/)?.[1] || '0');
-                                    updates.capacity_gb = fval.toLowerCase().includes('tb') || fval.toLowerCase().includes('to') ? cap * 1024 : cap;
-                                }
-                            }
-                        }
-                    } catch {
-                        clearTimeout(timeout);
+                if (resolved) {
+                    if (resolved.mpn) updates.mpn = resolved.mpn;
+                    if (resolved.ean) updates.ean = resolved.ean;
+                    
+                    // Map resolved specs to columns
+                    if (row.category === 'ram') {
+                        if (resolved.ram_type) updates.ram_type = resolved.ram_type;
+                        if (resolved.cas_latency) updates.cas_latency = resolved.cas_latency;
+                        if (resolved.frequency_mhz) updates.frequency_mhz = resolved.frequency_mhz;
+                        if (resolved.capacity_gb) updates.capacity_gb = resolved.capacity_gb;
+                    } else if (row.category === 'motherboard') {
+                        if (resolved.socket) updates.socket = resolved.socket;
+                        if (resolved.form_factor) updates.form_factor = resolved.form_factor;
+                    } else if (row.category === 'storage') {
+                        if (resolved.capacity_gb) updates.capacity_gb = resolved.capacity_gb;
+                    } else if (row.category === 'cooling') {
+                        if (resolved.tdp) updates.tdp = resolved.tdp;
+                    } else if (row.category === 'psu') {
+                        if (resolved.wattage) updates.wattage = resolved.wattage;
+                        if (resolved.efficiency) updates.efficiency_rating = normalizeEfficiencyRating(resolved.efficiency as string);
+                        if (resolved.efficiency_rating) updates.efficiency_rating = normalizeEfficiencyRating(resolved.efficiency_rating);
+                        if (resolved.modularity) updates.modular = normalizeModularity(resolved.modularity as string);
+                        if (resolved.modular) updates.modular = normalizeModularity(resolved.modular);
+                        if (resolved.form_factor) updates.psu_form_factor = normalizePsuFormFactor(resolved.form_factor as string);
+                        if (resolved.psu_form_factor) updates.psu_form_factor = normalizePsuFormFactor(resolved.psu_form_factor);
                     }
                 }
 
+                // Still handle image extraction manually or update deepScraper to handle it
+                const currentImages = new Set(row.image_urls || []);
+                if (currentImages.size < 2) {
+                    try {
+                        const res = await fetch(url, { 
+                            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' }
+                        });
+                        if (res.ok) {
+                            const html = await res.text();
+                            const $ = cheerio.load(html);
+                            $('.product-images img, .js-modal-product-cover, #product-images-large img, .js-thumb, .woocommerce-product-gallery__image img').each((_, img) => {
+                                const src = $(img).attr('data-image-large-src') || $(img).attr('data-src') || $(img).attr('src');
+                                if (src && src.startsWith('http')) currentImages.add(src);
+                            });
+                            if (currentImages.size > (row.image_urls?.length || 0)) {
+                                updates.image_urls = Array.from(currentImages).slice(0, 3);
+                            }
+                        }
+                    } catch { /* ignore fetch errors for images */ }
+                }
+
                 if (Object.keys(updates).length > 0) {
-                    await sql`UPDATE components SET ${sql(updates)} WHERE id = ${row.id}`;
+                    await sql`UPDATE components SET ${sql(updates)}, updated_at = NOW() WHERE id = ${row.id}`;
                     successCount++;
                 }
-            } catch { /* skip */ }
+            } catch (err) {
+                console.error(`[ENRICHMENT] Failed for ${row.name}:`, err);
+            }
         });
     }
     await queue.onIdle();

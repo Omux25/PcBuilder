@@ -8,7 +8,9 @@ export interface UnmatchedListingFilter {
 }
 
 export class UnmatchedRepository {
-  private sql = getSql();
+  private get sql() {
+    return getSql();
+  }
 
   async getPendingListingsWithSuggestions(filters: UnmatchedListingFilter) {
     const { search, retailerId, category } = filters;

@@ -12,7 +12,7 @@ import { describe, test, beforeAll, afterAll } from 'bun:test';
 import * as fc from 'fast-check';
 import { Hono } from 'hono';
 import jwt from 'jsonwebtoken';
-import { adminComponentsRouter } from '../../routes/admin/components.js';
+import { adminCatalogRouter } from '../../modules/catalog/catalog.routes.js';
 
 const TEST_SECRET = 'pbt-validation-test-secret';
 
@@ -21,7 +21,7 @@ afterAll(()  => { delete process.env.JWT_SECRET; });
 
 function makeApp() {
   const app = new Hono();
-  app.route('/api/admin/components', adminComponentsRouter);
+  app.route('/api/admin', adminCatalogRouter);
   return app;
 }
 

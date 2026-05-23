@@ -14,7 +14,8 @@
  * Requirements: 1.1–1.7, 2.1–2.5, 3.1–3.7
  */
 
-import { findBestMatch, type CatalogComponent } from '../../../core/utils/componentMatcher.js';
+import { type CatalogComponent } from '../../../core/utils/componentMatcher.js';
+import { findStrictMatch } from '../../../core/utils/hardwareMatcher.js';
 import { matchesRule, type KeywordRule } from './keywordRulesService.js';
 import { extractBrand } from '@shared/hardware/brands';
 import { extractCpuSpecs } from '@shared/hardware/specs/cpu';
@@ -27,7 +28,6 @@ import { extractCoolingSpecs } from '@shared/hardware/specs/cooling';
 import { extractCaseSpecs } from '@shared/hardware/specs/case';
 import { decodeHtml } from '@shared/decode-html';
 import { inferCategory as resolveCategory, inferCategoryFromUrl } from '@shared/hardware/categories';
-import { SCRAPER_CONFIG } from '@shared/scraper-config';
 import type { ComponentCategory } from '@shared/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -356,7 +356,11 @@ function buildSpecsHint(scrapedName: string, category: SuggestionCategory): Reco
             }
             case 'case': {
                 const specs = extractCaseSpecs(scrapedName);
-                return specs ? { max_gpu_length_mm: specs.max_gpu_length_mm } : {};
+                return specs ? {
+                    max_gpu_length_mm: specs.max_gpu_length_mm,
+                    max_cooler_height_mm: specs.max_cooler_height_mm,
+                    supported_motherboards: specs.supported_motherboards
+                } : {};
             }
             case 'fan': {
                 // Extract size from name (e.g. "120mm", "140mm")
@@ -432,7 +436,8 @@ export function suggestForListing(
     const category = inferredCategory || kwCategory;
 
     // Step 2: DNA match at perfect threshold (ONLY if it matches our inferred category!)
-    const perfectMatch = findBestMatch(name, catalog, SCRAPER_CONFIG.PERFECT_THRESHOLD);
+    // Use strict matching engine with 95%+ confidence
+    const perfectMatch = findStrictMatch(name, catalog, 95);
     if (perfectMatch) {
         const matched = catalog.find(c => c.id === perfectMatch.componentId);
         if (matched && (!category || matched.category === category)) {
@@ -447,8 +452,8 @@ export function suggestForListing(
         }
     }
 
-    // Step 3: DNA match at partial threshold
-    const partialMatch = findBestMatch(name, catalog, SCRAPER_CONFIG.PARTIAL_THRESHOLD);
+    // Step 3: DNA match at partial threshold (use a lower threshold for medium confidence)
+    const partialMatch = findStrictMatch(name, catalog, 75);
     if (partialMatch) {
         const matched = catalog.find(c => c.id === partialMatch.componentId);
         if (matched && (!category || matched.category === category)) {

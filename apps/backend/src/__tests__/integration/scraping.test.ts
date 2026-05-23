@@ -9,9 +9,9 @@
 // @ts-nocheck
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
 import { sql } from 'bun';
-import { aggregate } from '../../../scraper/aggregator.js';
-import { logger } from '../../../scraper/utils/logger.js';
-import type { ScrapedPrice } from '../../../scraper/scrapers/baseScraper.js';
+import { aggregate } from '../../modules/scraping/engine/aggregator.js';
+import { logger } from '../../modules/scraping/engine/utils/logger.js';
+import type { ScrapedPrice } from '../../modules/scraping/engine/scrapers/baseScraper.js';
 
 // ── DB availability check ─────────────────────────────────────────────────────
 

@@ -31,13 +31,63 @@ import { extractCpuSpecs } from '@shared/hardware/specs/cpu';
 import { extractGpuSpecs } from '@shared/hardware/specs/gpu';
 import { extractRamSpecs } from '@shared/hardware/specs/ram';
 import { extractMotherboardSpecs } from '@shared/hardware/specs/motherboard';
-import { extractPsuSpecs } from '@shared/hardware/specs/psu';
+import { extractPsuSpecs, normalizeEfficiencyRating, normalizeModularity, normalizePsuFormFactor } from '@shared/hardware/specs/psu';
 import { extractCoolingSpecs } from '@shared/hardware/specs/cooling';
 import { extractCaseSpecs } from '@shared/hardware/specs/case';
 import { extractFanSpecs } from '@shared/hardware/specs/fan';
 import { extractThermalPasteSpecs } from '@shared/hardware/specs/thermal-paste';
+import { extractStorageSpecs } from '@shared/hardware/specs/storage';
 import type { ComponentCategory } from '@shared/types';
 import { loadAdminRules, matchesRule, type KeywordRule } from '../services/keywordRulesService.js';
+import { getDynamicEnrichment } from '@shared/hardware/services/dynamicEnrichment';
+import { dbHardwareCache } from '../services/dynamicEnrichmentService.js';
+import { scrapeProductPage } from '../utils/deepScraper.js';
+
+// ── Case Negative Keyword Guard ───────────────────────────────────────────────
+// Any product title matching one of these keywords must NOT be categorised as a
+// PC case.  The guard fires in resolveCategory() and inside the case insertion
+// branch to permanently block cooling accessories from entering the case catalog.
+const CASE_NEGATIVE_KEYWORDS: Array<{
+  keywords: string[];
+  redirect: ComponentCategory;  // where to send pollutants instead
+}> = [
+  {
+    keywords: ['aio', 'watercooling', 'watercooler', 'water cooler', 'liquid freezer', 'liquid cooling', 'refroidissement liquide'],
+    redirect: 'cooling',
+  },
+  {
+    keywords: ['cooler', 'refroidisseur', 'ventirad', 'cpu cooler', 'air cooler'],
+    redirect: 'cooling',
+  },
+  {
+    keywords: ['pate thermique', 'pâte thermique', 'thermal paste', 'thermal compound', 'thermal grease'],
+    redirect: 'thermal_paste',
+  },
+  {
+    keywords: ['hub', 'fan hub', 'rgb hub', 'argb hub'],
+    redirect: 'fan',
+  },
+  {
+    keywords: ['fan', 'ventilateur', 'argb', 'pwm', 'liquid'],
+    redirect: 'fan',
+  },
+];
+
+/**
+ * Returns the correct ComponentCategory if the name is a cooling/fan accessory
+ * that was misidentified as a case, or `null` if the name is a legitimate case.
+ *
+ * Call this before assigning category = 'case'.
+ */
+function getCasePollutantRedirect(name: string): ComponentCategory | null {
+  const lower = name.toLowerCase();
+  for (const rule of CASE_NEGATIVE_KEYWORDS) {
+    if (rule.keywords.some(kw => lower.includes(kw))) {
+      return rule.redirect;
+    }
+  }
+  return null;
+}
 
 // Re-export DI helpers so tests can inject a mock SQL function.
 export { setSql, resetSql };
@@ -76,11 +126,26 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
   function resolveCategory(name: string): ComponentCategory | null {
     for (const rule of adminRules) {
       if (matchesRule(rule, name)) {
-        return rule.category as ComponentCategory;
+        // Even admin rules cannot override the case negative keyword guard —
+        // if an admin mapped something to 'case' but its title contains a
+        // cooling keyword, redirect it to the appropriate cooling category.
+        const adminCat = rule.category as ComponentCategory;
+        if (adminCat === 'case') {
+          const redirect = getCasePollutantRedirect(name);
+          if (redirect) return redirect;
+        }
+        return adminCat;
       }
     }
     const cat = inferCategory(name);
     if (cat === 'build' || cat === 'bundle') return null;
+    // ── Case Negative Keyword Guard ──────────────────────────────────────────
+    // If inferCategory() decided this is a 'case' but the product title
+    // contains a cooling/fan keyword, redirect it immediately.
+    if (cat === 'case') {
+      const redirect = getCasePollutantRedirect(name);
+      if (redirect) return redirect;
+    }
     return cat as ComponentCategory | null;
   }
 
@@ -124,6 +189,16 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
       ?? resolveCategory(scrapedName)
       ?? resolveCategory(nameForExtraction);
     if (!category || (category as string) === 'build') { skipped++; onProgress?.(created + skipped, pending.length); continue; }
+
+    // Special case: Skip SO-DIMM RAM (laptop) and tray components
+    if (category === 'ram') {
+      const lowerScraped = scrapedName.toLowerCase();
+      if (lowerScraped.includes('so-dimm') || lowerScraped.includes('sodimm') || lowerScraped.includes('tray') || lowerScraped.includes('bulk')) {
+        skipped++;
+        onProgress?.(created + skipped, pending.length);
+        continue;
+      }
+    }
 
     const brand = prefixAsBrand ?? extractBrand(nameForExtraction);
     const cleanedName = cleanName(nameForExtraction, brand, category);
@@ -238,10 +313,25 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         ` as { id: number }[];
         newId = rows[0]?.id;
       } else if (category === 'gpu') {
-        const specs = extractGpuSpecs(nameForExtraction);
+        let specs = extractGpuSpecs(nameForExtraction);
+
+        // Dynamic Enrichment for missing critical specs (like length_mm)
+        if (specs.length_mm === null) {
+          const enriched = await getDynamicEnrichment(nameForExtraction, 'gpu', dbHardwareCache, listing.product_url, scrapeProductPage);
+          if (enriched) {
+            specs = { ...specs, ...enriched };
+          }
+        }
+
+        const specsPayload = {
+          chipset: specs.chipset ?? null,
+          vram_gb: specs.vram_gb ?? null,
+          tdp: specs.tdp ?? null,
+          length_mm: specs.length_mm ?? null,
+        };
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, length_mm, tdp, chipset, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'gpu', ${specs.length_mm}, ${specs.tdp}, ${specs.chipset}, ${listing.image_url}, true)
+          INSERT INTO components (slug, name, brand, category, length_mm, tdp, chipset, vram_gb, specs, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'gpu', ${specs.length_mm}, ${specs.tdp}, ${specs.chipset}, ${specs.vram_gb}, ${JSON.stringify(specsPayload)}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
@@ -249,11 +339,21 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         const specs = extractRamSpecs(nameForExtraction);
         const rawSpecs = extractRamSpecs(scrapedName);
         
-        const ramType = specs?.ram_type || rawSpecs.ram_type || (nameForExtraction.toLowerCase().includes('ddr5') ? 'DDR5' : (nameForExtraction.toLowerCase().includes('ddr4') ? 'DDR4' : null));
-        const freqMhz = specs?.frequency_mhz || rawSpecs.frequency_mhz || null;
-        const kitCount = rawSpecs.kit_count ?? specs?.kit_count ?? 1;
-        const casLatency = rawSpecs.cas_latency ?? specs?.cas_latency ?? null;
+        let ramType = specs?.ram_type || rawSpecs.ram_type || (nameForExtraction.toLowerCase().includes('ddr5') ? 'DDR5' : (nameForExtraction.toLowerCase().includes('ddr4') ? 'DDR4' : null));
+        let freqMhz = specs?.frequency_mhz || rawSpecs.frequency_mhz || null;
+        let kitCount = rawSpecs.kit_count ?? specs?.kit_count ?? 1;
+        let casLatency = rawSpecs.cas_latency ?? specs?.cas_latency ?? null;
         const capacityGb = rawSpecs.capacity_gb ?? specs?.capacity_gb ?? null;
+
+        // Deep-scraper fallback: hunt the product page for CAS latency, kit config, or RAM type
+        if ((!casLatency || !ramType) && listing.product_url) {
+          const enriched = await getDynamicEnrichment(nameForExtraction, 'ram', dbHardwareCache, listing.product_url, scrapeProductPage);
+          if (enriched) {
+            casLatency = casLatency ?? (enriched.cas_latency as number | null | undefined) ?? null;
+            kitCount   = kitCount > 1 ? kitCount : ((enriched.kit_count as number | null | undefined) ?? kitCount);
+            ramType    = ramType ?? (enriched.ram_type as string | null | undefined) ?? null;
+          }
+        }
 
         const rows = await sql`
           INSERT INTO components (slug, name, brand, category, ram_type, frequency_mhz, kit_count, cas_latency, capacity_gb, image_url, is_active)
@@ -262,30 +362,82 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         ` as { id: number }[];
         newId = rows[0]?.id;
       } else if (category === 'storage') {
-        // Create storage even without extractable specs — name alone is sufficient
+        const specs = extractStorageSpecs(nameForExtraction);
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'storage', ${listing.image_url}, true)
+          INSERT INTO components (slug, name, brand, category, capacity_gb, interface_type, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'storage', ${specs.capacity_gb}, ${specs.interface_type}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
       } else if (category === 'motherboard') {
-        const specs = extractMotherboardSpecs(nameForExtraction);
+        let specs = extractMotherboardSpecs(nameForExtraction);
+
+        // Deep-scraper fallback: hunt the product page for form_factor and socket if missing
+        if ((!specs?.form_factor || !specs?.socket) && listing.product_url) {
+          const enriched = await getDynamicEnrichment(nameForExtraction, 'motherboard', dbHardwareCache, listing.product_url, scrapeProductPage);
+          if (enriched) {
+            // Merge only missing fields — don't overwrite what the chipset extractor resolved
+            if (specs) {
+              specs = {
+                ...specs,
+                form_factor: specs.form_factor ?? (enriched.form_factor as string | undefined) ?? specs.form_factor,
+                socket:      specs.socket ?? (enriched.socket as string | null | undefined) ?? specs.socket,
+              };
+            }
+          }
+        }
+
         // Use extracted specs or create with null fields — better to have the component than skip it
         const ramTypes = specs ? specs.supported_ram_types : null;
+        const specsPayload = specs ? {
+          socket: specs.socket ?? null,
+          supported_ram_types: specs.supported_ram_types ?? null,
+          max_ram_frequency: specs.max_ram_frequency ?? null,
+          form_factor: specs.form_factor ?? null,
+          ram_slots: specs.ram_slots ?? null,
+        } : null;
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, socket, supported_ram_types, max_ram_frequency, ram_slots, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'motherboard', ${specs?.socket ?? null}, ${ramTypes && ramTypes.length > 0 ? `{${ramTypes.map(t => t.replace(/"/g, '')).join(',')}}` : null}::text[], ${specs?.max_ram_frequency ?? null}, ${specs?.ram_slots ?? null}, ${listing.image_url}, true)
+          INSERT INTO components (slug, name, brand, category, socket, supported_ram_types, max_ram_frequency, ram_slots, form_factor, specs, image_url, is_active)
+          VALUES (
+            ${slug}, ${cleanedName}, ${brand}, 'motherboard', 
+            ${specs?.socket ?? null}, 
+            ${ramTypes && ramTypes.length > 0 ? `{${ramTypes.map(t => t.replace(/"/g, '')).join(',')}}` : null}::text[], 
+            ${specs?.max_ram_frequency ?? null}, 
+            ${specs?.ram_slots ?? null}, 
+            ${specs?.form_factor ?? null}, 
+            ${specsPayload ? JSON.stringify(specsPayload) : null}, 
+            ${listing.image_url}, 
+            true
+          )
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
       } else if (category === 'psu') {
-        const specs = extractPsuSpecs(nameForExtraction);
+        let specs = extractPsuSpecs(nameForExtraction);
+
+        // Deep-scraper: hunt the product page for 80+ rating and modularity
+        // We prioritize deep-scraped specifications over title heuristics since the detail page is the source of truth.
+        if (listing.product_url) {
+          const enriched = await getDynamicEnrichment(nameForExtraction, 'psu', dbHardwareCache, listing.product_url, scrapeProductPage);
+          if (enriched) {
+            specs = {
+              ...specs,
+              efficiency: (enriched.efficiency as string | null | undefined) ?? (enriched.efficiency_rating as string | null | undefined) ?? specs.efficiency ?? null,
+              modularity: (enriched.modularity as string | null | undefined) ?? (enriched.modular as string | null | undefined) ?? specs.modularity ?? null,
+              form_factor: (enriched.psu_form_factor as string | null | undefined) ?? (enriched.form_factor as string | null | undefined) ?? specs.form_factor ?? 'ATX',
+            };
+          }
+        }
+
         // Create PSU even without extractable wattage — wattage is often in the name but format varies
         const wattage = specs?.wattage ?? null;
+        const efficiency_rating = normalizeEfficiencyRating(specs?.efficiency);
+        const modular = normalizeModularity(specs?.modularity);
+        const psu_form_factor = normalizePsuFormFactor(specs?.form_factor);
+
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, wattage, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'psu', ${wattage}, ${listing.image_url}, true)
+          INSERT INTO components (slug, name, brand, category, wattage, efficiency_rating, modular, psu_form_factor, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'psu', ${wattage}, ${efficiency_rating}, ${modular}, ${psu_form_factor}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
@@ -299,13 +451,80 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         ` as { id: number }[];
         newId = rows[0]?.id;
       } else if (category === 'case') {
-        const specs = extractCaseSpecs(nameForExtraction);
-        const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, max_gpu_length_mm, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'case', ${specs.max_gpu_length_mm}, ${listing.image_url}, true)
-          RETURNING id
-        ` as { id: number }[];
-        newId = rows[0]?.id;
+        // ── Negative Keyword Guard (last-mile safety net) ─────────────────────
+        // resolveCategory() already runs the guard, but the suggestion_category
+        // column may have been pre-populated with 'case' by a previous pipeline
+        // run that didn't have this guard.  Re-check here to be safe.
+        const pollutantRedirect = getCasePollutantRedirect(nameForExtraction);
+        if (pollutantRedirect) {
+          await logger.info(
+            `[CATALOG] Negative keyword guard fired on "${cleanedName}" — ` +
+            `redirected case → ${pollutantRedirect}`
+          );
+          // Fall through to the correct branch by updating `category` in-flight
+          // and letting the existing fan/cooling blocks handle insertion below.
+          // We do this via a targeted mini-insert rather than restructuring the
+          // whole if-else chain:
+          const fanSpecs = extractFanSpecs(nameForExtraction);
+          if (pollutantRedirect === 'fan') {
+            const fSlug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
+            const fRows = await sql`
+              INSERT INTO components (slug, name, brand, category, size_mm, rgb, pack_size, image_url, is_active)
+              VALUES (${fSlug}, ${cleanedName}, ${brand}, 'fan', ${fanSpecs.size_mm}, ${fanSpecs.rgb}, ${fanSpecs.pack_size}, ${listing.image_url}, true)
+              RETURNING id
+            ` as { id: number }[];
+            newId = fRows[0]?.id;
+          } else if (pollutantRedirect === 'cooling') {
+            const cSpecs = extractCoolingSpecs(nameForExtraction);
+            const cTags = cSpecs?.tags || [];
+            const cSlug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
+            const cRows = await sql`
+              INSERT INTO components (slug, name, brand, category, tdp, tags, image_url, is_active)
+              VALUES (${cSlug}, ${cleanedName}, ${brand}, 'cooling', ${cSpecs?.tdp ?? null}, ${cTags.length > 0 ? `{${cTags.join(',')}}` : null}, ${listing.image_url}, true)
+              RETURNING id
+            ` as { id: number }[];
+            newId = cRows[0]?.id;
+          } else if (pollutantRedirect === 'thermal_paste') {
+            const tSpecs = extractThermalPasteSpecs(nameForExtraction);
+            const tSlug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
+            const tRows = await sql`
+              INSERT INTO components (slug, name, brand, category, weight_grams, paste_type, image_url, is_active)
+              VALUES (${tSlug}, ${cleanedName}, ${brand}, 'thermal_paste', ${tSpecs.weight_grams}, ${tSpecs.paste_type}, ${listing.image_url}, true)
+              RETURNING id
+            ` as { id: number }[];
+            newId = tRows[0]?.id;
+          }
+          // ↑ newId is now set; the common post-insert block below handles
+          //   scraper_mappings / unmatched_listings / prices automatically.
+        } else {
+          // Legitimate case — proceed with normal case spec extraction
+          const extractedSpecs = extractCaseSpecs(nameForExtraction);
+          let max_gpu_length_mm = extractedSpecs.max_gpu_length_mm;
+          let max_cpu_cooler_height_mm = extractedSpecs.max_cooler_height_mm;
+          let form_factors = extractedSpecs.supported_motherboards;
+
+          if (max_gpu_length_mm === null || form_factors === null) {
+            const enriched = await getDynamicEnrichment(nameForExtraction, 'case', dbHardwareCache, listing.product_url, scrapeProductPage);
+            if (enriched) {
+              max_gpu_length_mm = enriched.max_gpu_length_mm ?? max_gpu_length_mm;
+              max_cpu_cooler_height_mm = enriched.max_cpu_cooler_height_mm ?? max_cpu_cooler_height_mm;
+              form_factors = enriched.form_factors ?? form_factors;
+            }
+          }
+
+          const specsPayload = {
+            max_gpu_length_mm,
+            max_cpu_cooler_height_mm,
+            form_factors
+          };
+
+          const rows = await sql`
+            INSERT INTO components (slug, name, brand, category, max_gpu_length_mm, max_cooler_height_mm, supported_motherboards, specs, image_url, is_active)
+            VALUES (${slug}, ${cleanedName}, ${brand}, 'case', ${max_gpu_length_mm}, ${max_cpu_cooler_height_mm}, ${(form_factors && form_factors.length > 0) ? `{${form_factors.map((t: string) => t.replace(/"/g, '')).join(',')}}` : null}::text[], ${JSON.stringify(specsPayload)}, ${listing.image_url}, true)
+            RETURNING id
+          ` as { id: number }[];
+          newId = rows[0]?.id;
+        }
       } else if (category === 'fan') {
         const specs = extractFanSpecs(nameForExtraction);
         const rows = await sql`

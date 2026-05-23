@@ -15,7 +15,7 @@ import { RETAILER_SCRAPERS } from './config/retailers.config.js';
 import type { ResolvedRetailerScraperConfig } from './config/retailers.config.js';
 import { importBenchmarks } from './benchmarkImporter.js';
 import type { ScrapedPrice } from './scrapers/baseScraper.js';
-import { runSmartBackfill } from '../services/enrichmentService.js';
+import { runSmartBackfill, runDeepRetailerBackfill } from '../services/enrichmentService.js';
 import { runSpecMiningSession } from '../services/specMiningService.js';
 
 // ── Data Quality Pass ─────────────────────────────────────────────────────────
@@ -334,6 +334,12 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
   runSpecMiningSession()
     .then(() => logger.info('[SESSION] Spec mining task finished successfully'))
     .catch((err) => logger.error(`[SESSION] Spec mining task failed: ${err instanceof Error ? err.message : String(err)}`));
+
+  // 4. Deep Retailer Backfill: Visit product pages for missing specs (uses MPN logic)
+  console.log('Starting deep retailer backfill (MPN/EAN extraction)...');
+  runDeepRetailerBackfill()
+    .then(() => logger.info('[SESSION] Deep backfill finished successfully'))
+    .catch((err) => logger.error(`[SESSION] Deep backfill failed: ${err instanceof Error ? err.message : String(err)}`));
 }
 
 

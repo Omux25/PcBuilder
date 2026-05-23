@@ -1,7 +1,7 @@
 import { describe, expect, test, afterAll } from 'bun:test';
 import fc from 'fast-check';
-import { getComponents } from '../../services/componentService.js';
-import { setSql, resetSql } from '../../db/index.js';
+import { getComponents } from '../../modules/catalog/services/componentService.js';
+import { setSql, resetSql } from '../../core/db/index.js';
 
 describe('PBT 13.2 — Pagination correctness', () => {
   afterAll(() => {
@@ -19,7 +19,15 @@ describe('PBT 13.2 — Pagination correctness', () => {
 
           const TOTAL_ITEMS = 500; // Fake total items in DB
 
-          const mockSql = (_strings: TemplateStringsArray, ...values: any[]) => {
+          const mockSql = (strings: TemplateStringsArray, ...values: any[]) => {
+            const query = strings.join('?').toLowerCase();
+            
+            // Handle count queries (total and in-stock)
+            if (query.includes('count(*)')) {
+              return Promise.resolve([{ count: String(TOTAL_ITEMS) }]);
+            }
+
+            // Capture limit/offset from the main fetch query
             capturedLimit = values[values.length - 2];
             capturedOffset = values[values.length - 1];
 
@@ -53,7 +61,7 @@ describe('PBT 13.2 — Pagination correctness', () => {
 
           if (expectedOffset >= TOTAL_ITEMS) {
             expect(result.components).toHaveLength(0);
-            expect(result.total).toBe(0);
+            expect(result.total).toBe(TOTAL_ITEMS);
           } else {
             const expectedRowsCount = Math.min(expectedLimit, TOTAL_ITEMS - expectedOffset);
             expect(result.components).toHaveLength(expectedRowsCount);

@@ -1,7 +1,7 @@
 import { describe, expect, test, afterAll } from 'bun:test';
 import fc from 'fast-check';
-import { recordPriceChange } from '../../services/priceHistoryService.js';
-import { setSql, resetSql } from '../../db/index.js';
+import { recordPriceChange } from '../../modules/catalog/services/priceHistoryService.js';
+import { setSql, resetSql } from '../../core/db/index.js';
 
 describe('PBT 13.3 — Price history insertion', () => {
   afterAll(() => {

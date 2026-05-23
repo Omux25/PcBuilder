@@ -20,14 +20,14 @@ const GPU_AIB_PARTNERS = [
 
 const GPU_MODEL_TIERS: Record<string, string[]> = {
   Sapphire: ['Nitro+', 'Pulse', 'Pure'],
-  ASUS: ['ROG Strix', 'TUF Gaming', 'Dual', 'Prime', 'ProArt'],
+  ASUS: ['ROG Matrix', 'ROG Astral', 'ROG Strix', 'TUF Gaming', 'Dual', 'Prime', 'ProArt'],
   MSI: ['Gaming X Trio', 'Gaming X', 'Gaming', 'Ventus 3X', 'Ventus 2X', 'Ventus', 'Mech', 'Shadow'],
   Gigabyte: ['Aorus Master', 'Aorus Elite', 'Aorus', 'Gaming OC', 'Eagle OC', 'Eagle', 'Windforce OC', 'Windforce'],
   Palit: ['GameRock', 'GamingPro', 'Dual', 'StormX'],
-  Zotac: ['AMP Extreme', 'AMP Holo', 'AMP', 'Twin Edge OC', 'Twin Edge'],
+  Zotac: ['AMP Extreme', 'AMP Holo', 'AMP', 'Twin Edge OC', 'Twin Edge', 'Solid OC', 'Solid'],
   PowerColor: ['Red Devil', 'Red Dragon', 'Fighter'],
   XFX: ['Speedster MERC', 'Speedster SWFT', 'Speedster Swift', 'Qick'],
-  PNY: ['XLR8 Gaming Verto', 'XLR8', 'Verto'],
+  PNY: ['XLR8 Gaming Verto', 'XLR8', 'Verto', 'Epic-X RGB', 'Epic-X'],
 };
 
 export interface GpuVariantDetails {
@@ -36,6 +36,7 @@ export interface GpuVariantDetails {
   model_tier?: string;
   cooling_slots?: string; // "2-slot" | "2.5-slot" | "3-slot"
   vram_gb?: number;
+  is_oc?: boolean;
 }
 
 export function extractGpuVariant(productName: string, description?: string): { label: string; details: GpuVariantDetails } {
@@ -68,10 +69,16 @@ export function extractGpuVariant(productName: string, description?: string): { 
   const vramMatch = n.match(vramRegex) ?? (description ? description.match(vramRegex) : null);
   if (vramMatch) details.vram_gb = parseInt(vramMatch[1]);
 
+  // Detect OC Edition
+  if (/\boc\b/i.test(n) || n.toLowerCase().includes('oc edition')) {
+    details.is_oc = true;
+  }
+
   // Build label
   const parts: string[] = [];
   if (details.aib_partner) parts.push(details.aib_partner);
   if (details.model_tier) parts.push(details.model_tier);
+  if (details.is_oc) parts.push('OC');
   if (details.vram_gb) parts.push(`${details.vram_gb}GB`);
 
   const label = parts.length > 0 ? parts.join(' ') : productName.slice(0, 60);

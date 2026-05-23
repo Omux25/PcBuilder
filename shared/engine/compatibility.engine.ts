@@ -260,12 +260,21 @@ export function validateCompatibility(build: BuildInput): CompatibilityResult {
         components: ['psu'],
         message: `Estimated load (${total_tdp}W) exceeds PSU capacity (${build.psu.wattage}W).`,
       });
-    } else if (build.psu.wattage < total_tdp * 1.1) {
-      warnings.push({
-        rule: 'psu_tight',
-        components: ['psu'],
-        message: `PSU capacity (${build.psu.wattage}W) is very close to estimated load (${total_tdp}W).`,
-      });
+    } else {
+      if (build.psu.wattage < recommended_psu_wattage) {
+        warnings.push({
+          rule: 'psu_underpowered',
+          components: ['psu'],
+          message: `PSU (${build.psu.wattage}W) below recommended minimum (${recommended_psu_wattage}W).`,
+        });
+      }
+      if (build.psu.wattage < total_tdp * 1.1) {
+        warnings.push({
+          rule: 'psu_tight',
+          components: ['psu'],
+          message: `PSU capacity (${build.psu.wattage}W) is very close to estimated load (${total_tdp}W).`,
+        });
+      }
     }
   }
 
@@ -276,4 +285,115 @@ export function validateCompatibility(build: BuildInput): CompatibilityResult {
     errors,
     warnings,
   };
+}
+
+export function evaluateCompatibility(
+  component: Partial<Component>,
+  currentBuild: Record<string, Partial<Component>>
+): { isCompatible: boolean; reasons: string[] } {
+  let isCompatible = true;
+  const reasons: string[] = [];
+  
+  const cat = component.category;
+
+  // CPU ↔ Motherboard
+  if (cat === 'cpu' && currentBuild.motherboard) {
+    if (component.socket && currentBuild.motherboard.socket && component.socket !== currentBuild.motherboard.socket) {
+      isCompatible = false;
+      reasons.push(`Incompatible : Socket différent (${component.socket} vs ${currentBuild.motherboard.socket})`);
+    }
+  }
+  if (cat === 'motherboard' && currentBuild.cpu) {
+    if (component.socket && currentBuild.cpu.socket && component.socket !== currentBuild.cpu.socket) {
+      isCompatible = false;
+      reasons.push(`Incompatible : Socket différent (${component.socket} vs ${currentBuild.cpu.socket})`);
+    }
+  }
+
+  // Motherboard ↔ RAM
+  if (cat === 'ram' && currentBuild.motherboard) {
+    if (component.ram_type && currentBuild.motherboard.supported_ram_types) {
+      if (!currentBuild.motherboard.supported_ram_types.includes(component.ram_type)) {
+        isCompatible = false;
+        reasons.push(`Incompatible : Type de RAM non supporté (${component.ram_type})`);
+      }
+    }
+  }
+  if (cat === 'motherboard' && currentBuild.ram) {
+    if (component.supported_ram_types && currentBuild.ram.ram_type) {
+      if (!component.supported_ram_types.includes(currentBuild.ram.ram_type)) {
+        isCompatible = false;
+        reasons.push(`Incompatible : Type de RAM non supporté par cette carte mère (${currentBuild.ram.ram_type})`);
+      }
+    }
+  }
+
+  // Case ↔ Motherboard
+  if (cat === 'motherboard' && currentBuild.case) {
+    if (component.form_factor && currentBuild.case.supported_motherboards) {
+      if (!currentBuild.case.supported_motherboards.includes(component.form_factor)) {
+        isCompatible = false;
+        reasons.push(`Incompatible : Format de carte mère non supporté (${component.form_factor})`);
+      }
+    }
+  }
+  if (cat === 'case' && currentBuild.motherboard) {
+    if (component.supported_motherboards && currentBuild.motherboard.form_factor) {
+      if (!component.supported_motherboards.includes(currentBuild.motherboard.form_factor)) {
+        isCompatible = false;
+        reasons.push(`Incompatible : Ce boîtier ne supporte pas le format ${currentBuild.motherboard.form_factor}`);
+      }
+    }
+  }
+
+  // Case ↔ GPU
+  if (cat === 'gpu' && currentBuild.case) {
+    if (component.length_mm && currentBuild.case.max_gpu_length_mm) {
+      if (component.length_mm > currentBuild.case.max_gpu_length_mm) {
+        isCompatible = false;
+        reasons.push(`Incompatible : GPU trop long (${component.length_mm}mm > ${currentBuild.case.max_gpu_length_mm}mm)`);
+      }
+    }
+  }
+  if (cat === 'case' && currentBuild.gpu) {
+    if (component.max_gpu_length_mm && currentBuild.gpu.length_mm) {
+      if (currentBuild.gpu.length_mm > component.max_gpu_length_mm) {
+        isCompatible = false;
+        reasons.push(`Incompatible : GPU existant trop long pour ce boîtier (${currentBuild.gpu.length_mm}mm > ${component.max_gpu_length_mm}mm)`);
+      }
+    }
+  }
+
+  // Case ↔ CPU Cooler
+  if (cat === 'cooling' && currentBuild.case) {
+    if (component.height_mm && currentBuild.case.max_cooler_height_mm) {
+      if (component.height_mm > currentBuild.case.max_cooler_height_mm) {
+        isCompatible = false;
+        reasons.push(`Incompatible : Ventirad trop haut (${component.height_mm}mm > ${currentBuild.case.max_cooler_height_mm}mm)`);
+      }
+    }
+  }
+  if (cat === 'case' && currentBuild.cooling) {
+    if (component.max_cooler_height_mm && currentBuild.cooling.height_mm) {
+      if (currentBuild.cooling.height_mm > component.max_cooler_height_mm) {
+        isCompatible = false;
+        reasons.push(`Incompatible : Ventirad existant trop haut pour ce boîtier (${currentBuild.cooling.height_mm}mm > ${component.max_cooler_height_mm}mm)`);
+      }
+    }
+  }
+
+  // PSU
+  if (cat === 'psu' && (currentBuild.cpu || currentBuild.gpu)) {
+    const cpuTdp = currentBuild.cpu?.tdp || 0;
+    const gpuTdp = currentBuild.gpu?.tdp || 0;
+    const totalTdp = cpuTdp + gpuTdp;
+    if (totalTdp > 0 && component.wattage) {
+      if (component.wattage < totalTdp * 1.2) {
+        isCompatible = false;
+        reasons.push(`Incompatible : Puissance insuffisante (Nécessite au moins ${Math.ceil(totalTdp * 1.2)}W)`);
+      }
+    }
+  }
+
+  return { isCompatible, reasons };
 }
