@@ -39,6 +39,10 @@ export function resetSql(): void {
  * never crash the scraper.
  */
 async function log(level: LogLevel, message: string, site?: string): Promise<void> {
+  const ts = new Date().toLocaleString('en-GB');
+  const levelPad = level.padEnd(7);
+  console.log(`[${ts}] ${levelPad} ${message}`);
+
   try {
     await _sql`
       INSERT INTO scraper_logs (level, site, message)
