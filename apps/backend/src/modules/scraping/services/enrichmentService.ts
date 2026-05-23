@@ -65,8 +65,8 @@ export async function runSmartBackfill() {
     const storageUpdate = await sql`
         UPDATE components SET capacity_gb = 
             CASE 
-                WHEN name ~* '([0-9]+)\\s*(TB|TO)' THEN (substring(name from '([0-9]+)\\s*(?i)(TB|TO)')::int * 1024)
-                WHEN name ~* '([0-9]+)\\s*(GB|Go)' THEN substring(name from '([0-9]+)\\s*(?i)(GB|Go)')::int
+                WHEN name ~* '([0-9]+)\\s*(TB|TO)' THEN (substring(UPPER(name) from '([0-9]+)\\s*(TB|TO)')::int * 1024)
+                WHEN name ~* '([0-9]+)\\s*(GB|Go)' THEN substring(UPPER(name) from '([0-9]+)\\s*(GB|GO)')::int
                 ELSE capacity_gb
             END
         WHERE category = 'storage' AND capacity_gb IS NULL
@@ -82,17 +82,23 @@ export async function runDeepRetailerBackfill() {
     const BATCH_SIZE = 100; // Controlled batch size for AI/Scraping
     const queue = new PQueue({ concurrency: 2 }); // Lower concurrency to avoid bans
 
-    // 1. Count total pending
+    // 1. Count total pending (only include components that have active price URLs to avoid orphaned gaps)
     const [{ count: totalPending }] = await sql`
         SELECT count(*)::int FROM components
         WHERE is_active = true
+          AND EXISTS (
+            SELECT 1 FROM prices 
+            WHERE component_id = components.id 
+              AND product_url IS NOT NULL 
+              AND product_url != ''
+          )
           AND (
             (category = 'storage' AND capacity_gb IS NULL) OR
             (category = 'cooling' AND tdp IS NULL) OR
             (category = 'ram' AND (capacity_gb IS NULL OR cas_latency IS NULL)) OR
             (category = 'motherboard' AND (socket IS NULL OR supported_ram_types IS NULL)) OR
             (category = 'psu' AND (wattage IS NULL OR efficiency_rating IS NULL OR modular IS NULL)) OR
-            (image_urls IS NULL OR array_length(image_urls, 1) < 2)
+            (image_url IS NULL)
           )
     ` as { count: number }[];
 
@@ -104,21 +110,28 @@ export async function runDeepRetailerBackfill() {
           (SELECT array_agg(product_url) FROM prices WHERE component_id = components.id LIMIT 3) as product_urls
         FROM components
         WHERE is_active = true
+          AND EXISTS (
+            SELECT 1 FROM prices 
+            WHERE component_id = components.id 
+              AND product_url IS NOT NULL 
+              AND product_url != ''
+          )
           AND (
             (category = 'storage' AND capacity_gb IS NULL) OR
             (category = 'cooling' AND tdp IS NULL) OR
             (category = 'ram' AND (capacity_gb IS NULL OR cas_latency IS NULL)) OR
             (category = 'motherboard' AND (socket IS NULL OR supported_ram_types IS NULL)) OR
             (category = 'psu' AND (wattage IS NULL OR efficiency_rating IS NULL OR modular IS NULL)) OR
-            (image_urls IS NULL OR array_length(image_urls, 1) < 2)
+            (image_url IS NULL)
           )
         ORDER BY updated_at ASC
         LIMIT ${BATCH_SIZE}
     ` as { id: number; name: string; category: string; image_urls: string[] | null; product_urls: string[] }[];
 
-    await logger.info(`[ENRICHMENT] Deep: Progress ${rows.length}/${totalPending} components pending enrichment...`);
+
 
     let successCount = 0;
+    let processedCount = 0;
     for (const row of rows) {
         if (!row.product_urls || row.product_urls.length === 0) continue;
 
@@ -167,10 +180,11 @@ export async function runDeepRetailerBackfill() {
 
                 // Still handle image extraction manually or update deepScraper to handle it
                 const currentImages = new Set(row.image_urls || []);
-                if (currentImages.size < 2) {
+                if (currentImages.size < 1) {
                     try {
                         const res = await fetch(url, { 
-                            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' }
+                            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' },
+                            signal: AbortSignal.timeout(8000) // 8s timeout to prevent hanging forever
                         });
                         if (res.ok) {
                             const html = await res.text();
@@ -180,7 +194,8 @@ export async function runDeepRetailerBackfill() {
                                 if (src && src.startsWith('http')) currentImages.add(src);
                             });
                             if (currentImages.size > (row.image_urls?.length || 0)) {
-                                updates.image_urls = Array.from(currentImages).slice(0, 3);
+                                const urls = Array.from(currentImages).slice(0, 3);
+                                updates.image_urls = `{${urls.map(u => `"${u.replace(/"/g, '\\"')}"`).join(',')}}`;
                             }
                         }
                     } catch { /* ignore fetch errors for images */ }
@@ -189,9 +204,15 @@ export async function runDeepRetailerBackfill() {
                 if (Object.keys(updates).length > 0) {
                     await sql`UPDATE components SET ${sql(updates)}, updated_at = NOW() WHERE id = ${row.id}`;
                     successCount++;
+                } else {
+                    // Critical fix: Always touch updated_at to push processed components to the back of the queue.
+                    // This prevents infinite loops processing the same 100 un-enrichable items repeatedly.
+                    await sql`UPDATE components SET updated_at = NOW() WHERE id = ${row.id}`;
                 }
             } catch (err) {
-                console.error(`[ENRICHMENT] Failed for ${row.name}:`, err);
+                await logger.error(`[ENRICHMENT] Failed for ${row.name}: ${err instanceof Error ? err.message : String(err)}`);
+            } finally {
+                processedCount++;
             }
         });
     }

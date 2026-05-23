@@ -2,6 +2,7 @@
  * PCPartPicker/docyx dataset matching service.
  * Fetches, caches, and matches components dynamically to extract high-quality specifications.
  */
+import { logger } from '../engine/utils/logger.js';
 
 const BASE_URL = 'https://raw.githubusercontent.com/docyx/pc-part-dataset/main/data/json';
 
@@ -59,18 +60,18 @@ async function getOrFetchDataset(category: string): Promise<any[] | null> {
     }
 
     try {
-        console.log(`[PCPP-DATASET] Fetching dataset for ${category} from ${url}...`);
+        await logger.info(`[PCPP-DATASET] Fetching dataset for ${category} from ${url}...`);
         const res = await fetch(url);
         if (!res.ok) {
-            console.error(`[PCPP-DATASET] Failed to fetch dataset: ${res.status}`);
+            await logger.error(`[PCPP-DATASET] Failed to fetch dataset: ${res.status}`);
             return null;
         }
         const data = await res.json() as any[];
         datasetCache.set(category, data);
-        console.log(`[PCPP-DATASET] Loaded ${data.length} entries for ${category}.`);
+        await logger.info(`[PCPP-DATASET] Loaded ${data.length} entries for ${category}.`);
         return data;
     } catch (err) {
-        console.error(`[PCPP-DATASET] Error loading dataset for ${category}:`, err);
+        await logger.error(`[PCPP-DATASET] Error loading dataset for ${category}: ${err}`);
         return null;
     }
 }
@@ -85,7 +86,7 @@ export async function matchFromDataset(fullName: string, category: string): Prom
     const bestMatch = findBestMatch(fullName, dataset);
     if (!bestMatch) return null;
 
-    console.log(`[PCPP-DATASET] Matched "${fullName}" -> "${bestMatch.name}" in category "${category}"`);
+    await logger.info(`[PCPP-DATASET] Matched "${fullName}" -> "${bestMatch.name}" in category "${category}"`);
 
     // Map PCPartPicker properties to our database column naming
     if (category === 'case') {

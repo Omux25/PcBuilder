@@ -70,7 +70,7 @@ let cronHandle: any | null = null;
 export function startScheduler(): void {
   if (cronHandle) return; // already started
   cronHandle = Bun.cron('0 * * * *', runDueRetailers);
-  console.log('Scraper scheduler started — checks for due retailers every hour.');
+  void logger.info('[SCHEDULER] Scraper scheduler started — checks for due retailers every hour.');
 }
 
 /**
@@ -80,7 +80,7 @@ export function stopScheduler(): void {
   if (cronHandle) {
     cronHandle.unref?.();
     cronHandle = null;
-    console.log('Scraper scheduler stopped.');
+    void logger.info('[SCHEDULER] Scraper scheduler stopped.');
   }
 }
 

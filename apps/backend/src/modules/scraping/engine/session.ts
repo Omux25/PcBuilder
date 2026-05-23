@@ -217,25 +217,20 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
     : 'Full';
   const sessionType = targetRetailerId ? `Targeted (${targetName})` : 'Full';
 
-  console.log(`📡 Scraping session: ${sessionType}`);
-  console.log(`   Retailers to scrape: ${scrapersToRun.length}\n`);
-
   await logger.info(`[SESSION] Scraping session started: ${sessionType}`);
+  await logger.info(`[SESSION] Retailers to scrape: ${scrapersToRun.length}`);
 
   const scraperResults = new Map<number, 'SUCCESS' | 'FAILED'>();
 
   await Promise.all(scrapersToRun.map(config =>
     queue.add(async () => {
       try {
-        console.log(`🔄 [${config.name}] Starting scrape...`);
         await logger.info(`[${config.name}] Scraper started`, config.name);
         const prices = await config.run(config.retailer_id);
         allPrices.push(...prices);
-        console.log(`✅ [${config.name}] Scraped ${prices.length} products`);
         await logger.info(`[${config.name}] Successfully scraped ${prices.length} product(s)`, config.name);
         scraperResults.set(config.retailer_id, 'SUCCESS');
       } catch (err) {
-        console.error(`❌ [${config.name}] Failed: ${err instanceof Error ? err.message : String(err)}`);
         await logger.error(
           `[${config.name}] Scraper failed: ${err instanceof Error ? err.message : String(err)}`,
           config.name
@@ -256,38 +251,20 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
   }
 
   if (allPrices.length === 0) {
-    console.log('\n⚠️  No prices scraped');
     await logger.info('[SESSION] Scraping complete: 0 updated, 0 unmatched, 0 errors');
     return;
   }
 
-  console.log(`\n📊 Processing ${allPrices.length} listings through pipeline...`);
   await logger.info(`[SESSION] Processing ${allPrices.length} listing(s) through unified pipeline...`);
 
-  let lastReported = 0;
-  const PROGRESS_INTERVAL = 500;
-
-  const { updated, unmatched, errors, autoMapped, autoCreated } = await aggregate(allPrices, urlToId, {}, async (done, total) => {
-    if (done - lastReported >= PROGRESS_INTERVAL || done === total) {
-      const pct = Math.round((done / total) * 100);
-      await logger.info(`[SESSION] Pipeline progress: ${done}/${total} (${pct}%)`);
-      lastReported = done;
-    }
-  });
-
-  console.log(`\n✅ Pipeline complete:`);
-  console.log(`   Prices updated: ${updated}`);
-  console.log(`   Auto-mapped: ${autoMapped}`);
-  console.log(`   Auto-created: ${autoCreated}`);
-  console.log(`   Unmatched: ${unmatched}`);
-  if (errors > 0) console.log(`   Errors: ${errors}`);
+  const { updated, unmatched, errors, autoMapped, autoCreated } = await aggregate(allPrices, urlToId, {});
 
   await logger.info(`[SESSION] Pipeline done — ${updated} prices updated, ${autoMapped} auto-mapped, ${autoCreated} auto-created, ${unmatched} unmatched`);
 
   // ── Maintenance & Enrichment Flow ──────────────────────────────────────────
 
   // 1. Quality Pass First: Fixes categories/names before suggestions/benchmarks run
-  console.log('🧹 Running data quality pass...');
+  await logger.info('[SESSION] Running data quality pass...');
   try {
     await runDataQualityPass(sql);
   } catch (err) {
@@ -295,12 +272,12 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
   }
 
   // 2. Parallel Tasks: Suggestions, Benchmarks, and Smart Inference
-  console.log('🚀 Running parallel maintenance (Suggestions, Benchmarks, Inference)...');
+  await logger.info('[SESSION] Running parallel maintenance (Suggestions, Benchmarks, Inference)...');
   await Promise.all([
     // Suggestion Preprocessing
     (async () => {
       try {
-        console.log('🔍 Computing suggestions for unmatched listings...');
+        await logger.info('[SESSION] Computing suggestions for unmatched listings...');
         await runSuggestionPreprocessing();
       } catch (err) {
         await logger.error(`[SESSION] Suggestion preprocessing failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -310,7 +287,7 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
     // Benchmarks
     (async () => {
       try {
-        console.log('📈 Updating benchmark scores...');
+        await logger.info('[SESSION] Updating benchmark scores...');
         const { updated: bUpdated } = await importBenchmarks();
         if (bUpdated > 0) await logger.info(`[BENCHMARKS] Updated ${bUpdated} component score(s)`);
       } catch (err) {
@@ -321,7 +298,7 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
     // Smart Backfill (Inference)
     (async () => {
       try {
-        console.log('✨ Running smart spec inference...');
+        await logger.info('[SESSION] Running smart spec inference...');
         await runSmartBackfill();
       } catch (err) {
         await logger.error(`[SESSION] Smart backfill failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -329,17 +306,23 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
     })()
   ]);
 
-  // 3. Automated Spec Mining: Non-blocking (runs in background)
-  console.log('Starting automated spec mining (Retailers -> Manufacturers -> Datasets)...');
-  runSpecMiningSession()
-    .then(() => logger.info('[SESSION] Spec mining task finished successfully'))
-    .catch((err) => logger.error(`[SESSION] Spec mining task failed: ${err instanceof Error ? err.message : String(err)}`));
+  // 3. Automated Spec Mining: Blocking / Awaited for completion
+  await logger.info('[SESSION] Starting automated spec mining (Retailers -> Manufacturers -> Datasets)...');
+  try {
+    await runSpecMiningSession();
+    await logger.info('[SESSION] Spec mining task finished successfully');
+  } catch (err) {
+    await logger.error(`[SESSION] Spec mining task failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
   // 4. Deep Retailer Backfill: Visit product pages for missing specs (uses MPN logic)
-  console.log('Starting deep retailer backfill (MPN/EAN extraction)...');
-  runDeepRetailerBackfill()
-    .then(() => logger.info('[SESSION] Deep backfill finished successfully'))
-    .catch((err) => logger.error(`[SESSION] Deep backfill failed: ${err instanceof Error ? err.message : String(err)}`));
+  await logger.info('[SESSION] Starting deep retailer backfill (MPN/EAN extraction)...');
+  try {
+    await runDeepRetailerBackfill();
+    await logger.info('[SESSION] Deep backfill finished successfully');
+  } catch (err) {
+    await logger.error(`[SESSION] Deep backfill failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
 }
 
 

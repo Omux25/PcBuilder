@@ -78,8 +78,18 @@ export async function runSuggestionPreprocessing(force = false): Promise<Preproc
 
   if (pending.length === 0) return { processed, skipped };
 
-  // Step 3: Run batch suggestion (pure, no DB queries inside)
-  const suggestions = processBatch(pending, catalog, adminRules);
+  // Step 3: Run batch suggestion in chunks, yielding to the event loop so Hono can respond in real-time
+  const suggestions = new Map<number, any>();
+  const SUGGESTION_BATCH_SIZE = 50;
+  for (let i = 0; i < pending.length; i += SUGGESTION_BATCH_SIZE) {
+    const chunk = pending.slice(i, i + SUGGESTION_BATCH_SIZE);
+    const chunkSuggestions = processBatch(chunk, catalog, adminRules);
+    for (const [id, suggestion] of chunkSuggestions) {
+      suggestions.set(id, suggestion);
+    }
+    // Yield execution to the event loop to let Hono handle web requests and log queries
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
 
   // Step 4: Batch upsert results into unmatched_suggestions
   const upsertRows: any[] = [];
