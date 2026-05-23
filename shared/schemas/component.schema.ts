@@ -14,6 +14,8 @@ export const baseComponentSchema = z.object({
   name: z.string().min(1, 'Le nom est requis'),
   brand: z.string().nullable().optional(),
   category: componentCategorySchema,
+  mpn: z.string().nullable().optional(),
+  ean: z.string().nullable().optional(),
   description: z.string().optional(),
   release_year: z.number().int().optional(),
   is_active: z.boolean().default(true),
@@ -46,7 +48,7 @@ export const motherboardSpecsSchema = baseComponentSchema.extend({
 
 export const gpuSpecsSchema = baseComponentSchema.extend({
   category: z.literal('gpu'),
-  length_mm: z.number(),
+  length_mm: z.number().nullable(),
   tdp: z.number().optional(),
   vram_gb: z.number().int().positive().optional(),
   chipset: z.string().optional(),

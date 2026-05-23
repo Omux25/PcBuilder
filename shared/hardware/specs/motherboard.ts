@@ -93,18 +93,22 @@ const CHIPSET_MAP: Record<string, ChipsetInfo> = {
   H810: { socket: 'LGA1851', ddr: 'DDR5_ONLY', defaultMaxMhz: 6400 },
   B860: { socket: 'LGA1851', ddr: 'DDR5_ONLY', defaultMaxMhz: 6400 },
   Z890: { socket: 'LGA1851', ddr: 'DDR5_ONLY', defaultMaxMhz: 9200 },
+  // ── Intel LGA2066 HEDT ──────────────────
+  X299: { socket: 'LGA2066', ddr: 'DDR4_ONLY', defaultMaxMhz: 4266 },
 };
+
+const SORTED_CHIPSETS = Object.keys(CHIPSET_MAP).sort((a, b) => b.length - a.length);
 
 /**
  * Extract socket, supported_ram_types, and max_ram_frequency from a motherboard
  * product name using a two-layer approach:
  *
- *   Layer 1 \u2014 Explicit DDR suffix in name (highest confidence):
- *     "B760M DS3H DDR4" \u2192 DDR4,  "B760M DS3H DDR5" \u2192 DDR5
+ *   Layer 1 — Explicit DDR suffix in name (highest confidence):
+ *     "B760M DS3H DDR4" → DDR4,  "B760M DS3H DDR5" → DDR5
  *
- *   Layer 2 \u2014 Chipset lookup table:
- *     B650 \u2192 AM5 + DDR5_ONLY,  Z790 \u2192 LGA1700 + BOTH
- *     For BOTH chipsets: name contains "D4"/"DDR4" \u2192 DDR4, else \u2192 DDR5
+ *   Layer 2 — Chipset lookup table:
+ *     B650 → AM5 + DDR5_ONLY,  Z790 → LGA1700 + BOTH
+ *     For BOTH chipsets: name contains "D4"/"DDR4" → DDR4, else → DDR5
  *
  * Returns null only if no chipset can be identified at all.
  */
@@ -117,18 +121,41 @@ export function extractMotherboardSpecs(name: string): {
 } | null {
   const upper = name.toUpperCase();
 
-  // \u2500\u2500 Layer 1: explicit DDR suffix anywhere in the name \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // ── Layer 1: explicit DDR suffix anywhere in the name ────────────────────
   const hasExplicitDdr3 = /\bDDR3\b/.test(upper) || /\bD3\b/.test(upper);
   const hasExplicitDdr4 = /\bDDR4\b/.test(upper) || /\bD4\b/.test(upper);
   const hasExplicitDdr5 = /\bDDR5\b/.test(upper) || /\bD5\b/.test(upper);
 
-  // \u2500\u2500 Extract chipset token \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // ── Extract chipset token ─────────────────────────────────────────
   // Match patterns like: B650, B650E, B650M, X670E, Z790, H610M, X570S, TRX40, WRX80, X399, H81, Z97, H61
   const chipsetMatch = upper.match(
     /\b(TRX\d{2}|WRX\d{2}|X399|[ABXZH]\d{2,3}(?:[EIM]|S(?=\b))?)\b/
   );
-  if (!chipsetMatch) {
-    // Named series fallback: ROG MAXIMUS XII/XIII/XIV/XV/XVI \u2192 Z490/Z590/Z690/Z790/Z890, Zenith II \u2192 TRX40
+
+  let rawChipset = chipsetMatch ? chipsetMatch[1] : null;
+  let info: ChipsetInfo | undefined = undefined;
+
+  if (rawChipset) {
+    info =
+      CHIPSET_MAP[rawChipset] ??
+      CHIPSET_MAP[rawChipset.replace(/[EIM]$/, '')] ??
+      CHIPSET_MAP[rawChipset.replace(/[EIMS]{1,2}$/, '')];
+  }
+
+  // Fallback: If no chipset was found with word-boundary regex, do a substring lookup (longest first)
+  if (!info) {
+    for (const cs of SORTED_CHIPSETS) {
+      if (upper.includes(cs)) {
+        rawChipset = cs;
+        info = CHIPSET_MAP[cs];
+        break;
+      }
+    }
+  }
+
+  // If still not found, check named series fallbacks or Biostar
+  if (!info) {
+    // Named series fallback: ROG MAXIMUS XII/XIII/XIV/XV/XVI → Z490/Z590/Z690/Z790/Z890, Zenith II → TRX40
     if (/MAXIMUS\s+XII\b/.test(upper)) return extractMotherboardSpecs('Z490');
     if (/MAXIMUS\s+XIII\b/.test(upper)) return extractMotherboardSpecs('Z590');
     if (/MAXIMUS\s+XIV\b/.test(upper)) return extractMotherboardSpecs('Z690');
@@ -136,24 +163,17 @@ export function extractMotherboardSpecs(name: string): {
     if (/MAXIMUS\s+XVI\b/.test(upper)) return extractMotherboardSpecs('Z890');
     if (/ZENITH\s+II\b/.test(upper)) return extractMotherboardSpecs('TRX40');
     if (/ZENITH\s+III\b/.test(upper)) return extractMotherboardSpecs('TRX50');
+    if (/CROSSHAIR\s+VIII\b/.test(upper) || /CROSSHAIR\s+Viii\b/.test(upper)) return extractMotherboardSpecs('X570');
     // Biostar boards
     const biostarMatch = upper.match(/\b([ABXZH]\d{3})/);
-    if (biostarMatch) return extractMotherboardSpecs(biostarMatch[1]);
+    if (biostarMatch && biostarMatch[1] !== upper && CHIPSET_MAP[biostarMatch[1]]) {
+      return extractMotherboardSpecs(biostarMatch[1]);
+    }
     // ASUS Pro WS WRX80E / WRX90E
     if (/WRX80/.test(upper)) return extractMotherboardSpecs('WRX80');
     if (/WRX90/.test(upper)) return extractMotherboardSpecs('WRX90');
     return null;
   }
-
-  const rawChipset = chipsetMatch[1]; 
-
-  // Look up in map
-  const info: ChipsetInfo | undefined =
-    CHIPSET_MAP[rawChipset] ??
-    CHIPSET_MAP[rawChipset.replace(/[EIM]$/, '')] ??
-    CHIPSET_MAP[rawChipset.replace(/[EIMS]{1,2}$/, '')];
-
-  if (!info) return null;
 
   // \u2500\u2500 Resolve DDR type \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   let ramTypes: string[];
@@ -214,7 +234,7 @@ export function extractMotherboardSpecs(name: string): {
       'B250', 'B150', 'H270', 'H170',
       'H81', 'B85', 'H61', 'B75'
     ];
-    const isEntryChipset = entryChipsets.includes(rawChipset.replace(/[EIMS]$/, ''));
+    const isEntryChipset = rawChipset ? entryChipsets.includes(rawChipset.replace(/[EIMS]$/, '')) : false;
     
     if (isEntryChipset) {
       // Entry chipsets default to 2 slots unless they have keywords indicating 4

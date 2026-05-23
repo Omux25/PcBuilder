@@ -63,7 +63,9 @@ function formatKitLabel(capacity_gb: number, kit_count: number | undefined): str
 
 /** Join non-empty tokens with ' · ' separator. */
 function join(tokens: (string | undefined | null | false | 0)[]): string {
-    return (tokens.filter(Boolean) as string[]).join(' · ');
+    return (tokens
+        .filter(t => typeof t === 'string' ? t.trim().length > 0 : Boolean(t)) as string[])
+        .join(' · ');
 }
 
 // ── Category handlers ─────────────────────────────────────────────────────────

@@ -82,6 +82,14 @@ export interface Component {
   created_at: string;
   updated_at: string;
   lowest_price?: number | null;
+  primary_price?: number | null;
+  total_offers?: number;
+  offers?: {
+    retailer_name: string;
+    price: number;
+    in_stock: boolean;
+    product_url: string;
+  }[];
 }
 
 export interface PriceOffer {
@@ -210,7 +218,7 @@ export interface ComponentFilters {
   brand?: string;
   search?: string;
   sort?: string;
-  vram_gb?: number;
+  vram_gb?: any;
   in_stock?: boolean;
   min_price?: number;
   max_price?: number;
@@ -228,6 +236,8 @@ export interface ComponentFilters {
   core_count?: number;
   include_inactive?: boolean;
   is_active?: boolean;
+  sortBy?: string;
+  sortOrder?: string;
   // Compatibility Hints (for sorting)
   compat_socket?: string;
   compat_ram_type?: string;
@@ -257,3 +267,5 @@ export function isRamSlotKey(key: string): boolean {
 export function isStorageSlotKey(key: string): boolean {
     return key === 'storage' || /^storage_\d+$/.test(key);
 }
+
+export * from './constants/build.constants.js';

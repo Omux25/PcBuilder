@@ -6,6 +6,25 @@
  */
 
 /**
+ * Normalizes a component name for order-agnostic comparison and slug generation.
+ * Strips filler words, removes duplicate adjacent words, and sorts tokens alphabetically.
+ */
+export function normalizeName(name: string): string {
+  const fillerWords = ['geforce', 'radeon', 'edition'];
+  
+  // 1. Lowercase and split into tokens
+  const tokens = name.toLowerCase().split(/[\s_/-]+/);
+
+  // 2. Strip filler words and empty tokens
+  const filtered = tokens.filter(t => t && !fillerWords.includes(t));
+
+  // 3. Alphabetically sort and remove duplicates
+  const uniqueSorted = Array.from(new Set(filtered)).sort();
+
+  return uniqueSorted.join(' ');
+}
+
+/**
  * Converts a string into a URL-safe slug.
  */
 export function slugify(text: string): string {
@@ -22,8 +41,8 @@ export function slugify(text: string): string {
  * Generates a slug from a component's brand and name.
  */
 export function componentSlug(brand: string | null | undefined, name: string): string {
-  const parts = [brand, name].filter(Boolean).join(' ');
-  return slugify(parts);
+  const normalized = normalizeName(`${brand || ''} ${name}`);
+  return slugify(normalized);
 }
 
 /**

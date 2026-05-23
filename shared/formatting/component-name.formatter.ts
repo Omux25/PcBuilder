@@ -1,6 +1,19 @@
 import type { Component } from '../types.js';
 
 /**
+ * Normalizes a string for comparison by:
+ * - Converting to lowercase
+ * - Normalizing 'plus' to '+'
+ * - Removing all spaces, dashes, and other non-alphanumeric/non-+ characters.
+ */
+function normalizeForComparison(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/plus/g, '+')
+    .replace(/[^a-z0-9+]/g, '');
+}
+
+/**
  * Dynamically generates a uniform display name for a component based on its specifications.
  * 
  * Rules:
@@ -14,6 +27,7 @@ export function formatComponentName(c: Partial<Component>, options: { excludeBra
   const brand = c.brand ? c.brand.trim() : '';
   const model = c.name.trim();
   const lowerModel = model.toLowerCase();
+  const normModel = normalizeForComparison(model);
   
   // Base name
   let base = model;
@@ -23,11 +37,12 @@ export function formatComponentName(c: Partial<Component>, options: { excludeBra
 
   const parts: string[] = [base];
 
-  // Helper to append a spec if it's not already in the string
+  // Helper to append a spec if it's not already in the string (using normalized comparison)
   const appendIfMissing = (spec: string | number | null | undefined, suffix: string = '') => {
     if (!spec) return;
     const str = `${spec}${suffix}`;
-    if (!lowerModel.includes(str.toLowerCase().trim())) {
+    const normSpec = normalizeForComparison(str);
+    if (!normModel.includes(normSpec)) {
       parts.push(str);
     }
   };
@@ -38,7 +53,8 @@ export function formatComponentName(c: Partial<Component>, options: { excludeBra
 
     case 'gpu':
       if (c.chipset) {
-        if (!lowerModel.includes(c.chipset.toLowerCase())) {
+        const normChipset = normalizeForComparison(c.chipset);
+        if (!normModel.includes(normChipset)) {
           parts.push(c.chipset);
         }
       }
@@ -48,8 +64,9 @@ export function formatComponentName(c: Partial<Component>, options: { excludeBra
     case 'ram':
       if (c.capacity_gb) {
         const totalCap = `${c.capacity_gb}GB`;
+        const normTotalCap = normalizeForComparison(totalCap);
         
-        if (!lowerModel.includes(totalCap.toLowerCase())) {
+        if (!normModel.includes(normTotalCap)) {
           const stickCap = (c.kit_count && c.kit_count > 1) 
             ? Math.round(c.capacity_gb / c.kit_count)
             : c.capacity_gb;
@@ -62,17 +79,24 @@ export function formatComponentName(c: Partial<Component>, options: { excludeBra
       }
       appendIfMissing(c.ram_type);
       appendIfMissing(c.frequency_mhz, 'MHz');
-      if (c.cas_latency && !lowerModel.includes(`cl${c.cas_latency}`)) {
-        parts.push(`CL${c.cas_latency}`);
+      if (c.cas_latency) {
+        const hasLatency = lowerModel.includes(`cl${c.cas_latency}`) || 
+                           lowerModel.includes(`c${c.cas_latency}`) ||
+                           new RegExp(`\\b${c.cas_latency}\\b`).test(lowerModel);
+        if (!hasLatency) {
+          parts.push(`CL${c.cas_latency}`);
+        }
       }
       break;
 
     case 'storage':
       if (c.capacity_gb) {
-        const cap = c.capacity_gb >= 1000 
-            ? `${(c.capacity_gb / 1000).toFixed(0)}TB` 
-            : `${c.capacity_gb}GB`;
-        if (!lowerModel.includes(cap.toLowerCase())) {
+        const capTb = `${(c.capacity_gb / 1000).toFixed(0)}tb`;
+        const capGb = `${c.capacity_gb}gb`;
+        if (!normModel.includes(capTb) && !normModel.includes(capGb)) {
+          const cap = c.capacity_gb >= 1000 
+              ? `${(c.capacity_gb / 1000).toFixed(0)}TB` 
+              : `${c.capacity_gb}GB`;
           parts.push(cap);
         }
       }
@@ -81,8 +105,11 @@ export function formatComponentName(c: Partial<Component>, options: { excludeBra
 
     case 'psu':
       appendIfMissing(c.wattage, 'W');
-      if (c.efficiency_rating && !lowerModel.includes(c.efficiency_rating.toLowerCase())) {
-        parts.push(c.efficiency_rating);
+      if (c.efficiency_rating) {
+        const normEff = normalizeForComparison(c.efficiency_rating);
+        if (!normModel.includes(normEff)) {
+          parts.push(c.efficiency_rating);
+        }
       }
       if (c.modular && c.modular !== 'Non' && !lowerModel.includes('modulaire') && !lowerModel.includes('modular')) {
         parts.push(`${c.modular} Modular`);
@@ -91,7 +118,8 @@ export function formatComponentName(c: Partial<Component>, options: { excludeBra
 
     case 'motherboard':
       if (c.chipset) {
-        if (!lowerModel.includes(c.chipset.toLowerCase())) {
+        const normChipset = normalizeForComparison(c.chipset);
+        if (!normModel.includes(normChipset)) {
             parts.push(c.chipset);
         }
       }
