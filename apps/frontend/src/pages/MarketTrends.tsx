@@ -3,7 +3,7 @@
  * Accessible at /market-trends
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingDown, TrendingUp, ShoppingCart, BarChart3, Share2, Check } from 'lucide-react';
 import { getMarketTrends, getComponentById, type MarketTrend } from '../api';
@@ -26,18 +26,66 @@ export function MarketTrends() {
   const [days, setDays] = useState(7);
   const [category, setCategory] = useState('');
   const [trendType, setTrendType] = useState<'drops' | 'hikes'>('drops');
+  const [showOutOfStock, setShowOutOfStock] = useState(false);
   const [added, setAdded] = useState<number | null>(null);
   const [adding, setAdding] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+  const [sortBy, setSortBy] = useState<string>('pct');
 
   useEffect(() => {
     setLoading(true);
     setError(null);
-    getMarketTrends({ days, limit: 40, category: category || undefined, type: trendType })
+    getMarketTrends({
+      days,
+      limit: 40,
+      category: category || undefined,
+      type: trendType,
+      in_stock: showOutOfStock ? 'all' : 'true'
+    })
       .then(r => setTrends(r.trends))
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [days, category, trendType]);
+  }, [days, category, trendType, showOutOfStock]);
+
+  const sortedTrends = useMemo(() => {
+    return [...trends].sort((a, b) => {
+      if (sortBy === 'pct') {
+        return b.change_pct - a.change_pct;
+      }
+      if (sortBy === 'amount') {
+        return b.diff_amount - a.diff_amount;
+      }
+      if (sortBy === 'price_asc') {
+        return a.price_after - b.price_after;
+      }
+      if (sortBy === 'price_desc') {
+        return b.price_after - a.price_after;
+      }
+      return 0;
+    });
+  }, [trends, sortBy]);
+
+  const stats = useMemo(() => {
+    if (trends.length === 0) {
+      return { bestChangePct: 0, bestChangeComponent: null, maxSavings: 0, maxSavingsComponent: null };
+    }
+    const activeTrends = showOutOfStock ? trends : trends.filter(t => t.in_stock);
+    if (activeTrends.length === 0) {
+      return { bestChangePct: 0, bestChangeComponent: null, maxSavings: 0, maxSavingsComponent: null };
+    }
+    const bestPct = Math.max(...activeTrends.map(t => t.change_pct));
+    const bestComp = activeTrends.find(t => t.change_pct === bestPct) || null;
+
+    const bestSavings = Math.max(...activeTrends.map(t => t.diff_amount));
+    const maxSavingsComp = activeTrends.find(t => t.diff_amount === bestSavings) || null;
+
+    return {
+      bestChangePct: bestPct,
+      bestChangeComponent: bestComp,
+      maxSavings: bestSavings,
+      maxSavingsComponent: maxSavingsComp
+    };
+  }, [trends, showOutOfStock]);
 
   async function handleAdd(trend: MarketTrend) {
     setAdding(trend.component_id);
@@ -100,6 +148,44 @@ export function MarketTrends() {
           </button>
         </div>
 
+        {!loading && trends.length > 0 && (
+          <div className={styles.statsRow}>
+            <div className={styles.statCard}>
+              <span className={styles.statLabel}>
+                {trendType === 'drops' ? 'Offres en baisse' : 'Hausses détectées'}
+              </span>
+              <span className={styles.statValue}>
+                {trends.length} {trends.length > 1 ? 'produits' : 'produit'}
+              </span>
+              <span className={styles.statSub}>Actuellement analysés</span>
+            </div>
+
+            <div className={styles.statCard}>
+              <span className={styles.statLabel}>
+                {trendType === 'drops' ? 'Meilleure réduction' : 'Plus forte hausse'}
+              </span>
+              <span className={`${styles.statValue} ${trendType === 'drops' ? styles.statGreen : styles.statRed}`}>
+                {trendType === 'drops' ? '−' : '+'}{stats.bestChangePct}%
+              </span>
+              <span className={styles.statSub} title={stats.bestChangeComponent?.name}>
+                {stats.bestChangeComponent ? `${stats.bestChangeComponent.brand || ''} ${stats.bestChangeComponent.name}` : '—'}
+              </span>
+            </div>
+
+            <div className={styles.statCard}>
+              <span className={styles.statLabel}>
+                {trendType === 'drops' ? 'Économie maximale' : 'Impact maximal'}
+              </span>
+              <span className={styles.statValue}>
+                {formatPrice(stats.maxSavings)}
+              </span>
+              <span className={styles.statSub} title={stats.maxSavingsComponent?.name}>
+                {stats.maxSavingsComponent ? `${stats.maxSavingsComponent.brand || ''} ${stats.maxSavingsComponent.name}` : '—'}
+              </span>
+            </div>
+          </div>
+        )}
+
         <div className={styles.filters}>
           <div className={styles.filterGroup}>
             <label className={styles.filterLabel}>{UI.trends.period}</label>
@@ -129,6 +215,33 @@ export function MarketTrends() {
               ))}
             </select>
           </div>
+
+          <div className={styles.filterGroup}>
+            <label className={styles.filterLabel}>Trier par</label>
+            <select className={styles.catSelect} value={sortBy} onChange={e => setSortBy(e.target.value)}>
+              <option value="pct">
+                {trendType === 'drops' ? 'Remise la plus élevée (%)' : 'Hausse la plus élevée (%)'}
+              </option>
+              <option value="amount">
+                {trendType === 'drops' ? 'Économie la plus élevée (MAD)' : 'Impact le plus élevé (MAD)'}
+              </option>
+              <option value="price_asc">Prix : du moins cher au plus cher</option>
+              <option value="price_desc">Prix : du plus cher au moins cher</option>
+            </select>
+          </div>
+
+          <div className={styles.filterGroup}>
+            <span className={styles.filterLabel}>Stock</span>
+            <label className={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={showOutOfStock}
+                onChange={e => setShowOutOfStock(e.target.checked)}
+                className={styles.checkboxInput}
+              />
+              <span className={styles.checkboxText}>{UI.trends.showOos}</span>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -149,16 +262,16 @@ export function MarketTrends() {
             </div>
           ))}
         </div>
-      ) : trends.length === 0 ? (
+      ) : sortedTrends.length === 0 ? (
         <div className={styles.empty}>
           <BarChart3 size={40} className={styles.emptyIcon} />
           <p>{UI.trends.noResults(days)}</p>
         </div>
       ) : (
         <>
-          <p className={styles.resultCount}>{UI.trends.resultCount(trends.length, days)}</p>
+          <p className={styles.resultCount}>{UI.trends.resultCount(sortedTrends.length, days)}</p>
           <div className={styles.grid}>
-            {trends.map(trend => (
+            {sortedTrends.map(trend => (
               <TrendCard
                 key={trend.component_id}
                 trend={trend}
@@ -185,8 +298,16 @@ function TrendCard({ trend, isAdded, isAdding, onAdd }: { trend: MarketTrend; is
     setTimeout(() => setCopied(false), 2000);
   }
 
+  const isOutOfStock = !trend.in_stock;
+
   return (
-    <div className={`${styles.card} ${isDrop ? styles.cardDrops : styles.cardHikes}`}>
+    <div 
+      className={`
+        ${styles.card} 
+        ${isDrop ? styles.cardDrops : styles.cardHikes}
+        ${isOutOfStock ? styles.cardOos : ''}
+      `}
+    >
       <div className={styles.cardImageWrap}>
         {trend.image_url ? (
           <img src={trend.image_url} alt={trend.name} className={styles.cardImage} referrerPolicy="no-referrer" />
@@ -195,7 +316,7 @@ function TrendCard({ trend, isAdded, isAdding, onAdd }: { trend: MarketTrend; is
             <CategoryIcon category={trend.category as ComponentCategory} size={28} />
           </div>
         )}
-        <div className={isDrop ? styles.dropBadge : styles.hikeBadge}>
+        <div className={isDrop ? (trend.change_pct >= 15 ? styles.hotBadge : styles.dropBadge) : styles.hikeBadge}>
           {isDrop ? <TrendingDown size={11} /> : <TrendingUp size={11} />}
           {isDrop ? '−' : '+'}{trend.change_pct}%
         </div>
@@ -203,10 +324,15 @@ function TrendCard({ trend, isAdded, isAdding, onAdd }: { trend: MarketTrend; is
 
       <div className={styles.cardBody}>
         <div className={styles.cardTop}>
-          {trend.brand && <span className={styles.brand}>{trend.brand}</span>}
-          <span className={styles.catBadge}>
-            <CategoryIcon category={trend.category as ComponentCategory} size={11} />
-            {CATEGORY_LABELS[trend.category as ComponentCategory] ?? trend.category}
+          <div className={styles.cardTopLeft}>
+            {trend.brand && <span className={styles.brand}>{trend.brand}</span>}
+            <span className={styles.catBadge}>
+              <CategoryIcon category={trend.category as ComponentCategory} size={11} />
+              {CATEGORY_LABELS[trend.category as ComponentCategory] ?? trend.category}
+            </span>
+          </div>
+          <span className={`${styles.stockBadge} ${trend.in_stock ? styles.inStock : styles.outStock}`}>
+            {trend.in_stock ? UI.browse.inStock : UI.browse.outOfStock}
           </span>
         </div>
 
@@ -234,9 +360,14 @@ function TrendCard({ trend, isAdded, isAdding, onAdd }: { trend: MarketTrend; is
             {copied ? <Check size={14} /> : <Share2 size={14} />}
           </button>
           <button 
-            className={`${styles.addBtn} ${isAdded ? styles.addBtnDone : ''}`} 
+            className={`
+              ${styles.addBtn} 
+              ${isAdded ? styles.addBtnDone : ''}
+              ${isOutOfStock ? styles.addBtnDisabled : ''}
+            `} 
             onClick={onAdd}
-            disabled={isAdding || isAdded}
+            disabled={isAdding || isAdded || isOutOfStock}
+            title={isOutOfStock ? 'Produit en rupture de stock' : 'Ajouter au configurateur'}
           >
             {isAdded ? '✓' : isAdding ? '...' : <ShoppingCart size={14} />}
           </button>

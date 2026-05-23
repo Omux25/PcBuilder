@@ -418,3 +418,8 @@
   transform: translateY(-2px);
   opacity: 0.9;
 }
+
+.emptySpec {
+  opacity: 0.35;
+  color: var(--text-dim);
+}

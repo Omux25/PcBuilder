@@ -93,12 +93,12 @@
   gap: 0.4rem;
   margin-top: 1rem;
   padding: 0.4rem 0.8rem;
-  background: var(--success-soft);
-  color: #fff;
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--success);
+  border: 1px solid var(--success-tint);
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2);
 }
 
 .brand {

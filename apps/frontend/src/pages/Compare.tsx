@@ -296,10 +296,13 @@ function getSpecValue(component: Component, key: string): unknown {
   return specs?.[key] ?? null;
 }
 
-function formatSpecVal(value: unknown, unit?: string): string {
-  if (value === null || value === undefined || value === '') return '—';
+function formatSpecVal(value: unknown, unit?: string): React.ReactNode {
+  if (value === null || value === undefined || value === '') return <span className={styles.emptySpec}>—</span>;
   if (Array.isArray(value)) return value.join(', ');
-  if (typeof value === 'boolean') return value ? 'Oui' : 'Non';
+  if (typeof value === 'boolean') return value ? 'Oui' : <span className={styles.emptySpec}>Non</span>;
   const str = String(value);
+  if (str === 'None' || str === 'Non' || str === '—') {
+    return <span className={styles.emptySpec}>{str === 'None' ? 'Non' : str}</span>;
+  }
   return unit ? `${str} ${unit}` : str;
 }

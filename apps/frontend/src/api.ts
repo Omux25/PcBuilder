@@ -11,7 +11,13 @@ import type {
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
 const request = createRequest(BASE);
-const client = createClient(BASE);
+
+// For the Hono RPC client, the backend's AppRouter type already includes the '/api' prefix
+// (e.g. '.route("/api/builds", buildsRouter)'). Therefore, the RPC client's base URL must
+// be the domain root (without the '/api' prefix) so that keys like 'client.api.builds'
+// resolve to '[domain root]/api/builds' instead of '[domain root]/api/api/builds'.
+const clientBaseUrl = BASE.endsWith('/api') ? BASE.slice(0, -4) || '/' : BASE;
+const client = createClient(clientBaseUrl);
 
 // ── Components ────────────────────────────────────────────────────────────────
 
@@ -52,17 +58,19 @@ export interface SmartSearchResult {
 export async function smartSearch(params: {
   category: ComponentCategory;
   search?: string;
-  brand?: string;
-  socket?: string;
-  ram_type?: string;
-  vram_gb?: number;
-  chipset?: string;
-  form_factor?: string;
-  interface_type?: string;
-  efficiency_rating?: string;
-  modular?: string;
+  brand?: string | string[];
+  socket?: string | string[];
+  ram_type?: string | string[];
+  vram_gb?: number | number[] | string;
+  chipset?: string | string[];
+  form_factor?: string | string[];
+  interface_type?: string | string[];
+  efficiency_rating?: string | string[];
+  modular?: string | string[];
   core_count?: number;
   sort?: string;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC' | 'asc' | 'desc';
   min_price?: number;
   max_price?: number;
   min_wattage?: number;
@@ -80,17 +88,46 @@ export async function smartSearch(params: {
   const qs = new URLSearchParams();
   qs.set('category', params.category);
   if (params.search) qs.set('search', params.search);
-  if (params.brand) qs.set('brand', params.brand);
-  if (params.socket) qs.set('socket', params.socket);
-  if (params.ram_type) qs.set('ram_type', params.ram_type);
-  if (params.vram_gb != null) qs.set('vram_gb', String(params.vram_gb));
-  if (params.chipset) qs.set('chipset', params.chipset);
-  if (params.form_factor) qs.set('form_factor', params.form_factor);
-  if (params.interface_type) qs.set('interface_type', params.interface_type);
-  if (params.efficiency_rating) qs.set('efficiency_rating', params.efficiency_rating);
-  if (params.modular) qs.set('modular', params.modular);
+  if (params.brand) {
+    const brandStr = Array.isArray(params.brand) ? params.brand.join(',') : params.brand;
+    qs.set('brands', brandStr);
+  }
+  if (params.socket) {
+    const socketStr = Array.isArray(params.socket) ? params.socket.join(',') : params.socket;
+    qs.set('sockets', socketStr);
+  }
+  if (params.ram_type) {
+    const ramTypeStr = Array.isArray(params.ram_type) ? params.ram_type.join(',') : params.ram_type;
+    qs.set('ram_types', ramTypeStr);
+  }
+  if (params.vram_gb != null) {
+    const vramStr = Array.isArray(params.vram_gb) ? params.vram_gb.join(',') : String(params.vram_gb);
+    qs.set('vrams', vramStr);
+  }
+  if (params.chipset) {
+    const chipsetStr = Array.isArray(params.chipset) ? params.chipset.join(',') : params.chipset;
+    qs.set('chipsets', chipsetStr);
+  }
+  if (params.form_factor) {
+    const formFactorStr = Array.isArray(params.form_factor) ? params.form_factor.join(',') : params.form_factor;
+    qs.set('form_factors', formFactorStr);
+  }
+  if (params.interface_type) {
+    const interfaceStr = Array.isArray(params.interface_type) ? params.interface_type.join(',') : params.interface_type;
+    qs.set('interfaces', interfaceStr);
+  }
+  if (params.efficiency_rating) {
+    const efficiencyStr = Array.isArray(params.efficiency_rating) ? params.efficiency_rating.join(',') : params.efficiency_rating;
+    qs.set('efficiencies', efficiencyStr);
+  }
+  if (params.modular) {
+    const modularStr = Array.isArray(params.modular) ? params.modular.join(',') : params.modular;
+    qs.set('modulars', modularStr);
+  }
   if (params.core_count != null) qs.set('core_count', String(params.core_count));
   if (params.sort) qs.set('sort', params.sort);
+  if (params.sortBy) qs.set('sortBy', params.sortBy);
+  if (params.sortOrder) qs.set('sortOrder', params.sortOrder);
   if (params.min_price != null) qs.set('min_price', String(params.min_price));
   if (params.max_price != null) qs.set('max_price', String(params.max_price));
   if (params.min_wattage != null) qs.set('min_wattage', String(params.min_wattage));
@@ -103,8 +140,6 @@ export async function smartSearch(params: {
   if (params.compatible_only) qs.set('compatible_only', 'true');
   if (params.page) qs.set('page', String(params.page));
   if (params.limit) qs.set('limit', String(params.limit));
-
-
 
   return request<SmartSearchResult>(`/components/smart-search?${qs.toString()}`, {
     method: 'POST',
@@ -141,6 +176,11 @@ export async function getComponentsByIds(ids: number[]): Promise<Component[]> {
 /** Fetch a single component by slug. */
 export function getComponentBySlug(slug: string): Promise<Component> {
   return request<Component>(`/components/slug/${slug}`);
+}
+
+/** Fetch a single component by category and identifier (MPN or Slug). */
+export function getComponentByIdentifier(category: string, identifier: string): Promise<Component> {
+  return request<Component>(`/components/mpn/${category}/${identifier}`);
 }
 
 // ── Prices ────────────────────────────────────────────────────────────────────
@@ -201,6 +241,7 @@ export interface MarketTrend {
   diff_amount: number;
   change_pct: number;
   type: 'drops' | 'hikes';
+  in_stock: boolean;
 }
 
 export interface MarketTrendsResult {
@@ -215,12 +256,14 @@ export async function getMarketTrends(params: {
   limit?: number;
   category?: string;
   type?: 'drops' | 'hikes';
+  in_stock?: 'true' | 'false' | 'all';
 } = {}): Promise<MarketTrendsResult> {
   const qs = new URLSearchParams();
   if (params.days) qs.set('days', String(params.days));
   if (params.limit) qs.set('limit', String(params.limit));
   if (params.category) qs.set('category', params.category);
   if (params.type) qs.set('type', params.type);
+  if (params.in_stock) qs.set('in_stock', params.in_stock);
   const query = qs.toString() ? `?${qs.toString()}` : '';
   return request<MarketTrendsResult>(`/market-trends${query}`);
 }

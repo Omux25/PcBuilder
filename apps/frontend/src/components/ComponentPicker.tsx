@@ -93,7 +93,7 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
   }, [buildContextKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
-  const fetchComponents = useCallback((
+  const fetchComponents = useCallback(async (
     searchTerm: string,
     brandFilter: string,
     socketFilter: string,
@@ -101,7 +101,7 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
     pageNum: number,
     compatOnly: boolean,
   ) => {
-    setLoading(true); // always — prevents stale results flashing
+    if (allComponents.length === 0) setLoading(true);
     setError(null);
 
     smartSearch({
@@ -114,8 +114,8 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
       build: buildContext,
       page: pageNum,
       limit: PAGE_SIZE,
+      sort: sort,
     })
-
       .then(({ components: list, total: t }) => {
         setAllComponents(list);
         setTotal(t);
@@ -132,7 +132,7 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [category, buildContextKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [category, buildContextKey, sort]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Client-side sort + price filter ──────────────────────────────────────
   const components = useMemo(() => {
@@ -142,56 +142,41 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
     if (minPrice) list = list.filter(c => c.lowest_price != null && c.lowest_price >= Number(minPrice));
     if (maxPrice) list = list.filter(c => c.lowest_price != null && c.lowest_price <= Number(maxPrice));
 
-    if (sort === 'smart') return list; // already sorted by backend
+    // Compatibility filter override
+    if (compatibleOnly) {
+      list = list.filter(c => c.compatibility !== 'incompatible');
+    }
 
-    return list.sort((a, b) => {
-      // 1. Compatibility priority (Compatible > Unknown > Incompatible)
-      const rank = (c: SmartComponent) => {
-        if (c.compatibility === 'compatible') return 0;
-        if (c.compatibility === 'unknown') return 1;
-        return 2;
-      };
-      const rankA = rank(a);
-      const rankB = rank(b);
-      if (rankA !== rankB) return rankA - rankB;
-
-      // 2. Field-specific sort
-      if (sort === 'price_asc') {
-        if (a.lowest_price == null && b.lowest_price == null) return 0;
-        if (a.lowest_price == null) return 1;
-        if (b.lowest_price == null) return -1;
-        return a.lowest_price - b.lowest_price;
-      }
-      if (sort === 'price_desc') {
-        if (a.lowest_price == null && b.lowest_price == null) return 0;
-        if (a.lowest_price == null) return 1;
-        if (b.lowest_price == null) return -1;
-        return b.lowest_price - a.lowest_price;
-      }
-      if (sort === 'name_asc') return a.name.localeCompare(b.name);
-      return 0;
-    });
-
-  }, [allComponents, sort, minPrice, maxPrice]);
+    return list;
+  }, [allComponents, minPrice, maxPrice, compatibleOnly]);
 
   // ── Debounced search + filter changes ─────────────────────────────────────
   useEffect(() => {
     if (!open) return;
+    
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    
+    // Determine debounce delay: only debounce for search input
+    // Using a ref to track previous search to see if it changed
+    const isSearchChange = search !== prevSearchRef.current;
+    prevSearchRef.current = search;
+    
     debounceRef.current = setTimeout(() => {
-      setPage(1);
-      fetchComponents(search, brand, socket, ramType, 1, compatibleOnly);
-    }, DEBOUNCE_MS);
+      fetchComponents(search, brand, socket, ramType, page, compatibleOnly);
+    }, isSearchChange ? DEBOUNCE_MS : 0);
+    
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [search, brand, socket, ramType, compatibleOnly, open, fetchComponents]);
+  }, [search, brand, socket, ramType, compatibleOnly, open, sort, page, fetchComponents]);
+
+  // Track previous search to only debounce on search changes
+  const prevSearchRef = useRef(search);
 
   // ── Load on open ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (open) {
-      fetchComponents(search, brand, socket, ramType, page, compatibleOnly);
       setTimeout(() => searchRef.current?.focus(), 50);
     }
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // ── Close on outside click / Escape ──────────────────────────────────────
   useEffect(() => {
@@ -219,11 +204,11 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
 
   function clearFilters() {
     setBrand(''); setSocket(''); setRamType(''); setMinPrice(''); setMaxPrice('');
+    setPage(1);
   }
 
   function handlePageChange(newPage: number) {
     setPage(newPage);
-    fetchComponents(search, brand, socket, ramType, newPage, compatibleOnly);
   }
 
   return (
@@ -269,11 +254,17 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
                 className={styles.searchInput}
                 placeholder={UI.picker.searchPlaceholder}
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={e => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
                 aria-label="Rechercher un composant"
               />
               {search && (
-                <button className={styles.clearSearch} onClick={() => setSearch('')}>
+                <button className={styles.clearSearch} onClick={() => {
+                  setSearch('');
+                  setPage(1);
+                }}>
                   <X size={12} />
                 </button>
               )}
@@ -295,7 +286,10 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
               <select
                 className={styles.sortSelect}
                 value={sort}
-                onChange={e => setSort(e.target.value as SortOption)}
+                onChange={e => {
+                  setSort(e.target.value as SortOption);
+                  setPage(1);
+                }}
               >
                 {(Object.entries(SORT_LABELS) as [SortOption, string][]).map(([val, label]) => (
                   <option key={val} value={val}>{label}</option>
@@ -312,7 +306,10 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
                   <input
                     type="checkbox"
                     checked={compatibleOnly}
-                    onChange={e => setCompatibleOnly(e.target.checked)}
+                    onChange={e => {
+                      setCompatibleOnly(e.target.checked);
+                      setPage(1);
+                    }}
                   />
                   Compatible uniquement
                 </label>
@@ -325,7 +322,10 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
                   <select
                     className={styles.filterSelect}
                     value={brand}
-                    onChange={e => setBrand(e.target.value)}
+                    onChange={e => {
+                      setBrand(e.target.value);
+                      setPage(1);
+                    }}
                   >
                     <option value="">{UI.picker.filterAllBrands}</option>
                     {availableBrands.map(b => <option key={b} value={b}>{b}</option>)}
@@ -340,7 +340,10 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
                   <select
                     className={styles.filterSelect}
                     value={socket}
-                    onChange={e => setSocket(e.target.value)}
+                    onChange={e => {
+                      setSocket(e.target.value);
+                      setPage(1);
+                    }}
                   >
                     <option value="">{UI.picker.filterAllSockets}</option>
                     {availableSockets.map(s => <option key={s} value={s}>{s}</option>)}
@@ -355,7 +358,10 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
                   <select
                     className={styles.filterSelect}
                     value={ramType}
-                    onChange={e => setRamType(e.target.value)}
+                    onChange={e => {
+                      setRamType(e.target.value);
+                      setPage(1);
+                    }}
                   >
                     <option value="">{UI.picker.filterAllRam}</option>
                     <option value="DDR4">DDR4</option>
@@ -457,7 +463,7 @@ function ComponentRow({
 }) {
   const { addToCompare, isInCompare, removeFromCompare, compareCategory } = useCompare();
   const isIncompatible = component.compatibility === 'incompatible';
-  const hasPrice = component.lowest_price !== null;
+  const hasPrice = component.lowest_price !== null && component.lowest_price !== undefined && component.lowest_price > 0;
   const isCompared = isInCompare(component.id);
   const isCategoryMismatch = !!compareCategory && compareCategory !== component.category;
 
@@ -495,15 +501,30 @@ function ComponentRow({
           </button>
 
           {hasPrice ? (
-            <span className={styles.price}>
-              {formatPrice(component.lowest_price!)}
-            </span>
+            <div className={styles.priceContainer}>
+              {component.total_offers && component.total_offers > 1 ? (
+                <div className={styles.aggregatedPrice}>
+                  <span className={styles.pricePrefix}>À partir de</span>
+                  <span className={styles.price}>
+                    {formatPrice(component.primary_price ?? component.lowest_price!)}
+                  </span>
+                  <span className={styles.offersCount}>
+                    {component.total_offers} offres
+                  </span>
+                </div>
+              ) : (
+                <span className={styles.price}>
+                  {formatPrice(component.lowest_price!)}
+                </span>
+              )}
+            </div>
           ) : (
             <span className={styles.noPrice}>—</span>
           )}
 
           {hasPrice && (
-            <span className={component.in_stock ? styles.inStock : styles.outStock}>
+            <span className={`${styles.stockBadge} ${component.in_stock ? styles.inStock : styles.outStock}`}>
+              <span className={component.in_stock ? styles.stockDotActive : styles.stockDotInactive} />
               {component.in_stock ? UI.picker.inStock : UI.picker.outOfStock}
             </span>
           )}

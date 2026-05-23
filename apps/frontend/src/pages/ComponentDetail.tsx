@@ -6,7 +6,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { GitCompare, ShoppingCart, ArrowLeft, Share2, Check, TrendingDown, ChevronDown } from 'lucide-react';
-import { getComponentBySlug, getPrices, getPriceHistory, getMarketTrends } from '../api';
+import { getComponentBySlug, getComponentByIdentifier, getPrices, getPriceHistory, getMarketTrends } from '../api';
 import { PriceHistoryChart } from '../components/PriceHistoryChart';
 import type { HistoryPeriod } from '../constants/periods';
 import { PERIOD_DAYS } from '../constants/periods';
@@ -25,7 +25,7 @@ interface Props {
 }
 
 export function ComponentDetail({ onAddToBuild }: Props = {}) {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug, category, identifier } = useParams<{ slug?: string; category?: string; identifier?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { addToCompare, removeFromCompare, isInCompare } = useCompare();
@@ -59,11 +59,15 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
   }
 
   useEffect(() => {
-    if (!slug) return;
+    if (!slug && (!category || !identifier)) return;
     setLoading(true);
     setError(null);
 
-    getComponentBySlug(slug)
+    const fetchPromise = slug 
+      ? getComponentBySlug(slug)
+      : getComponentByIdentifier(category!, identifier!);
+
+    fetchPromise
       .then(async (found) => {
         setComponent(found);
         setComponentId(found.id);
@@ -78,7 +82,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, category, identifier]);
 
   function handleAddToBuild() {
     if (!component) return;

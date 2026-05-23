@@ -168,6 +168,14 @@ export default function App() {
           </main>
         } />
 
+        <Route path="/components/:category/:identifier" element={
+          <main className={styles.main}>
+            <Suspense fallback={<Skeleton height={400} />}>
+              <ComponentDetail onAddToBuild={addToBuild} />
+            </Suspense>
+          </main>
+        } />
+
         <Route path="/components" element={
           <main className={styles.main}>
             <Suspense fallback={<Skeleton height={400} />}>
