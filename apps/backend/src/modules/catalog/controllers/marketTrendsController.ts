@@ -12,6 +12,7 @@ export class MarketTrendsController {
 
     const category = c.req.query('category') || null;
     const type = c.req.query('type') === 'hikes' ? 'hikes' : 'drops';
+    const inStockParam = c.req.query('in_stock') ?? 'true';
 
     const rows = await sql`
       WITH daily_market_min AS (
@@ -65,15 +66,21 @@ export class MarketTrendsController {
         c.brand,
         c.slug,
         c.category,
-        c.image_url
+        c.image_url,
+        COALESCE(ap.in_stock, false) AS in_stock
       FROM filtered_trends ft
       JOIN components c ON c.id = ft.component_id
+      LEFT JOIN (
+        SELECT component_id, bool_or(in_stock) as in_stock
+        FROM prices
+        GROUP BY component_id
+      ) ap ON ap.component_id = ft.component_id
       WHERE c.is_active = true
         AND (${category}::text IS NULL OR c.category = ${category})
-        AND EXISTS (
-          SELECT 1 FROM prices p 
-          WHERE p.component_id = ft.component_id 
-            AND p.in_stock = true
+        AND (
+          ${inStockParam} = 'all' OR
+          (${inStockParam} = 'true' AND COALESCE(ap.in_stock, false) = true) OR
+          (${inStockParam} = 'false' AND COALESCE(ap.in_stock, false) = false)
         )
       ORDER BY 
         CASE WHEN ${type} = 'drops' THEN ft.raw_diff END ASC,
@@ -94,6 +101,7 @@ export class MarketTrendsController {
         diff_amount: Math.abs(Number(r.raw_diff)),
         change_pct: Number(r.change_pct),
         type,
+        in_stock: Boolean(r.in_stock),
       })),
       days,
       type,

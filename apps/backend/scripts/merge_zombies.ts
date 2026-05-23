@@ -48,6 +48,7 @@ async function main() {
       for (let j = i + 1; j < members.length; j++) {
         const c2 = members[j];
         if (processedInGroup.has(c2.id)) continue;
+        if (c1.category !== c2.category) continue; // Category Guardrail
 
         // Compare within same DNA-token group
         const match1 = scoreDnaMatch(

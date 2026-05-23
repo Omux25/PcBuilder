@@ -97,14 +97,15 @@ async function fixPollutions() {
 
       try {
         const rs = c.category === 'ram' ? (specs as ReturnType<typeof extractRamSpecs>) : null;
+        const ss = c.category === 'storage' ? (specs as ReturnType<typeof extractStorageSpecs>) : null;
         const [newComp] = await sql`
           INSERT INTO components (
             name, brand, category, capacity_gb, slug, is_active, image_url, image_urls, 
-            ram_type, frequency_mhz, kit_count, cas_latency, mpn
+            ram_type, frequency_mhz, kit_count, cas_latency, mpn, interface_type
           )
           SELECT 
             ${newCleanName}, brand, category, ${specs.capacity_gb}, ${uniqueSlug}, true, image_url, image_urls, 
-            ${rs?.ram_type ?? null}, ${rs?.frequency_mhz ?? null}, ${rs?.kit_count ?? 1}, ${rs?.cas_latency ?? null}, ${rs?.mpn ?? null}
+            ${rs?.ram_type ?? null}, ${rs?.frequency_mhz ?? null}, ${rs?.kit_count ?? 1}, ${rs?.cas_latency ?? null}, ${rs?.mpn ?? null}, ${ss?.interface_type ?? null}
           FROM components WHERE id = ${c.component_id}
           RETURNING id
         ` as { id: number }[];
@@ -127,6 +128,7 @@ async function fixPollutions() {
     const newOfficialName = cleanName(sampleForTarget.original_name || c.name, c.brand, c.category as any);
     
     const trs = c.category === 'ram' ? (targetSpecs as ReturnType<typeof extractRamSpecs>) : null;
+    const tss = c.category === 'storage' ? (targetSpecs as ReturnType<typeof extractStorageSpecs>) : null;
     await sql`
       UPDATE components 
       SET name = ${newOfficialName}, 
@@ -135,7 +137,8 @@ async function fixPollutions() {
           frequency_mhz = ${trs?.frequency_mhz ?? null},
           kit_count = ${trs?.kit_count ?? 1},
           cas_latency = ${trs?.cas_latency ?? null},
-          mpn = ${trs?.mpn ?? null}
+          mpn = ${trs?.mpn ?? null},
+          interface_type = ${tss?.interface_type ?? null}
       WHERE id = ${c.component_id}
     `;
     console.log(`   Updated original component ID ${c.component_id} to ${targetSpecKey} (${newOfficialName}).`);

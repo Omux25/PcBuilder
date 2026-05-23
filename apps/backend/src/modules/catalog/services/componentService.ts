@@ -4,7 +4,7 @@ import { getUniqueSlug } from './slugService.js';
 import { AppError } from '../../../core/errors/errors.js';
 
 import type { Component, PriceOffer, ComponentInput, ComponentFilters } from '@shared/types';
-import { checkSocketCompatibility, validateCompatibility, type BuildInput } from '../../builds/services/compatibilityService.js';
+import { checkSocketCompatibility, evaluateCompatibility } from '../../builds/services/compatibilityService.js';
 import { getSql } from '../../../core/db/index.js';
 import { getPriceHistory } from './priceHistoryService.js';
 
@@ -46,6 +46,14 @@ export class ComponentService {
     return component;
   }
 
+  async getComponentByIdentifier(category: string, identifier: string): Promise<Component> {
+    const component = await this.repository.getComponentByIdentifier(category, identifier);
+    if (!component) {
+      throw new AppError('COMPONENT_NOT_FOUND', `Component with identifier "${identifier}" in category "${category}" not found`, 404);
+    }
+    return component;
+  }
+
   async getPricesByComponentId(id: number): Promise<PriceOffer[]> {
     return this.priceRepository.getPricesByComponentId(id);
   }
@@ -77,17 +85,33 @@ export class ComponentService {
     core_count?: number;
     inStockOnly?: boolean;
     compatibleOnly?: boolean;
-    vramGb?: number;
+    vramGb?: any;
     page: number;
     limit: number;
     currentBuild: Record<string, any>;
+    sortBy?: string;
+    sortOrder?: string;
   }) {
     const { 
         category, search, brand, socket, ram_type, sort, 
         minPrice, maxPrice, inStockOnly, compatibleOnly, vramGb, page, limit, currentBuild,
         min_wattage, max_wattage, min_capacity_gb, max_capacity_gb, min_frequency_mhz, max_frequency_mhz,
-        chipset, form_factor, interface_type, efficiency_rating, modular, core_count
+        chipset, form_factor, interface_type, efficiency_rating, modular, core_count,
+        sortBy: explicitSortBy, sortOrder: explicitSortOrder
     } = params;
+
+    let sortBy = explicitSortBy;
+    let sortOrder = explicitSortOrder;
+    if (!sortBy && sort && sort !== 'smart') {
+      const parts = sort.split('_');
+      if (parts.length > 1) {
+        const orderPart = parts[parts.length - 1];
+        if (['asc', 'desc', 'ASC', 'DESC'].includes(orderPart)) {
+          sortOrder = parts.pop()!;
+          sortBy = parts.join('_');
+        }
+      }
+    }
 
     const offset = (page - 1) * limit;
 
@@ -129,11 +153,7 @@ export class ComponentService {
         }
     }
 
-    // 2. Fetch filtered and sorted components from DB
-    // NOTE: If compatibleOnly is true, we could theoretically filter in DB,
-    // but full compatibility rules are complex JS. So we fetch more and filter in JS if needed,
-    // OR we just use the hints to filter by socket/ram_type in DB.
-    const { components, total, in_stock_total } = await this.repository.getComponents({
+    const activeFilters: ComponentFilters = {
       category,
       search: search || undefined,
       brand: brand || undefined,
@@ -157,32 +177,29 @@ export class ComponentService {
       core_count,
       in_stock: inStockOnly || undefined,
       is_active: true,
+      sortBy: sortBy || undefined,
+      sortOrder: sortOrder || undefined,
       ...compatHints
-    }, limit, offset);
+    };
+
+    // 2. Fetch filtered and sorted components from DB
+    // NOTE: If compatibleOnly is true, we could theoretically filter in DB,
+    // but full compatibility rules are complex JS. So we fetch more and filter in JS if needed,
+    // OR we just use the hints to filter by socket/ram_type in DB.
+    const { components, total, in_stock_total } = await this.repository.getComponents(activeFilters, limit, offset);
 
     if (components.length === 0) return { components: [], total, in_stock_total: 0, available_brands: [], available_sockets: [], available_vram: [], available_chipsets: [], available_form_factors: [] };
 
     // 3. Enrich with compatibility (Post-DB)
     let enriched = components.map((component) => {
-      const testBuild = { ...currentBuild, [category]: component };
-
       let compatibility: 'compatible' | 'incompatible' | 'unknown' = 'unknown';
       let compatibility_issues: string[] = [];
       const hasOtherComponents = Object.keys(currentBuild).some((k) => k !== category);
 
       if (hasOtherComponents) {
-        try {
-          const result = validateCompatibility(testBuild as BuildInput);
-          const relevantErrors = result.errors.filter((e) => e.components.includes(category));
-          if (relevantErrors.length > 0) {
-            compatibility = 'incompatible';
-            compatibility_issues = relevantErrors.map((e) => e.message);
-          } else {
-            compatibility = 'compatible';
-          }
-        } catch {
-          compatibility = 'unknown';
-        }
+        const { isCompatible, reasons } = evaluateCompatibility(component, currentBuild);
+        compatibility = isCompatible ? 'compatible' : 'incompatible';
+        compatibility_issues = reasons;
       } else {
         compatibility = 'compatible';
       }
@@ -210,21 +227,70 @@ export class ComponentService {
         enriched = enriched.filter(c => c.compatibility !== 'incompatible');
     }
 
-    const availableBrands = [...new Set(components.map(c => c.brand).filter(Boolean) as string[])].sort();
-    const availableSockets = [...new Set(components.map(c => c.socket).filter(Boolean) as string[])].sort();
-    const availableVram = [...new Set(components.map(c => c.vram_gb).filter(Boolean) as number[])].sort((a, b) => a - b);
-    const availableChipsets = [...new Set(components.map(c => c.chipset).filter(Boolean) as string[])].sort();
-    const availableFormFactors = [...new Set(components.map(c => c.form_factor).filter(Boolean) as string[])].sort();
+    if (!sortBy && (sort === 'smart' || !sort)) {
+        enriched.sort((a, b) => {
+            const getTier = (c: any) => {
+                const isGhost = c.lowest_price === null || c.lowest_price === undefined || c.lowest_price <= 0;
+                if (isGhost) return 6;
+
+                const isIncompatible = c.compatibility === 'incompatible';
+                if (isIncompatible) return 5;
+
+                const isIncomplete = c.category === 'gpu' && (
+                    c.vram_gb === null || c.vram_gb === undefined ||
+                    c.chipset === null || c.chipset === undefined ||
+                    c.length_mm === null || c.length_mm === undefined
+                );
+
+                if (c.in_stock) {
+                    return isIncomplete ? 2 : 1;
+                } else {
+                    return isIncomplete ? 4 : 3;
+                }
+            };
+
+            const getPriceVal = (c: any) => {
+                const p = c.lowest_price;
+                return (p === null || p === undefined || p <= 0) ? null : Number(p);
+            };
+
+            const tierA = getTier(a);
+            const tierB = getTier(b);
+
+            if (tierA !== tierB) {
+                return tierA - tierB;
+            }
+
+            const priceA = getPriceVal(a);
+            const priceB = getPriceVal(b);
+
+            if (priceA === null && priceB === null) {
+                return a.id - b.id;
+            }
+            if (priceA === null) return 1;
+            if (priceB === null) return -1;
+
+            if (priceA !== priceB) {
+                return priceA - priceB;
+            }
+
+            return a.id - b.id;
+        });
+    }
+
+
+    // 5. Fetch global facets for the category
+    const facets = await this.repository.getFacets(category, activeFilters);
 
     return {
       components: enriched,
       total,
       in_stock_total: in_stock_total ?? total, 
-      available_brands: availableBrands,
-      available_sockets: availableSockets,
-      available_vram: availableVram,
-      available_chipsets: availableChipsets,
-      available_form_factors: availableFormFactors,
+      available_brands: facets.brands,
+      available_sockets: facets.sockets,
+      available_vram: facets.vrams,
+      available_chipsets: facets.chipsets,
+      available_form_factors: facets.form_factors,
     };
 
   }
@@ -372,6 +438,7 @@ export const getComponents = service.getComponents.bind(service);
 export const getComponentById = service.getComponentById.bind(service);
 export const getComponentsByIds = service.getComponentsByIds.bind(service);
 export const getComponentBySlug = service.getComponentBySlug.bind(service);
+export const getComponentByIdentifier = service.getComponentByIdentifier.bind(service);
 export const getPricesByComponentId = service.getPricesByComponentId.bind(service);
 export const getPriceHistoryApi = service.getPriceHistory.bind(service);
 export const createComponent = service.createComponent.bind(service);
