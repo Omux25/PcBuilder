@@ -243,6 +243,7 @@ export const UI = {
     savings: 'Économie potentielle',
     hike: 'Augmentation',
     viewDetails: 'Fiche produit',
+    showOos: 'Inclure les ruptures de stock',
   },
 
   // ── Presets page ──────────────────────────────────────────────────────────

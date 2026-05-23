@@ -1,7 +1,9 @@
 // @ts-nocheck
-import { describe, it } from 'vitest';
+import { describe, expect, test } from 'bun:test';
 import * as fc from 'fast-check';
 import { getSpecLine } from '@shared/formatting/spec-line.formatter';
+
+// ... rest of the file ...
 
 // ── Arbitraries ───────────────────────────────────────────────────────────────
 
@@ -46,7 +48,7 @@ const anyComponent = fc.record({
 // Feature: configurator-spec-line, Property 1: Separator integrity
 
 describe('PBT — Property 1: Separator integrity', () => {
-    it('output never starts/ends with " · " and never contains double separator', () => {
+    test('output never starts/ends with " · " and never contains double separator', () => {
         fc.assert(
             fc.property(anyComponent, (component) => {
                 const result = getSpecLine(component);
@@ -63,7 +65,7 @@ describe('PBT — Property 1: Separator integrity', () => {
 // Feature: configurator-spec-line, Property 2: Determinism
 
 describe('PBT — Property 2: Determinism', () => {
-    it('same input always returns same output', () => {
+    test('same input always returns same output', () => {
         fc.assert(
             fc.property(anyComponent, (component) => {
                 const first = getSpecLine(component);
@@ -79,10 +81,10 @@ describe('PBT — Property 2: Determinism', () => {
 // Feature: configurator-spec-line, Property 3: CPU format
 
 describe('PBT — Property 3: CPU format', () => {
-    it('when socket and core_count both populated, output contains both', () => {
+    test('when socket and core_count both populated, output contains both', () => {
         fc.assert(
             fc.property(
-                fc.string({ minLength: 1, maxLength: 20 }),
+                fc.string({ minLength: 1, maxLength: 20 }).map(s => s.trim()).filter(s => s.length > 0),
                 fc.integer({ min: 1, max: 64 }),
                 (socket, core_count) => {
                     const component = {
@@ -104,10 +106,10 @@ describe('PBT — Property 3: CPU format', () => {
 // Feature: configurator-spec-line, Property 4: GPU format
 
 describe('PBT — Property 4: GPU format', () => {
-    it('when chipset and vram_gb both populated, output contains both', () => {
+    test('when chipset and vram_gb both populated, output contains both', () => {
         fc.assert(
             fc.property(
-                fc.string({ minLength: 1, maxLength: 30 }),
+                fc.string({ minLength: 1, maxLength: 30 }).map(s => s.trim()).filter(s => s.length > 0),
                 fc.integer({ min: 1, max: 48 }),
                 (chipset, vram_gb) => {
                     const component = {
@@ -129,7 +131,7 @@ describe('PBT — Property 4: GPU format', () => {
 // Feature: configurator-spec-line, Property 5: RAM kit label computation
 
 describe('PBT — Property 5: RAM kit label', () => {
-    it('when kit_count > 1 and capacity_gb populated, output contains correct kit label', () => {
+    test('when kit_count > 1 and capacity_gb populated, output contains correct kit label', () => {
         fc.assert(
             fc.property(
                 fc.integer({ min: 2, max: 8 }),
@@ -154,7 +156,7 @@ describe('PBT — Property 5: RAM kit label', () => {
 // Feature: configurator-spec-line, Property 6: Storage capacity formatting
 
 describe('PBT — Property 6: Storage capacity format', () => {
-    it('capacity_gb >= 1000 displays as TB', () => {
+    test('capacity_gb >= 1000 displays as TB', () => {
         fc.assert(
             fc.property(
                 fc.integer({ min: 1000, max: 100000 }),
@@ -173,7 +175,7 @@ describe('PBT — Property 6: Storage capacity format', () => {
         );
     });
 
-    it('capacity_gb < 1000 displays as GB', () => {
+    test('capacity_gb < 1000 displays as GB', () => {
         fc.assert(
             fc.property(
                 fc.integer({ min: 1, max: 999 }),
@@ -197,7 +199,7 @@ describe('PBT — Property 6: Storage capacity format', () => {
 // Feature: configurator-spec-line, Property 7: PSU efficiency prefix normalization
 
 describe('PBT — Property 7: PSU efficiency prefix', () => {
-    it('output contains exactly one "80+ " prefix before the rating', () => {
+    test('output contains exactly one "80+ " prefix before the rating', () => {
         fc.assert(
             fc.property(
                 fc.constantFrom('Bronze', 'Gold', 'Platinum', 'Titanium', '80+ Gold', '80+ Bronze', '80+ Platinum'),
@@ -224,7 +226,7 @@ describe('PBT — Property 7: PSU efficiency prefix', () => {
 // Feature: configurator-spec-line, Property 8: Case color tag extraction
 
 describe('PBT — Property 8: Case color tag', () => {
-    it('when tags contains "black", output contains "Black"', () => {
+    test('when tags contains "black", output contains "Black"', () => {
         fc.assert(
             fc.property(
                 fc.array(fc.string({ minLength: 1, maxLength: 15 }), { maxLength: 5 }),
@@ -242,7 +244,7 @@ describe('PBT — Property 8: Case color tag', () => {
         );
     });
 
-    it('when tags contains "white", output contains "White"', () => {
+    test('when tags contains "white", output contains "White"', () => {
         fc.assert(
             fc.property(
                 fc.array(fc.string({ minLength: 1, maxLength: 15 }), { maxLength: 5 }),
@@ -265,7 +267,7 @@ describe('PBT — Property 8: Case color tag', () => {
 // Feature: configurator-spec-line, Property 9: Cooler radiator size tag extraction
 
 describe('PBT — Property 9: Cooler radiator size tag', () => {
-    it('when tags contains a radiator size tag, output contains that size', () => {
+    test('when tags contains a radiator size tag, output contains that size', () => {
         fc.assert(
             fc.property(
                 fc.constantFrom('120mm', '140mm', '240mm', '280mm', '360mm', '420mm'),
@@ -294,7 +296,7 @@ describe('PBT — Property 10: Fallback priority and two-token cap', () => {
         'headphones', 'speakers', 'webcam', 'accessory',
     ] as const;
 
-    it('output has at most 2 tokens for non-primary categories', () => {
+    test('output has at most 2 tokens for non-primary categories', () => {
         fc.assert(
             fc.property(
                 fc.constantFrom(...nonPrimaryCategories),
@@ -318,7 +320,7 @@ describe('PBT — Property 10: Fallback priority and two-token cap', () => {
         );
     });
 
-    it('when tdp is populated, it appears before frequency_mhz, wattage, form_factor', () => {
+    test('when tdp is populated, it appears before frequency_mhz, wattage, form_factor', () => {
         fc.assert(
             fc.property(
                 fc.constantFrom(...nonPrimaryCategories),

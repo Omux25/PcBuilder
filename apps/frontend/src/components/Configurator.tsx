@@ -20,6 +20,7 @@ import { calculateBuildTotalPrice } from '@shared/engine/pricing.engine';
 import { encodeBuildToUrl } from '../utils/buildUrl';
 import { getSpecLine } from '@shared/formatting/spec-line.formatter';
 import { formatPrice } from '@shared/formatting/price.formatter';
+import { formatComponentName } from '@shared/formatting/component-name.formatter';
 import styles from './Configurator.module.css';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -234,7 +235,7 @@ export function Configurator() {
                           className={styles.compNameLink}
                           onClick={e => e.stopPropagation()}
                         >
-                          {selected.name}
+                          {formatComponentName(selected, { excludeBrand: true })}
                         </Link>
                         <span className={styles.compSpecs}>{getSpecLine(selected)}</span>
                         

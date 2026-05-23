@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, it } from 'bun:test';
 import { getSpecLine } from '@shared/formatting/spec-line.formatter';
 
 // Minimal Component factory — only set fields relevant to each test
