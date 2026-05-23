@@ -14,26 +14,55 @@
 
 import type { ResolvedSpecs } from '@shared/hardware/services/dynamicEnrichment';
 import * as cheerio from 'cheerio';
+import { logger } from '../engine/utils/logger.js';
 
 // ── HTML Normalizer ───────────────────────────────────────────────────────────
+
+const USER_AGENTS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+];
+
+function delay(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 /**
  * Fetch a URL and use Cheerio to extract a rich, structured text blob from targeted
  * spec/description selectors, bulleted lists, tables, and body content.
  */
 async function fetchCleanedText(url: string): Promise<string | null> {
+  // Add random jitter (500ms - 1500ms) to avoid rapid-fire rate limits
+  await delay(500 + Math.random() * 1000);
+
+  const randomUA = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+  let origin = '';
+  try { origin = new URL(url).origin; } catch {}
+
   const res = await fetch(url, {
     headers: {
-      // Disguise as a real browser to avoid simple bot filters on Moroccan retail sites
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'fr-MA,fr;q=0.9,en;q=0.8',
+      'User-Agent': randomUA,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+      'Accept-Language': 'fr-MA,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Referer': origin ? `${origin}/` : 'https://www.google.com/',
+      'Sec-Ch-Ua': '"Google Chrome";v="124", "Chromium";v="124", "Not-A.Brand";v="99"',
+      'Sec-Ch-Ua-Mobile': '?0',
+      'Sec-Ch-Ua-Platform': '"Windows"',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'cross-site',
+      'Sec-Fetch-User': '?1',
+      'Upgrade-Insecure-Requests': '1',
+      'Cache-Control': 'max-age=0'
     },
-    signal: AbortSignal.timeout(12_000), // 12s — Moroccan CDNs can be slow
+    signal: AbortSignal.timeout(15_000), // 15s — Moroccan CDNs can be slow
   });
 
   if (!res.ok) {
-    console.warn(`[DeepScraper] HTTP ${res.status} for ${url}`);
+    await logger.warn(`[DeepScraper] HTTP ${res.status} for ${url}`);
     return null;
   }
 
@@ -435,7 +464,7 @@ export async function scrapeProductPage(url: string, category: string): Promise<
     const categoryResult = strategy ? strategy(cleaned) : null;
 
     if (!mpn && !ean && !categoryResult) {
-      console.warn(`[DeepScraper] No specs or IDs found for ${url} (${category})`);
+      await logger.warn(`[DeepScraper] No specs or IDs found for ${url} (${category})`);
       return null;
     }
 
@@ -445,11 +474,11 @@ export async function scrapeProductPage(url: string, category: string): Promise<
       ...categoryResult,
     };
 
-    console.log(`[DeepScraper] Extracted data for "${category}" from ${url}:`, finalResult);
+    await logger.info(`[DeepScraper] Extracted data for "${category}" from ${url}: ${JSON.stringify(finalResult)}`);
     return finalResult;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error(`[DeepScraper] Error scraping ${url} (category: ${category}): ${msg}`);
+    await logger.error(`[DeepScraper] Error scraping ${url} (category: ${category}): ${msg}`);
     return null;
   }
 }
