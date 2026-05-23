@@ -74,7 +74,7 @@ export function Scrapers() {
   }, []);
 
   const loadLogs = useCallback(() => {
-    const params: Record<string, string> = { limit: '100' };
+    const params: Record<string, string> = { limit: '1000' };
     if (logLevel) params.level = logLevel;
     return getAdminLogs(params).then((data) => {
       setLogs(data.logs ?? []);
