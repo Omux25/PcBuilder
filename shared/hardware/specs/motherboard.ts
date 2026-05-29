@@ -277,7 +277,7 @@ export function extractMotherboardSpecs(name: string, brand?: string): {
       ram_slots = 2;
     } else if (hasGigabyte && (
       upper.match(/\b(H\d{3}M|A\d{3}M)[ -][KHS2]\b/) ||
-      upper.match(/\b([ABXZH]\d{3}M?)[ -](K|H|S2|S2H|D2H|D3H)\b/)
+      upper.match(/\b([ABXZH]\d{3}M?)[ -](K|H|S2|S2H|D2H)\b/)
     )) {
       ram_slots = 2;
     } else {
