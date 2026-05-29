@@ -74,7 +74,7 @@
   flex-direction: column;
   gap: 1.25rem;
   position: sticky;
-  top: 1rem;
+  top: calc(52px + 1rem);
   z-index: 40;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -631,7 +631,7 @@
   font-size: 0.85rem;
   color: var(--text-2);
   background: var(--bg-surface);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color 0.12s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.12s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.12s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Row card extremes radius and borders */
@@ -861,7 +861,7 @@
   font-weight: 700;
   cursor: pointer;
   box-shadow: var(--shadow-sm);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
   text-decoration: none;
 }
@@ -897,7 +897,7 @@
   border: 1px solid var(--border-2);
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0;
 }
 
@@ -1498,7 +1498,7 @@
 /* Row Hover Left Glow */
 .dataRow:hover td:first-child {
   border-left: 2px solid var(--text-primary) !important;
-  padding-left: calc(1.25rem - 1px) !important;
+  padding-left: calc(0.85rem - 1px) !important;
 }
 
 

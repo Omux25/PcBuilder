@@ -27,6 +27,9 @@ export const CATEGORY_WORDS = new Set([
 export function cleanName(rawName: string, brand: string, category?: string): string {
   let name = decodeHtml(rawName);
 
+  // Strip leading colons, retail slashes, spaces, and category prefixes
+  name = name.replace(/^[\s\-\u2013\|\/:~+]+/, '').trim();
+
   // Strip French Retail prefixes
   name = name
     .replace(/l['\u2019]alimentation\s+/gi, '')
@@ -95,9 +98,23 @@ export function cleanName(rawName: string, brand: string, category?: string): st
     }
   }
 
-  // Remove retail noise + Colors + Technical specs
+  // Remove retail noise + Colors + Technical specs (preserving color/heatsinks where critical)
+  const preserveColor = category && ['case', 'cooling', 'ram', 'fan', 'gpu'].includes(category);
+  const preserveHeatsink = category === 'storage';
+
+  let noiseRegex: RegExp;
+  if (preserveColor && preserveHeatsink) {
+    noiseRegex = /\s*(BOX|Tray|MPK|OEM|Bulk|no\s*fan|WOF|wraith\s*\w+|edition|sans\s*emballage|sans\s*refroidisseur)\s*/gi;
+  } else if (preserveColor) {
+    noiseRegex = /\s*(BOX|Tray|MPK|OEM|Bulk|no\s*fan|WOF|wraith\s*\w+|edition|sans\s*emballage|sans\s*refroidisseur|avec\s*dissipateur(\s*thermique)?)\s*/gi;
+  } else if (preserveHeatsink) {
+    noiseRegex = /\s*(BOX|Tray|MPK|OEM|Bulk|no\s*fan|WOF|wraith\s*\w+|edition|noir|blanc|white|black|silver|argent|grey|gris|sans\s*emballage|sans\s*refroidisseur)\s*/gi;
+  } else {
+    noiseRegex = /\s*(BOX|Tray|MPK|OEM|Bulk|no\s*fan|WOF|wraith\s*\w+|edition|noir|blanc|white|black|silver|argent|grey|gris|sans\s*emballage|sans\s*refroidisseur|avec\s*dissipateur(\s*thermique)?)\s*/gi;
+  }
+
   name = name
-    .replace(/\s*(BOX|Tray|MPK|OEM|Bulk|no\s*fan|WOF|wraith\s*\w+|edition|noir|blanc|white|black|silver|argent|grey|gris|sans\s*emballage|sans\s*refroidisseur|avec\s*dissipateur(\s*thermique)?)\s*/gi, ' ')
+    .replace(noiseRegex, ' ')
     .replace(/\s*\(\s*\)\s*/g, ' ') // Strip empty parentheses
     // French marketing phrases: (jusqu'\u00e0 4.7 GHz)
     .replace(/\s*\(jusqu['\u2019]?\u00e0?\s*[\d.,]+\s*GHz\)\s*/gi, ' ')
@@ -138,6 +155,9 @@ export function cleanName(rawName: string, brand: string, category?: string): st
   if (/\b[ABXZH]\d{3,4}[A-Z]?\b/.test(name)) {
     name = name.replace(/\s+DDR[45]\s*$/i, '');
     name = name.replace(/\s+D[45]\s*$/i, '');
+    // Standardize spacing/dash separator before budget suffixes (K, E, H, A, R, D, HDV, DS3H, S2H, DVS, MHP, UD, CSM, D3HP, D2H, D3H) to always use a dash
+    name = name.replace(/\b([ABXZH]\d{3,4}[M]?)[\s\-]+([KHEARD])\b/gi, '$1-$2');
+    name = name.replace(/\b([ABXZH]\d{3,4}[M]?)[\s\-]+(HDV|DS3H|S2H|DVS|MHP|UD|CSM|D3HP|D2H|D3H)\b/gi, '$1-$2');
   }
 
   // Strip socket suffix leaked from retailer names
@@ -172,6 +192,9 @@ export function cleanName(rawName: string, brand: string, category?: string): st
       'xmp': 'XMP', 'expo': 'EXPO',
       'cpu': 'CPU', 'gpu': 'GPU', 'psu': 'PSU', 'ram': 'RAM',
       'masterliquid': 'MasterLiquid',
+      'hdv': 'HDV', 'ds3h': 'DS3H', 's2h': 'S2H', 'dvs': 'DVS', 'mhp': 'MHP', 'ud': 'UD', 'csm': 'CSM', 'd3hp': 'D3HP',
+      'ii': 'II', 'iii': 'III',
+      'ac': 'AC', 'ax': 'AX', 'hvs': 'HVS', 'mh': 'MH', 'mt': 'MT', 'mx2': 'MX2', 'btf': 'BTF',
     };
 
     name = name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
@@ -191,7 +214,11 @@ export function cleanName(rawName: string, brand: string, category?: string): st
 
     for (const [lower, correct] of Object.entries(ACRONYMS)) {
       if (lower === 'm.2') continue;
-      name = name.replace(new RegExp(`\\b${lower}\\b`, 'gi'), correct);
+      const isMBSuffix = ['hdv', 'ds3h', 's2h', 'dvs', 'mhp', 'ud', 'csm', 'd3hp', 'hvs', 'mh', 'mt', 'mx2', 'btf'].includes(lower);
+      const pattern = isMBSuffix 
+        ? `(\\b|(?<=[0-9m]))${lower}\\b`
+        : `\\b${lower}\\b`;
+      name = name.replace(new RegExp(pattern, 'gi'), correct);
     }
     name = name.replace(/\bM\.2\b/gi, 'M.2');
 
@@ -360,15 +387,25 @@ export function cleanName(rawName: string, brand: string, category?: string): st
 
   // ── MOTHERBOARD-specific normalization ─────────────────────────────────────
   if (category === 'motherboard') {
+    // 0. Strip leading "Cm" prefix leaked from "Carte Mère"
+    name = name.replace(/^cm\b/gi, '').trim();
+
+    // 0b. Strip trailing retail metadata, e.g. "- Micro Intel B760", "- Micro", "- Intel B760"
+    name = name
+      .replace(/\s*[\-\u2013]\s*Micro\s*(Intel|AMD)?\s*([A-Z]\d{3})?\s*$/gi, '')
+      .replace(/\s*[\-\u2013]\s*Micro\s*$/gi, '')
+      .replace(/\s*[\-\u2013]\s*Intel\s*([A-Z]\d{3})?\s*$/gi, '')
+      .replace(/\s*[\-\u2013]\s*AMD\s*([A-Z]\d{3})?\s*$/gi, '')
+      .replace(/\s*[\-\u2013]\s*(ATX|mATX|Micro-?ATX|Mini-?ITX|ITX)\s*$/gi, '');
+
     // 1. Strip redundant tech markers
     name = name
       .replace(/\s*Socket\s*(AM[45]|LGA\s*(1151|1200|1700|1851))\s*/gi, ' ')
       .replace(/\b(LGA\d+|AM[45])\b/gi, ' ')
       .replace(/\b(DDR[45]|D[45])\b/gi, ' ')
-      .replace(/\b(Wi-?Fi\s*\d*[Ee]?|Wlan)\b/gi, ' ')
       .replace(/\b(Bluetooth|BT)\b/gi, ' ')
       .replace(/\b(ATX|mATX|Micro-?ATX|Mini-?ITX|ITX)\b/gi, ' ')
-      .replace(/\b(Usb-?C|Gen\s*\d|Wifi\d[Ee]?)\b/gi, ' ')
+      .replace(/\b(Usb-?C|Gen\s*\d)\b/gi, ' ')
       .replace(/\s+/g, ' ')
       .trim();
 

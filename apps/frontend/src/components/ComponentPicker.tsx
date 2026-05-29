@@ -492,10 +492,9 @@ function ComponentRow({
             onClick={(e) => {
               e.stopPropagation();
               if (isCompared) removeFromCompare(component.id);
-              else if (!isCategoryMismatch) addToCompare(component.id, component.category);
+              else addToCompare(component.id, component.category, formatComponentName(component));
             }}
-            disabled={isCategoryMismatch && !isCompared}
-            title={isCompared ? "Retirer" : isCategoryMismatch ? `Déjà en comparaison: ${CATEGORY_LABELS[compareCategory as ComponentCategory]}` : "Comparer"}
+            title={isCompared ? "Retirer" : isCategoryMismatch ? `Déjà en comparaison: ${CATEGORY_LABELS[compareCategory as ComponentCategory]} (Cliquer pour remplacer)` : "Comparer"}
           >
             <GitCompare size={14} />
           </button>

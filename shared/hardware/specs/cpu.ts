@@ -7,7 +7,7 @@ interface CpuModelStats {
   tdp: number;
 }
 
-const COMMON_CPU_STATS: Record<string, CpuModelStats> = {
+export const COMMON_CPU_STATS: Record<string, CpuModelStats> = {
   // AMD Ryzen 9 (AM5, DDR5)
   '9950X3D': { cores: 16, threads: 32, base: 4.2, boost: 5.7, socket: 'AM5', tdp: 120 },
   '9950X': { cores: 16, threads: 32, base: 4.3, boost: 5.7, socket: 'AM5', tdp: 170 },
@@ -30,6 +30,8 @@ const COMMON_CPU_STATS: Record<string, CpuModelStats> = {
   '9850X3D': { cores: 8, threads: 16, base: 4.7, boost: 5.6, socket: 'AM5', tdp: 120 },
   '9800X3D': { cores: 8, threads: 16, base: 4.7, boost: 5.2, socket: 'AM5', tdp: 120 },
   '9700X': { cores: 8, threads: 16, base: 3.8, boost: 5.5, socket: 'AM5', tdp: 65 },
+  '8700G': { cores: 8, threads: 16, base: 4.2, boost: 5.1, socket: 'AM5', tdp: 65 },
+  '8700F': { cores: 8, threads: 16, base: 4.1, boost: 5.0, socket: 'AM5', tdp: 65 },
   '7800X3D': { cores: 8, threads: 16, base: 4.2, boost: 5.0, socket: 'AM5', tdp: 120 },
   '7745': { cores: 8, threads: 16, base: 3.8, boost: 5.3, socket: 'AM5', tdp: 65 },
   '7700X': { cores: 8, threads: 16, base: 4.5, boost: 5.4, socket: 'AM5', tdp: 105 },
@@ -44,12 +46,15 @@ const COMMON_CPU_STATS: Record<string, CpuModelStats> = {
   '5700': { cores: 8, threads: 16, base: 3.7, boost: 4.6, socket: 'AM4', tdp: 65 },
   '3800X': { cores: 8, threads: 16, base: 3.9, boost: 4.5, socket: 'AM4', tdp: 105 },
   '3700X': { cores: 8, threads: 16, base: 3.6, boost: 4.4, socket: 'AM4', tdp: 65 },
+  '2700': { cores: 8, threads: 16, base: 3.2, boost: 4.1, socket: 'AM4', tdp: 65 },
 
   // AMD Ryzen 5 (AM5, DDR5)
   '9600X': { cores: 6, threads: 12, base: 3.9, boost: 5.4, socket: 'AM5', tdp: 65 },
+  '9600': { cores: 6, threads: 12, base: 3.8, boost: 5.4, socket: 'AM5', tdp: 65 },
   '8600G': { cores: 6, threads: 12, base: 4.3, boost: 5.0, socket: 'AM5', tdp: 65 },
   '8500G': { cores: 6, threads: 12, base: 3.5, boost: 5.0, socket: 'AM5', tdp: 65 },
   '8400F': { cores: 6, threads: 12, base: 4.2, boost: 4.7, socket: 'AM5', tdp: 65 },
+  '7645': { cores: 6, threads: 12, base: 3.8, boost: 5.1, socket: 'AM5', tdp: 65 },
   '7600X3D': { cores: 6, threads: 12, base: 4.1, boost: 4.7, socket: 'AM5', tdp: 65 },
   '7600X': { cores: 6, threads: 12, base: 4.7, boost: 5.3, socket: 'AM5', tdp: 105 },
   '7600': { cores: 6, threads: 12, base: 3.8, boost: 5.1, socket: 'AM5', tdp: 65 },
@@ -94,6 +99,7 @@ const COMMON_CPU_STATS: Record<string, CpuModelStats> = {
   '5975WX': { cores: 32, threads: 64, base: 3.6, boost: 4.5, socket: 'sWRX8', tdp: 280 },
   '3995WX': { cores: 64, threads: 128, base: 2.7, boost: 4.2, socket: 'sWRX8', tdp: 280 },
   '3975WX': { cores: 32, threads: 64, base: 3.5, boost: 4.2, socket: 'sWRX8', tdp: 280 },
+  '3960X': { cores: 24, threads: 48, base: 3.8, boost: 4.5, socket: 'sTRX4', tdp: 280 },
   '3955WX': { cores: 16, threads: 32, base: 3.9, boost: 4.3, socket: 'sWRX8', tdp: 280 },
 
   // Intel Core i9 (LGA1700, DDR4/DDR5)
@@ -110,7 +116,7 @@ const COMMON_CPU_STATS: Record<string, CpuModelStats> = {
   '12900F': { cores: 16, threads: 24, base: 2.4, boost: 5.1, socket: 'LGA1700', tdp: 65 },
   '12900': { cores: 16, threads: 24, base: 2.4, boost: 5.1, socket: 'LGA1700', tdp: 65 },
   
-  // Intel Core i9 (LGA1200)
+  // Intel Core i9 (LGA1200 / LGA1151)
   '11900K': { cores: 8, threads: 16, base: 3.5, boost: 5.3, socket: 'LGA1200', tdp: 125 },
   '11900KF': { cores: 8, threads: 16, base: 3.5, boost: 5.3, socket: 'LGA1200', tdp: 125 },
   '11900F': { cores: 8, threads: 16, base: 2.5, boost: 5.2, socket: 'LGA1200', tdp: 65 },
@@ -119,8 +125,9 @@ const COMMON_CPU_STATS: Record<string, CpuModelStats> = {
   '10900KF': { cores: 10, threads: 20, base: 3.7, boost: 5.3, socket: 'LGA1200', tdp: 125 },
   '10900F': { cores: 10, threads: 20, base: 2.8, boost: 5.2, socket: 'LGA1200', tdp: 65 },
   '10900': { cores: 10, threads: 20, base: 2.8, boost: 5.2, socket: 'LGA1200', tdp: 65 },
+  '9900KF': { cores: 8, threads: 16, base: 3.6, boost: 5.0, socket: 'LGA1151', tdp: 95 },
 
-  // Intel Core i7 (LGA1200)
+  // Intel Core i7 (LGA1200 / LGA1151)
   '11700K': { cores: 8, threads: 16, base: 3.6, boost: 5.0, socket: 'LGA1200', tdp: 125 },
   '11700KF': { cores: 8, threads: 16, base: 3.6, boost: 5.0, socket: 'LGA1200', tdp: 125 },
   '11700F': { cores: 8, threads: 16, base: 2.5, boost: 4.9, socket: 'LGA1200', tdp: 65 },
@@ -129,6 +136,7 @@ const COMMON_CPU_STATS: Record<string, CpuModelStats> = {
   '10700KF': { cores: 8, threads: 16, base: 3.8, boost: 5.1, socket: 'LGA1200', tdp: 125 },
   '10700F': { cores: 8, threads: 16, base: 2.9, boost: 4.8, socket: 'LGA1200', tdp: 65 },
   '10700': { cores: 8, threads: 16, base: 2.9, boost: 4.8, socket: 'LGA1200', tdp: 65 },
+  '9700': { cores: 8, threads: 8, base: 3.0, boost: 4.7, socket: 'LGA1151', tdp: 65 },
 
   // Intel Core i7 (LGA1700, DDR4/DDR5)
   '14700K': { cores: 20, threads: 28, base: 3.4, boost: 5.6, socket: 'LGA1700', tdp: 125 },
@@ -231,19 +239,19 @@ export const extractCpuSpecs = (n: string) => {
     boost_clock_ghz = parseFloat(ghzMatches[0][1]);
   }
 
-  // Model-based lookup for missing stats
+  // Model-based lookup for official stats (takes priority for recognized models to ensure 100% accuracy)
   let thread_count: number | null = null;
   let tdp: number | null = tdpMatch ? parseInt(tdpMatch[1]) : null;
   
   for (const model of SORTED_MODELS) {
     if (upper.includes(model)) {
       const stats = COMMON_CPU_STATS[model];
-      if (!core_count) core_count = stats.cores;
-      if (!thread_count) thread_count = stats.threads;
-      if (!base_clock_ghz && stats.base) base_clock_ghz = stats.base;
-      if (!boost_clock_ghz && stats.boost) boost_clock_ghz = stats.boost;
-      if (!socket && stats.socket) socket = stats.socket;
-      if (!tdp && stats.tdp) tdp = stats.tdp;
+      core_count = stats.cores;
+      thread_count = stats.threads;
+      base_clock_ghz = stats.base ?? null;
+      boost_clock_ghz = stats.boost ?? null;
+      socket = stats.socket;
+      tdp = stats.tdp;
       break;
     }
   }

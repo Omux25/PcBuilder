@@ -75,19 +75,27 @@ export function UnknownSection({ onCategoryAssigned, refreshTrigger }: Props) {
         const idx = listings.findIndex((l) => l.id === listing.id);
         setRowError(listing.id, null);
 
-        // Optimistic: remove from Unknown immediately
-        setListings((prev) => prev.filter((l) => l.id !== listing.id));
+        if (category !== 'standby') {
+            // Optimistic: remove from Unknown immediately
+            setListings((prev) => prev.filter((l) => l.id !== listing.id));
+        }
 
         try {
             await updateUnmatchedCategory(listing.id, category);
-            onCategoryAssigned(listing.id, category);
+            if (category !== 'standby') {
+                onCategoryAssigned(listing.id, category);
+            } else {
+                setListings((prev) => prev.map((l) => l.id === listing.id ? { ...l, manual_category: 'standby' } : l));
+            }
         } catch (err) {
-            // Rollback: re-insert at original position
-            setListings((prev) => {
-                const restored = [...prev];
-                restored.splice(idx, 0, listing);
-                return restored;
-            });
+            if (category !== 'standby') {
+                // Rollback: re-insert at original position
+                setListings((prev) => {
+                    const restored = [...prev];
+                    restored.splice(idx, 0, listing);
+                    return restored;
+                });
+            }
             setRowError(listing.id, getErrorMessage(err));
         }
     }
@@ -226,7 +234,7 @@ export function UnknownSection({ onCategoryAssigned, refreshTrigger }: Props) {
                                     <td style={{ padding: '8px 12px' }}>
                                         {/* Inline category dropdown — immediate save on change */}
                                         <select
-                                            value=""
+                                            value={listing.manual_category || ''}
                                             onChange={(e) => {
                                                 if (e.target.value) handleCategoryChange(listing, e.target.value);
                                             }}
@@ -241,6 +249,7 @@ export function UnknownSection({ onCategoryAssigned, refreshTrigger }: Props) {
                                             }}
                                         >
                                             <option value="">Assigner...</option>
+                                            <option value="standby">Standby (Aucune)</option>
                                             {CATEGORY_ORDER.map((cat) => (
                                                 <option key={cat} value={cat}>
                                                     {CATEGORY_LABELS[cat as ComponentCategory]}

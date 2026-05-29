@@ -92,7 +92,16 @@ export function inferCategory(name: string): Category | null {
     !n.match(/\b(boitier|bo\u00eetier|case|tower|mid.?tower|chassis|riser|mount|holder|kit|monitor|ssd|nvme|m\.2|cooler|cooling|ventirad|helios|strix\s*g[tx]|tuf\s*g|gt301|gt501|gt302|gt502|gr701)\b/)) return 'gpu';
   if (n.match(/\bt\d{3,4}\b/) && n.match(/\bnvidia\b/)) return 'gpu';
 
+  // 2.5. Thermal Paste (High-Confidence Keywords)
+  if (n.match(/\b(kryonaut|conductonaut|hydronaut|aeronaut|duronaut|carbonaut|kryosheet|polartherm|tm30|kryofuze|cryofuze|minus\s*pad|wipes|thermal\s*paste|p\u00e2te\s*thermique|pate\s*thermique|thermal\s*compound|thermal\s*grease|mx-[0-9]|mx[0-9]|liquid\s*metal|m\u00e9tal\s*liquide|liquid\s*compound)\b/) &&
+    !n.match(/\b(cpu|gpu|ram|ssd|nvme|psu|case|boitier|tower|fan)\b/)) return 'thermal_paste';
+
   // 3. Known Models / Series overrides
+  if (n.match(/\b(prism|spectra|frost|shadow)\b/) &&
+      (n.match(/\b(boitier|boîtier|chassis|case|tour|glass)\b/) ||
+       (n.match(/\b(xtrmlab|hybrok|setup\s*game|mars\s*gaming|m\.red|kolink|montech|nox|cougar|aerocool|antec|spirit\s*of\s*gamer)\b/) &&
+        !n.match(/\b(fan|ventilateur|cooler|cooling|refroidissement|ventirad|watercooling|aio|paste|grease|compound)\b/)))) return 'case';
+
   if (n.match(/\b(h210i?|h400i?|h440i?|h500i?|h510i?|h590\b|h700i?|h710i?|h5\s*flow|h6\s*flow|h7\s*flow|h9\s*flow|h5\s*elite|h7\s*elite|h9\s*elite|h3\s*flow|h1\s*v2)\b/)) return 'case';
   if (n.match(/be\s*quiet/) && n.match(/\b(pure\s*base|shadow\s*base|silent\s*base|light\s*base|dark\s*base)\b/)) return 'case';
   if (n.match(/\bcx\d{3}\b/) && n.match(/\bantec\b/)) return 'case';
@@ -153,8 +162,7 @@ export function inferCategory(name: string): Category | null {
   // 8. General Fallbacks
   if (n.match(/\b(f120|f140|mf120|mf140|ll\d{3}|ql\d{3}|fd12|fd14|fk120|sickleflow|sicklefan|tl-c12|tl-c14|af\d{3}|sp\d{3}|rs\d{3}|ar\d{3}|ml\d{3}|rs140|rs120|ar120|ar140|f360|f420|fd14|xlf120|xt120|kunai|p12|p14|fl12r|fl12\b|fl14\b|masterfan|halo|light\s*wings|silent\s*wings|pure\s*wings|shadow\s*wings|f\d{3}p|f\d{3}q|f\d{3}rgb|p\d{2}\s*max|rgb\s*core|twin\s*pack|triple\s*pack|dual\s*pack|lx\d{2,3}|eclipse|astro|mirage|glory|glory\s*1|duo\s*12|t10\b|t20\b|t30\b|vortex|ventilateur\s*rgb|ventilateur\s*argb|ventilateur\s*boitier|shark|cyclon|p7-f12|orbit|rev\s*rgb|sg61|sg62)\b/i)) return 'fan';
   if ((n.match(/\b(ventilateur|fan)\b/i) && n.match(/\b(rgb|argb|pwm|120|120mm|140|140mm)\b/i) && !n.match(/\b(case|boitier|bo\u00eetier|cpu\s*cooler|ventirad|watercooler|aio)\b/i))) return 'fan';
-  if (n.match(/\b(kryonaut|conductonaut|hydronaut|aeronaut|duronaut|carbonaut|kryosheet|polartherm|tm30|kryofuze|cryofuze|minus\s*pad|wipes|thermal\s*paste|p\u00e2te\s*thermique|pate\s*thermique|thermal\s*compound|thermal\s*grease|mx-[0-9]|mx[0-9]|liquid\s*metal|m\u00e9tal\s*liquide|m\u00e9tal\s*liquide|liquid\s*compound)\b/) &&
-    !n.match(/\b(cpu|gpu|ram|ssd|nvme|psu|case|boitier|tower|fan)\b/)) return 'thermal_paste';
+
 
   if (n.match(/\b(o11|o11d|vision|vector|lancool|dynamic|pano|forge|gungnir|sekira|mag\s*pano|mpg\s*gungnir|mag\s*forge|mag\s*shield|m100a|120a|ap201|ap202|gt301|gt302|gt501|gt502|gr701|helios|hyperion|proart\s*pa\d*|tuf\s*gaming\s*gt|a21|a31|mc500|mc51|mc61|mca|mcmesh|mcorb|mc\d{2,3}|talos|aura\s*gc|gamdias|c8|c3|c5|c7|df800|ragn\u00e4r|nightcity|biohazard|tooq|y40|y60|y70|y70\s*touch|corsair\s*air|montech\s*air|pop\s*(air|mini|silent)|define\s*(7|c|mini|r\d)|meshify\s*(2|c)|torrent|north|ridge|terra|mood|morpheus|a3\b|cte\b|cmt\d+|fv150|fv235|mc-ultra|mc-custom|mcultra|qube\s*500|qube\s*540|masterframe|tomahawk\s*atx|tomahawk\s*itx|odyssey\s*x|t350m|465x|airface|blader|hadron|k20|z1|velox|panoglass|airboost|stealth|bolt)\b/) &&
     !n.match(/\b(motherboard|mb|cpu\s*cooler|ventirad|water\s*cooler|liquid|monitor|mouse|keyboard|fan|halo|wing|light\s*wings|wraith|amd\s*wraith|masterair|masterliquid|pure\s*loop|shadow\s*loop|silent\s*loop)\b/)) return 'case';

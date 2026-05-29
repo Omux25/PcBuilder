@@ -1,4 +1,5 @@
 import { UnmatchedRepository } from '../repositories/unmatchedRepository.js';
+import { CurationPersistenceService } from '../../../../core/services/curationPersistenceService.js';
 import type { UnmatchedListingFilter } from '../repositories/unmatchedRepository.js';
 import { runSuggestionPreprocessing } from '../../services/suggestionPreprocessor.js';
 import { logger } from '../../engine/utils/logger.js';
@@ -14,6 +15,7 @@ import { extractCoolingSpecs } from '@shared/hardware/specs/cooling.js';
 import { extractFanSpecs } from '@shared/hardware/specs/fan.js';
 import { extractThermalPasteSpecs } from '@shared/hardware/specs/thermal-paste.js';
 import { extractStorageSpecs } from '@shared/hardware/specs/storage.js';
+import { extractBrand } from '@shared/hardware/brands.js';
 import { AppError } from '../../../../core/errors/errors.js';
 
 export class UnmatchedService {
@@ -44,6 +46,10 @@ export class UnmatchedService {
       throw new AppError('NOT_FOUND', `Unmatched listing ${id} not found`, 404);
     }
 
+    CurationPersistenceService.exportCuratedCatalog().catch(err => {
+      logger.error(`[CURATION] Background export failed on linkListing: ${err.message}`);
+    });
+
     return mappingId;
   }
 
@@ -52,6 +58,9 @@ export class UnmatchedService {
     if (dismissed === 0) {
       throw new AppError('NOT_FOUND', `Unmatched listing ${id} not found`, 404);
     }
+    CurationPersistenceService.exportCuratedCatalog().catch(err => {
+      logger.error(`[CURATION] Background export failed on dismissListing: ${err.message}`);
+    });
     return true;
   }
 
@@ -61,6 +70,167 @@ export class UnmatchedService {
       throw new AppError('NOT_FOUND', `Unmatched listing ${id} not found`, 404);
     }
     return true;
+  }
+
+  async bulkUpdateCategory(ids: number[], category: string | null) {
+    const count = await this.repository.bulkUpdateManualCategory(ids, category);
+    if (count > 0) {
+      await runSuggestionPreprocessing(true);
+    }
+    CurationPersistenceService.exportCuratedCatalog().catch(err => {
+      logger.error(`[CURATION] Background export failed on bulkUpdateCategory: ${err.message}`);
+    });
+    return count;
+  }
+
+  async bulkConfirmAllWithCategories() {
+    const sql = getSql();
+    // 1. Fetch all pending listings with suggested categories
+    const listings = await this.repository.getPendingWithCategory();
+    if (listings.length === 0) {
+      return { linked_listings: 0, created_components: 0, created_listings: 0 };
+    }
+
+    // 2. Group into:
+    //    - existingToLink: grouped by existing_component_id -> list of listing_ids
+    //    - newToCreate: grouped by canonical_name (lower case) + category -> list of listings
+    const existingToLink = new Map<number, number[]>();
+    const newToCreate = new Map<string, typeof listings>();
+
+    for (const listing of listings) {
+      if (listing.existing_component_id) {
+        const list = existingToLink.get(listing.existing_component_id) || [];
+        list.push(listing.listing_id);
+        existingToLink.set(listing.existing_component_id, list);
+      } else {
+        const key = `${listing.canonical_name.trim().toLowerCase()}|${listing.category.trim().toLowerCase()}`;
+        const list = newToCreate.get(key) || [];
+        list.push(listing);
+        newToCreate.set(key, list);
+      }
+    }
+
+    let linked_listings = 0;
+    let created_components = 0;
+    let created_listings = 0;
+
+    await sql.begin(async (tx) => {
+      // 3. Process links to existing components
+      for (const [compId, listingIds] of existingToLink) {
+        await this.repository.linkListingsToComponent(tx, listingIds, compId);
+        linked_listings += listingIds.length;
+      }
+
+      // 4. Process new component creations
+      for (const [, groupListings] of newToCreate) {
+        const sample = groupListings[0];
+        const canonicalName = sample.canonical_name.trim();
+        const brandVal = sample.brand?.trim() ?? null;
+        const category = sample.category;
+
+        // Check if component already exists in DB to prevent duplicates in edge cases
+        const duplicates = await this.repository.findDuplicateComponent(canonicalName, category, brandVal);
+        let compId: number;
+
+        if (duplicates.length > 0) {
+          compId = duplicates[0].id;
+        } else {
+          // Create new component
+          const slug = await getUniqueSlug(brandVal, canonicalName);
+          const s = this.enrichSpecs(category, canonicalName, sample.specs_hint ?? {});
+
+          let specsPayload: Record<string, any> | null = null;
+          if (category === 'gpu') {
+            specsPayload = {
+              chipset: s.chipset ?? null,
+              vram_gb: s.vram_gb ?? null,
+              tdp: s.tdp ?? null,
+              length_mm: s.length_mm ?? null,
+            };
+          } else if (category === 'motherboard') {
+            specsPayload = {
+              socket: s.socket ?? null,
+              supported_ram_types: s.supported_ram_types ?? null,
+              max_ram_frequency: s.max_ram_frequency ?? null,
+              form_factor: s.form_factor ?? null,
+              ram_slots: s.ram_slots ?? null,
+            };
+          }
+
+          const inserted = (await tx`
+            INSERT INTO components (
+              slug, name, brand, category,
+              socket, supported_ram_types, max_ram_frequency,
+              ram_type, frequency_mhz, kit_count, cas_latency,
+              capacity_gb, vram_gb, core_count, thread_count,
+              length_mm, max_gpu_length_mm,
+              supported_motherboards, max_cooler_height_mm,
+              form_factor, height_mm,
+              wattage, tdp,
+              ram_slots, m2_slots, sata_ports,
+              size_mm, airflow_cfm, noise_db, rgb, pack_size,
+              weight_grams, thermal_conductivity, paste_type,
+              tags,
+              chipset,
+              specs,
+              is_active
+            ) VALUES (
+              ${slug}, ${canonicalName}, ${brandVal}, ${category},
+              ${(s.socket) ?? null},
+              ${(s.supported_ram_types && s.supported_ram_types.length > 0) ? `{${s.supported_ram_types.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}::text[],
+              ${(s.max_ram_frequency) ?? null},
+              ${(s.ram_type) ?? null},
+              ${(s.frequency_mhz) ?? null},
+              ${(s.kit_count) ?? 1},
+              ${(s.cas_latency) ?? null},
+              ${(s.capacity_gb) ?? null},
+              ${(s.vram_gb) ?? null},
+              ${(s.core_count) ?? null},
+              ${(s.thread_count) ?? null},
+              ${(s.length_mm) ?? null},
+              ${(s.max_gpu_length_mm) ?? null},
+              ${(s.supported_motherboards && s.supported_motherboards.length > 0) ? `{${s.supported_motherboards.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}::text[],
+              ${(s.max_cooler_height_mm) ?? null},
+              ${(s.form_factor) ?? null},
+              ${(s.height_mm) ?? null},
+              ${(s.wattage) ?? null},
+              ${(s.tdp) ?? null},
+              ${(s.ram_slots) ?? null},
+              ${(s.m2_slots) ?? null},
+              ${(s.sata_ports) ?? null},
+              ${(s.size_mm) ?? null},
+              ${(s.airflow_cfm) ?? null},
+              ${(s.noise_db) ?? null},
+              ${(s.rgb) ?? null},
+              ${(s.pack_size) ?? null},
+              ${(s.weight_grams) ?? null},
+              ${(s.thermal_conductivity) ?? null},
+              ${(s.paste_type) ?? null},
+              ${(s.tags && s.tags.length > 0) ? `{${s.tags.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}::text[],
+              ${(s.chipset) ?? null},
+              ${specsPayload ? JSON.stringify(specsPayload) : null},
+              true
+            )
+            RETURNING id
+          `) as { id: number }[];
+
+          compId = inserted[0].id;
+          created_components++;
+        }
+
+        const listingIds = groupListings.map(l => l.listing_id);
+        await this.repository.linkListingsToComponent(tx, listingIds, compId);
+        created_listings += listingIds.length;
+      }
+    });
+
+    CurationPersistenceService.exportCuratedCatalog().catch(err => {
+      logger.error(`[CURATION] Background export failed on bulkConfirmAllWithCategories: ${err.message}`);
+    });
+
+    runSuggestionPreprocessing().catch(() => {});
+
+    return { linked_listings, created_components, created_listings };
   }
 
   async getCategorySummary() {
@@ -152,7 +322,11 @@ export class UnmatchedService {
   }
 
   async bulkDismiss(listingIds: number[]) {
-    return this.repository.bulkDismiss(listingIds);
+    const count = await this.repository.bulkDismiss(listingIds);
+    CurationPersistenceService.exportCuratedCatalog().catch(err => {
+      logger.error(`[CURATION] Background export failed on bulkDismiss: ${err.message}`);
+    });
+    return count;
   }
 
   async bulkApprove(canonicalNames: string[]) {
@@ -183,6 +357,10 @@ export class UnmatchedService {
         linked_listings++;
       }
       approved_groups = new Set(groups.map((g) => g.canonical_name)).size;
+    });
+
+    CurationPersistenceService.exportCuratedCatalog().catch(err => {
+      logger.error(`[CURATION] Background export failed on bulkApprove: ${err.message}`);
     });
 
     return { approved_groups, linked_listings, skipped_groups };
@@ -307,6 +485,10 @@ export class UnmatchedService {
       await this.repository.linkListingsToComponent(tx, listing_ids, newComponentId);
     });
 
+    CurationPersistenceService.exportCuratedCatalog().catch(err => {
+      logger.error(`[CURATION] Background export failed on createAndLink: ${err.message}`);
+    });
+
     runSuggestionPreprocessing().catch(() => {});
     return { component_id: newComponentId!, component_slug: slug, linked_count: listings.length };
   }
@@ -336,7 +518,8 @@ export class UnmatchedService {
         if (!s.chipset && extracted.chipset) s.chipset = extracted.chipset;
       }
     } else if (category === 'motherboard') {
-      const extracted = extractMotherboardSpecs(name);
+      const brand = extractBrand(name) || undefined;
+      const extracted = extractMotherboardSpecs(name, brand);
       if (extracted) {
         if (!s.socket && extracted.socket) s.socket = extracted.socket;
         if (!s.supported_ram_types && extracted.supported_ram_types) s.supported_ram_types = extracted.supported_ram_types;

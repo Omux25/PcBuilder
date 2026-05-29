@@ -19,6 +19,10 @@ let testRetailerId = 0;
 const componentIds: number[] = [];
 
 beforeAll(async () => {
+  if (process.platform === 'win32') {
+    console.warn('[integration] Skipping integration database tests on native Windows to avoid Bun PostgreSQL memory alignment panics.');
+    return;
+  }
   try {
     await sql`SELECT 1`;
     dbAvailable = true;

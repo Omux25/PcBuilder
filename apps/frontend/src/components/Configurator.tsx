@@ -10,6 +10,7 @@ import {
   Share2,
   Check,
   Tag,
+  Printer,
 } from 'lucide-react';
 import { InlinePrices } from './InlinePrices';
 import { CategoryIcon } from './CategoryIcon';
@@ -21,6 +22,7 @@ import { encodeBuildToUrl } from '../utils/buildUrl';
 import { getSpecLine } from '@shared/formatting/spec-line.formatter';
 import { formatPrice } from '@shared/formatting/price.formatter';
 import { formatComponentName } from '@shared/formatting/component-name.formatter';
+import { LinkEngine } from '@shared/link-engine';
 import styles from './Configurator.module.css';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -60,10 +62,13 @@ export function Configurator() {
 
   const hasComponents = Object.keys(build).length > 0;
 
-  function handleShare() {
+  const shareUrl = (() => {
     const params = encodeBuildToUrl(build);
-    const url = `${window.location.origin}${window.location.pathname}?${params}`;
-    navigator.clipboard.writeText(url).then(() => {
+    return `${window.location.origin}${window.location.pathname}?${params}`;
+  })();
+
+  function handleShare() {
+    navigator.clipboard.writeText(shareUrl).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -221,7 +226,7 @@ export function Configurator() {
                     <div className={styles.filledState}>
                       {selected.image_url ? (
                         <Link
-                          to={`/product/${selected.slug}`}
+                          to={LinkEngine.getProductUrl(selected)}
                           className={styles.compThumbLink}
                           onClick={e => e.stopPropagation()}
                         >
@@ -231,7 +236,7 @@ export function Configurator() {
                       <div className={styles.compInfo}>
                         <span className={styles.compBrand}>{selected.brand}</span>
                         <Link
-                          to={`/product/${selected.slug}`}
+                          to={LinkEngine.getProductUrl(selected)}
                           className={styles.compNameLink}
                           onClick={e => e.stopPropagation()}
                         >
@@ -303,6 +308,13 @@ export function Configurator() {
               >
                 {copied ? <><Check size={18} /> Copié !</> : <><Share2 size={18} /> Partager</>}
               </button>
+              
+              <button
+                className={styles.exportBtn}
+                onClick={() => window.print()}
+              >
+                <Printer size={16} /> Exporter PDF
+              </button>
               {confirmReset ? (
                 <div className={styles.resetConfirm}>
                   <button className={styles.resetConfirmYes} onClick={() => { resetBuild(); setConfirmReset(false); }}>
@@ -346,6 +358,99 @@ export function Configurator() {
           ))}
         </div>
       )}
+
+      {/* ── Print Proposal Sheet (Only visible when printing) ── */}
+      <div className={styles.printOnlyContainer}>
+        <div className={styles.printHeader}>
+          <div className={styles.printHeaderLeft}>
+            <h1 className={styles.printBrandName}>PC BUILDER MAROC</h1>
+            <p className={styles.printBrandTagline}>Comparateur de prix &amp; Vérificateur de compatibilité</p>
+          </div>
+          <div className={styles.printHeaderRight}>
+            <div className={styles.printDocTitle}>PROPOSITION DE CONFIGURATION</div>
+            <div className={styles.printDate}>Date : {new Date().toLocaleDateString('fr-MA', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+          </div>
+        </div>
+
+        <table className={styles.printTable}>
+          <thead>
+            <tr>
+              <th style={{ width: '20%', textAlign: 'left' }}>Composant</th>
+              <th style={{ width: '40%', textAlign: 'left' }}>Modèle</th>
+              <th style={{ width: '25%', textAlign: 'left' }}>Détails</th>
+              <th style={{ width: '15%', textAlign: 'right' }}>Meilleur Prix</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(build)
+              .filter(([_, comp]) => !!comp)
+              .map(([slotKey, comp]) => {
+                if (!comp) return null;
+                return (
+                  <tr key={slotKey} className={styles.printTableRow}>
+                    <td className={styles.printTableCat}>{slotLabel(slotKey)}</td>
+                    <td className={styles.printTableName}>
+                      <strong>{comp.brand}</strong> {formatComponentName(comp, { excludeBrand: true })}
+                    </td>
+                    <td className={styles.printTableSpecs}>{getSpecLine(comp)}</td>
+                    <td className={styles.printTablePrice}>
+                      {comp.lowest_price ? `${formatPrice(comp.lowest_price)}` : '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+          </tbody>
+        </table>
+
+        <div className={styles.printSummaryBlock}>
+          <div className={styles.printSummaryLeft}>
+            <h3 className={styles.printSummaryTitle}>Diagnostic Technique</h3>
+            <div className={styles.printDiagList}>
+              <div className={styles.printDiagItem}>
+                <span className={styles.printDiagIcon}>✓</span>
+                <span>Consommation estimée : <strong>{tdp}W</strong></span>
+              </div>
+              <div className={styles.printDiagItem}>
+                <span className={styles.printDiagIcon}>✓</span>
+                <span>Alimentation conseillée : <strong>{compat?.recommended_psu_wattage || '—'}W</strong></span>
+              </div>
+              <div className={styles.printDiagItem}>
+                <span className={styles.printDiagIcon}>✓</span>
+                <span>
+                  {compat?.compatible 
+                    ? 'Tous les composants sélectionnés sont compatibles.' 
+                    : 'Présence de réserves techniques (vérifier les détails sur le site).'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className={styles.printSummaryRight}>
+            <span className={styles.printTotalLabel}>TOTAL ESTIMÉ</span>
+            <span className={styles.printTotalPrice}>{formatPrice(totalPrice)}</span>
+            <span className={styles.printTotalPriceSub}>*Tarifs indicatifs calculés chez nos marchands partenaires</span>
+          </div>
+        </div>
+
+        <div className={styles.printAdBox}>
+          <div className={styles.printAdText}>
+            <h3 className={styles.printAdTitle}>Configurez votre PC idéal sur pcbuilder.ma</h3>
+            <p className={styles.printAdDesc}>
+              Créez votre setup sur mesure, comparez les prix en temps réel parmi les plus grandes boutiques d'informatique au Maroc (Maroc Gaming, Ultra Gaming, etc.) et optimisez votre investissement en toute simplicité.
+            </p>
+            <a href={shareUrl} target="_blank" rel="noopener noreferrer" className={styles.printAdLink}>
+              {shareUrl}
+            </a>
+          </div>
+          <div className={styles.printAdQr}>
+            <img 
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(shareUrl)}&color=0c0c0e&bgcolor=ffffff`}
+              alt="QR Code de la configuration"
+              className={styles.printQrImage}
+            />
+            <span className={styles.printQrText}>Scanner pour voir en ligne</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -16,7 +16,7 @@ import { extractStorageSpecs } from '@shared/hardware/specs/storage';
 
 async function refreshMetadata() {
   const sql = getSql();
-  const components = (await sql`SELECT id, name, category, brand, supported_motherboards, max_gpu_length_mm, max_cooler_height_mm, wattage, capacity_gb, interface_type, ram_type, frequency_mhz, kit_count, cas_latency, mpn, efficiency_rating, modular FROM components`) as {
+  const components = (await sql`SELECT id, name, category, brand, supported_motherboards, max_gpu_length_mm, max_cooler_height_mm, wattage, capacity_gb, interface_type, ram_type, frequency_mhz, kit_count, cas_latency, mpn, efficiency_rating, modular, tdp, height_mm, tags FROM components`) as {
     id: number;
     name: string;
     category: string;
@@ -34,6 +34,9 @@ async function refreshMetadata() {
     mpn: string | null;
     efficiency_rating: string | null;
     modular: string | null;
+    tdp: number | null;
+    height_mm: number | null;
+    tags: string[] | null;
   }[];
 
   let brandUpdates = 0;
@@ -84,9 +87,16 @@ async function refreshMetadata() {
       if (ex.mpn && !c.mpn) updates.mpn = ex.mpn;
 
     } else if (c.category === 'cooling') {
-      // cooling extractor is minimal — skip to avoid bad data
-      skipped++;
-      continue;
+      const ex = extractCoolingSpecs(c.name, c.brand ?? undefined);
+      if (ex.tdp && !c.tdp) updates.tdp = ex.tdp;
+      if (ex.height_mm && !c.height_mm) updates.height_mm = ex.height_mm;
+      if (ex.tags && ex.tags.length > 0) {
+        const existingTags = c.tags || [];
+        const newTags = [...new Set([...existingTags, ...ex.tags])];
+        if (newTags.length > existingTags.length) {
+          updates.tags = newTags;
+        }
+      }
     } else {
       skipped++;
       continue;
@@ -100,6 +110,9 @@ async function refreshMetadata() {
           // Use raw Postgres array literal to avoid double-quoting
           const pgArray = '{' + (val as string[]).join(',') + '}';
           await sql`UPDATE components SET supported_motherboards = ${pgArray}::text[] WHERE id = ${c.id}`;
+        } else if (col === 'tags' && Array.isArray(val)) {
+          const pgArray = '{' + (val as string[]).join(',') + '}';
+          await sql`UPDATE components SET tags = ${pgArray}::text[] WHERE id = ${c.id}`;
         } else {
           await sql`UPDATE components SET ${sql(col)} = ${val as string | number | null} WHERE id = ${c.id}`;
         }

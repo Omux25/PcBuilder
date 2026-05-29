@@ -112,14 +112,21 @@ const SORTED_CHIPSETS = Object.keys(CHIPSET_MAP).sort((a, b) => b.length - a.len
  *
  * Returns null only if no chipset can be identified at all.
  */
-export function extractMotherboardSpecs(name: string): {
+export function extractMotherboardSpecs(name: string, brand?: string): {
   socket: string | null;
+  chipset: string | null;
   supported_ram_types: string[];
   max_ram_frequency: number;
   form_factor: string;
   ram_slots: number;
 } | null {
   const upper = name.toUpperCase();
+  const bUpper = brand ? brand.toUpperCase() : '';
+  const hasAsus = upper.includes('ASUS') || bUpper.includes('ASUS');
+  const hasGigabyte = upper.includes('GIGABYTE') || bUpper.includes('GIGABYTE');
+  const hasMsi = upper.includes('MSI') || bUpper.includes('MSI');
+  const hasAsrock = upper.includes('ASROCK') || bUpper.includes('ASROCK');
+  const hasBiostar = upper.includes('BIOSTAR') || bUpper.includes('BIOSTAR');
 
   // ── Layer 1: explicit DDR suffix anywhere in the name ────────────────────
   const hasExplicitDdr3 = /\bDDR3\b/.test(upper) || /\bD3\b/.test(upper);
@@ -134,12 +141,23 @@ export function extractMotherboardSpecs(name: string): {
 
   let rawChipset = chipsetMatch ? chipsetMatch[1] : null;
   let info: ChipsetInfo | undefined = undefined;
+  let resolvedChipset: string | null = null;
 
   if (rawChipset) {
-    info =
-      CHIPSET_MAP[rawChipset] ??
-      CHIPSET_MAP[rawChipset.replace(/[EIM]$/, '')] ??
-      CHIPSET_MAP[rawChipset.replace(/[EIMS]{1,2}$/, '')];
+    const directKey = rawChipset;
+    const cleanedKey1 = rawChipset.replace(/[EIM]$/, '');
+    const cleanedKey2 = rawChipset.replace(/[EIMS]{1,2}$/, '');
+    
+    if (CHIPSET_MAP[directKey]) {
+      info = CHIPSET_MAP[directKey];
+      resolvedChipset = directKey;
+    } else if (CHIPSET_MAP[cleanedKey1]) {
+      info = CHIPSET_MAP[cleanedKey1];
+      resolvedChipset = cleanedKey1;
+    } else if (CHIPSET_MAP[cleanedKey2]) {
+      info = CHIPSET_MAP[cleanedKey2];
+      resolvedChipset = cleanedKey2;
+    }
   }
 
   // Fallback: If no chipset was found with word-boundary regex, do a substring lookup (longest first)
@@ -148,6 +166,7 @@ export function extractMotherboardSpecs(name: string): {
       if (upper.includes(cs)) {
         rawChipset = cs;
         info = CHIPSET_MAP[cs];
+        resolvedChipset = cs;
         break;
       }
     }
@@ -156,26 +175,26 @@ export function extractMotherboardSpecs(name: string): {
   // If still not found, check named series fallbacks or Biostar
   if (!info) {
     // Named series fallback: ROG MAXIMUS XII/XIII/XIV/XV/XVI → Z490/Z590/Z690/Z790/Z890, Zenith II → TRX40
-    if (/MAXIMUS\s+XII\b/.test(upper)) return extractMotherboardSpecs('Z490');
-    if (/MAXIMUS\s+XIII\b/.test(upper)) return extractMotherboardSpecs('Z590');
-    if (/MAXIMUS\s+XIV\b/.test(upper)) return extractMotherboardSpecs('Z690');
-    if (/MAXIMUS\s+XV\b/.test(upper)) return extractMotherboardSpecs('Z790');
-    if (/MAXIMUS\s+XVI\b/.test(upper)) return extractMotherboardSpecs('Z890');
-    if (/ZENITH\s+II\b/.test(upper)) return extractMotherboardSpecs('TRX40');
-    if (/ZENITH\s+III\b/.test(upper)) return extractMotherboardSpecs('TRX50');
-    if (/CROSSHAIR\s+VIII\b/.test(upper) || /CROSSHAIR\s+Viii\b/.test(upper)) return extractMotherboardSpecs('X570');
+    if (/MAXIMUS\s+XII\b/.test(upper)) return extractMotherboardSpecs('Z490', brand);
+    if (/MAXIMUS\s+XIII\b/.test(upper)) return extractMotherboardSpecs('Z590', brand);
+    if (/MAXIMUS\s+XIV\b/.test(upper)) return extractMotherboardSpecs('Z690', brand);
+    if (/MAXIMUS\s+XV\b/.test(upper)) return extractMotherboardSpecs('Z790', brand);
+    if (/MAXIMUS\s+XVI\b/.test(upper)) return extractMotherboardSpecs('Z890', brand);
+    if (/ZENITH\s+II\b/.test(upper)) return extractMotherboardSpecs('TRX40', brand);
+    if (/ZENITH\s+III\b/.test(upper)) return extractMotherboardSpecs('TRX50', brand);
+    if (/CROSSHAIR\s+VIII\b/.test(upper) || /CROSSHAIR\s+Viii\b/.test(upper)) return extractMotherboardSpecs('X570', brand);
     // Biostar boards
     const biostarMatch = upper.match(/\b([ABXZH]\d{3})/);
     if (biostarMatch && biostarMatch[1] !== upper && CHIPSET_MAP[biostarMatch[1]]) {
-      return extractMotherboardSpecs(biostarMatch[1]);
+      return extractMotherboardSpecs(biostarMatch[1], brand);
     }
     // ASUS Pro WS WRX80E / WRX90E
-    if (/WRX80/.test(upper)) return extractMotherboardSpecs('WRX80');
-    if (/WRX90/.test(upper)) return extractMotherboardSpecs('WRX90');
+    if (/WRX80/.test(upper)) return extractMotherboardSpecs('WRX80', brand);
+    if (/WRX90/.test(upper)) return extractMotherboardSpecs('WRX90', brand);
     return null;
   }
 
-  // \u2500\u2500 Resolve DDR type \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // ── Resolve DDR type ──────────────────────────────────────────────────────
   let ramTypes: string[];
   let maxMhz: number;
 
@@ -189,13 +208,22 @@ export function extractMotherboardSpecs(name: string): {
     ramTypes = ['DDR5'];
     maxMhz = info.defaultMaxMhz;
   } else {
-    // BOTH \u2014 use explicit suffix if present, otherwise default to DDR5
+    // BOTH — use explicit suffix if present, otherwise default to chipset-based policy
     if (hasExplicitDdr4) {
       ramTypes = ['DDR4'];
       maxMhz = info.defaultMaxMhz;
-    } else {
-      // DDR5 variant
+    } else if (hasExplicitDdr5) {
       ramTypes = ['DDR5'];
+      maxMhz = info.defaultMaxMhz;
+    } else {
+      // Default fallback when there is no explicit suffix:
+      // For older/budget LGA1700 chipsets (H610, B660), default to DDR4 (by far the most common).
+      // For newer/mainstream LGA1700 chipsets (B760, H670, H770, Z690, Z790), default to DDR5.
+      if (resolvedChipset && (resolvedChipset.startsWith('H610') || resolvedChipset.startsWith('B660'))) {
+        ramTypes = ['DDR4'];
+      } else {
+        ramTypes = ['DDR5'];
+      }
       maxMhz = info.defaultMaxMhz;
     }
   }
@@ -208,7 +236,7 @@ export function extractMotherboardSpecs(name: string): {
     ramTypes = ['DDR3'];
   }
 
-  // \u2500\u2500 Resolve Form Factor & Slots \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // ── Resolve Form Factor & Slots ───────────────────────────────────────────
   let form_factor = 'ATX';
   if (upper.match(/\b(ITX|MINI-ITX)\b/) || upper.match(/[ABXZH]\d{2,3}I/)) {
     form_factor = 'ITX';
@@ -227,32 +255,66 @@ export function extractMotherboardSpecs(name: string): {
     // 2. Form Factor based defaults
     ram_slots = 2;
   } else {
-    // 3. Chipset and Name based logic
-    const entryChipsets = [
-      'H610', 'H510', 'H410', 'H310', 'H110', 
-      'A320', 'A520',
-      'B250', 'B150', 'H270', 'H170',
-      'H81', 'B85', 'H61', 'B75'
-    ];
-    const isEntryChipset = rawChipset ? entryChipsets.includes(rawChipset.replace(/[EIMS]$/, '')) : false;
-    
-    if (isEntryChipset) {
-      // Entry chipsets default to 2 slots unless they have keywords indicating 4
-      if (!upper.match(/\b(DS3H|PLUS|STEEL|PHANTOM|MORTAR|TOMAHAWK|ELITE|MASTER|AORUS|MAX)\b/)) {
+    // 3. Brand-specific and model-specific high-fidelity slot count rules
+    if (hasBiostar) {
+      if (!upper.match(/\b(VALKYRIE|RACING|SILVER)\b/)) {
         ram_slots = 2;
       }
+    } else if (hasAsrock && (upper.match(/\b(HDV|DVS|HVS)\b/) || upper.match(/[- ]X\b/) || upper.includes('H310CM'))) {
+      ram_slots = 2;
+    } else if (hasMsi && (
+      upper.match(/\bPRO[ -]([AH]\d{3}M|[ABH]\d{3}M[ -][EB])\b/) || 
+      upper.match(/\b(A520M[ -]A[ -]PRO|B450M[ -]A[ -]PRO)\b/) ||
+      (form_factor === 'mATX' && (
+        upper.includes('-A PRO') || upper.includes('A-PRO') || upper.includes('A PRO') ||
+        upper.includes('-M2') || upper.includes('PRO-M2')
+      ))
+    )) {
+      ram_slots = 2;
+    } else if (hasAsus && (
+      upper.match(/\bPRIME[ -]([AH]\d{3}M|[ABXZH]\d{3}M[ -][KDRE])\b/)
+    )) {
+      ram_slots = 2;
+    } else if (hasGigabyte && (
+      upper.match(/\b(H\d{3}M|A\d{3}M)[ -][KHS2]\b/) ||
+      upper.match(/\b([ABXZH]\d{3}M?)[ -](K|H|S2|S2H|D2H|D3H)\b/)
+    )) {
+      ram_slots = 2;
     } else {
-      // Mainstream chipsets (B, X, Z) default to 4 slots.
-      // We only override to 2 for specific budget series and suffixes on B-series boards.
-      const isHighEndChipset = upper.match(/\b([XZ]\d{3})\b/);
-      const isBudgetSeries = !isHighEndChipset && upper.match(/\b(PRIME|PRO|GAMING|S2H|DS2H|DS2V|S2|H|K|V|R|E)\b/) 
-         && !upper.match(/\b(X|AX|PLUS|WIFI|AC|AORUS|ROG|STRIX|TUF|MAG|MPG|MEG|MORTAR|TOMAHAWK|STEEL|PHANTOM|LEGEND|4)\b/i);
+      // 4. Chipset based default fallbacks
+      const entryChipsets = [
+        'H610', 'H510', 'H410', 'H310', 'H110', 
+        'A320', 'A520',
+        'B250', 'B150', 'H270', 'H170',
+        'H81', 'B85', 'H61', 'B75'
+      ];
+      const strictTwoSlotChipsets = ['H610', 'H510', 'H410', 'H310', 'H110', 'A320', 'H81', 'H61'];
+      const isEntryChipset = rawChipset ? entryChipsets.includes(rawChipset.replace(/[EIMS]$/, '')) : false;
+      const isStrictTwoSlot = rawChipset ? strictTwoSlotChipsets.includes(rawChipset.replace(/[EIMS]$/, '')) : false;
       
-      if (isBudgetSeries) {
-        if (upper.match(/[- ](K|H|V|R|E|M-K|M-H|M-V|M-R|M-E)\b/) || upper.match(/\b(PRO-V?H|DS2H|DS2V|S2H|S2V)\b/)) {
+      if (isStrictTwoSlot) {
+        ram_slots = 2;
+      } else if (isEntryChipset) {
+        // Entry chipsets default to 2 slots unless they have keywords indicating 4
+        if (!upper.match(/\b(DS3H|PLUS|STEEL|PHANTOM|MORTAR|TOMAHAWK|ELITE|MASTER|AORUS|MAX)\b/)) {
           ram_slots = 2;
-        } else if (upper.match(/\bGAMING\b/) && form_factor === 'mATX') {
-          ram_slots = 2;
+        }
+      } else {
+        // Mainstream chipsets (B, X, Z) default to 4 slots.
+        // We only override to 2 for specific budget series and suffixes on B-series boards.
+        const isHighEndChipset = upper.match(/\b([XZ]\d{3})\b/);
+        const isBudgetSeries = !isHighEndChipset && upper.match(/\b(PRIME|PRO|GAMING|S2H|DS2H|DS2V|S2|H|K|V|R|E)\b/) 
+           && !upper.match(/\b(X|AX|PLUS|WIFI|AC|AORUS|ROG|STRIX|TUF|MAG|MPG|MEG|MORTAR|TOMAHAWK|STEEL|PHANTOM|LEGEND|4)\b/i);
+        
+        if (isBudgetSeries) {
+          const isB550 = upper.includes('B550');
+          if (isB550) {
+            ram_slots = 4;
+          } else if (upper.match(/[- ](K|H|V|R|E|M-K|M-H|M-V|M-R|M-E)\b/) || upper.match(/\b(PRO-V?H|DS2H|DS2V|S2H|S2V)\b/)) {
+            ram_slots = 2;
+          } else if (upper.match(/\bGAMING\b/) && form_factor === 'mATX') {
+            ram_slots = 2;
+          }
         }
       }
     }
@@ -260,6 +322,7 @@ export function extractMotherboardSpecs(name: string): {
 
   return {
     socket: info.socket,
+    chipset: resolvedChipset,
     supported_ram_types: ramTypes,
     max_ram_frequency: maxMhz,
     form_factor,

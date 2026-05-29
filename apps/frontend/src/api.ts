@@ -67,6 +67,7 @@ export async function smartSearch(params: {
   interface_type?: string | string[];
   efficiency_rating?: string | string[];
   modular?: string | string[];
+  cooling_type?: string | string[];
   core_count?: number;
   sort?: string;
   sortBy?: string;
@@ -123,6 +124,10 @@ export async function smartSearch(params: {
   if (params.modular) {
     const modularStr = Array.isArray(params.modular) ? params.modular.join(',') : params.modular;
     qs.set('modulars', modularStr);
+  }
+  if (params.cooling_type) {
+    const coolingTypeStr = Array.isArray(params.cooling_type) ? params.cooling_type.join(',') : params.cooling_type;
+    qs.set('cooling_types', coolingTypeStr);
   }
   if (params.core_count != null) qs.set('core_count', String(params.core_count));
   if (params.sort) qs.set('sort', params.sort);

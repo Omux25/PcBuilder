@@ -272,6 +272,7 @@ export function CategoryAccordion({
                             <thead>
                                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
                                     <th style={{ width: '32px' }} />
+                                    <th style={{ width: '48px' }} />
                                     <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nom canonique</th>
                                     <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Confiance</th>
                                     <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Revendeurs</th>

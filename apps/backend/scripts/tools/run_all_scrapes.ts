@@ -45,6 +45,10 @@ try {
 
   console.log(`\n🖼️  Image Coverage: ${withImages}/${total} components (${percentage}%)`);
   console.log('\n✅ Scrape complete!\n');
+
+  console.log('🔄 Automatically running the 100% specification enrichment pipeline...');
+  const { $ } = await import('bun');
+  await $`bun scripts/enrich_database.ts`;
 } catch (err) {
   console.error('\n💥 Full scrape failed:');
   console.error(err);

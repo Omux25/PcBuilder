@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer,
 } from 'recharts';
 import type { HistoryPeriod } from '../constants/periods';
-import { PERIOD_DAYS } from '../constants/periods';
 import type { PriceHistoryEntry } from '../types';
 import { Skeleton } from './Skeleton';
 import { UI } from '../ui-strings';
@@ -18,16 +17,17 @@ interface Props {
 }
 
 function getCssVar(name: string): string {
+  if (typeof window === 'undefined') return '#888';
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888';
 }
 
 const RETAILER_COLORS = [
-  '#3b82f6', // blue
-  '#10b981', // green
-  '#f59e0b', // orange
-  '#ef4444', // red
-  '#8b5cf6', // purple
-  '#ec4899', // pink
+  '#3b82f6', // UltraPC - Vibrant Indigo/Blue
+  '#10b981', // NextLevel - Emerald
+  '#f59e0b', // SetupGame - Amber
+  '#ef4444', // PC Gamer Casa - Coral/Red
+  '#a855f7', // Purple
+  '#ec4899', // Pink
 ];
 
 const PERIODS: { key: HistoryPeriod; label: string }[] = [
@@ -57,7 +57,7 @@ export function PriceHistoryChart({ history, loading, period, onPeriodChange }: 
     return (
       <div>
         {periodToggle}
-        <div className={styles.chart}><Skeleton height={220} /></div>
+        <div className={styles.chart}><Skeleton height={260} /></div>
       </div>
     );
   }
@@ -74,138 +74,184 @@ export function PriceHistoryChart({ history, loading, period, onPeriodChange }: 
   const retailerNames = [...new Set(history.map(h => h.retailer_name))];
 
   // ── Data Transformation ──────────────────────────────────────────────────
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const startDate = new Date(now);
-  startDate.setDate(now.getDate() - PERIOD_DAYS[period]);
-  
+  // Extract all timestamps that have actual recordings in this range
+  const recordedDays = history.map(h => {
+    const d = new Date(h.recorded_at);
+    d.setHours(0,0,0,0);
+    return d.getTime();
+  });
+  const uniqueRecordedDays = [...new Set(recordedDays)].sort();
+
   const byRetailer = new Map<string, PriceHistoryEntry[]>();
   for (const h of history) {
     if (!byRetailer.has(h.retailer_name)) byRetailer.set(h.retailer_name, []);
     byRetailer.get(h.retailer_name)!.push(h);
   }
 
-  const chartData = [];
-  const iterDate = new Date(startDate);
-  
-  while (iterDate <= now) {
-    const ts = iterDate.getTime();
-    const dataPoint: any = { 
+  // Create chart data ONLY for dates that have actual recordings.
+  // This avoids huge flat periods of missing stock backfilling/padding.
+  const chartData = uniqueRecordedDays.map(ts => {
+    const dateObj = new Date(ts);
+    const dataPoint: any = {
       timestamp: ts,
-      date: iterDate.toLocaleDateString('fr-MA', { 
-        month: '2-digit', 
+      date: dateObj.toLocaleDateString('fr-MA', {
+        month: '2-digit',
         day: '2-digit',
-        ...(period === '1y' ? { year: '2-digit' } : {})
-      }) 
+      })
     };
 
     for (const name of retailerNames) {
       const entries = byRetailer.get(name)!;
-      // Find the most recent entry before or at this day
-      const lastEntry = [...entries]
-        .filter(e => new Date(e.recorded_at).setHours(0, 0, 0, 0) <= ts)
-        .sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime())[0];
-      
-      if (lastEntry && lastEntry.in_stock) {
-        dataPoint[name] = Number(lastEntry.price);
-        dataPoint[`${name}_in_stock`] = true;
+      // Find exact or latest recording for this day
+      const dayEntries = entries.filter(e => {
+        const ed = new Date(e.recorded_at);
+        ed.setHours(0,0,0,0);
+        return ed.getTime() === ts;
+      });
+
+      if (dayEntries.length > 0) {
+        const sorted = dayEntries.sort((a,b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime());
+        dataPoint[name] = Number(sorted[0].price);
+        dataPoint[`${name}_in_stock`] = sorted[0].in_stock;
+        dataPoint[`${name}_has_record`] = true;
       } else {
-        dataPoint[name] = null;
-        dataPoint[`${name}_in_stock`] = false;
+        // Find latest previous historical price
+        const prevEntries = entries.filter(e => new Date(e.recorded_at).getTime() < ts + 86400000);
+        if (prevEntries.length > 0) {
+          const sorted = prevEntries.sort((a,b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime());
+          dataPoint[name] = Number(sorted[0].price);
+          dataPoint[`${name}_in_stock`] = sorted[0].in_stock;
+          dataPoint[`${name}_has_record`] = false;
+        } else {
+          dataPoint[name] = null;
+          dataPoint[`${name}_in_stock`] = false;
+          dataPoint[`${name}_has_record`] = false;
+        }
       }
     }
-    chartData.push(dataPoint);
-    iterDate.setDate(iterDate.getDate() + 1);
-  }
+    return dataPoint;
+  });
 
   const gridColor = getCssVar('--border');
   const tickColor = getCssVar('--text-dim');
-  const tooltipBg = getCssVar('--surface-2');
-  const tooltipBdr = getCssVar('--border-2');
   const legendColor = getCssVar('--text-muted');
 
   return (
     <div>
       {periodToggle}
       <div className={styles.chart}>
-        <ResponsiveContainer width="100%" height={220}>
-          <LineChart 
+        <ResponsiveContainer width="100%" height={260}>
+          <AreaChart 
             data={chartData} 
-            margin={{ top: 10, right: 30, left: 0, bottom: 5 }}
-            onMouseMove={(e: any) => {
-              if (e.activeTooltipIndex !== undefined) {
-                // Potential for line highlighting logic here
-              }
-            }}
+            margin={{ top: 15, right: 10, left: -20, bottom: 5 }}
             onMouseLeave={() => setHoveredRetailer(null)}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={true} opacity={0.3} />
+            <defs>
+              {retailerNames.map((name, i) => {
+                const color = RETAILER_COLORS[i % RETAILER_COLORS.length];
+                const id = `grad-${name.replace(/\s+/g, '-')}`;
+                return (
+                  <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={color} stopOpacity={0.25}/>
+                    <stop offset="95%" stopColor={color} stopOpacity={0.0}/>
+                  </linearGradient>
+                );
+              })}
+            </defs>
+
+            <CartesianGrid strokeDasharray="6 6" stroke={gridColor} vertical={false} opacity={0.15} />
             <XAxis 
               dataKey="date" 
-              tick={{ fill: tickColor, fontSize: 10 }} 
+              tick={{ fill: tickColor, fontSize: 10, fontWeight: 500 }} 
               tickLine={false}
               axisLine={false}
-              interval={period === '7d' ? 0 : period === '30d' ? 4 : 29}
+              dy={10}
             />
             <YAxis
-              tick={{ fill: tickColor, fontSize: 10 }}
+              tick={{ fill: tickColor, fontSize: 10, fontWeight: 500 }}
               tickLine={false}
               axisLine={false}
-              tickFormatter={v => `${v} MAD`}
-              width={65}
+              dx={-5}
+              tickFormatter={v => `${v} DH`}
+              width={75}
               domain={['auto', 'auto']}
-              padding={{ top: 20, bottom: 20 }}
+              padding={{ top: 20, bottom: 10 }}
             />
             <Tooltip
               contentStyle={{ 
-                background: tooltipBg, 
-                border: `1px solid ${tooltipBdr}`, 
-                borderRadius: 8,
-                boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
+                background: 'rgba(23, 23, 23, 0.85)', 
+                backdropFilter: 'blur(12px)',
+                border: `1px solid rgba(255, 255, 255, 0.08)`, 
+                borderRadius: 12,
+                boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4)',
+                padding: '10px 14px'
               }}
-              labelStyle={{ color: getCssVar('--text-2'), fontSize: 12, fontWeight: 600, marginBottom: 4 }}
-              itemStyle={{ fontSize: 12, padding: '2px 0' }}
+              labelStyle={{ color: 'var(--text)', fontSize: 12, fontWeight: 700, marginBottom: 6, opacity: 0.9 }}
+              itemStyle={{ fontSize: 12, padding: '3px 0' }}
+              cursor={{ stroke: 'rgba(255, 255, 255, 0.06)', strokeWidth: 1.5, strokeDasharray: '3 3' }}
               formatter={(value, name, props) => {
                 const inStock = props.payload[`${name}_in_stock`];
-                if (value === null || !inStock) return [
-                  <span key={name as string} style={{ color: tickColor, opacity: 0.5 }}>Épuisé</span>,
+                if (value === null) return [
+                  <span key={name as string} style={{ color: 'var(--text-dim)', opacity: 0.5, fontStyle: 'italic' }}>Non disponible</span>,
+                  name
+                ];
+                if (!inStock) return [
+                  <span key={name as string} style={{ color: 'var(--text-dim)', opacity: 0.65 }}>
+                    {Number(value).toLocaleString()} MAD <span style={{ fontSize: '10px', color: '#ef4444', fontWeight: 600, marginLeft: 4 }}>(Rupture)</span>
+                  </span>,
                   name
                 ];
                 return [
-                  <span key={name as string} style={{ fontWeight: 600 }}>{Number(value).toLocaleString()} MAD</span>,
+                  <span key={name as string} style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{Number(value).toLocaleString()} MAD</span>,
                   name
                 ];
               }}
             />
             <Legend 
-              wrapperStyle={{ fontSize: 11, color: legendColor, paddingTop: 10 }}
+              wrapperStyle={{ fontSize: 11, color: legendColor, paddingTop: 18 }}
               iconType="circle"
               iconSize={8}
+              align="center"
               onMouseEnter={(e: any) => setHoveredRetailer(e.value)}
               onMouseLeave={() => setHoveredRetailer(null)}
             />
             {retailerNames.map((name, i) => {
-              const dashPatterns = ['0', '5 5', '3 3', '10 5', '5 2 2 2'];
               const color = RETAILER_COLORS[i % RETAILER_COLORS.length];
               const isFocused = hoveredRetailer === null || hoveredRetailer === name;
+              const gradId = `url(#grad-${name.replace(/\s+/g, '-')})`;
               
               return (
-                <Line
+                <Area
                   key={name}
-                  type="stepAfter"
+                  type="monotone"
                   dataKey={name}
                   stroke={color}
-                  strokeWidth={isFocused ? 3 : 1.5}
-                  strokeOpacity={isFocused ? 1 : 0.2}
-                  strokeDasharray={dashPatterns[i % dashPatterns.length]}
-                  dot={{ r: 2, strokeWidth: 0, fill: color, fillOpacity: isFocused ? 1 : 0.2 }}
+                  strokeWidth={isFocused ? 2.5 : 1.25}
+                  strokeOpacity={isFocused ? 1 : 0.15}
+                  fill={gradId}
+                  fillOpacity={isFocused ? 1 : 0.1}
+                  // Render active dots on each date point that contains actual history entries in the db
+                  dot={(props: any) => {
+                    const hasRecord = props.payload[`${name}_has_record`];
+                    if (!hasRecord) return null;
+                    return (
+                      <circle
+                        cx={props.cx}
+                        cy={props.cy}
+                        r={3}
+                        fill={color}
+                        stroke="none"
+                        fillOpacity={isFocused ? 1 : 0.3}
+                      />
+                    );
+                  }}
                   activeDot={{ r: 5, strokeWidth: 0, fill: color }}
-                  connectNulls={false}
-                  animationDuration={300}
+                  connectNulls={true}
+                  animationDuration={450}
                 />
               );
             })}
-          </LineChart>
+          </AreaChart>
         </ResponsiveContainer>
       </div>
     </div>

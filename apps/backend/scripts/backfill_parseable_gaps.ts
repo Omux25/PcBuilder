@@ -298,30 +298,53 @@ async function backfillGpuChipset() {
   total += updated;
 }
 
-// ── RAM: capacity_gb from name ────────────────────────────────────────────────
+// ── RAM: specs from name ────────────────────────────────────────────────
 
-async function backfillRamCapacity() {
+async function backfillRamSpecs() {
   const rows = (await sql`
     SELECT id, name FROM components
-    WHERE category = 'ram' AND is_active = true AND capacity_gb IS NULL
+    WHERE category = 'ram' AND is_active = true 
+      AND (capacity_gb IS NULL OR frequency_mhz IS NULL OR ram_type IS NULL)
   `) as { id: number; name: string }[];
 
   let updated = 0;
   for (const { id, name } of rows) {
     const n = norm(name);
-    // Take the largest GB number in the name — that's total kit capacity
+    
+    // Capacity (largest GB number)
+    let capacity_gb: number | null = null;
     const allMatches = [...n.matchAll(/\b(\d+)\s*[Gg][BbOo]\b/g)];
-    if (allMatches.length === 0) continue;
-    const capacity_gb = Math.max(...allMatches.map(m => parseInt(m[1])));
-    if (!capacity_gb || capacity_gb < 1) continue;
+    if (allMatches.length > 0) {
+      capacity_gb = Math.max(...allMatches.map(m => parseInt(m[1])));
+      if (capacity_gb < 1) capacity_gb = null;
+    }
+
+    // Frequency
+    let frequency_mhz: number | null = null;
+    const freqMatch = n.match(/\b(2133|2400|2666|3000|3200|3600|4000|4400|4800|5200|5600|6000|6400|6600|7200|8000)\s*(?:mhz)?\b/i);
+    if (freqMatch) {
+      frequency_mhz = parseInt(freqMatch[1]);
+    }
+
+    // Type
+    let ram_type: string | null = null;
+    if (/\bddr5\b/i.test(n)) ram_type = 'DDR5';
+    else if (/\bddr4\b/i.test(n)) ram_type = 'DDR4';
+    else if (/\bddr3\b/i.test(n)) ram_type = 'DDR3';
+
+    if (!capacity_gb && !frequency_mhz && !ram_type) continue;
 
     await sql`
-      UPDATE components SET capacity_gb = ${capacity_gb}, updated_at = NOW()
+      UPDATE components SET 
+        capacity_gb = COALESCE(capacity_gb, ${capacity_gb}),
+        frequency_mhz = COALESCE(frequency_mhz, ${frequency_mhz}),
+        ram_type = COALESCE(ram_type, ${ram_type}),
+        updated_at = NOW()
       WHERE id = ${id}
     `;
     updated++;
   }
-  console.log(`RAM capacity: ${updated}/${rows.length} updated`);
+  console.log(`RAM specs (capacity/frequency/type): ${updated}/${rows.length} updated`);
   total += updated;
 }
 
@@ -406,6 +429,10 @@ console.log('=== Backfilling parseable gaps (Round 4 — final targeted pass) ==
 await backfillStorage();
 await backfillPsu();
 await backfillCase();
+await backfillGpuChipset();
+await backfillRamSpecs();
+await backfillCpuTdp();
+await backfillMotherboardFormFactor();
 
 // Fix misclassified entries in case table
 const misclassified = (await sql`

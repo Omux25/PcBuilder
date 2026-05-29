@@ -181,3 +181,23 @@ describe('formatComponentName — Motherboard', () => {
     expect(formatComponentName(c)).toBe('ASUS TUF Gaming B650-PLUS WIFI ATX');
   });
 });
+
+describe('formatComponentName — Cooling', () => {
+  it('prevents duplicate radiator size suffix if size number is already present in model name', () => {
+    const c1 = make({
+      brand: 'Corsair',
+      name: 'Nautilus 360 Rs Lcd',
+      category: 'cooling',
+      size_mm: 360,
+    });
+    expect(formatComponentName(c1)).toBe('Corsair Nautilus 360 Rs Lcd');
+
+    const c2 = make({
+      brand: 'Corsair',
+      name: 'Nautilus RS LCD',
+      category: 'cooling',
+      size_mm: 360,
+    });
+    expect(formatComponentName(c2)).toBe('Corsair Nautilus RS LCD 360mm');
+  });
+});

@@ -398,12 +398,12 @@ const EXTRACTION_STRATEGIES: Record<string, ExtractionStrategy> = {
   carte_mere:  motherboardStrategy, // French alias
 };
 
-// ── Global Identifiers Extraction ────────────────────────────────────────────
+const FORBIDDEN_MPNS = new Set([
+  'GIGABYTE', 'PRIME', 'STRIX', 'AORUS', 'GAMING', 'BIOSTAR', 'ASROCK', 'SOCKET', 'TOMAHAWK', 'MAXIMUS', 'TORPEDO', 'CARTE',
+  'MSI', 'ASUS', 'INTEL', 'AMD', 'CORSAIR', 'KINGSTON', 'CRUCIAL', 'SAMSUNG', 'WD', 'SEAGATE', 'RYZEN', 'GEFORCE', 'RADEON',
+  'B550M', 'B660M', 'Z690M', 'B560M', 'B650M', 'H510M-A', 'H610M', 'B760M', 'Z790M', 'X670E', 'X870E'
+]);
 
-/**
- * Searches for universal product identifiers (MPN/EAN) that are applicable
- * to all hardware categories.
- */
 function extractUniversalIdentifiers(cleaned: string): { mpn: string | null; ean: string | null } {
   let mpn: string | null = null;
   let ean: string | null = null;
@@ -418,8 +418,11 @@ function extractUniversalIdentifiers(cleaned: string): { mpn: string | null; ean
   for (const re of mpnPatterns) {
     const m = cleaned.match(re);
     if (m?.[1]) {
-      mpn = m[1].trim();
-      break;
+      const candidate = m[1].trim();
+      if (!FORBIDDEN_MPNS.has(candidate.toUpperCase()) && candidate.length >= 4) {
+        mpn = candidate;
+        break;
+      }
     }
   }
 

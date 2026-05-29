@@ -26,6 +26,40 @@
   gap: 0.75rem;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.toggleDiffBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.7rem 1.4rem;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s var(--ease-out);
+  box-shadow: var(--shadow-sm);
+}
+
+.toggleDiffBtn:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+}
+
+.toggleDiffBtnActive {
+  background: var(--accent-blue-tint) !important;
+  border-color: var(--accent-blue) !important;
+  color: var(--accent-blue) !important;
+}
+
 .shareBtn {
   display: inline-flex;
   align-items: center;
@@ -121,7 +155,7 @@
   background: rgba(17, 17, 19, 0.95);
   border-bottom: 2px solid var(--border-subtle);
   position: sticky;
-  top: 0;
+  top: 52px;
   z-index: 10;
   backdrop-filter: blur(12px);
 }
@@ -630,4 +664,212 @@
 .emptySpec {
   opacity: 0.4;
   color: var(--text-dim);
+}
+
+/* ── Empty Slot Button ── */
+.addBtnEmptySlot {
+  background: transparent;
+  border: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.addSlotActive {
+  background: var(--bg-surface-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+.addSlotActive::before {
+  border-color: var(--accent-blue) !important;
+}
+
+/* ── Inline Quick Search ── */
+.quickAddContainer {
+  position: absolute;
+  inset: 1.5rem;
+  background: rgba(17, 17, 19, 0.95);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-xl);
+  backdrop-filter: blur(8px);
+}
+
+[data-theme="light"] .quickAddContainer {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.quickAddHeader {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  gap: 0.5rem;
+}
+
+.quickAddInput {
+  flex: 1;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  outline: none;
+  transition: all 0.2s;
+}
+
+.quickAddInput:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.quickAddClose {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.quickAddClose:hover {
+  background: var(--danger-tint);
+  color: var(--danger);
+}
+
+.quickAddBody {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.quickAddLoading,
+.quickAddNoResults,
+.quickAddPrompt {
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quickAddList {
+  display: flex;
+  flex-direction: column;
+  padding: 0.25rem 0;
+}
+
+.quickAddRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 1px solid rgba(255,255,255,0.02);
+}
+
+.quickAddRow:hover {
+  background: var(--bg-surface-hover);
+}
+
+.quickAddThumb {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 4px;
+  padding: 2px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-subtle);
+}
+
+.quickAddThumbPlaceholder {
+  width: 28px;
+  height: 28px;
+  background: var(--bg-surface-2);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.quickAddInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  text-align: left;
+}
+
+.quickAddBrand {
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--accent-blue);
+  letter-spacing: 0.05em;
+  line-height: 1;
+  margin-bottom: 0.15rem;
+}
+
+.quickAddName {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.quickAddPlusIcon {
+  color: var(--text-secondary);
+  transition: transform 0.2s;
+}
+
+.quickAddRow:hover .quickAddPlusIcon {
+  color: var(--accent-blue);
+  transform: scale(1.15) rotate(90deg);
+}
+
+/* ── VS Hero Chart ── */
+.vsChartContainer {
+  margin-top: 1.2rem;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-lg);
+  padding: 0.75rem 1rem;
+}
+
+.vsChartLabel {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
 }

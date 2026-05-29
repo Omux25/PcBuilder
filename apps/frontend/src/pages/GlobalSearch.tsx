@@ -10,6 +10,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
 import { getComponents } from '../api';
 import { formatComponentName } from '@shared/formatting/component-name.formatter';
+import { LinkEngine } from '@shared/link-engine';
 import { CategoryIcon } from '../components/CategoryIcon';
 import type { Component, ComponentCategory } from '../types';
 import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
@@ -136,7 +137,7 @@ export function GlobalSearch() {
               </div>
               <div className={styles.componentList}>
                 {components.map(c => (
-                  <Link key={c.id} to={`/product/${c.slug}`} className={styles.componentRow}>
+                  <Link key={c.id} to={LinkEngine.getProductUrl(c)} className={styles.componentRow}>
                     {c.image_url ? (
                       <img src={c.image_url} alt={c.name} className={styles.componentImg} referrerPolicy="no-referrer" />
                     ) : (

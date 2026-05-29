@@ -343,6 +343,23 @@ export const bulkAssociateUnmatched = (canonicalNames: string[]) =>
     body: JSON.stringify({ canonical_names: canonicalNames }),
   });
 
+export interface BulkConfirmResponse {
+  linked_listings: number;
+  created_components: number;
+  created_listings: number;
+}
+
+export const bulkUpdateUnmatchedCategory = (listingIds: number[], category: string | null) =>
+  request<{ success: boolean; count: number }>('/admin/unmatched-listings/bulk-category', {
+    method: 'POST',
+    body: JSON.stringify({ listing_ids: listingIds, category }),
+  });
+
+export const bulkConfirmAllWithCategories = () =>
+  request<BulkConfirmResponse>('/admin/unmatched-listings/bulk-confirm-categories', {
+    method: 'POST',
+  });
+
 // ── Presets ───────────────────────────────────────────────────────────────────
 
 export interface PresetPayload {

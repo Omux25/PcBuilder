@@ -123,7 +123,6 @@ export function formatComponentName(c: Partial<Component>, options: { excludeBra
             parts.push(c.chipset);
         }
       }
-      appendIfMissing(c.form_factor);
       break;
 
     case 'case':
@@ -131,12 +130,15 @@ export function formatComponentName(c: Partial<Component>, options: { excludeBra
       break;
 
     case 'cooling':
-      if (c.size_mm) appendIfMissing(c.size_mm, 'mm');
-      else if (c.height_mm) appendIfMissing(c.height_mm, 'mm');
+      if (c.size_mm && !normModel.includes(String(c.size_mm))) {
+        appendIfMissing(c.size_mm, 'mm');
+      }
       break;
 
     case 'fan':
-      appendIfMissing(c.size_mm, 'mm');
+      if (c.size_mm && !normModel.includes(String(c.size_mm))) {
+        appendIfMissing(c.size_mm, 'mm');
+      }
       if (c.pack_size && c.pack_size > 1 && !lowerModel.includes('pack')) {
         parts.push(`Pack of ${c.pack_size}`);
       }

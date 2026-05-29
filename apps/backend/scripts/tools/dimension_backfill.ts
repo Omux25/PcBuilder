@@ -1,65 +1,13 @@
 import { sql } from 'bun';
+import { extractCoolingSpecs } from '@shared/hardware/specs/cooling';
 
 function norm(s: string) { return s.toLowerCase().replace(/\s+/g, ' ').trim(); }
-
-async function backfillCoolerHeights() {
-    const rows = await sql`SELECT id, name, brand FROM components WHERE category = 'cooling' AND height_mm IS NULL` as { id: number; name: string; brand: string | null }[];
-    let updated = 0;
-    
-    // Most popular coolers height lookup
-    const heights: Record<string, number> = {
-        'nh-d15': 165,
-        'nh-u12s': 158,
-        'nh-l9i': 37,
-        'nh-l9a': 37,
-        'pure rock 2': 155,
-        'dark rock pro 4': 163,
-        'dark rock 4': 159,
-        'hyper 212': 159,
-        'ak620': 160,
-        'ak400': 155,
-        'ag620': 160,
-        'ag400': 150,
-        'assassin iii': 165,
-        'peerless assassin 120': 157,
-        'phantom spirit 120': 154,
-        'wraith prism': 92,
-        'wraith stealth': 54,
-        'wraith spire': 71,
-        't120': 159,
-        'h212': 159,
-        'g200p': 39,
-        'i70c': 60,
-    };
-
-    for (const { id, name, brand } of rows) {
-        const n = norm(name);
-        let height: number | null = null;
-        
-        for (const [key, h] of Object.entries(heights)) {
-            if (n.includes(key)) {
-                height = h;
-                break;
-            }
-        }
-        
-        if (height) {
-            await sql`UPDATE components SET height_mm = ${height} WHERE id = ${id}`;
-            updated++;
-        }
-    }
-    console.log(`Cooler Heights: ${updated}/${rows.length} updated`);
-}
 
 async function backfillCaseClearance() {
     const rows = await sql`SELECT id, name, form_factor FROM components WHERE category = 'case' AND max_cooler_height_mm IS NULL` as { id: number; name: string; form_factor: string | null }[];
     let updated = 0;
     
     // Generic defaults based on form factor if specific model unknown
-    // ATX Mid Tower usually supports ~160-170mm
-    // mATX usually ~150-160mm
-    // ITX varies wildly, so we don't default it
-    
     const caseLimits: Record<string, number> = {
         'h5 flow': 165,
         'h7 flow': 185,
@@ -94,12 +42,6 @@ async function backfillCaseClearance() {
             }
         }
         
-        // Fallback generic (safe estimates)
-        if (!limit) {
-            if (form_factor === 'ATX' || form_factor === 'Full Tower') limit = 160;
-            else if (form_factor === 'mATX') limit = 155;
-        }
-        
         if (limit) {
             await sql`UPDATE components SET max_cooler_height_mm = ${limit} WHERE id = ${id}`;
             updated++;
@@ -108,42 +50,131 @@ async function backfillCaseClearance() {
     console.log(`Case Clearance: ${updated}/${rows.length} updated`);
 }
 
-async function backfillCoolingTdp() {
-    const rows = await sql`SELECT id, name, tags FROM components WHERE category = 'cooling' AND max_tdp IS NULL` as { id: number; name: string; tags: string[] | null }[];
+async function backfillCoolingSpecs() {
+    // 1. Move misclassified case fans from Cooling to Fan category
+    console.log('🔄 Moving misclassified case fans from Cooling to Fan category...');
+    const fansMoved = await sql`
+        UPDATE components 
+        SET category = 'fan',
+            updated_at = NOW()
+        WHERE category = 'cooling' 
+          AND (name ILIKE '%wings%' OR name ILIKE '%3-pack%' OR name ILIKE '%triple pack%' OR name ILIKE '%pack de%' OR name ILIKE '%pack of%' OR name ILIKE '%pure%wings%')
+    `;
+    console.log(`✅ Moved ${fansMoved.count ?? 0} case fans to Fan category.`);
+
+    // 2. Target reset of all active cooling specs first to ensure clean idempotent run
+    console.log('🔄 Resetting cooling heuristics for a fresh accurate pass...');
+    await sql`
+        UPDATE components 
+        SET height_mm = NULL, 
+            max_tdp = NULL, 
+            tags = NULL,
+            supported_sockets = NULL 
+        WHERE category = 'cooling' AND is_active = true
+    `;
+
+    const rows = await sql`
+        SELECT id, name, brand, tags, height_mm, max_tdp, supported_sockets 
+        FROM components 
+        WHERE category = 'cooling' AND is_active = true
+    ` as { 
+        id: number; 
+        name: string; 
+        brand: string | null; 
+        tags: string[] | null; 
+        height_mm: number | null; 
+        max_tdp: number | null; 
+        supported_sockets: string[] | null;
+    }[];
+    
     let updated = 0;
     
-    for (const { id, name, tags } of rows) {
-        const n = norm(name);
-        let tdp: number | null = null;
+    // Most popular coolers exact heights lookup
+    const heightsDict: Record<string, number> = {
+        'nh-d15': 165,
+        'nh-u12s': 158,
+        'nh-l9i': 37,
+        'nh-l9a': 37,
+        'pure rock 2': 155,
+        'dark rock pro 4': 163,
+        'dark rock 4': 159,
+        'hyper 212': 159,
+        'ak620': 160,
+        'ak400': 155,
+        'ag620': 160,
+        'ag400': 150,
+        'assassin iii': 165,
+        'peerless assassin 120': 157,
+        'phantom spirit 120': 154,
+        'wraith prism': 92,
+        'wraith stealth': 54,
+        'wraith spire': 71,
+        't120': 159,
+        'h212': 159,
+        'g200p': 39,
+        'i70c': 60,
+        'arctic frost': 65,
+        'boreas e1-410': 154,
+        'wraith ripper': 160,
+    };
+
+    // Modern common sockets list includes LGA1851 (Intel Arrow Lake / Core Ultra)
+    const commonSockets = ['LGA1851', 'LGA1700', 'LGA1200', 'LGA1151', 'AM4', 'AM5'];
+
+    for (const row of rows) {
+        const specs = extractCoolingSpecs(row.name, row.brand ?? undefined);
         
-        const isAio = tags?.includes('aio') || /\baio|liquid|water\b/i.test(n);
+        let height = row.height_mm;
+        let tdp = row.max_tdp;
+        let sockets = row.supported_sockets;
+        let needsUpdate = false;
         
-        if (isAio) {
-            if (n.includes('360')) tdp = 300;
-            else if (n.includes('240')) tdp = 250;
-            else if (n.includes('280')) tdp = 280;
-            else if (n.includes('420')) tdp = 350;
-            else if (n.includes('120')) tdp = 150;
-        } else {
-            // Air coolers
-            if (n.includes('nh-d15') || n.includes('ak620') || n.includes('assassin iii') || n.includes('peerless assassin')) tdp = 250;
-            else if (n.includes('ak400') || n.includes('hyper 212') || n.includes('pure rock')) tdp = 180;
-            else if (n.includes('wraith prism')) tdp = 140;
-            else if (n.includes('wraith stealth')) tdp = 65;
-            else tdp = 120; // safe baseline for tower coolers
+        // 1. Sockets
+        if (!sockets || sockets.length === 0) {
+            sockets = [...commonSockets];
+            const n = norm(`${row.brand ?? ''} ${row.name}`);
+            if (/\b(tr4|threadripper)\b/i.test(n)) {
+                sockets.push('TR4', 'sTRX4');
+            }
+            needsUpdate = true;
+        }
+
+        // 2. Height
+        if (height === null) {
+            height = specs.height_mm;
+            needsUpdate = true;
+        }
+
+        // 3. TDP
+        if (tdp === null) {
+            tdp = specs.tdp;
+            needsUpdate = true;
         }
         
-        if (tdp) {
-            await sql`UPDATE components SET max_tdp = ${tdp} WHERE id = ${id}`;
+        // 4. Tags (like 'aio', radiator sizes, or 'accessory')
+        const tagsToUpdate = specs.tags;
+        needsUpdate = true;
+
+        if (needsUpdate) {
+            const pgSockets = '{' + sockets.map(s => `"${s}"`).join(',') + '}';
+            const pgTags = tagsToUpdate.length > 0 ? '{' + tagsToUpdate.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',') + '}' : null;
+            await sql`
+                UPDATE components 
+                SET height_mm = ${height},
+                    max_tdp = ${tdp},
+                    tags = ${pgTags ? sql`${pgTags}::text[]` : null},
+                    supported_sockets = ${pgSockets}::text[],
+                    updated_at = NOW()
+                WHERE id = ${row.id}
+            `;
             updated++;
         }
     }
-    console.log(`Cooling TDP: ${updated}/${rows.length} updated`);
+    console.log(`Cooling Specifications: ${updated}/${rows.length} updated`);
 }
 
 console.log('Starting dimension backfill...\n');
-await backfillCoolerHeights();
 await backfillCaseClearance();
-await backfillCoolingTdp();
+await backfillCoolingSpecs();
 console.log('\nDimension backfill complete.');
 process.exit(0);

@@ -9,7 +9,8 @@
     "dev": "bun --hot src/server.ts",
     "test": "bun test",
     "migrate": "bun src/core/db/migrate.ts",
-    "sync": "bun scripts/sync_catalog.ts"
+    "sync": "bun scripts/sync_catalog.ts",
+    "enrich": "bun scripts/enrich_database.ts"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.8.0",

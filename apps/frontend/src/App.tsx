@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { Routes, Route, Link, useLocation, useNavigate, Navigate, useParams } from 'react-router-dom';
 import { Cpu, Sun, Moon, LayoutGrid, Search, GitCompare } from 'lucide-react';
 import { Configurator } from './components/Configurator';
 import { Skeleton } from './components/Skeleton';
 import { CompareTray } from './components/CompareTray';
+import { CategoryConflictModal } from './components/CategoryConflictModal';
 import { useBuild } from './context/BuildContext';
 import { getInitialTheme, applyTheme, toggleTheme } from './utils/theme';
-import { getComponentById } from './api';
+import { getComponentById, getComponentBySlug } from './api';
 import { UI } from './ui-strings';
 import styles from './App.module.css';
 
@@ -19,6 +20,31 @@ const Compare = lazy(() => import('./pages/Compare').then(m => ({ default: m.Com
 const GlobalSearch = lazy(() => import('./pages/GlobalSearch').then(m => ({ default: m.GlobalSearch })));
 const MarketTrends = lazy(() => import('./pages/MarketTrends').then(m => ({ default: m.MarketTrends })));
 const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })));
+
+function ProductRedirect() {
+  const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (slug) {
+      getComponentBySlug(slug)
+        .then(comp => {
+          navigate(`/components/${comp.category}/${comp.slug}`, { replace: true });
+        })
+        .catch(() => {
+          setError(true);
+        });
+    }
+  }, [slug, navigate]);
+
+  if (error) return <Navigate to="/404" replace />;
+  return (
+    <main className={styles.main}>
+      <Skeleton height={400} />
+    </main>
+  );
+}
 
 export default function App() {
   const { build, setBuild, addToBuild } = useBuild();
@@ -161,11 +187,7 @@ export default function App() {
         } />
 
         <Route path="/product/:slug" element={
-          <main className={styles.main}>
-            <Suspense fallback={<Skeleton height={400} />}>
-              <ComponentDetail onAddToBuild={addToBuild} />
-            </Suspense>
-          </main>
+          <ProductRedirect />
         } />
 
         <Route path="/components/:category/:identifier" element={
@@ -245,6 +267,7 @@ export default function App() {
       </footer>
 
       <CompareTray />
+      <CategoryConflictModal />
     </div>
   );
 }

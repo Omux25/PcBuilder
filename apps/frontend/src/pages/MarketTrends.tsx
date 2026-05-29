@@ -14,6 +14,7 @@ import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
 import { useBuild } from '../context/BuildContext';
 import { UI } from '../ui-strings';
 import { formatPrice } from '@shared/formatting/price.formatter';
+import { LinkEngine } from '@shared/link-engine';
 import styles from './MarketTrends.module.css';
 
 const DAY_OPTIONS = [3, 7, 14, 30];
@@ -293,7 +294,7 @@ function TrendCard({ trend, isAdded, isAdding, onAdd }: { trend: MarketTrend; is
 
   function handleShare(e: React.MouseEvent) {
     e.preventDefault();
-    navigator.clipboard.writeText(`${window.location.origin}/product/${trend.slug}`);
+    navigator.clipboard.writeText(window.location.origin + LinkEngine.getProductUrl(trend));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -336,7 +337,7 @@ function TrendCard({ trend, isAdded, isAdding, onAdd }: { trend: MarketTrend; is
           </span>
         </div>
 
-        <Link to={`/product/${trend.slug}`} className={styles.cardName}>{trend.name}</Link>
+        <Link to={LinkEngine.getProductUrl(trend)} className={styles.cardName}>{trend.name}</Link>
 
         <div className={styles.priceRow}>
           <span className={styles.priceBefore}>{formatPrice(trend.price_before)}</span>
@@ -354,7 +355,7 @@ function TrendCard({ trend, isAdded, isAdding, onAdd }: { trend: MarketTrend; is
       </div>
 
       <div className={styles.cardFooter}>
-        <Link to={`/product/${trend.slug}`} className={styles.detailLink}>{UI.trends.viewDetails}</Link>
+        <Link to={LinkEngine.getProductUrl(trend)} className={styles.detailLink}>{UI.trends.viewDetails}</Link>
         <div className={styles.cardActions}>
           <button className={`${styles.shareIconBtn} ${copied ? styles.copiedIconBtn : ''}`} onClick={handleShare} title="Partager">
             {copied ? <Check size={14} /> : <Share2 size={14} />}

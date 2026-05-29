@@ -187,4 +187,37 @@ export class UnmatchedController {
 
     return c.json({ successful: [{ linked_count: result.linked_listings }], failed: [] }); 
   }
+
+  async bulkCategory(c: Context) {
+    const body = await c.req.json();
+    const ids = body.listing_ids;
+    const category = body.category; // can be string, null, or 'standby'
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return c.json({ error: { code: 'VALIDATION_ERROR', message: 'listing_ids must be a non-empty array' } }, 400);
+    }
+
+    const count = await this.service.bulkUpdateCategory(ids, category);
+    const admin = c.get('admin') as { id: number } | undefined;
+
+    if (admin?.id && count > 0) {
+      await logActivity(admin.id, 'bulk_category_update', 'unmatched_listings', undefined, {
+        count,
+        category,
+        listing_ids: ids,
+      });
+    }
+
+    return c.json({ success: true, count });
+  }
+
+  async bulkConfirmCategories(c: Context) {
+    const admin = c.get('admin') as { id: number } | undefined;
+    const result = await this.service.bulkConfirmAllWithCategories();
+
+    if (admin?.id) {
+      await logActivity(admin.id, 'bulk_confirm_categories', 'unmatched_listings', undefined, result);
+    }
+
+    return c.json(result);
+  }
 }

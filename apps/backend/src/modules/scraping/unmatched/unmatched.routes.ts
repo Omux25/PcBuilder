@@ -22,6 +22,8 @@ const unmatchedRouter = new Hono()
   .post('/bulk-approve', (c) => controller.bulkApprove(c))
   .post('/bulk-associate', (c) => controller.bulkAssociate(c))
   .post('/reject', (c) => controller.reject(c))
+  .post('/bulk-category', (c) => controller.bulkCategory(c))
+  .post('/bulk-confirm-categories', (c) => controller.bulkConfirmCategories(c))
   .post('/create-and-link', (c) => controller.createAndLink(c));
 
 export { unmatchedRouter };

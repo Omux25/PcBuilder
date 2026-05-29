@@ -16,8 +16,9 @@ import { X, Link2, Plus } from 'lucide-react';
 import { ConfidenceBadge } from './ConfidenceBadge';
 import { ScrapedListingRow } from './ScrapedListingRow';
 import type { CanonicalGroup, CanonicalGroupListing } from '../api';
-import { getErrorMessage, rejectUnmatchedListings } from '../api';
+import { getErrorMessage, rejectUnmatchedListings, bulkUpdateUnmatchedCategory } from '../api';
 import { fmtPriceRange } from '../utils/fmt';
+import { CATEGORY_ORDER, CATEGORY_LABELS, type ComponentCategory } from '@shared/types';
 
 type Confidence = 'high' | 'medium' | 'low' | 'unknown';
 
@@ -135,6 +136,7 @@ export function CanonicalGroupRow({
                         <img
                             src={listings[0].image_url}
                             alt=""
+                            referrerPolicy="no-referrer"
                             style={{
                                 width: '40px',
                                 height: '40px',
@@ -199,6 +201,42 @@ export function CanonicalGroupRow({
                 {/* Actions */}
                 <td onClick={(e) => e.stopPropagation()}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <select
+                            value={group.category || ''}
+                            onChange={async (e) => {
+                                const newCat = e.target.value || 'standby';
+                                setRejecting(true);
+                                setRowError(null);
+                                try {
+                                    const allIds = listings.map(l => l.id);
+                                    await bulkUpdateUnmatchedCategory(allIds, newCat === 'standby' ? 'standby' : newCat);
+                                    onGroupRejected(group.canonical_name);
+                                } catch (err) {
+                                    setRowError(getErrorMessage(err));
+                                } finally {
+                                    setRejecting(false);
+                                }
+                            }}
+                            disabled={rejecting}
+                            style={{
+                                padding: '3px 6px',
+                                fontSize: '12px',
+                                border: '1px solid var(--border)',
+                                borderRadius: 'var(--radius)',
+                                background: 'var(--surface-2)',
+                                color: 'var(--text)',
+                                cursor: 'pointer',
+                                outline: 'none',
+                                maxWidth: '125px'
+                            }}
+                        >
+                            <option value="">— Standby / Aucun —</option>
+                            {CATEGORY_ORDER.map((cat) => (
+                                <option key={cat} value={cat}>
+                                    {CATEGORY_LABELS[cat as ComponentCategory] || cat}
+                                </option>
+                            ))}
+                        </select>
                         <button
                             onClick={() => onAssociate(group)}
                             title={group.existing_component_id ? 'Associer à l\'existant' : 'Créer et associer'}
