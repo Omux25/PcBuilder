@@ -27,8 +27,7 @@ interface Props {
 export function ComponentDetail({ onAddToBuild }: Props = {}) {
   const { slug, category, identifier } = useParams<{ slug?: string; category?: string; identifier?: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { addToCompare, removeFromCompare, isInCompare } = useCompare();
+  const location = useLocation();  const { addToCompare, removeFromCompare, isInCompare, compareIds, compareCategory } = useCompare();
   const [component, setComponent] = useState<Component | null>(null);
   const [prices, setPrices] = useState<PriceOffer[]>([]);
   const [history, setHistory] = useState<PriceHistoryEntry[]>([]);
@@ -42,7 +41,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
   const [selectedImgIdx, setSelectedImgIdx] = useState(0);
   const [copied, setCopied] = useState(false);
   const [isTrending, setIsTrending] = useState(false);
-
+  
   // Fetch history separately so period changes don't reload the whole page
   const fetchHistory = useCallback(async (id: number, p: HistoryPeriod) => {
     setHistoryLoading(true);
@@ -202,7 +201,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
               <div 
                 className={styles.displayBlur} 
                 style={{ backgroundImage: `url(${images[selectedImgIdx]})` }} 
-              />
+                />
             )}
             {images.length > 0 ? (
               <img 
@@ -330,8 +329,14 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
                 if (isInCompare(component.id)) {
                   removeFromCompare(component.id);
                 } else {
-                  addToCompare(component.id, component.category);
-                  navigate(`/compare?ids=${component.id}`);
+                  const compName = formatComponentName(component);
+                  addToCompare(component.id, component.category, compName);
+                  if (!compareCategory || compareCategory === component.category) {
+                    const newIds = compareIds.includes(component.id) 
+                      ? compareIds 
+                      : [...compareIds, component.id].slice(0, 4);
+                    navigate(`/compare?ids=${newIds.join(',')}`);
+                  }
                 }
               }}
             >
@@ -340,7 +345,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
           </div>
 
           {/* Pricing History */}
-          <section className={styles.card}>
+          <section className={styles.chartContainerCard}>
             <h3 className={styles.cardTitle}>Historique des prix</h3>
             <PriceHistoryChart
               history={history}

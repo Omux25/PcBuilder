@@ -61,6 +61,12 @@ function getModularList(modular: any): string[] {
   return String(modular).split(',').map(s => s.trim()).filter(Boolean);
 }
 
+function getCoolingTypeList(coolingType: any): string[] {
+  if (!coolingType) return [];
+  if (Array.isArray(coolingType)) return coolingType.map(s => String(s).toLowerCase().trim()).filter(Boolean);
+  return String(coolingType).split(',').map(s => s.toLowerCase().trim()).filter(Boolean);
+}
+
 export class ComponentRepository {
   private get sql() {
     return getSql();
@@ -73,7 +79,7 @@ export class ComponentRepository {
       in_stock, is_active,
       min_price, max_price, min_wattage, max_wattage,
       min_capacity_gb, max_capacity_gb, min_frequency_mhz, max_frequency_mhz,
-      chipset, form_factor, interface_type, efficiency_rating, modular, core_count,
+      chipset, form_factor, interface_type, efficiency_rating, modular, cooling_type, core_count,
       vram_gb,
       compat_socket, compat_ram_type, compat_form_factors,
       sort, sortBy, sortOrder
@@ -151,6 +157,17 @@ export class ComponentRepository {
       baseQuery = this.sql`${baseQuery} AND COALESCE(c.modular, c.specs->>'modular') IN ${this.sql(modularList)}`;
     }
     if (core_count != null) baseQuery = this.sql`${baseQuery} AND COALESCE(c.core_count, (c.specs->>'core_count')::integer) = ${core_count}`;
+
+    const coolingTypeList = getCoolingTypeList(cooling_type);
+    if (category === 'cooling' && coolingTypeList.length === 1) {
+      const type = coolingTypeList[0];
+      const aioCond = this.sql`((c.tags IS NOT NULL AND 'aio' = ANY(c.tags)) OR c.height_mm = 52 OR c.name ILIKE '%aio%' OR c.name ILIKE '%liquid%' OR c.name ILIKE '%watercooler%' OR c.name ILIKE '%water cooling%')`;
+      if (type === 'aio') {
+        baseQuery = this.sql`${baseQuery} AND ${aioCond} AND NOT (c.tags IS NOT NULL AND 'accessory' = ANY(c.tags))`;
+      } else if (type === 'air') {
+        baseQuery = this.sql`${baseQuery} AND NOT ${aioCond} AND NOT (c.tags IS NOT NULL AND 'accessory' = ANY(c.tags))`;
+      }
+    }
 
     // Compatibility check logic (reused for tiers)
     let isCompatibleSql = this.sql`true`;
@@ -560,8 +577,9 @@ export class ComponentRepository {
       ) ap ON ap.product_key = COALESCE(c.mpn, c.name || '::' || c.category)
       WHERE c.category = ${category} 
         AND (
-          (${isId}::boolean = true AND c.id = ${isId ? Number(identifier) : 0}) OR 
-          (${isId}::boolean = false AND c.mpn = ${identifier})
+          c.mpn = ${identifier} OR
+          c.slug = ${identifier} OR
+          (${isId}::boolean = true AND c.id = ${isId ? Number(identifier) : 0})
         )
       ORDER BY c.id ASC
       LIMIT 1
@@ -626,7 +644,7 @@ export class ComponentRepository {
     if (activeFilters) {
       const {
         brand, socket, chipset, form_factor, vram_gb, ram_type, search,
-        compat_socket, compat_ram_type, compat_form_factors
+        compat_socket, compat_ram_type, compat_form_factors, cooling_type
       } = activeFilters;
 
       const brandList = getBrandList(brand);
@@ -656,6 +674,17 @@ export class ComponentRepository {
       if (search) {
         const term = `%${search}%`;
         conditions = this.sql`${conditions} AND (c.name ILIKE ${term} OR c.brand ILIKE ${term} OR c.slug ILIKE ${term})`;
+      }
+
+      const coolingTypeList = getCoolingTypeList(cooling_type);
+      if (category === 'cooling' && coolingTypeList.length === 1) {
+        const type = coolingTypeList[0];
+        const aioCond = this.sql`((c.tags IS NOT NULL AND 'aio' = ANY(c.tags)) OR c.height_mm = 52 OR c.name ILIKE '%aio%' OR c.name ILIKE '%liquid%' OR c.name ILIKE '%watercooler%' OR c.name ILIKE '%water cooling%')`;
+        if (type === 'aio') {
+          conditions = this.sql`${conditions} AND ${aioCond} AND NOT (c.tags IS NOT NULL AND 'accessory' = ANY(c.tags))`;
+        } else if (type === 'air') {
+          conditions = this.sql`${conditions} AND NOT ${aioCond} AND NOT (c.tags IS NOT NULL AND 'accessory' = ANY(c.tags))`;
+        }
       }
 
       // Compatibility hints (strict filters when compatibleOnly is active)

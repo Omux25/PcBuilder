@@ -11,13 +11,15 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { X, Plus, ArrowLeft, BarChart3, CheckCircle2, Share2, Check } from 'lucide-react';
-import { getComponentById, getPrices } from '../api';
+import { getComponentById, getPrices, smartSearch } from '../api';
 import type { Component, PriceOffer, ComponentCategory } from '../types';
 import { CATEGORY_LABELS } from '../types';
-import { MAX_COMPARE } from '../context/CompareContext';
+import { MAX_COMPARE, useCompare } from '../context/CompareContext';
 import { formatComponentName } from '@shared/formatting/component-name.formatter';
 import { formatPrice } from '@shared/formatting/price.formatter';
+import { LinkEngine } from '@shared/link-engine';
 import { UI } from '../ui-strings';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer } from 'recharts';
 import styles from './Compare.module.css';
 
 // Ranks for non-numeric specs
@@ -70,6 +72,9 @@ const ALL_SPEC_ROWS: Record<string, { label: string; unit?: string; highlight?: 
   height_mm: { label: 'Hauteur', unit: 'mm', highlight: 'lower' },
   tdp: { label: 'TDP', unit: 'W', highlight: 'lower' },
   max_tdp: { label: 'TDP max', unit: 'W', highlight: 'higher' },
+  m2_slots: { label: 'Slots M.2', highlight: 'higher' },
+  supported_motherboards: { label: 'Cartes mères supportées' },
+  supported_sockets: { label: 'Sockets supportés' },
 };
 
 const CATEGORY_SPECS: Record<string, string[]> = {
@@ -92,6 +97,16 @@ interface ComponentWithPrices {
 export function Compare() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [copied, setCopied] = useState(false);
+  const { syncCompareIds, removeFromCompare } = useCompare();
+
+  // Show only differences toggle state
+  const [showOnlyDifferences, setShowOnlyDifferences] = useState(false);
+
+  // Quick Add states
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [quickAddSearch, setQuickAddSearch] = useState('');
+  const [quickAddResults, setQuickAddResults] = useState<Component[]>([]);
+  const [quickAddLoading, setQuickAddLoading] = useState(false);
 
   // Parse IDs from URL
   const idsParam = searchParams.get('ids') ?? '';
@@ -99,6 +114,9 @@ export function Compare() {
 
   const [items, setItems] = useState<ComponentWithPrices[]>([]);
   const [loading, setLoading] = useState(ids.length > 0);
+
+  const category = items[0]?.component.category;
+  const specKeys = category ? CATEGORY_SPECS[category] || Object.keys(ALL_SPEC_ROWS) : [];
 
   function handleShare() {
     navigator.clipboard.writeText(window.location.href);
@@ -111,6 +129,7 @@ export function Compare() {
     if (ids.length === 0) {
       setItems([]);
       setLoading(false);
+      syncCompareIds([], null);
       return;
     }
 
@@ -132,18 +151,73 @@ export function Compare() {
         }
       })
     ).then(results => {
-      setItems(results.filter((r): r is ComponentWithPrices => r !== null));
+      const filtered = results.filter((r): r is ComponentWithPrices => r !== null);
+      setItems(filtered);
+      
+      // Synchroniser avec l'état global
+      if (filtered.length > 0) {
+        const cat = filtered[0].component.category;
+        syncCompareIds(filtered.map(x => x.component.id), cat);
+      } else {
+        syncCompareIds([], null);
+      }
     }).finally(() => setLoading(false));
   }, [idsParam]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Quick Add Search suggestions effect
+  useEffect(() => {
+    if (!showQuickAdd || !category) return;
+    if (!quickAddSearch.trim()) {
+      setQuickAddResults([]);
+      return;
+    }
+    setQuickAddLoading(true);
+    const delayDebounce = setTimeout(() => {
+      smartSearch({
+        category: category as ComponentCategory,
+        search: quickAddSearch,
+        limit: 5,
+        compatible_only: false
+      }).then(res => {
+        // Filter out components already in the comparison
+        setQuickAddResults(res.components.filter(c => !ids.includes(c.id)));
+      }).catch(() => {
+        setQuickAddResults([]);
+      }).finally(() => {
+        setQuickAddLoading(false);
+      });
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [quickAddSearch, showQuickAdd, category, ids]);
 
   function removeComponent(id: number) {
     const newIds = ids.filter(i => i !== id);
     if (newIds.length === 0) setSearchParams({});
     else setSearchParams({ ids: newIds.join(',') });
+    removeFromCompare(id);
   }
 
-  const category = items[0]?.component.category;
-  const specKeys = category ? CATEGORY_SPECS[category] || Object.keys(ALL_SPEC_ROWS) : [];
+  // Identify tech specs whose values are identical across all compared components
+  const identicalKeys = useMemo(() => {
+    if (items.length < 2) return new Set<string>();
+    const set = new Set<string>();
+    specKeys.forEach(key => {
+      const firstVal = String(getSpecValue(items[0].component, key) ?? '');
+      const allSame = items.every(item => 
+        String(getSpecValue(item.component, key) ?? '') === firstVal
+      );
+      if (allSame) {
+        set.add(key);
+      }
+    });
+    return set;
+  }, [items, specKeys]);
+
+  const displayedSpecKeys = useMemo(() => {
+    if (!showOnlyDifferences) return specKeys;
+    return specKeys.filter(key => !identicalKeys.has(key));
+  }, [specKeys, identicalKeys, showOnlyDifferences]);
 
   const totalCols = items.length + (items.length < MAX_COMPARE ? 1 : 0);
 
@@ -188,10 +262,20 @@ export function Compare() {
             <h1 className={styles.title}>{UI.compare.title}</h1>
             {category && <div className={styles.categoryBadge}>{CATEGORY_LABELS[category as ComponentCategory]}</div>}
           </div>
-          <button className={`${styles.shareBtn} ${copied ? styles.copied : ''}`} onClick={handleShare}>
-            {copied ? <Check size={16} /> : <Share2 size={16} />}
-            <span>{copied ? 'Copié !' : 'Partager'}</span>
-          </button>
+          <div className={styles.headerActions}>
+            {items.length >= 2 && (
+              <button 
+                className={`${styles.toggleDiffBtn} ${showOnlyDifferences ? styles.toggleDiffBtnActive : ''}`}
+                onClick={() => setShowOnlyDifferences(prev => !prev)}
+              >
+                <span>{showOnlyDifferences ? 'Afficher similitudes' : 'Masquer similitudes'}</span>
+              </button>
+            )}
+            <button className={`${styles.shareBtn} ${copied ? styles.copied : ''}`} onClick={handleShare}>
+              {copied ? <Check size={16} /> : <Share2 size={16} />}
+              <span>{copied ? 'Copié !' : 'Partager'}</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -240,6 +324,45 @@ export function Compare() {
                 return "Comparez les caractéristiques techniques détaillées et les prix en temps réel ci-dessous.";
               })()}
             </div>
+            {(() => {
+              const scoreA = Number(getSpecValue(items[0].component, 'benchmark_score')) || 0;
+              const scoreB = Number(getSpecValue(items[1].component, 'benchmark_score')) || 0;
+              const nameA = items[0].component.brand || 'Produit A';
+              const nameB = items[1].component.brand || 'Produit B';
+              
+              if (!scoreA || !scoreB) return null;
+
+              const chartData = [
+                { name: nameA, Score: scoreA, fill: '#3b82f6' },
+                { name: nameB, Score: scoreB, fill: '#a855f7' }
+              ];
+
+              return (
+                <div className={styles.vsChartContainer}>
+                  <div className={styles.vsChartLabel}>Indice de puissance brute (Benchmark)</div>
+                  <ResponsiveContainer width="100%" height={90}>
+                    <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 15, left: -25, bottom: 5 }}>
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="name" type="category" stroke="var(--text-muted)" fontSize={11} axisLine={false} tickLine={false} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          background: 'var(--bg-surface-2)', 
+                          border: '1px solid var(--border-subtle)', 
+                          borderRadius: 8,
+                          fontSize: '11px',
+                          color: 'var(--text-primary)'
+                        }} 
+                      />
+                      <Bar dataKey="Score" radius={[0, 99, 99, 0]} barSize={12}>
+                        {chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              );
+            })()}
           </div>
           {(() => {
             const scoreA = Number(getSpecValue(items[0].component, 'benchmark_score')) || 0;
@@ -281,7 +404,7 @@ export function Compare() {
               </div>
               <div className={styles.compInfo}>
                 <span className={styles.brand}>{item.component.brand}</span>
-                <Link to={`/product/${item.component.slug}`} className={styles.name}>{formatComponentName(item.component)}</Link>
+                <Link to={LinkEngine.getProductUrl(item.component)} className={styles.name}>{formatComponentName(item.component)}</Link>
                 <div className={styles.price}>
                    {item.lowestPrice ? formatPrice(item.lowestPrice) : 'Rupture'}
                 </div>
@@ -289,10 +412,67 @@ export function Compare() {
             </div>
           ))}
           {items.length < MAX_COMPARE && (
-             <Link to={`/browse/${category || ''}`} className={styles.addSlot}>
-                <Plus size={24} />
-                <span>Ajouter</span>
-             </Link>
+             <div className={`${styles.addSlot} ${showQuickAdd ? styles.addSlotActive : ''}`}>
+                {!showQuickAdd ? (
+                   <button className={styles.addBtnEmptySlot} onClick={() => setShowQuickAdd(true)}>
+                      <Plus size={24} />
+                      <span>Ajouter</span>
+                   </button>
+                ) : (
+                   <div className={styles.quickAddContainer}>
+                      <div className={styles.quickAddHeader}>
+                         <input
+                            type="text"
+                            className={styles.quickAddInput}
+                            placeholder="Rechercher…"
+                            value={quickAddSearch}
+                            onChange={e => setQuickAddSearch(e.target.value)}
+                            autoFocus
+                         />
+                         <button className={styles.quickAddClose} onClick={() => { setShowQuickAdd(false); setQuickAddSearch(''); }}>
+                            <X size={14} />
+                         </button>
+                      </div>
+                      <div className={styles.quickAddBody}>
+                         {quickAddLoading && <div className={styles.quickAddLoading}>Chargement…</div>}
+                         {!quickAddLoading && quickAddResults.length === 0 && quickAddSearch.trim() !== '' && (
+                            <div className={styles.quickAddNoResults}>Aucun résultat</div>
+                         )}
+                         {!quickAddLoading && quickAddSearch.trim() === '' && (
+                            <div className={styles.quickAddPrompt}>Rechercher un produit...</div>
+                         )}
+                         <div className={styles.quickAddList}>
+                            {quickAddResults.map(prod => (
+                               <div 
+                                  key={prod.id} 
+                                  className={styles.quickAddRow}
+                                  title={formatComponentName(prod)}
+                                  onClick={() => {
+                                     const newIds = [...ids, prod.id];
+                                     setSearchParams({ ids: newIds.join(',') });
+                                     setShowQuickAdd(false);
+                                     setQuickAddSearch('');
+                                  }}
+                               >
+                                  {prod.image_url ? (
+                                    <img src={prod.image_url} alt="" className={styles.quickAddThumb} referrerPolicy="no-referrer" />
+                                  ) : (
+                                    <div className={styles.quickAddThumbPlaceholder}><Plus size={12} /></div>
+                                  )}
+                                  <div className={styles.quickAddInfo}>
+                                     <span className={styles.quickAddBrand}>{prod.brand}</span>
+                                     <span className={styles.quickAddName}>
+                                        {formatComponentName(prod)}
+                                     </span>
+                                  </div>
+                                  <Plus size={14} className={styles.quickAddPlusIcon} />
+                               </div>
+                            ))}
+                         </div>
+                      </div>
+                   </div>
+                )}
+             </div>
           )}
         </div>
 
@@ -381,7 +561,7 @@ export function Compare() {
 
             {/* Specs Section */}
             <div className={styles.sectionDivider}>Caractéristiques</div>
-            {specKeys.map(key => {
+            {displayedSpecKeys.map(key => {
                 const row = ALL_SPEC_ROWS[key] || { label: key };
                 const bestVal = getBestValue(key);
                 return (

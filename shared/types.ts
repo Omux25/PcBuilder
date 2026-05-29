@@ -242,6 +242,7 @@ export interface ComponentFilters {
   compat_socket?: string;
   compat_ram_type?: string;
   compat_form_factors?: string[];
+  cooling_type?: string;
 }
 
 /** The build configuration — one optional slot per category.

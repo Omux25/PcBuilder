@@ -9,6 +9,7 @@ import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
 import { useBuild } from '../context/BuildContext';
 import { useCompare } from '../context/CompareContext';
 import { formatComponentName } from '@shared/formatting/component-name.formatter';
+import { LinkEngine } from '@shared/link-engine';
 import styles from './CategoryBrowse.module.css';
 
 const LIMIT = 20;
@@ -236,7 +237,7 @@ function getColDefs(cat: ComponentCategory): ColDef[] {
             const val = str(c.modular);
             if (val === '—') return val;
             const valLower = val.toLowerCase();
-            let displayVal = val;
+            let displayVal: string;
             if (valLower.includes('full')) {
               displayVal = 'Modulaire';
             } else if (valLower.includes('semi')) {
@@ -268,7 +269,12 @@ function getColDefs(cat: ComponentCategory): ColDef[] {
           width: '55px',
           render: c => {
             const n = c.name.toLowerCase();
-            const isAio = n.includes('aio') || n.includes('liquid') || n.includes('watercooler');
+            const isAio = c.tags?.includes('aio') ||
+                          c.height_mm === 52 ||
+                          n.includes('aio') || 
+                          n.includes('liquid') || 
+                          n.includes('watercooler') || 
+                          n.includes('water cooling');
             return isAio ? 'AIO' : 'Air';
           }
         },
@@ -374,6 +380,12 @@ export function CategoryBrowse() {
     const modularParam = searchParams.get('modular');
     return modularParam ? [modularParam] : [];
   });
+  const [selectedCoolingTypes, setSelectedCoolingTypes] = useState<string[]>(() => {
+    const param = searchParams.get('cooling_types');
+    if (param) return param.split(',').filter(Boolean);
+    const singleParam = searchParams.get('cooling_type');
+    return singleParam ? [singleParam] : [];
+  });
   const [coreCount, setCoreCount] = useState(searchParams.get('core_count') ?? '');
 
   const initialSortBy = useMemo(() => {
@@ -450,7 +462,7 @@ export function CategoryBrowse() {
     ramTypeFilter: string | string[], pageNum: number, sortByVal: string, sortOrderVal: 'ASC' | 'DESC',
     minPriceVal: string, maxPriceVal: string, inStockVal: boolean, compatOnlyVal: boolean, vramGbVal: number | number[],
     minWatt: string, maxWatt: string, minCap: string, maxCap: string, minF: string, maxF: string,
-    chipsetVal: string | string[], formFactorVal: string | string[], interfaceVal: string | string[], efficiencyVal: string | string[], modularVal: string | string[], coreVal: string
+    chipsetVal: string | string[], formFactorVal: string | string[], interfaceVal: string | string[], efficiencyVal: string | string[], modularVal: string | string[], coolingTypeVal: string | string[], coreVal: string
   ) => {
     if (abortRef.current) abortRef.current.abort();
     abortRef.current = new AbortController();
@@ -483,6 +495,7 @@ export function CategoryBrowse() {
         interface_type: (Array.isArray(interfaceVal) && interfaceVal.length > 0) ? interfaceVal : (typeof interfaceVal === 'string' && interfaceVal) ? interfaceVal : undefined,
         efficiency_rating: (Array.isArray(efficiencyVal) && efficiencyVal.length > 0) ? efficiencyVal : (typeof efficiencyVal === 'string' && efficiencyVal) ? efficiencyVal : undefined,
         modular: (Array.isArray(modularVal) && modularVal.length > 0) ? modularVal : (typeof modularVal === 'string' && modularVal) ? modularVal : undefined,
+        cooling_type: (Array.isArray(coolingTypeVal) && coolingTypeVal.length > 0) ? coolingTypeVal : (typeof coolingTypeVal === 'string' && coolingTypeVal) ? coolingTypeVal : undefined,
         core_count: coreVal ? Number(coreVal) : undefined,
         in_stock: inStockVal || undefined, 
         compatible_only: compatOnlyVal,
@@ -509,7 +522,7 @@ export function CategoryBrowse() {
   useEffect(() => {
     if (!filterMountedRef.current) {
       filterMountedRef.current = true;
-      fetchRef.current(search, selectedBrands, selectedSockets, selectedRamTypes, page, sortBy, sortOrder, minPrice, maxPrice, inStockOnly, compatibleOnly, selectedVram, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq, selectedChipsets, selectedFormFactors, selectedInterfaces, selectedEfficiencies, selectedModulars, coreCount);
+      fetchRef.current(search, selectedBrands, selectedSockets, selectedRamTypes, page, sortBy, sortOrder, minPrice, maxPrice, inStockOnly, compatibleOnly, selectedVram, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq, selectedChipsets, selectedFormFactors, selectedInterfaces, selectedEfficiencies, selectedModulars, selectedCoolingTypes, coreCount);
       return;
     }
     
@@ -518,7 +531,7 @@ export function CategoryBrowse() {
     prevSearchRef.current = search;
 
     const timeout = setTimeout(() => {
-      fetchRef.current(search, selectedBrands, selectedSockets, selectedRamTypes, page, sortBy, sortOrder, minPrice, maxPrice, inStockOnly, compatibleOnly, selectedVram, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq, selectedChipsets, selectedFormFactors, selectedInterfaces, selectedEfficiencies, selectedModulars, coreCount);
+      fetchRef.current(search, selectedBrands, selectedSockets, selectedRamTypes, page, sortBy, sortOrder, minPrice, maxPrice, inStockOnly, compatibleOnly, selectedVram, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq, selectedChipsets, selectedFormFactors, selectedInterfaces, selectedEfficiencies, selectedModulars, selectedCoolingTypes, coreCount);
       
       const params: Record<string, string> = {};
       if (search) params.q = search;
@@ -537,6 +550,7 @@ export function CategoryBrowse() {
       if (selectedInterfaces.length > 0) params.interfaces = selectedInterfaces.join(',');
       if (selectedEfficiencies.length > 0) params.efficiencies = selectedEfficiencies.join(',');
       if (selectedModulars.length > 0) params.modulars = selectedModulars.join(',');
+      if (selectedCoolingTypes.length > 0) params.cooling_types = selectedCoolingTypes.join(',');
       if (coreCount) params.core_count = coreCount;
       if (minPrice) params.min_price = minPrice;
       if (maxPrice) params.max_price = maxPrice;
@@ -552,7 +566,7 @@ export function CategoryBrowse() {
     }, isSearchChange ? DEBOUNCE_MS : 0);
     
     return () => clearTimeout(timeout);
-  }, [search, selectedBrands, selectedSockets, selectedRamTypes, selectedVram, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq, selectedChipsets, selectedFormFactors, selectedInterfaces, selectedEfficiencies, selectedModulars, coreCount, minPrice, maxPrice, sortBy, sortOrder, inStockOnly, compatibleOnly, page, setSearchParams]);
+  }, [search, selectedBrands, selectedSockets, selectedRamTypes, selectedVram, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq, selectedChipsets, selectedFormFactors, selectedInterfaces, selectedEfficiencies, selectedModulars, selectedCoolingTypes, coreCount, minPrice, maxPrice, sortBy, sortOrder, inStockOnly, compatibleOnly, page, setSearchParams]);
 
   const totalPages = Math.ceil(total / LIMIT);
 
@@ -597,6 +611,7 @@ export function CategoryBrowse() {
     setMinCapacity(''); setMaxCapacity('');
     setMinFreq(''); setMaxFreq('');
     setSelectedChipsets([]); setSelectedFormFactors([]); setSelectedInterfaces([]); setSelectedEfficiencies([]); setSelectedModulars([]); setCoreCount('');
+    setSelectedCoolingTypes([]);
     setInStockOnly(false); setCompatibleOnly(true);
     setSortBy(''); setSortOrder('ASC');
   };
@@ -609,7 +624,7 @@ export function CategoryBrowse() {
   const activeFilters = [
     search, selectedBrands.length ? '1' : '', selectedSockets.length ? '1' : '', selectedRamTypes.length ? '1' : '', selectedVram.length ? '1' : '', 
     minPrice, maxPrice, minWattage, maxWattage, minCapacity, maxCapacity, minFreq, maxFreq,
-    selectedChipsets.length ? '1' : '', selectedFormFactors.length ? '1' : '', selectedInterfaces.length ? '1' : '', selectedEfficiencies.length ? '1' : '', selectedModulars.length ? '1' : '', coreCount, sortBy
+    selectedChipsets.length ? '1' : '', selectedFormFactors.length ? '1' : '', selectedInterfaces.length ? '1' : '', selectedEfficiencies.length ? '1' : '', selectedModulars.length ? '1' : '', selectedCoolingTypes.length ? '1' : '', coreCount, sortBy
   ].filter(Boolean).length;
 
   if (!CATEGORY_ORDER.includes(cat)) {
@@ -683,6 +698,16 @@ export function CategoryBrowse() {
               onChange={onFilterChange(setSelectedBrands)}
               defaultOpen={true}
               searchable={true}
+            />
+          )}
+
+          {cat === 'cooling' && (
+            <AccordionCheckboxFilterGroup
+              label="Type"
+              options={['Air', 'AIO']}
+              values={selectedCoolingTypes}
+              onChange={onFilterChange(setSelectedCoolingTypes)}
+              defaultOpen={true}
             />
           )}
 
@@ -888,12 +913,19 @@ export function CategoryBrowse() {
                     const isCompared = isInCompare(c.id);
                     return (
                       <React.Fragment key={c.id}>
-                        <tr className={`${styles.dataRow} ${isIncompatible ? styles.incompatibleRow : ''}`}>
+                        <tr 
+                          className={`${styles.dataRow} ${isIncompatible ? styles.incompatibleRow : ''}`}
+                          onClick={() => {
+                            navigate(LinkEngine.getProductUrl(c));
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        >
                           <td className={styles.tdImg}>
                             <Link 
-                              to={c.mpn ? `/components/${c.category}/${c.mpn}` : `/components/${c.category}/${c.id}`} 
+                              to={LinkEngine.getProductUrl(c)} 
                               className={styles.thumbWrapper}
                               style={{ display: 'block' }}
+                              onClick={(e) => e.stopPropagation()}
                             >
                               {c.image_url
                                 ? <img src={c.image_url} alt="" className={styles.compThumb} referrerPolicy="no-referrer" />
@@ -905,9 +937,10 @@ export function CategoryBrowse() {
                             <div className={styles.nameWrap}>
                               <span className={styles.compBrand}>{c.brand}</span>
                               <Link 
-                                to={c.mpn ? `/components/${c.category}/${c.mpn}` : `/components/${c.category}/${c.id}`} 
+                                to={LinkEngine.getProductUrl(c)} 
                                 className={styles.compName} 
                                 title={formatComponentName(c)}
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 {formatComponentName(c, { excludeBrand: true })}
                               </Link>
@@ -958,7 +991,7 @@ export function CategoryBrowse() {
                               </div>
                             </div>
                           </td>
-                          <td className={styles.tdAction}>
+                          <td className={styles.tdAction} onClick={(e) => e.stopPropagation()}>
                             <div className={styles.btnGroup}>
                               {/* Compare Button */}
                               <button 
@@ -966,14 +999,13 @@ export function CategoryBrowse() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (isCompared) removeFromCompare(c.id);
-                                  else addToCompare(c.id, c.category);
+                                  else addToCompare(c.id, c.category, formatComponentName(c));
                                 }}
                                 title="Comparer"
                               >
                                 <GitCompare size={16} />
                               </button>
 
-                              {/* Main Action Button */}
                               <button 
                                 className={`${styles.addBtn} ${isIncompatible ? styles.addBtnDisabled : ''}`}
                                 onClick={(e) => {

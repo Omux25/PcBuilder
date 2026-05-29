@@ -563,3 +563,305 @@
     flex-direction: row;
   }
 }
+
+/* Screen export button */
+.exportBtn {
+  width: 100%;
+  padding: 0.85rem;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  border-radius: var(--radius-lg);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.exportBtn:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+/* ── Print Proposal Sheet ── */
+.printOnlyContainer {
+  display: none;
+}
+
+@media print {
+  /* Hide the rest of the application completely! */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Make only the print container and its contents visible */
+  .printOnlyContainer,
+  .printOnlyContainer * {
+    visibility: visible;
+  }
+  
+  .printOnlyContainer {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: #ffffff !important;
+    color: #0b0b0d !important;
+    padding: 1.5cm 1cm !important;
+    font-family: 'Inter', -apple-system, sans-serif !important;
+    font-size: 10.5pt !important;
+    line-height: 1.4 !important;
+  }
+
+  .printHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #0b0b0d;
+    padding-bottom: 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  .printBrandName {
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 20pt !important;
+    font-weight: 800 !important;
+    color: #0b0b0d !important;
+    margin: 0 !important;
+    letter-spacing: -0.03em !important;
+  }
+
+  .printBrandTagline {
+    font-size: 8.5pt !important;
+    color: #555566 !important;
+    margin: 0.25rem 0 0 0 !important;
+    font-weight: 500 !important;
+  }
+
+  .printDocTitle {
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 11pt !important;
+    font-weight: 800 !important;
+    color: #0b0b0d !important;
+    letter-spacing: 0.05em !important;
+    text-align: right !important;
+  }
+
+  .printDate {
+    font-size: 8.5pt !important;
+    color: #555566 !important;
+    margin-top: 0.25rem !important;
+    text-align: right !important;
+  }
+
+  .printTable {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-bottom: 2.5rem !important;
+  }
+
+  .printTable th {
+    background: #f1f2f6 !important;
+    color: #444455 !important;
+    font-size: 8pt !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    padding: 0.75rem 1rem !important;
+    border-bottom: 1.5px solid #0b0b0d !important;
+  }
+
+  .printTableRow {
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+
+  .printTableRow td {
+    padding: 0.95rem 1rem !important;
+    font-size: 9.5pt !important;
+    vertical-align: middle !important;
+  }
+
+  .printTableCat {
+    font-size: 8pt !important;
+    font-weight: 800 !important;
+    color: #64748b !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.03em !important;
+  }
+
+  .printTableName {
+    color: #0b0b0d !important;
+  }
+
+  .printTableName strong {
+    font-weight: 700 !important;
+  }
+
+  .printTableSpecs {
+    font-size: 8.5pt !important;
+    color: #475569 !important;
+  }
+
+  .printTablePrice {
+    font-weight: 700 !important;
+    text-align: right !important;
+    font-variant-numeric: tabular-nums !important;
+  }
+
+  /* ── Summary diagnostics block ── */
+  .printSummaryBlock {
+    display: grid !important;
+    grid-template-columns: 1.2fr 1fr !important;
+    gap: 2rem !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    padding: 1.25rem 1.5rem !important;
+    margin-bottom: 2.5rem !important;
+    page-break-inside: avoid !important;
+  }
+
+  .printSummaryLeft {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  .printSummaryTitle {
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 10pt !important;
+    font-weight: 800 !important;
+    margin: 0 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.02em !important;
+    color: #0b0b0d !important;
+  }
+
+  .printDiagList {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.4rem !important;
+  }
+
+  .printDiagItem {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    font-size: 9pt !important;
+    color: #334155 !important;
+  }
+
+  .printDiagIcon {
+    color: #16a34a !important;
+    font-weight: bold !important;
+  }
+
+  .printDiagItem strong {
+    color: #0b0b0d !important;
+  }
+
+  .printSummaryRight {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    border-left: 1px solid #e2e8f0 !important;
+    padding-left: 2rem !important;
+  }
+
+  .printTotalLabel {
+    font-size: 8pt !important;
+    font-weight: 800 !important;
+    color: #64748b !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    margin-bottom: 0.25rem !important;
+  }
+
+  .printTotalPrice {
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 22pt !important;
+    font-weight: 800 !important;
+    color: #0b0b0d !important;
+    line-height: 1 !important;
+  }
+
+  .printTotalPriceSub {
+    font-size: 7pt !important;
+    color: #94a3b8 !important;
+    margin-top: 0.4rem !important;
+    text-align: right !important;
+  }
+
+  /* ── Brand ad box ── */
+  .printAdBox {
+    border: 2px dashed #0b0b0d !important;
+    background: #f8fafc !important;
+    border-radius: 12px !important;
+    padding: 1.25rem 1.5rem !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 2rem !important;
+    page-break-inside: avoid !important;
+  }
+
+  .printAdText {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.4rem !important;
+  }
+
+  .printAdTitle {
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 11pt !important;
+    font-weight: 800 !important;
+    color: #0b0b0d !important;
+    margin: 0 !important;
+  }
+
+  .printAdDesc {
+    font-size: 8pt !important;
+    color: #475569 !important;
+    margin: 0 !important;
+    line-height: 1.5 !important;
+  }
+
+  .printAdLink {
+    font-size: 8pt !important;
+    font-weight: 700 !important;
+    color: #2563eb !important;
+    text-decoration: none !important;
+    word-break: break-all !important;
+  }
+
+  .printAdQr {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  .printQrImage {
+    width: 90px !important;
+    height: 90px !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 6px !important;
+    padding: 4px !important;
+  }
+
+  .printQrText {
+    font-size: 7pt !important;
+    font-weight: 700 !important;
+    color: #64748b !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.03em !important;
+  }
+}

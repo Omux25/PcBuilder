@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { RefreshCw, Search, X } from 'lucide-react';
+import { RefreshCw, Search, X, CheckCircle } from 'lucide-react';
 import { CategoryAccordion } from '../components/CategoryAccordion';
 import { UnknownSection } from '../components/UnknownSection';
 import { SearchOverrideView } from '../components/SearchOverrideView';
@@ -29,6 +29,7 @@ import {
   bulkAssociateUnmatched,
   reprocessSuggestions,
   getErrorMessage,
+  bulkConfirmAllWithCategories,
 } from '../api';
 import { CATEGORY_ORDER, CATEGORY_LABELS, type ComponentCategory } from '@shared/types';
 
@@ -58,6 +59,7 @@ export function Unmatched() {
 
   // ── Reprocess ─────────────────────────────────────────────────────────────
   const [reprocessing, setReprocessing] = useState(false);
+  const [confirmingCategories, setConfirmingCategories] = useState(false);
 
   // ── Unknown section refresh trigger ──────────────────────────────────────
   const [unknownRefresh, setUnknownRefresh] = useState(0);
@@ -199,6 +201,30 @@ export function Unmatched() {
     }
   }
 
+  async function handleConfirmCategories() {
+    if (confirmingCategories) return;
+    if (!window.confirm("Êtes-vous sûr de vouloir confirmer et créer automatiquement des composants pour TOUS les produits avec catégories ? Cette action associera les correspondances et créera des entrées de catalogue propres pour les nouveaux produits.")) {
+      return;
+    }
+
+    setConfirmingCategories(true);
+    try {
+      const result = await bulkConfirmAllWithCategories();
+      showToast({
+        message: `✓ Ingestion réussie : ${result.created_components} composants créés, ${result.created_listings} listings associés aux nouveaux, ${result.linked_listings} listings associés aux existants.`,
+        type: 'success',
+      });
+      loadSummary();
+      setUnknownRefresh((n) => n + 1);
+      setCategoryState(new Map());
+      setAccordionOpen(new Map());
+    } catch (err) {
+      showToast({ message: getErrorMessage(err), type: 'error' });
+    } finally {
+      setConfirmingCategories(false);
+    }
+  }
+
   // ── Derived ───────────────────────────────────────────────────────────────
   const knownCategories = categorySummary.filter((e) => e.category !== null);
   const unknownEntry = categorySummary.find((e) => e.category === null);
@@ -288,6 +314,43 @@ export function Unmatched() {
               </button>
             )}
           </div>
+
+          <button
+            onClick={handleConfirmCategories}
+            disabled={confirmingCategories}
+            title="Confirmer et créer automatiquement tous les produits qui ont une catégorie suggérée ou manuelle"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              height: '42px',
+              padding: '0 24px',
+              fontSize: '13px',
+              fontWeight: 700,
+              borderRadius: 'var(--radius-lg)',
+              border: 'none',
+              cursor: confirmingCategories ? 'not-allowed' : 'pointer',
+              transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              background: confirmingCategories
+                ? 'var(--surface-3)'
+                : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              color: confirmingCategories ? 'var(--text-dim)' : '#fff',
+              boxShadow: confirmingCategories ? 'none' : '0 4px 15px rgba(16, 185, 129, 0.4), 0 0 20px rgba(5, 150, 105, 0.2)',
+              opacity: confirmingCategories ? 0.6 : 1,
+              transform: confirmingCategories ? 'none' : 'translateY(0)',
+            }}
+            onMouseOver={(e) => { if (!confirmingCategories) e.currentTarget.style.transform = 'translateY(-2px)'; }}
+            onMouseOut={(e) => { if (!confirmingCategories) e.currentTarget.style.transform = 'translateY(0)'; }}
+          >
+            <CheckCircle
+              size={16}
+              style={{
+                flexShrink: 0,
+              }}
+            />
+            {confirmingCategories ? 'Confirmation...' : 'Confirmer les Catégories'}
+          </button>
 
           <button
             onClick={handleReprocess}

@@ -40,7 +40,7 @@ import { extractCoolingSpecs } from '@shared/hardware/specs/cooling';
 import { extractCaseSpecs } from '@shared/hardware/specs/case';
 import { extractFanSpecs } from '@shared/hardware/specs/fan';
 import { extractThermalPasteSpecs } from '@shared/hardware/specs/thermal-paste';
-import { componentSlug, generateUniqueSlug } from '@shared/slugify';
+import { componentSlug } from '@shared/slugify';
 import { scoreDnaMatch, extractDna, type CatalogComponent } from '../../../core/utils/componentMatcher.js';
 import { findStrictMatch } from '../../../core/utils/hardwareMatcher.js';
 import { loadAdminRules, matchesRule, type KeywordRule } from '../services/keywordRulesService.js';
@@ -124,8 +124,6 @@ export async function aggregate(
   }
 
   // 3. All slugs (for auto-creation - use a Set for O(1) lookup)
-  const existingSlugsRows = isRealSql ? (await sql`SELECT slug FROM components WHERE slug IS NOT NULL`) as { slug: string }[] : [];
-  const existingSlugs = new Set(existingSlugsRows.map(r => r.slug));
   const slugToComponent = new Map<string, CatalogComponent>();
   for (const c of existingComponents) slugToComponent.set(componentSlug(c.brand, c.name), c);
 
@@ -349,32 +347,20 @@ export async function aggregate(
         continue;
       }
 
-      // Step 5: Queue for creation — only for DB-supported categories.
-      // Peripherals/accessories (mouse, keyboard, monitor, etc.) are not in the
-      // components_category_check constraint — send them to unmatched instead.
-      if (!DB_CATEGORIES.has(resolvedCategory)) {
-        unmatchedListingsToUpsert.push({
-          retailer_id: p.retailer_id,
-          product_url: p.product_url,
-          scraped_name: scrapedName,
-          scraped_price: p.price,
-          image_url: p.image_url ?? null,
-          image_urls: (p.image_urls && p.image_urls.length > 0) 
-            ? `{${p.image_urls.map(u => `"${u.replace(/"/g, '\\"')}"`).join(',')}}`
-            : null
-        });
-        unmatched++;
-        continue;
-      }
-
-      const existing = toCreateBySlug.get(baseSlug);
-      if (existing) {
-        existing.prices.push(p);
-      } else {
-        const slug = generateUniqueSlug(baseSlug, existingSlugs);
-        existingSlugs.add(slug); // reserve immediately to prevent duplicates within this batch
-        toCreateBySlug.set(baseSlug, { slug, cleanedName, brand: resolvedBrand, category: resolvedCategory, nameForExtraction, prices: [p] });
-      }
+      // Step 5: Disable auto-creation of components in scraping pipeline.
+      // All unmatched/unmapped products go directly to unmatched_listings staging.
+      unmatchedListingsToUpsert.push({
+        retailer_id: p.retailer_id,
+        product_url: p.product_url,
+        scraped_name: scrapedName,
+        scraped_price: p.price,
+        image_url: p.image_url ?? null,
+        image_urls: (p.image_urls && p.image_urls.length > 0) 
+          ? `{${p.image_urls.map(u => `"${u.replace(/"/g, '\\"')}"`).join(',')}}`
+          : null
+      });
+      unmatched++;
+      continue;
     } catch (err) {
       errors++;
       await logger.error(`[PIPELINE] Classification failed for ${p.product_url}: ${err instanceof Error ? err.message : String(err)}`);
@@ -449,7 +435,7 @@ export async function aggregate(
           tdp: s?.tdp ?? null,
           chipset: s?.chipset ?? null,
           vram_gb: s?.vram_gb ?? null,
-          specs: specsPayload ? JSON.stringify(specsPayload) : null
+          specs: specsPayload
         };
       } else if (category === 'ram') {
         const s = extractRamSpecs(compositeText);
@@ -463,9 +449,10 @@ export async function aggregate(
           cas_latency: s?.cas_latency ?? null
         };
       } else if (category === 'motherboard') {
-        const s = extractMotherboardSpecs(compositeText);
+        const s = extractMotherboardSpecs(compositeText, brand);
         const specsPayload = s ? {
           socket: s.socket ?? null,
+          chipset: s.chipset ?? null,
           supported_ram_types: s.supported_ram_types ?? null,
           max_ram_frequency: s.max_ram_frequency ?? null,
           form_factor: s.form_factor ?? null,
@@ -474,11 +461,12 @@ export async function aggregate(
         row = { 
           ...row, 
           socket: s?.socket ?? null, 
+          chipset: s?.chipset ?? null, 
           supported_ram_types: s ? `{${s.supported_ram_types.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null, 
           max_ram_frequency: s?.max_ram_frequency ?? null,
           ram_slots: s?.ram_slots ?? null,
           form_factor: s?.form_factor ?? null,
-          specs: specsPayload ? JSON.stringify(specsPayload) : null
+          specs: specsPayload
         };
       } else if (category === 'psu') {
         const s = extractPsuSpecs(compositeText);
@@ -490,9 +478,9 @@ export async function aggregate(
           psu_form_factor: normalizePsuFormFactor(s?.form_factor)
         };
       } else if (category === 'cooling') {
-        const s = extractCoolingSpecs(compositeText);
+        const s = extractCoolingSpecs(compositeText, brand ?? undefined);
         const tags = s?.tags || [];
-        row = { ...row, tdp: s?.tdp ?? null, tags: tags.length > 0 ? `{${tags.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null };
+        row = { ...row, tdp: s?.tdp ?? null, height_mm: s?.height_mm ?? null, tags: tags.length > 0 ? `{${tags.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null };
       } else if (category === 'case') {
         const s = extractCaseSpecs(compositeText);
         row = { ...row, max_gpu_length_mm: s?.max_gpu_length_mm ?? null, max_cooler_height_mm: s?.max_cooler_height_mm ?? null };
@@ -634,7 +622,11 @@ export async function aggregate(
               image_url = EXCLUDED.image_url,
               image_urls = EXCLUDED.image_urls,
               scraped_at = NOW(),
-              status = 'pending'
+              status = CASE 
+                WHEN unmatched_listings.status = 'dismissed' THEN 'dismissed'
+                WHEN unmatched_listings.status = 'linked' THEN 'linked'
+                ELSE 'pending'
+              END
           `;
         }
       }
@@ -772,7 +764,11 @@ export async function aggregate(
                 scraped_price = EXCLUDED.scraped_price,
                 image_url = EXCLUDED.image_url,
                 scraped_at = NOW(),
-                status = 'pending'
+                status = CASE 
+                  WHEN unmatched_listings.status = 'dismissed' THEN 'dismissed'
+                  WHEN unmatched_listings.status = 'linked' THEN 'linked'
+                  ELSE 'pending'
+                END
             `;
           }
         } catch { /* non-critical in test mode */ }

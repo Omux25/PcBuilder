@@ -5,6 +5,7 @@
 import { sql } from 'bun';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { CurationPersistenceService } from './src/core/services/curationPersistenceService.js';
 
 console.log('⚠️  Dropping all tables...');
 
@@ -56,6 +57,10 @@ console.log('\n🌱 Seeding retailers...');
 const retailerSeed = await readFile(join(import.meta.dirname, 'seed/01_retailers.sql'), 'utf-8');
 await sql.unsafe(retailerSeed);
 console.log('✅ Retailers seeded.');
+
+console.log('\n📦 Seeding curated catalog from backup...');
+await CurationPersistenceService.importCuratedCatalog();
+console.log('✅ Curated catalog seeded.');
 
 console.log('\n🎉 Clean state ready. Run the scraper next:');
 console.log('   bun scripts/tools/run_all_scrapes.ts');

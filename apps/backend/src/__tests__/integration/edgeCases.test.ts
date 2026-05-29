@@ -25,6 +25,10 @@ import jwt from 'jsonwebtoken';
 let dbAvailable = false;
 
 beforeAll(async () => {
+  if (process.platform === 'win32') {
+    console.warn('[integration] Skipping integration database tests on native Windows to avoid Bun PostgreSQL memory alignment panics.');
+    return;
+  }
   // Set JWT_SECRET so the auth middleware accepts our test tokens
   process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'integration-test-secret';
 

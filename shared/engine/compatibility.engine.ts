@@ -226,6 +226,82 @@ const RULES: Rule[] = [
         : null;
     },
   },
+
+  // ── Unverified Specifications Warnings (Option A) ──────────────────────────
+  {
+    name: 'unverified_socket',
+    type: 'warning',
+    components: ['cpu', 'motherboard'],
+    validate: ({ cpu, motherboard }) => {
+      if (cpu && motherboard && (!cpu.socket || !motherboard.socket)) {
+        return `CPU socket compatibility is unverified due to missing socket data.`;
+      }
+      return null;
+    },
+  },
+  {
+    name: 'unverified_ram_type',
+    type: 'warning',
+    components: ['ram', 'motherboard'],
+    validate: (build) => {
+      const mb = build.motherboard;
+      if (!mb) return null;
+      for (const ram of getRamComponents(build)) {
+        if (!ram.ram_type || !mb.supported_ram_types || mb.supported_ram_types.length === 0) {
+          return `RAM type compatibility with motherboard is unverified (missing data).`;
+        }
+      }
+      return null;
+    },
+  },
+  {
+    name: 'unverified_gpu_clearance',
+    type: 'warning',
+    components: ['gpu', 'case'],
+    validate: (build) => {
+      const pcCase = build.case;
+      if (!pcCase) return null;
+      for (const gpu of getGpuComponents(build)) {
+        if (!gpu.length_mm || !pcCase.max_gpu_length_mm) {
+          return `GPU physical length clearance is unverified (missing GPU length or Case clearance limit).`;
+        }
+      }
+      return null;
+    },
+  },
+  {
+    name: 'unverified_cooler_clearance',
+    type: 'warning',
+    components: ['cooling', 'case'],
+    validate: ({ cooling, case: pcCase }) => {
+      if (cooling && pcCase && (!cooling.height_mm || !pcCase.max_cooler_height_mm)) {
+        return `CPU Cooler height clearance in Case is unverified (missing heights or clearance limit).`;
+      }
+      return null;
+    },
+  },
+  {
+    name: 'unverified_cooler_socket',
+    type: 'warning',
+    components: ['cooling', 'cpu'],
+    validate: ({ cooling, cpu }) => {
+      if (cooling && cpu && (!cooling.supported_sockets || cooling.supported_sockets.length === 0 || !cpu.socket)) {
+        return `CPU Cooler socket compatibility is unverified (missing socket listings).`;
+      }
+      return null;
+    },
+  },
+  {
+    name: 'unverified_form_factor',
+    type: 'warning',
+    components: ['motherboard', 'case'],
+    validate: ({ motherboard, case: pcCase }) => {
+      if (motherboard && pcCase && (!motherboard.form_factor || !pcCase.supported_motherboards || pcCase.supported_motherboards.length === 0)) {
+        return `Motherboard form factor support in Case is unverified (missing form factors).`;
+      }
+      return null;
+    },
+  },
 ];
 
 export function validateCompatibility(build: BuildInput): CompatibilityResult {

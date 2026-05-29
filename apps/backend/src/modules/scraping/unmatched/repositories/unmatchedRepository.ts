@@ -197,6 +197,42 @@ export class UnmatchedRepository {
     return rows.length > 0;
   }
 
+  async bulkUpdateManualCategory(ids: number[], category: string | null) {
+    if (ids.length === 0) return 0;
+    const rows = await this.sql`
+      UPDATE unmatched_listings 
+      SET manual_category = ${category ?? null} 
+      WHERE id IN ${bunSql(ids)} 
+      RETURNING id
+    ` as { id: number }[];
+    return rows.length;
+  }
+
+  async getPendingWithCategory() {
+    return (await this.sql`
+      SELECT
+        ul.id          AS listing_id,
+        ul.retailer_id,
+        ul.product_url,
+        ul.scraped_name,
+        ul.scraped_price,
+        ul.image_url,
+        ul.image_urls,
+        COALESCE(us.canonical_name, ul.scraped_name) AS canonical_name,
+        us.brand,
+        us.category,
+        COALESCE(us.confidence, 'unknown')           AS confidence,
+        us.existing_component_id,
+        us.specs_hint
+      FROM unmatched_listings ul
+      JOIN unmatched_suggestions us ON us.unmatched_listing_id = ul.id
+      WHERE ul.status = 'pending'
+        AND us.category IS NOT NULL
+        AND us.category != 'standby'
+      ORDER BY ul.scraped_at DESC
+    `) as any[];
+  }
+
   async getCategorySummary() {
     return (await this.sql`
       SELECT

@@ -257,7 +257,7 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
 
   await logger.info(`[SESSION] Processing ${allPrices.length} listing(s) through unified pipeline...`);
 
-  const { updated, unmatched, errors, autoMapped, autoCreated } = await aggregate(allPrices, urlToId, {});
+  const { updated, unmatched, autoMapped, autoCreated } = await aggregate(allPrices, urlToId, {});
 
   await logger.info(`[SESSION] Pipeline done — ${updated} prices updated, ${autoMapped} auto-mapped, ${autoCreated} auto-created, ${unmatched} unmatched`);
 

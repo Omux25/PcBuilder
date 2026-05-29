@@ -18,10 +18,15 @@ export function normalizeName(name: string): string {
   // 2. Strip filler words and empty tokens
   const filtered = tokens.filter(t => t && !fillerWords.includes(t));
 
-  // 3. Alphabetically sort and remove duplicates
-  const uniqueSorted = Array.from(new Set(filtered)).sort();
+  // 3. Remove duplicate words while maintaining original order
+  const uniqueOrdered: string[] = [];
+  for (const token of filtered) {
+    if (!uniqueOrdered.includes(token)) {
+      uniqueOrdered.push(token);
+    }
+  }
 
-  return uniqueSorted.join(' ');
+  return uniqueOrdered.join(' ');
 }
 
 /**

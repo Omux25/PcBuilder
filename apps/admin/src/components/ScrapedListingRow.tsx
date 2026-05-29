@@ -45,6 +45,7 @@ export function ScrapedListingRow({ listing, onReject }: Props) {
                                 key={i}
                                 src={url!}
                                 alt=""
+                                referrerPolicy="no-referrer"
                                 style={{
                                     width: i === 0 ? '40px' : '32px',
                                     height: i === 0 ? '40px' : '32px',

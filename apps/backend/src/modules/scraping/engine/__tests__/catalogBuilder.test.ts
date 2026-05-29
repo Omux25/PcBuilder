@@ -390,7 +390,7 @@ describe('buildFromUnmatched — progress callback', () => {
 
 describe('buildFromUnmatched — slug uniqueness', () => {
   test('generates a unique slug when the base slug already exists', async () => {
-    const existingSlugs = [{ slug: '5-7600x-amd-ryzen' }];
+    const existingSlugs = [{ slug: 'amd-ryzen-5-7600x' }];
     const { mock, insertedComponents } = makeSql(
       [{ id: 60, retailer_id: 11, product_url: 'https://nextlevelpc.ma/cpu/1', scraped_name: 'AMD Ryzen 5 7600X BOX' }],
       [],
@@ -402,6 +402,6 @@ describe('buildFromUnmatched — slug uniqueness', () => {
 
     expect(insertedComponents).toHaveLength(1);
     // Slug should have a numeric suffix since base slug is taken
-    expect(insertedComponents[0].slug).toMatch(/^5-7600x-amd-ryzen-\d+$/);
+    expect(insertedComponents[0].slug).toMatch(/^amd-ryzen-5-7600x-\d+$/);
   });
 });

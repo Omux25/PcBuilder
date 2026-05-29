@@ -17,6 +17,7 @@
 import { type CatalogComponent } from '../../../core/utils/componentMatcher.js';
 import { findStrictMatch } from '../../../core/utils/hardwareMatcher.js';
 import { matchesRule, type KeywordRule } from './keywordRulesService.js';
+import { type AliasRule } from './aliasRulesService.js';
 import { extractBrand } from '@shared/hardware/brands';
 import { extractCpuSpecs } from '@shared/hardware/specs/cpu';
 import { extractGpuSpecs } from '@shared/hardware/specs/gpu';
@@ -54,6 +55,10 @@ const COLOR_TOKENS = [
 const NOISE_TOKENS = [
     'kit', 'bundle', 'pack', 'combo', 'oem', 'retail', 'box',
     'edition', 'version',
+    // CPU packaging/noise tokens
+    'tray', 'mpk', 'wof', 'pib', 'tary', 'traw', 'boxed', 'unlocked', 'sans ventilateur', 'avec ventilateur',
+    'wraith stealth', 'wraith spire', 'wraith prism', 'wraith max', 'no fan', 'processeurs', 'processeur', 'processors', 'processor',
+    'sans refroidisseur', 'avec fan', 'version tray'
 ];
 
 // ── Canonical name derivation ─────────────────────────────────────────────────
@@ -68,12 +73,15 @@ const NOISE_TOKENS = [
  * Pure function — no side effects, no DB access.
  * Requirements: 3.1–3.7
  */
-export function deriveCanonicalName(scrapedName: string, brand: string | null): string {
+export function deriveCanonicalName(scrapedName: string, brand: string | null, category: string | null = null, aliasRules: AliasRule[] = []): string {
     let name = scrapedName.trim();
 
     // Strip category prefix — SetupGame names often start with "Watercooler – " or "Boitier – "
-    // Remove everything up to and including the first em-dash or hyphen separator
-    name = name.replace(/^[^\u2013-]*[\u2013-]\s+/, '').trim();
+    // Only strip if the prefix does NOT contain brands or model keywords (e.g. Ryzen, Core, Radeon, GeForce, AMD, Intel, RTX, GTX)
+    const hasCpuGpuKeyword = /ryzen|intel|amd|core|geforce|radeon|rtx|gtx|rx\s+\d/i.test(name.split(/[\u2013-]/)[0]);
+    if (!hasCpuGpuKeyword) {
+        name = name.replace(/^[^\u2013-]*[\u2013-]\s+/, '').trim();
+    }
 
     // Strip brand prefix (case-insensitive)
     if (brand) {
@@ -81,11 +89,88 @@ export function deriveCanonicalName(scrapedName: string, brand: string | null): 
         name = name.replace(new RegExp(`^${escaped}\\s*`, 'i'), '').trim();
     }
 
+    // Category-specific pre-cleaning
+    if (category === 'cpu') {
+        // Aggressively strip socket mentions (even when directly attached like 265KFSOCKET)
+        name = name.replace(/socket\s*\d+/gi, ' ');
+        name = name.replace(/\b(socket\s+)?(lga\s*\d+|am[45]|115[01]|1200|1700|1851|2011|2066)\b/gi, ' ');
+
+        // Strip version or fan tokens that might be joined without a boundary
+        name = name.replace(/[-.\s]*(?:version|avec\s*fan|avec\s*ventilateur)\b\.?/gi, ' ');
+
+        // Strip RGB, LED, or Wraith cooler mentions for CPUs
+        name = name.replace(/\b(?:led\s+)?rgb\b/gi, ' ');
+        name = name.replace(/\bwraith\s*(?:stealth|spire|prism|max)?\b/gi, ' ');
+
+        // Strip core/thread configurations like "8C 16T", "6C/12T" etc.
+        name = name.replace(/\b\d+\s*c\s*\d+\s*t\b/gi, ' ');
+        name = name.replace(/\b\d+\s*c\/\d+\s*t\b/gi, ' ');
+
+        // Strip GHz mentions and parentheses enclosing them, supporting missing closing parenthesis
+        name = name.replace(/\(\s*[^)]*ghz[^)]*\)/gi, ' ');
+        name = name.replace(/\(\s*[^)]*ghz.*/gi, ' ');
+        // Strip standalone GHz mentions
+        name = name.replace(/\b\d+(?:\.\d+)?\s*ghz\s*[\/\u2013-]\s*\d+(?:\.\d+)?\s*ghz\b/gi, ' ');
+        name = name.replace(/\b\d+(?:\.\d+)?\s*ghz\b/gi, ' ');
+
+        // Normalize space between Ryzen and its number tier: e.g. "Ryzen5" -> "Ryzen 5"
+        name = name.replace(/\bryzen\s*([3579])\b/gi, 'Ryzen $1');
+
+        // Normalize Intel Core formatting: e.g. "Core i5 12400F" or "i5 12400F" -> "Core i5-12400F"
+        name = name.replace(/\b(?:core\s+)?i([3579])[-\s]+(\d+\w*)\b/gi, 'Core i$1-$2');
+        
+        // Normalize Intel Core Ultra formatting: e.g. "Core Ultra 5 245K" -> "Core Ultra 5 245K" (ensure consistent space/hyphen)
+        name = name.replace(/\bcore\s+ultra\s+(\d)[-\s]+(\d+\w*)\b/gi, 'Core Ultra $1 $2');
+        
+        // Normalize AMD Ryzen formatting: e.g. "Ryzen 5-7600" -> "Ryzen 5 7600"
+        name = name.replace(/\bryzen\s+(\d)[-\s]+(\d+\w*)\b/gi, 'Ryzen $1 $2');
+
+        // Force uppercase for AMD 'X/XT/X3D' and Intel 'K/KF/KS/F' suffixes, supporting both 3-digit (e.g. 265KF) and 4/5-digit models
+        name = name.replace(/\b(\d{3,5})([xXtTkKfFsS]+)\b/g, (_, num, suffix) => {
+            return num + suffix.toUpperCase();
+        });
+    }
+
+    if (category === 'cooling') {
+        // Strip socket mentions and generic compatibility markers
+        name = name.replace(/[-.\s]*(?:intel|amd|lga\s*\d+|am[45]|socket\b)\b/gi, ' ');
+        // Strip mounting bracket mentions
+        name = name.replace(/avec\s+fixations?\s*[a-z0-9]*/gi, ' ');
+        // Strip generic terms like "CPU Ventirads", "Ventirads", "CPU Cooler", "Liquid Cooler", etc.
+        name = name.replace(/\b(?:cpu\s+)?(?:ventirads?|cooler|refroidisseur|watercooling|watercooler|liquid\s+cooling|heatsink)\b/gi, ' ');
+        // Strip trailing fan counts like ", 3 Fans" or "with 3 fans"
+        name = name.replace(/,?\s*\d+\s*fans?\b/gi, ' ');
+    }
+
+    // Apply database-backed alias rules
+    if (aliasRules && aliasRules.length > 0) {
+        for (const rule of aliasRules) {
+            // Only apply if category is universal (null) or matches the active category
+            if (rule.category && rule.category !== category) {
+                continue;
+            }
+            try {
+                if (rule.is_regex) {
+                    name = name.replace(new RegExp(rule.pattern, 'gi'), rule.replacement);
+                } else {
+                    const escaped = rule.pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    name = name.replace(new RegExp(escaped, 'gi'), rule.replacement);
+                }
+            } catch {
+                // Fail-safe: do not let a malformed regex crash the engine
+            }
+        }
+    }
+
     // Strip color and noise tokens (whole-word, case-insensitive)
     const allTokens = [...COLOR_TOKENS, ...NOISE_TOKENS];
     for (const token of allTokens) {
         const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        name = name.replace(new RegExp(`\\b${escaped}\\b`, 'gi'), ' ');
+        if (token.includes(' ')) {
+            name = name.replace(new RegExp(escaped, 'gi'), ' ');
+        } else {
+            name = name.replace(new RegExp(`\\b${escaped}\\b`, 'gi'), ' ');
+        }
     }
 
     // Normalize whitespace
@@ -94,8 +179,8 @@ export function deriveCanonicalName(scrapedName: string, brand: string | null): 
     // Clean up empty parentheses left after token stripping e.g. "Galahad 240 ( )" -> "Galahad 240"
     name = name.replace(/\(\s*\)/g, '').trim();
 
-    // Strip leading/trailing dashes or en-dashes left after stripping
-    name = name.replace(/^[\s\u2013-]+|[\s\u2013-]+$/g, '').trim();
+    // Strip leading/trailing dashes, dots, slashes, or en-dashes left after stripping
+    name = name.replace(/^[\s\u2013.,-]+|[\s\u2013.,-]+$/g, '').trim();
 
     // Fallback: if stripping left nothing, return original minus brand
     if (!name) {
@@ -337,7 +422,8 @@ function buildSpecsHint(scrapedName: string, category: SuggestionCategory): Reco
                 return specs ? { interface_type: specs.interface_type, capacity_gb: specs.capacity_gb } : {};
             }
             case 'motherboard': {
-                const specs = extractMotherboardSpecs(scrapedName);
+                const brand = extractBrandFromName(scrapedName) ?? undefined;
+                const specs = extractMotherboardSpecs(scrapedName, brand);
                 return specs ? {
                     socket: specs.socket,
                     supported_ram_types: specs.supported_ram_types,
@@ -411,14 +497,18 @@ export function suggestForListing(
     catalog: CatalogComponent[],
     adminRules?: KeywordRule[],
     url?: string,
+    aliasRules?: AliasRule[],
 ): Suggestion {
     // Decode HTML entities first (retailers store names with &#8211;, &Prime;, etc.)
     const name = decodeHtml(scrapedName);
     const brand = extractBrandFromName(name);
-    const canonical_name = deriveCanonicalName(name, brand);
 
     // Step 1.5: Infer category FIRST to avoid cross-pollination
-    const inferredCategory = resolveCategory(name) ?? resolveCategory(canonical_name) ?? (url ? inferCategoryFromUrl(url) : null);
+    // Let's resolve the category before deriving the final canonical name so we can pass it in
+    const tempCanonical = deriveCanonicalName(name, brand, null, aliasRules);
+    const inferredCategory = resolveCategory(name) ?? resolveCategory(tempCanonical) ?? (url ? inferCategoryFromUrl(url) : null);
+
+    const canonical_name = deriveCanonicalName(name, brand, inferredCategory, aliasRules);
 
     // If it's a build, stop here and return null category
     if (inferredCategory === 'build') {
@@ -514,10 +604,11 @@ export function processBatch(
     listings: Array<{ id: number; scraped_name: string; product_url?: string }>,
     catalog: CatalogComponent[],
     adminRules?: KeywordRule[],
+    aliasRules?: AliasRule[],
 ): Map<number, Suggestion> {
     const results = new Map<number, Suggestion>();
     for (const listing of listings) {
-        results.set(listing.id, suggestForListing(listing.scraped_name, catalog, adminRules, listing.product_url));
+        results.set(listing.id, suggestForListing(listing.scraped_name, catalog, adminRules, listing.product_url, aliasRules));
     }
     return results;
 }

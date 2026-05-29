@@ -69,6 +69,7 @@ export class ComponentController {
     const interface_type = c.req.query('interface_type') || c.req.query('interfaces');
     const efficiency_rating = c.req.query('efficiency_rating') || c.req.query('efficiencies');
     const modular = c.req.query('modular') || c.req.query('modulars');
+    const cooling_type = c.req.query('cooling_type') || c.req.query('cooling_types');
     const core_count = c.req.query('core_count') ? Number(c.req.query('core_count')) : undefined;
     const page = c.req.query('page') ? Number(c.req.query('page')) : 1;
     const limit = Math.min(100, c.req.query('limit') ? Number(c.req.query('limit')) : 20);
@@ -89,13 +90,13 @@ export class ComponentController {
 
     console.log("CONTROLLER PARSED PARAMS:", {
       category, search, brand, socket, ram_type, sort, minPrice, maxPrice, inStockOnly, compatibleOnly, vramGb, page, limit,
-      efficiency_rating, modular, sortBy, sortOrder
+      efficiency_rating, modular, cooling_type, sortBy, sortOrder
     });
 
     const result = await this.componentService.smartSearch({
       category, search, brand, socket, ram_type, sort, minPrice, maxPrice, inStockOnly, compatibleOnly, vramGb, page, limit, currentBuild,
       min_wattage, max_wattage, min_capacity_gb, max_capacity_gb, min_frequency_mhz, max_frequency_mhz,
-      chipset, form_factor, interface_type, efficiency_rating, modular, core_count,
+      chipset, form_factor, interface_type, efficiency_rating, modular, cooling_type, core_count,
       sortBy, sortOrder
     });
 

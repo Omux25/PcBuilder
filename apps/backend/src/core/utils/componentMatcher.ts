@@ -663,6 +663,17 @@ export function scoreDnaMatch(productName: string, catalogName: string, category
     }
   }
 
+  // Strict WiFi/Non-WiFi Guardrail for Motherboards to prevent price overlaps
+  if (category === 'motherboard') {
+    const hasWifiStr = (str: string) => {
+      const s = str.toLowerCase();
+      return /\bwifi\b/.test(s) || /\bwi-fi\b/.test(s) || /\bwireless\b/.test(s) || /\bax\b/.test(s) || /\bac\b/.test(s);
+    };
+    if (hasWifiStr(productName) !== hasWifiStr(catalogName)) {
+      return { score: 0, dnaTokens: [] };
+    }
+  }
+
   const dnaTokens = extractDna(catalogName, category);
   if (dnaTokens.length === 0) return { score: 0, dnaTokens: [] };
 

@@ -331,7 +331,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         };
         const rows = await sql`
           INSERT INTO components (slug, name, brand, category, length_mm, tdp, chipset, vram_gb, specs, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'gpu', ${specs.length_mm}, ${specs.tdp}, ${specs.chipset}, ${specs.vram_gb}, ${JSON.stringify(specsPayload)}, ${listing.image_url}, true)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'gpu', ${specs.length_mm}, ${specs.tdp}, ${specs.chipset}, ${specs.vram_gb}, ${specsPayload}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
@@ -370,7 +370,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         ` as { id: number }[];
         newId = rows[0]?.id;
       } else if (category === 'motherboard') {
-        let specs = extractMotherboardSpecs(nameForExtraction);
+        let specs = extractMotherboardSpecs(nameForExtraction, brand);
 
         // Deep-scraper fallback: hunt the product page for form_factor and socket if missing
         if ((!specs?.form_factor || !specs?.socket) && listing.product_url) {
@@ -391,21 +391,23 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         const ramTypes = specs ? specs.supported_ram_types : null;
         const specsPayload = specs ? {
           socket: specs.socket ?? null,
+          chipset: specs.chipset ?? null,
           supported_ram_types: specs.supported_ram_types ?? null,
           max_ram_frequency: specs.max_ram_frequency ?? null,
           form_factor: specs.form_factor ?? null,
           ram_slots: specs.ram_slots ?? null,
         } : null;
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, socket, supported_ram_types, max_ram_frequency, ram_slots, form_factor, specs, image_url, is_active)
+          INSERT INTO components (slug, name, brand, category, socket, chipset, supported_ram_types, max_ram_frequency, ram_slots, form_factor, specs, image_url, is_active)
           VALUES (
             ${slug}, ${cleanedName}, ${brand}, 'motherboard', 
             ${specs?.socket ?? null}, 
+            ${specs?.chipset ?? null}, 
             ${ramTypes && ramTypes.length > 0 ? `{${ramTypes.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}::text[], 
             ${specs?.max_ram_frequency ?? null}, 
             ${specs?.ram_slots ?? null}, 
             ${specs?.form_factor ?? null}, 
-            ${specsPayload ? JSON.stringify(specsPayload) : null}, 
+            ${specsPayload}, 
             ${listing.image_url}, 
             true
           )
@@ -442,11 +444,11 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         ` as { id: number }[];
         newId = rows[0]?.id;
       } else if (category === 'cooling') {
-        const specs = extractCoolingSpecs(nameForExtraction);
+        const specs = extractCoolingSpecs(nameForExtraction, brand ?? undefined);
         const tags = specs?.tags || [];
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, tdp, tags, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'cooling', ${specs?.tdp ?? null}, ${tags.length > 0 ? `{${tags.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}, ${listing.image_url}, true)
+          INSERT INTO components (slug, name, brand, category, tdp, height_mm, tags, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'cooling', ${specs?.tdp ?? null}, ${specs?.height_mm ?? null}, ${tags.length > 0 ? `{${tags.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
@@ -475,12 +477,12 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
             ` as { id: number }[];
             newId = fRows[0]?.id;
           } else if (pollutantRedirect === 'cooling') {
-            const cSpecs = extractCoolingSpecs(nameForExtraction);
+            const cSpecs = extractCoolingSpecs(nameForExtraction, brand ?? undefined);
             const cTags = cSpecs?.tags || [];
             const cSlug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
             const cRows = await sql`
-              INSERT INTO components (slug, name, brand, category, tdp, tags, image_url, is_active)
-              VALUES (${cSlug}, ${cleanedName}, ${brand}, 'cooling', ${cSpecs?.tdp ?? null}, ${cTags.length > 0 ? `{${cTags.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}, ${listing.image_url}, true)
+              INSERT INTO components (slug, name, brand, category, tdp, height_mm, tags, image_url, is_active)
+              VALUES (${cSlug}, ${cleanedName}, ${brand}, 'cooling', ${cSpecs?.tdp ?? null}, ${cSpecs?.height_mm ?? null}, ${cTags.length > 0 ? `{${cTags.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}, ${listing.image_url}, true)
               RETURNING id
             ` as { id: number }[];
             newId = cRows[0]?.id;
@@ -520,7 +522,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
 
           const rows = await sql`
             INSERT INTO components (slug, name, brand, category, max_gpu_length_mm, max_cooler_height_mm, supported_motherboards, specs, image_url, is_active)
-            VALUES (${slug}, ${cleanedName}, ${brand}, 'case', ${max_gpu_length_mm}, ${max_cpu_cooler_height_mm}, ${(form_factors && form_factors.length > 0) ? `{${form_factors.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}::text[], ${JSON.stringify(specsPayload)}, ${listing.image_url}, true)
+            VALUES (${slug}, ${cleanedName}, ${brand}, 'case', ${max_gpu_length_mm}, ${max_cpu_cooler_height_mm}, ${(form_factors && form_factors.length > 0) ? `{${form_factors.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}::text[], ${specsPayload}, ${listing.image_url}, true)
             RETURNING id
           ` as { id: number }[];
           newId = rows[0]?.id;

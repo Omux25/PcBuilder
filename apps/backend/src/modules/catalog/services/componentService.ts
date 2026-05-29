@@ -82,6 +82,7 @@ export class ComponentService {
     interface_type?: string;
     efficiency_rating?: string;
     modular?: string;
+    cooling_type?: string;
     core_count?: number;
     inStockOnly?: boolean;
     compatibleOnly?: boolean;
@@ -96,7 +97,7 @@ export class ComponentService {
         category, search, brand, socket, ram_type, sort, 
         minPrice, maxPrice, inStockOnly, compatibleOnly, vramGb, page, limit, currentBuild,
         min_wattage, max_wattage, min_capacity_gb, max_capacity_gb, min_frequency_mhz, max_frequency_mhz,
-        chipset, form_factor, interface_type, efficiency_rating, modular, core_count,
+        chipset, form_factor, interface_type, efficiency_rating, modular, cooling_type, core_count,
         sortBy: explicitSortBy, sortOrder: explicitSortOrder
     } = params;
 
@@ -174,6 +175,7 @@ export class ComponentService {
       interface_type,
       efficiency_rating,
       modular,
+      cooling_type,
       core_count,
       in_stock: inStockOnly || undefined,
       is_active: true,
@@ -236,11 +238,49 @@ export class ComponentService {
                 const isIncompatible = c.compatibility === 'incompatible';
                 if (isIncompatible) return 5;
 
-                const isIncomplete = c.category === 'gpu' && (
-                    c.vram_gb === null || c.vram_gb === undefined ||
-                    c.chipset === null || c.chipset === undefined ||
-                    c.length_mm === null || c.length_mm === undefined
-                );
+                const isIncomplete = (() => {
+                  const cat = c.category;
+                  if (cat === 'gpu') {
+                    return c.vram_gb === null || c.vram_gb === undefined ||
+                           c.chipset === null || c.chipset === undefined ||
+                           c.length_mm === null || c.length_mm === undefined;
+                  }
+                  if (cat === 'cpu') {
+                    return c.socket === null || c.socket === undefined ||
+                           c.core_count === null || c.core_count === undefined ||
+                           c.tdp === null || c.tdp === undefined;
+                  }
+                  if (cat === 'motherboard') {
+                    return c.socket === null || c.socket === undefined ||
+                           c.chipset === null || c.chipset === undefined ||
+                           c.form_factor === null || c.form_factor === undefined ||
+                           c.ram_slots === null || c.ram_slots === undefined;
+                  }
+                  if (cat === 'ram') {
+                    return c.ram_type === null || c.ram_type === undefined ||
+                           c.frequency_mhz === null || c.frequency_mhz === undefined ||
+                           c.capacity_gb === null || c.capacity_gb === undefined;
+                  }
+                  if (cat === 'psu') {
+                    return c.wattage === null || c.wattage === undefined ||
+                           c.efficiency_rating === null || c.efficiency_rating === undefined ||
+                           c.modular === null || c.modular === undefined;
+                  }
+                  if (cat === 'case') {
+                    return c.form_factor === null || c.form_factor === undefined ||
+                           c.max_gpu_length_mm === null || c.max_gpu_length_mm === undefined ||
+                           c.max_cooler_height_mm === null || c.max_cooler_height_mm === undefined;
+                  }
+                  if (cat === 'cooling') {
+                    return c.height_mm === null || c.height_mm === undefined ||
+                           !Array.isArray(c.supported_sockets) || c.supported_sockets.length === 0;
+                  }
+                  if (cat === 'storage') {
+                    return c.capacity_gb === null || c.capacity_gb === undefined ||
+                           c.interface_type === null || c.interface_type === undefined;
+                  }
+                  return false;
+                })();
 
                 if (c.in_stock) {
                     return isIncomplete ? 2 : 1;

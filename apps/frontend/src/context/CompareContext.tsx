@@ -8,10 +8,13 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 interface CompareContextType {
   compareIds: number[];
   compareCategory: string | null;
-  addToCompare: (id: number, category: string) => void;
+  addToCompare: (id: number, category: string, name?: string) => void;
   removeFromCompare: (id: number) => void;
   clearCompare: () => void;
   isInCompare: (id: number) => boolean;
+  syncCompareIds: (ids: number[], category: string | null) => void;
+  categoryConflict: { id: number; category: string; name: string } | null;
+  clearCategoryConflict: () => void;
 }
 
 const CompareContext = createContext<CompareContextType | undefined>(undefined);
@@ -23,6 +26,7 @@ export const MAX_COMPARE = 4;
 export function CompareProvider({ children }: { children: ReactNode }) {
   const [compareIds, setCompareIds] = useState<number[]>([]);
   const [compareCategory, setCompareCategory] = useState<string | null>(null);
+  const [categoryConflict, setCategoryConflict] = useState<{ id: number; category: string; name: string } | null>(null);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -46,10 +50,9 @@ export function CompareProvider({ children }: { children: ReactNode }) {
     else localStorage.removeItem(CAT_STORAGE_KEY);
   }, [compareIds, compareCategory]);
 
-  const addToCompare = (id: number, category: string) => {
+  const addToCompare = (id: number, category: string, name?: string) => {
     if (compareIds.length > 0 && compareCategory && compareCategory !== category) {
-      // In a real app we'd use a toast, for now we just block
-      console.warn('Cannot compare different categories');
+      setCategoryConflict({ id, category, name: name || `Composant #${id}` });
       return;
     }
 
@@ -76,6 +79,15 @@ export function CompareProvider({ children }: { children: ReactNode }) {
 
   const isInCompare = (id: number) => compareIds.includes(id);
 
+  const syncCompareIds = (ids: number[], category: string | null) => {
+    setCompareIds(ids.slice(0, MAX_COMPARE));
+    setCompareCategory(category);
+  };
+
+  const clearCategoryConflict = () => {
+    setCategoryConflict(null);
+  };
+
   return (
     <CompareContext.Provider value={{ 
       compareIds, 
@@ -83,7 +95,10 @@ export function CompareProvider({ children }: { children: ReactNode }) {
       addToCompare, 
       removeFromCompare, 
       clearCompare, 
-      isInCompare 
+      isInCompare,
+      syncCompareIds,
+      categoryConflict,
+      clearCategoryConflict
     }}>
       {children}
     </CompareContext.Provider>

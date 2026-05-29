@@ -14,6 +14,7 @@
 import { getSql } from '../../../core/db/index.js';
 import { processBatch } from './suggestionEngine.js';
 import { loadAdminRules } from './keywordRulesService.js';
+import { loadAliasRules } from './aliasRulesService.js';
 import { logger } from '../engine/utils/logger.js';
 import type { CatalogComponent } from '../../../core/utils/componentMatcher.js';
 
@@ -47,13 +48,15 @@ export async function runSuggestionPreprocessing(force = false): Promise<Preproc
     WHERE is_active = true
   `) as CatalogComponent[];
 
-  // Step 1b: Load admin keyword rules once per batch
+  // Step 1b: Load admin keyword rules & alias rules once per batch
   let adminRules: Awaited<ReturnType<typeof loadAdminRules>> = [];
+  let aliasRules: Awaited<ReturnType<typeof loadAliasRules>> = [];
   try {
     adminRules = await loadAdminRules();
+    aliasRules = await loadAliasRules();
   } catch (err) {
     await logger.error(
-      `[SUGGESTION-PREPROCESSOR] Failed to load admin rules: ${err instanceof Error ? err.message : String(err)}`,
+      `[SUGGESTION-PREPROCESSOR] Failed to load rules: ${err instanceof Error ? err.message : String(err)}`,
     );
     return { processed: 0, skipped: 0 };
   }
@@ -83,7 +86,7 @@ export async function runSuggestionPreprocessing(force = false): Promise<Preproc
   const SUGGESTION_BATCH_SIZE = 50;
   for (let i = 0; i < pending.length; i += SUGGESTION_BATCH_SIZE) {
     const chunk = pending.slice(i, i + SUGGESTION_BATCH_SIZE);
-    const chunkSuggestions = processBatch(chunk, catalog, adminRules);
+    const chunkSuggestions = processBatch(chunk, catalog, adminRules, aliasRules);
     for (const [id, suggestion] of chunkSuggestions) {
       suggestions.set(id, suggestion);
     }
@@ -100,7 +103,12 @@ export async function runSuggestionPreprocessing(force = false): Promise<Preproc
       continue;
     }
 
-    if (listing.manual_category) {
+    if (listing.manual_category === 'standby') {
+      suggestion.category = null;
+      suggestion.confidence = 'low';
+      suggestion.canonical_name = listing.scraped_name;
+      suggestion.existing_component_id = null;
+    } else if (listing.manual_category) {
       suggestion.category = listing.manual_category as any;
       suggestion.confidence = 'high';
     }
