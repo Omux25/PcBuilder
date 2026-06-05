@@ -124,7 +124,7 @@ app.onError((err, c) => {
 // Paths are relative to the backend's dist output directory (apps/backend/dist/).
 // The monorepo build copies admin/dist and frontend/dist there.
 
-if (process.env.NODE_ENV === 'production' && process.env.SERVE_STATIC === 'true') {
+if (process.env.SERVE_STATIC === 'true') {
   // Admin panel — must be mounted before the frontend catch-all
   app.use('/admin/*', serveStatic({ 
     root: './admin/dist',
