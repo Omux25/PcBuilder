@@ -30,7 +30,6 @@ RUN bun install --frozen-lockfile --production
 
 # Copy backend source
 COPY apps/backend/src/ ./src/
-COPY apps/backend/scraper/ ./scraper/
 COPY apps/backend/scripts/data/ ./scripts/data/
 COPY apps/backend/tsconfig.json ./
 
