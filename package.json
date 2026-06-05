@@ -4,8 +4,7 @@
   "version": "1.0.0",
   "description": "PC Builder Morocco — Unified Project Workspace",
   "workspaces": [
-    "apps/*",
-    "shared"
+    "apps/*"
   ],
   "scripts": {
     "dev": "powershell.exe -NoProfile -Command \".\\dev.ps1\"",
