@@ -39,7 +39,7 @@ RUN bun install --production
 
 # Copy backend source
 COPY apps/backend/src/ apps/backend/src/
-COPY apps/backend/scripts/data/ apps/backend/scripts/data/
+COPY apps/backend/scripts/ apps/backend/scripts/
 COPY apps/backend/tsconfig.json apps/backend/
 
 # Copy shared utilities
