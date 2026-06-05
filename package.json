@@ -3,6 +3,10 @@
   "private": true,
   "version": "1.0.0",
   "description": "PC Builder Morocco — Unified Project Workspace",
+  "workspaces": [
+    "apps/*",
+    "shared"
+  ],
   "scripts": {
     "dev": "powershell.exe -NoProfile -Command \".\\dev.ps1\"",
     "test:backend": "cd apps/backend && bun test",
