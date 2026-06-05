@@ -76,15 +76,15 @@ async function migrate() {
     console.log(`\n🎉 Successfully applied ${count} migrations.`);
   }
 
-  // 5. Seed default admin if table is empty
+  // 5. Seed default admin requested by user
   try {
-    const adminCount = await sql`SELECT COUNT(*) as c FROM admins`;
+    const adminCount = await sql`SELECT COUNT(*) as c FROM admins WHERE username = 'omux'`;
     if (Number(adminCount[0].c) === 0) {
-      console.log('🔒 No admins found. Creating default admin...');
+      console.log('🔒 "omux" admin not found. Creating it...');
       const bcrypt = await import('bcrypt');
-      const hash = await bcrypt.default.hash('admin', 10);
-      await sql`INSERT INTO admins (username, password_hash) VALUES ('admin', ${hash})`;
-      console.log('✅ Default admin created. (username: admin, password: admin)');
+      const hash = await bcrypt.default.hash('2525', 10);
+      await sql`INSERT INTO admins (username, password_hash) VALUES ('omux', ${hash})`;
+      console.log('✅ Default admin created. (username: omux, password: ***)');
     }
   } catch (err) {
     console.error('Failed to seed default admin:', err);
