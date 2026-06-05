@@ -1,17 +1,19 @@
 # ── STAGE 1: Frontend Build ───────────────────────────────────────────────────
 FROM oven/bun:1.3-alpine AS frontend-builder
-WORKDIR /app/frontend
+WORKDIR /app/apps/frontend
 COPY apps/frontend/package.json apps/frontend/bun.lock ./
 RUN bun install --frozen-lockfile
 COPY apps/frontend/ ./
+COPY shared/ /app/shared/
 RUN bun run build
 
 # ── STAGE 2: Admin Build ──────────────────────────────────────────────────────
 FROM oven/bun:1.3-alpine AS admin-builder
-WORKDIR /app/admin
+WORKDIR /app/apps/admin
 COPY apps/admin/package.json apps/admin/bun.lock ./
 RUN bun install --frozen-lockfile
 COPY apps/admin/ ./
+COPY shared/ /app/shared/
 RUN bun run build
 
 # ── STAGE 3: Backend Runtime ──────────────────────────────────────────────────
@@ -40,8 +42,8 @@ COPY shared/ /app/shared/
 # Paths are relative to WORKDIR (/app/apps/backend) to match app.ts serveStatic paths:
 #   './admin/dist'   → /app/apps/backend/admin/dist
 #   './frontend/dist' → /app/apps/backend/frontend/dist
-COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
-COPY --from=admin-builder /app/admin/dist ./admin/dist
+COPY --from=frontend-builder /app/apps/frontend/dist ./frontend/dist
+COPY --from=admin-builder /app/apps/admin/dist ./admin/dist
 
 # Run as non-root user
 USER bun
