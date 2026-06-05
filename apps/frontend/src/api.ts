@@ -9,7 +9,7 @@ import type {
   CompatibilityResult, BuildConfig, PresetBuild,
 } from './types';
 
-const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
+const BASE = import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_URL ?? '/api';
 const request = createRequest(BASE);
 
 // For the Hono RPC client, the backend's AppRouter type already includes the '/api' prefix
