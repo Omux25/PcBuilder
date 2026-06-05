@@ -75,6 +75,20 @@ async function migrate() {
   } else {
     console.log(`\n🎉 Successfully applied ${count} migrations.`);
   }
+
+  // 5. Seed default admin if table is empty
+  try {
+    const adminCount = await sql`SELECT COUNT(*) as c FROM admins`;
+    if (Number(adminCount[0].c) === 0) {
+      console.log('🔒 No admins found. Creating default admin...');
+      const bcrypt = await import('bcrypt');
+      const hash = await bcrypt.default.hash('admin', 10);
+      await sql`INSERT INTO admins (username, password_hash) VALUES ('admin', ${hash})`;
+      console.log('✅ Default admin created. (username: admin, password: admin)');
+    }
+  } catch (err) {
+    console.error('Failed to seed default admin:', err);
+  }
 }
 
 migrate().catch(err => {
