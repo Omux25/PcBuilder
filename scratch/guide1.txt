@@ -1,0 +1,171 @@
+Guide de rédaction du rapport PFA
+Projet de Fin d’Année
+Recherche documentaire scientifique
+1. Recommandations générales
+Le rapport PFA doit être présenté d’une manière claire, structurée et professionnelle. Il doit permettre au
+lecteur de comprendre le contexte du projet, la problématique, la démarche suivie, la solution proposée et
+l’apport général du travail réalisé.
+Il est recommandé de :
+— rédiger avec un style simple et académique ;
+— organiser le contenu avec des titres et sous-titres clairs ;
+— illustrer les parties importantes avec des figures, tableaux ou diagrammes ;
+— garder une cohérence entre les différentes parties du rapport ;
+— centrer la rédaction sur le projet réalisé.
+Le rapport ne doit pas être une simple description rapide de l’application ou du système développé.
+Il doit montrer une démarche de travail organisée, depuis le besoin initial jusqu’au résultat final.
+2. Structure recommandée du rapport
+2.1. Couverture
+La couverture constitue la première page du rapport. Elle doit être sobre, bien présentée et contenir les
+informations essentielles.
+Elle comprend généralement :
+— le logo de l’établissement ;
+— le titre du projet ;
+— la mention Rapport de Projet de Fin d’Année ;
+— le nom et prénom des étudiants ;
+— la filière et l’année universitaire ;
+— le nom de l’encadrant académique ;
+— la date de remise ou de soutenance.
+2.2. Remerciements
+Les remerciements permettent aux étudiants d’exprimer leur reconnaissance envers les personnes ayant
+contribué au bon déroulement du projet.
+Guide de rédaction du rapport PFA
+Recherche documentaire scientifique
+2.3. Résumé et Abstract
+Le résumé présente le projet d’une manière synthétique. Il donne une vue d’ensemble du contexte, de la
+problématique, de la solution proposée et du résultat général obtenu.
+L’Abstract est la version anglaise du résumé. Il doit transmettre les mêmes idées de manière claire.
+2.4. Table des matières
+La table des matières permet au lecteur d’avoir une vue d’ensemble du rapport et de retrouver facilement
+les différentes parties.
+Elle doit refléter fidèlement l’organisation du document.
+2.5. Liste des figures, tableaux et abréviations
+Lorsque le rapport contient plusieurs figures, tableaux ou abréviations, il est conseillé d’ajouter :
+— une liste des figures ;
+— une liste des tableaux ;
+— une liste des abréviations.
+Ces listes rendent le rapport plus clair et plus facile à consulter.
+3. Introduction générale
+L’introduction générale doit préparer le lecteur à comprendre le projet. Elle présente le sujet d’une
+manière progressive, sans entrer immédiatement dans les détails techniques.
+Elle peut contenir :
+— le contexte général du projet ;
+— le domaine concerné ;
+— le besoin ou le problème observé ;
+— la problématique ;
+— les objectifs du projet ;
+— une courte présentation de la démarche adoptée ;
+— une vue d’ensemble des parties du rapport.
+Idée attendue
+L’introduction doit montrer pourquoi le projet est important et en quoi la solution proposée répond
+à un besoin réel.
+4. Chapitre 1 : Présentation du contexte
+Ce chapitre présente le cadre général du projet. Il permet de situer le sujet et d’expliquer l’origine du
+besoin traité.
+Cette partie peut inclure :
+— une présentation de l’organisme, du domaine ou du contexte concerné ;
+Guide de rédaction du rapport PFA
+Recherche documentaire scientifique
+— une description de la situation actuelle ;
+— les difficultés ou limites observées ;
+— l’intérêt de mettre en place une solution.
+L’objectif est d’aider le lecteur à comprendre le point de départ du projet.
+5. Chapitre 2 : Présentation du projet
+Ce chapitre présente le projet lui-même et précise ce que les étudiants cherchent à réaliser.
+Il peut contenir :
+— la problématique ;
+— les objectifs généraux du projet ;
+— les utilisateurs concernés ;
+— les besoins principaux ;
+— le cahier des charges ;
+— une présentation générale de l’organisation du travail.
+5.1. Problématique
+La problématique exprime clairement le problème principal que le projet cherche à résoudre.
+5.2. Objectifs
+Les objectifs décrivent ce que la solution proposée doit permettre d’apporter. Ils doivent rester cohérents
+avec la problématique.
+5.3. Cahier des charges
+Le cahier des charges présente les attentes générales du projet, les fonctionnalités principales et les
+contraintes éventuelles.
+6. Chapitre 3 : Analyse et conception
+Ce chapitre présente la réflexion menée avant la réalisation concrète de la solution.
+Il peut contenir :
+— l’analyse des besoins ;
+— les besoins fonctionnels ;
+— les besoins non fonctionnels ;
+— les acteurs du système ;
+— les choix techniques ;
+— les diagrammes ou schémas de conception ;
+— l’architecture générale de la solution.
+Guide de rédaction du rapport PFA
+Recherche documentaire scientifique
+6.1. Analyse des besoins
+L’analyse des besoins permet de préciser ce que la solution doit offrir aux utilisateurs.
+6.2. Conception
+La conception permet de représenter la solution avant sa réalisation. Selon la nature du projet, elle peut
+être illustrée à l’aide de :
+— diagrammes de cas d’utilisation ;
+— diagrammes de classes ;
+— schémas de base de données ;
+— schémas d’architecture ;
+— autres représentations adaptées au projet.
+Les diagrammes doivent être utiles, lisibles et accompagnés d’une courte explication.
+7. Chapitre 4 : Réalisation et développement
+Ce chapitre présente la mise en œuvre du projet.
+Il peut contenir :
+— les outils et technologies utilisés ;
+— l’environnement de développement ;
+— les principales étapes de réalisation ;
+— les fonctionnalités développées ;
+— quelques captures d’écran représentatives ;
+— les difficultés rencontrées.
+7.1. Outils utilisés
+Les étudiants peuvent présenter les principaux outils et technologies mobilisés dans le projet, en précisant
+leur rôle général.
+7.2. Fonctionnalités développées
+Il est conseillé de présenter les fonctionnalités principales d’une manière synthétique, sans entrer dans des
+détails trop techniques.
+7.3. Illustrations
+Des captures d’écran ou figures peuvent être ajoutées pour illustrer les parties importantes de la solution.
+8. Chapitre 5 : Résultats obtenus
+Ce chapitre présente le résultat global du projet.
+Guide de rédaction du rapport PFA
+Recherche documentaire scientifique
+Il ne s’agit pas de détailler tous les éléments réalisés, mais de montrer que la solution proposée répond
+d’une manière générale aux objectifs fixés au départ.
+Les étudiants peuvent mettre en avant :
+— l’apport général de la solution ;
+— l’amélioration proposée par rapport à la situation initiale ;
+— l’intérêt du projet pour les utilisateurs concernés ;
+— la cohérence entre les objectifs annoncés et le résultat obtenu ;
+— quelques limites générales du projet.
+Point important
+Cette partie doit rester synthétique et mettre en valeur la contribution générale du projet.
+9. Conclusion et perspectives
+La conclusion générale permet de faire le bilan du projet.
+Elle peut contenir :
+— un rappel du contexte ;
+— un rappel de la problématique ;
+— une synthèse du travail réalisé ;
+— les principaux apports du projet ;
+— les limites générales ;
+— les perspectives d’amélioration.
+Les perspectives présentent les évolutions possibles du projet. Elles peuvent concerner :
+— l’ajout de nouvelles fonctionnalités ;
+— l’amélioration de l’interface ;
+— l’optimisation de la solution ;
+— le renforcement de la sécurité ;
+— le déploiement ou l’extension future du projet.
+10. Bibliographie
+La bibliographie regroupe les sources utilisées pendant la réalisation du projet.
+Elle peut inclure :
+— les documentations officielles ;
+— les articles techniques ;
+— les livres ;
+— les supports de cours ;
+— les sites web fiables.
+Les références doivent être liées directement au projet et aux outils utilisés.
+Guide de rédaction du rapport PFA
+Recherche documentaire scientifique
+Un rapport PFA réussi est clair, structuré et centré sur la valeur du projet réalisé.
+Guide de rédaction du rapport PFA
+Recherche documentaire scientifique

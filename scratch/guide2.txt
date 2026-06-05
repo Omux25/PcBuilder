@@ -1,0 +1,158 @@
+Prof. Houda Mouttalib
+EMSI Casablanca
+3IIR
+S2 2024/2025
+Chapitre 3
+Recommandations de mise en forme du rapport PFA
+●
+Police : Times New Roman ou Arial
+●
+Taille du texte : 12 pour le corps, 14 pour les titres de chapitres, 16-18 pour le titre de couverture
+●
+Interligne : 1,5
+●
+Marge : 2,5 cm (gauche/droite/haut/bas)
+●
+Pagination : obligatoire à partir de l’introduction
+●
+Longueur totale : 35 à 60 pages hors annexes (selon la complexité du projet)
+●
+Images et tableaux :
+●
+Illustrer chaque chapitre technique (conception, réalisation, résultats)
+●
+Intégrer au moins 2-3 diagrammes (UML, etc.)
+●
+Ajouter des captures d’écran pour la partie réalisation
+●
+Utiliser des tableaux pour synthétiser les résultats ou plannings
+Prof. Houda Mouttalib
+EMSI Casablanca
+3IIR
+S2 2024/2025
+Chapitre 3
+Structure du rapport PFA à EMSI
+1. Couverture (Page de garde)
+●
+Contenu :
+●
+Logo EMSI (en haut)
+●
+Titre du rapport (clair et concis, taille 18-20, gras)
+●
+Nom et prénom de(s) l’étudiant.e(s)
+●
+Filière et année universitaire
+●
+Nom du tuteur académique
+●
+Date de soutenance/présentation
+●
+Mise en forme :
+●
+Police : Times New Roman ou Arial
+●
+Taille : 14 à 16 pour les informations, 18-20 pour le titre
+●
+Fond blanc, logo en couleur, texte centré
+Prof. Houda Mouttalib
+EMSI Casablanca
+3IIR
+S2 2024/2025
+Chapitre 3
+Structure du rapport PFA à EMSI
+2. Remerciements
+●
+½ à 1 page, police 12, interligne 1.5
+3. Résumé et Abstract
+●
+Résumé en français (10-15 lignes), puis abstract en anglais
+●
+Taille police : 12, interligne 1.5
+4. Table des matières
+●
+Générée automatiquement (Word/LibreOﬃce)
+●
+Inclure la pagination
+Prof. Houda Mouttalib
+EMSI Casablanca
+3IIR
+S2 2024/2025
+Chapitre 3
+Structure du rapport PFA à EMSI
+5. Liste des figures, tableaux et abréviations
+●
+Facultatif mais recommandé si le rapport est long et illustré
+6. Introduction générale
+●
+Présentation du contexte, de l’école, du projet et des objectifs
+●
+1 à 2 pages
+7. Chapitres principaux
+Chapitre 1 : Présentation de l’école et du contexte
+●
+Historique, secteur d’activité, organigramme, missions
+●
+2 à 3 pages
+●
+Image recommandée : organigramme, photo de l’école
+Prof. Houda Mouttalib
+EMSI Casablanca
+3IIR
+S2 2024/2025
+Chapitre 3
+Structure du rapport PFA à EMSI
+Chapitre 2 : Présentation du projet
+●
+Problématique, objectifs, cahier des charges
+●
+2 à 3 pages
+●
+Tableau recommandé : planning, répartition des tâches (gantt)
+Chapitre 3 : Analyse et conception
+●
+Analyse des besoins, choix techniques, conception (diagrammes UML, MCD, MLD…)
+●
+3 à 5 pages
+●
+Images recommandées : diagrammes de cas d’utilisation, diagrammes de classes, schémas techniques
+Prof. Houda Mouttalib
+EMSI Casablanca
+3IIR
+S2 2024/2025
+Chapitre 3
+Structure du rapport PFA à EMSI
+Chapitre 4 : Réalisation et développement
+●
+Outils utilisés, étapes de réalisation, diﬃcultés rencontrées, captures d’écran de l’application ou du 
+système développé
+●
+5 à 10 pages selon la complexité du projet
+●
+Images recommandées : captures d’écran, extraits de code, photos du poste de travail
+Chapitre 5 : Résultats, tests et validation
+●
+Présentation des résultats obtenus, tests réalisés, analyse critique
+●
+2 à 4 pages
+●
+Tableaux recommandés : résultats de tests, comparatifs, graphiques
+Prof. Houda Mouttalib
+EMSI Casablanca
+3IIR
+S2 2024/2025
+Chapitre 3
+Structure du rapport PFA à EMSI
+8. Conclusion et perspectives
+●
+Synthèse, bilan, axes d’amélioration, perspectives d’évolution
+●
+1 à 2 pages
+9. Bibliographie
+●
+Liste des ouvrages, articles, sites web utilisés
+●
+Respecter un style académique (ISO 690)
+10. Annexes
+●
+Cahier des charges, documentation technique, code source, autres documents utiles

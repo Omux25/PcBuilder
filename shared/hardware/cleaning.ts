@@ -104,13 +104,13 @@ export function cleanName(rawName: string, brand: string, category?: string): st
 
   let noiseRegex: RegExp;
   if (preserveColor && preserveHeatsink) {
-    noiseRegex = /\s*(BOX|Tray|MPK|OEM|Bulk|no\s*fan|WOF|wraith\s*\w+|edition|sans\s*emballage|sans\s*refroidisseur)\s*/gi;
+    noiseRegex = /\s*(BOX|Tray|Tary|Traw|MPK|OEM|Bulk|no\s*fan|WOF|wraith\s*\w+|edition|sans\s*emballage|sans\s*refroidisseur)\s*/gi;
   } else if (preserveColor) {
-    noiseRegex = /\s*(BOX|Tray|MPK|OEM|Bulk|no\s*fan|WOF|wraith\s*\w+|edition|sans\s*emballage|sans\s*refroidisseur|avec\s*dissipateur(\s*thermique)?)\s*/gi;
+    noiseRegex = /\s*(BOX|Tray|Tary|Traw|MPK|OEM|Bulk|no\s*fan|WOF|wraith\s*\w+|edition|sans\s*emballage|sans\s*refroidisseur|avec\s*dissipateur(\s*thermique)?)\s*/gi;
   } else if (preserveHeatsink) {
-    noiseRegex = /\s*(BOX|Tray|MPK|OEM|Bulk|no\s*fan|WOF|wraith\s*\w+|edition|noir|blanc|white|black|silver|argent|grey|gris|sans\s*emballage|sans\s*refroidisseur)\s*/gi;
+    noiseRegex = /\s*(BOX|Tray|Tary|Traw|MPK|OEM|Bulk|no\s*fan|WOF|wraith\s*\w+|edition|noir|blanc|white|black|silver|argent|grey|gris|sans\s*emballage|sans\s*refroidisseur)\s*/gi;
   } else {
-    noiseRegex = /\s*(BOX|Tray|MPK|OEM|Bulk|no\s*fan|WOF|wraith\s*\w+|edition|noir|blanc|white|black|silver|argent|grey|gris|sans\s*emballage|sans\s*refroidisseur|avec\s*dissipateur(\s*thermique)?)\s*/gi;
+    noiseRegex = /\s*(BOX|Tray|Tary|Traw|MPK|OEM|Bulk|no\s*fan|WOF|wraith\s*\w+|edition|noir|blanc|white|black|silver|argent|grey|gris|sans\s*emballage|sans\s*refroidisseur|avec\s*dissipateur(\s*thermique)?)\s*/gi;
   }
 
   name = name
