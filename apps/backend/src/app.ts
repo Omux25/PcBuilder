@@ -108,7 +108,8 @@ app.onError((err, c) => {
     {
       error: {
         code: 'INTERNAL_ERROR',
-        message: 'An unexpected error occurred',
+        message: err instanceof Error ? err.message : 'An unexpected error occurred',
+        stack: err instanceof Error ? err.stack : undefined,
       },
     },
     500,
