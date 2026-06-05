@@ -61,4 +61,4 @@ USER bun
 EXPOSE 3000
 
 # Entry point starts the Hono server
-CMD ["bun", "run", "src/server.ts"]
+CMD ["sh", "-c", "bun run migrate && bun run src/server.ts"]
