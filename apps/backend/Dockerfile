@@ -1,40 +1,51 @@
 # ── STAGE 1: Frontend Build ───────────────────────────────────────────────────
 FROM oven/bun:1.3-alpine AS frontend-builder
+WORKDIR /app
+COPY package.json bun.lock ./
+COPY apps/frontend/package.json apps/frontend/
+COPY apps/admin/package.json apps/admin/
+COPY apps/backend/package.json apps/backend/
+RUN bun install
+COPY apps/frontend/ apps/frontend/
+COPY shared/ shared/
 WORKDIR /app/apps/frontend
-COPY apps/frontend/package.json apps/frontend/bun.lock ./
-RUN bun install --frozen-lockfile
-COPY apps/frontend/ ./
-COPY shared/ /app/shared/
 RUN bun run build
 
 # ── STAGE 2: Admin Build ──────────────────────────────────────────────────────
 FROM oven/bun:1.3-alpine AS admin-builder
+WORKDIR /app
+COPY package.json bun.lock ./
+COPY apps/frontend/package.json apps/frontend/
+COPY apps/admin/package.json apps/admin/
+COPY apps/backend/package.json apps/backend/
+RUN bun install
+COPY apps/admin/ apps/admin/
+COPY shared/ shared/
 WORKDIR /app/apps/admin
-COPY apps/admin/package.json apps/admin/bun.lock ./
-RUN bun install --frozen-lockfile
-COPY apps/admin/ ./
-COPY shared/ /app/shared/
 RUN bun run build
 
 # ── STAGE 3: Backend Runtime ──────────────────────────────────────────────────
 FROM oven/bun:1.3-alpine AS base
 
 # Mirror the monorepo layout so tsconfig path aliases resolve correctly.
-# tsconfig.json maps "@shared/*" → "../../shared/*" relative to apps/backend/.
-# With WORKDIR=/app/apps/backend, "../../shared" resolves to /app/shared — present below.
-WORKDIR /app/apps/backend
+WORKDIR /app
 
 # Install backend dependencies
-COPY apps/backend/package.json apps/backend/bun.lock ./
-RUN bun install --frozen-lockfile --production
+COPY package.json bun.lock ./
+COPY apps/frontend/package.json apps/frontend/
+COPY apps/admin/package.json apps/admin/
+COPY apps/backend/package.json apps/backend/
+RUN bun install --production
 
 # Copy backend source
-COPY apps/backend/src/ ./src/
-COPY apps/backend/scripts/data/ ./scripts/data/
-COPY apps/backend/tsconfig.json ./
+COPY apps/backend/src/ apps/backend/src/
+COPY apps/backend/scripts/data/ apps/backend/scripts/data/
+COPY apps/backend/tsconfig.json apps/backend/
 
-# Copy shared utilities — resolves to ../../shared from WORKDIR = /app/shared
-COPY shared/ /app/shared/
+# Copy shared utilities
+COPY shared/ shared/
+
+WORKDIR /app/apps/backend
 
 # Copy built frontend assets from previous stages
 # These are used when SERVE_STATIC=true.
