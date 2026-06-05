@@ -6,8 +6,16 @@
       "destination": "https://pcbuilder-m2nf.onrender.com/api/$1"
     },
     {
+      "source": "/api",
+      "destination": "https://pcbuilder-m2nf.onrender.com/api"
+    },
+    {
       "source": "/admin/(.*)",
       "destination": "https://pcbuilder-m2nf.onrender.com/admin/$1"
+    },
+    {
+      "source": "/admin",
+      "destination": "https://pcbuilder-m2nf.onrender.com/admin/"
     },
     {
       "source": "/(.*)",
