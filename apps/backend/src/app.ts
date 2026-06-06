@@ -130,6 +130,9 @@ if (process.env.SERVE_STATIC === 'true') {
     root: './admin/dist',
     rewriteRequestPath: (path) => path.replace(/^\/admin/, '')
   }));
+  // SPA fallback for admin panel
+  app.use('/admin/*', serveStatic({ path: './admin/dist/index.html' }));
+
   // Frontend SPA
   app.use('/*', serveStatic({ root: './frontend/dist' }));
   // SPA fallback — serve index.html for any unmatched path (client-side routing)
