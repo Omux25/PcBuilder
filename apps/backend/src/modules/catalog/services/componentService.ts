@@ -26,6 +26,10 @@ export class ComponentService {
     return this.repository.getComponents(filters, limit, offset);
   }
 
+  async getCategoryCounts(): Promise<Record<string, number>> {
+    return this.repository.getCategoryCounts();
+  }
+
   async getComponentById(id: number): Promise<Component> {
     const component = await this.repository.getComponentById(id);
     if (!component) {
@@ -487,3 +491,4 @@ export const deactivateComponent = service.deactivateComponent.bind(service);
 export const activateComponent = service.activateComponent.bind(service);
 export const deleteComponent = service.deleteComponent.bind(service);
 export const unlinkComponent = service.unlinkComponent.bind(service);
+export const getCategoryCounts = service.getCategoryCounts.bind(service);

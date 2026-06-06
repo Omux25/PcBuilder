@@ -11,6 +11,7 @@ const trendsController = new MarketTrendsController();
 
 const catalogRouter = new Hono()
   .get('/components', (c) => componentController.getComponents(c))
+  .get('/components/counts', (c) => componentController.getCategoryCounts(c))
   .post('/components/smart-search', (c) => componentController.smartSearch(c))
   .get('/components/slug/:slug', (c) => componentController.getComponentBySlug(c))
   .get('/components/mpn/:category/:identifier', (c) => componentController.getComponentByIdentifier(c))
