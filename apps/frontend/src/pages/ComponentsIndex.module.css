@@ -48,7 +48,7 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  background: var(--surface);
+  background: linear-gradient(145deg, var(--surface) 0%, var(--surface-hover) 100%);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   text-decoration: none;
@@ -69,21 +69,25 @@
   right: -20px;
   top: 50%;
   transform: translateY(-50%) rotate(-10deg);
-  opacity: 0.03;
+  opacity: 0.02;
   color: var(--text-primary);
   pointer-events: none;
-  transition: all 0.4s var(--ease-out);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.coreCard:hover .cardBgIcon {
-  opacity: 0.06;
+.card:hover .cardBgIcon {
+  opacity: 0.04;
   transform: translateY(-50%) rotate(0deg) scale(1.1);
   color: var(--accent-blue);
 }
 
+.coreCard:hover .cardBgIcon {
+  opacity: 0.06;
+}
+
 .card:hover {
   border-color: var(--accent-blue-tint);
-  background: var(--surface-hover);
+  background: linear-gradient(145deg, var(--surface-hover) 0%, var(--surface-2) 100%);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05), 0 0 20px var(--accent-blue-tint);
   transform: translateY(-3px);
   text-decoration: none;
@@ -92,14 +96,15 @@
 .cardIcon {
   width: 44px;
   height: 44px;
-  background: var(--surface-2);
+  background: var(--surface-3);
   border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-secondary);
+  color: var(--text);
   flex-shrink: 0;
   transition: all 0.25s;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .coreCard .cardIcon {
