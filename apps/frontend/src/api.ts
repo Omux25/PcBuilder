@@ -166,6 +166,11 @@ export async function getComponents(params: GetComponentsParams = {}): Promise<C
   return request<ComponentListResult>(`/components${query}`);
 }
 
+/** Fetch aggregated component counts by category. */
+export async function getComponentCounts(): Promise<Record<string, number>> {
+  return request<Record<string, number>>('/components/counts');
+}
+
 /** Fetch a single component by ID. */
 export function getComponentById(id: number): Promise<Component> {
   return request<Component>(`/components/${id}`);

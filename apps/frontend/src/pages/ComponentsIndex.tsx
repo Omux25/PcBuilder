@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getComponents } from '../api';
+import { getComponentCounts } from '../api';
 import { CategoryIcon } from '../components/CategoryIcon';
 import type { ComponentCategory } from '../types';
 import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
@@ -22,11 +22,15 @@ export function ComponentsIndex() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all(
-      CATEGORY_ORDER.map(cat =>
-        getComponents({ category: cat, limit: 1 }).then(({ total }) => ({ category: cat, count: total }))
-      )
-    ).then(setStats).finally(() => setLoading(false));
+    getComponentCounts()
+      .then((counts) => {
+        const newStats = CATEGORY_ORDER.map(cat => ({
+          category: cat,
+          count: counts[cat] || 0
+        }));
+        setStats(newStats);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   return (

@@ -45,6 +45,11 @@ export class ComponentController {
     return c.json({ components, total });
   }
 
+  async getCategoryCounts(c: Context) {
+    const counts = await this.componentService.getCategoryCounts();
+    return c.json(counts);
+  }
+
   async smartSearch(c: Context) {
     const category = c.req.query('category');
     const search = c.req.query('search');

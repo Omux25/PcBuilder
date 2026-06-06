@@ -419,6 +419,21 @@ export class ComponentRepository {
     return { components, total, in_stock_total: inStockTotal };
   }
 
+  async getCategoryCounts(): Promise<Record<string, number>> {
+    const rows = await this.sql`
+      SELECT category, COUNT(*) as count 
+      FROM components 
+      WHERE is_active = true 
+      GROUP BY category
+    ` as { category: string, count: string }[];
+    
+    const result: Record<string, number> = {};
+    for (const row of rows) {
+      result[row.category] = parseInt(row.count, 10);
+    }
+    return result;
+  }
+
   async getComponentsByIds(ids: number[]): Promise<Component[]> {
     if (ids.length === 0) return [];
     const rows = (await this.sql`
