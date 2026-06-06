@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 import { getComponentCounts } from '../api';
 import { CategoryIcon } from '../components/CategoryIcon';
 import type { ComponentCategory } from '../types';
-import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
+import { CATEGORY_LABELS, CATEGORY_ORDER, CORE_CATEGORIES, CATEGORY_GROUPS } from '../types';
 import { UI } from '../ui-strings';
 import styles from './ComponentsIndex.module.css';
 
@@ -18,20 +18,33 @@ interface CategoryStat {
 }
 
 export function ComponentsIndex() {
-  const [stats, setStats] = useState<CategoryStat[]>([]);
+  const [stats, setStats] = useState<Record<ComponentCategory, number>>({} as any);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     getComponentCounts()
-      .then((counts) => {
-        const newStats = CATEGORY_ORDER.map(cat => ({
-          category: cat,
-          count: counts[cat] || 0
-        }));
-        setStats(newStats);
-      })
+      .then(setStats)
       .finally(() => setLoading(false));
   }, []);
+
+  const renderGrid = (categories: ComponentCategory[], isCore = false) => (
+    <div className={`${styles.grid} ${isCore ? styles.coreGrid : ''}`}>
+      {categories.map(cat => (
+        <Link key={cat} to={`/browse/${cat}`} className={`${styles.card} ${isCore ? styles.coreCard : ''}`}>
+          <div className={styles.cardIcon}>
+            <CategoryIcon category={cat} size={isCore ? 32 : 24} />
+          </div>
+          <div className={styles.cardInfo}>
+            <h2 className={styles.cardTitle}>{CATEGORY_LABELS[cat]}</h2>
+            <p className={styles.cardCount}>
+              {loading ? '…' : UI.componentsIndex.count(stats[cat] ?? 0)}
+            </p>
+          </div>
+          <span className={styles.cardArrow}>→</span>
+        </Link>
+      ))}
+    </div>
+  );
 
   return (
     <div className={styles.page}>
@@ -40,25 +53,17 @@ export function ComponentsIndex() {
         <p className={styles.subtitle}>{UI.componentsIndex.subtitle}</p>
       </div>
 
-      <div className={styles.grid}>
-        {CATEGORY_ORDER.map(cat => {
-          const stat = stats.find(s => s.category === cat);
-          return (
-            <Link key={cat} to={`/browse/${cat}`} className={styles.card}>
-              <div className={styles.cardIcon}>
-                <CategoryIcon category={cat} size={28} />
-              </div>
-              <div className={styles.cardInfo}>
-                <h2 className={styles.cardTitle}>{CATEGORY_LABELS[cat]}</h2>
-                <p className={styles.cardCount}>
-                  {loading ? '…' : UI.componentsIndex.count(stat?.count ?? 0)}
-                </p>
-              </div>
-              <span className={styles.cardArrow}>→</span>
-            </Link>
-          );
-        })}
-      </div>
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Composants principaux</h2>
+        {renderGrid(CORE_CATEGORIES, true)}
+      </section>
+
+      {CATEGORY_GROUPS.map(group => (
+        <section key={group.label} className={styles.section}>
+          <h2 className={styles.sectionTitle}>{group.label}</h2>
+          {renderGrid(group.categories)}
+        </section>
+      ))}
     </div>
   );
 }
