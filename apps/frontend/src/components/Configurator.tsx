@@ -130,23 +130,25 @@ export function Configurator() {
       const catLabel = CATEGORY_LABELS[entry.category];
 
       return (
-        <div key={`add-${entry.category}`} className={styles.cardWrap}>
-          <Link 
-            to={entry.category === slotKey ? `/browse/${entry.category}` : `/browse/${entry.category}/${slotKey}`} 
-            className={styles.emptyCard}
-          >
-            <div className={styles.emptyIconWrap}>
-              <CategoryIcon category={entry.category} size={32} />
+        <div key={`add-${entry.category}`} className={styles.rowWrap}>
+          <div className={`${styles.row} ${styles.rowEmpty}`}>
+            <div className={styles.catCol}>
+              <div className={styles.catIconWrap}>
+                <CategoryIcon category={entry.category} size={18} />
+              </div>
+              <div className={styles.catLabel}>
+                {catLabel}
+                {count > 0 && <span className={styles.slotCount}>{count}</span>}
+              </div>
             </div>
-            <div className={styles.emptyLabel}>
-              {catLabel}
-              {count > 0 && <span className={styles.slotCount}>{count}</span>}
+            <div className={styles.pickerCol}>
+              <Link to={entry.category === slotKey ? `/browse/${entry.category}` : `/browse/${entry.category}/${slotKey}`} className={styles.emptyButton}>
+                <Plus size={16} />
+                {addLabel}
+              </Link>
             </div>
-            <div className={styles.emptyAction}>
-              <Plus size={16} />
-              <span>{addLabel}</span>
-            </div>
-          </Link>
+            <div className={styles.priceCol} />
+          </div>
         </div>
       );
     }
@@ -157,73 +159,79 @@ export function Configurator() {
     const isExpanded = expandedKey === slotKey;
 
     return (
-      <div key={slotKey} className={styles.cardWrap}>
-        {!selected ? (
-          <Link 
-            to={category === slotKey ? `/browse/${category}` : `/browse/${category}/${slotKey}`} 
-            className={styles.emptyCard}
-          >
-            <div className={styles.emptyIconWrap}>
-              <CategoryIcon category={category} size={32} />
+      <div key={slotKey} className={styles.rowWrap}>
+        <div
+          className={`${styles.row} ${selected ? styles.rowFilled : styles.rowEmpty}`}
+          style={{ cursor: 'default' }}
+        >
+          <div className={styles.catCol}>
+            <div className={styles.catIconWrap}>
+              <CategoryIcon category={category} size={18} />
             </div>
-            <div className={styles.emptyLabel}>{label}</div>
-            <div className={styles.emptyAction}>
-              <Plus size={16} />
-              <span>Ajouter</span>
-            </div>
-          </Link>
-        ) : (
-          <div className={styles.filledCard}>
-            <div className={styles.filledHeader}>
-              <div className={styles.filledCat}>
-                <CategoryIcon category={category} size={14} />
-                <span>{label}</span>
-              </div>
-              <button
-                className={styles.actionBtn}
-                onClick={(e) => { e.stopPropagation(); removeFromBuild(slotKey); }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-            
-            <Link
-              to={LinkEngine.getProductUrl(selected)}
-              className={styles.filledMain}
-            >
-              {selected.image_url ? (
-                <div className={styles.thumbWrap}>
-                  <img src={selected.image_url} alt="" className={styles.compThumb} referrerPolicy="no-referrer" />
+            <div className={styles.catLabel}>{label}</div>
+          </div>
+
+          <div className={styles.pickerCol}>
+            {selected ? (
+              <div className={styles.filledState}>
+                {selected.image_url ? (
+                  <Link
+                    to={LinkEngine.getProductUrl(selected)}
+                    className={styles.compThumbLink}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <img src={selected.image_url} alt="" className={styles.compThumb} referrerPolicy="no-referrer" />
+                  </Link>
+                ) : null}
+                <div className={styles.compInfo}>
+                  <span className={styles.compBrand}>{selected.brand}</span>
+                  <Link
+                    to={LinkEngine.getProductUrl(selected)}
+                    className={styles.compNameLink}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    {formatComponentName(selected, { excludeBrand: true })}
+                  </Link>
+                  <span className={styles.compSpecs}>{getSpecLine(selected)}</span>
+                  
+                  <button
+                    type="button"
+                    className={`${styles.offersBtn} ${isExpanded ? styles.offersBtnActive : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setExpandedKey(isExpanded ? null : slotKey);
+                    }}
+                  >
+                    <Tag size={12} className={styles.tagIcon} />
+                    <span>{isExpanded ? 'Masquer les offres' : 'Voir les offres'}</span>
+                    <span className={`${styles.chevronIcon} ${isExpanded ? styles.chevronIconOpen : ''}`}>▼</span>
+                  </button>
                 </div>
-              ) : null}
-              <div className={styles.compInfo}>
-                <span className={styles.compBrand}>{selected.brand}</span>
-                <span className={styles.compNameLink}>
-                  {formatComponentName(selected, { excludeBrand: true })}
-                </span>
-                <span className={styles.compSpecs}>{getSpecLine(selected)}</span>
+              </div>
+            ) : (
+              <Link to={category === slotKey ? `/browse/${category}` : `/browse/${category}/${slotKey}`} className={styles.emptyButton}>
+                <Plus size={16} />
+                Choisir un composant
+              </Link>
+            )}
+          </div>
+
+          <div className={styles.priceCol}>
+            {selected ? (
+              <>
                 <span className={styles.priceVal}>
                   {selected.lowest_price ? formatPrice(selected.lowest_price) : '—'}
                 </span>
-              </div>
-            </Link>
-
-            <div className={styles.filledFooter}>
-              <button
-                type="button"
-                className={`${styles.offersBtn} ${isExpanded ? styles.offersBtnActive : ''}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setExpandedKey(isExpanded ? null : slotKey);
-                }}
-              >
-                <Tag size={12} className={styles.tagIcon} />
-                <span>{isExpanded ? 'Masquer les offres' : 'Voir les offres'}</span>
-                <span className={`${styles.chevronIcon} ${isExpanded ? styles.chevronIconOpen : ''}`}>▼</span>
-              </button>
-            </div>
+                <button
+                  className={styles.actionBtn}
+                  onClick={(e) => { e.stopPropagation(); removeFromBuild(slotKey); }}
+                >
+                  <X size={18} />
+                </button>
+              </>
+            ) : null}
           </div>
-        )}
+        </div>
 
         {isExpanded && selected && (
           <div className={styles.expandContent}>
@@ -262,7 +270,7 @@ export function Configurator() {
         <div className={styles.mainColumn}>
           <div className={styles.section}>
             <h2 className={styles.sectionTitle}>Composants principaux</h2>
-            <div className={styles.gridContainer}>
+            <div className={styles.card}>
               {coreRows.map(renderRow)}
             </div>
           </div>
@@ -270,7 +278,7 @@ export function Configurator() {
           {otherRows.length > 0 && (
             <div className={styles.section}>
               <h2 className={styles.sectionTitle}>Logiciel & Périphériques</h2>
-              <div className={styles.gridContainer}>
+              <div className={styles.card}>
                 {otherRows.map(renderRow)}
               </div>
             </div>

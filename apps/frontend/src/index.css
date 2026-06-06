@@ -43,6 +43,9 @@
   --accent-blue-rgb: 59, 130, 246;
   --accent-blue-tint: rgba(59, 130, 246, 0.08);
   --accent-blue-glow: rgba(59, 130, 246, 0.2);
+  --accent-orange: #f97316;
+  --accent-orange-rgb: 249, 115, 22;
+  --accent-orange-tint: rgba(249, 115, 22, 0.08);
   --accent-cyan: #06b6d4;
   --accent-rgb: 250, 250, 250;
   --accent-tech: #4f46e5;
