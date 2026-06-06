@@ -31,11 +31,9 @@ export function ComponentsIndex() {
     <div className={`${styles.grid} ${isCore ? styles.coreGrid : ''}`}>
       {categories.map(cat => (
         <Link key={cat} to={`/browse/${cat}`} className={`${styles.card} ${isCore ? styles.coreCard : ''}`}>
-          {isCore && (
-            <div className={styles.cardBgIcon}>
-              <CategoryIcon category={cat} size={120} />
-            </div>
-          )}
+          <div className={styles.cardBgIcon}>
+            <CategoryIcon category={cat} size={isCore ? 120 : 100} />
+          </div>
           <div className={styles.cardIcon}>
             <CategoryIcon category={cat} size={isCore ? 32 : 24} />
           </div>
