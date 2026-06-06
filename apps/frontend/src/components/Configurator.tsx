@@ -130,25 +130,23 @@ export function Configurator() {
       const catLabel = CATEGORY_LABELS[entry.category];
 
       return (
-        <div key={`add-${entry.category}`} className={styles.rowWrap}>
-          <div className={`${styles.row} ${styles.rowEmpty}`}>
-            <div className={styles.catCol}>
-              <div className={styles.catIconWrap}>
-                <CategoryIcon category={entry.category} size={18} />
-              </div>
-              <div className={styles.catLabel}>
-                {catLabel}
-                {count > 0 && <span className={styles.slotCount}>{count}</span>}
-              </div>
+        <div key={`add-${entry.category}`} className={styles.cardWrap}>
+          <Link 
+            to={entry.category === slotKey ? `/browse/${entry.category}` : `/browse/${entry.category}/${slotKey}`} 
+            className={styles.emptyCard}
+          >
+            <div className={styles.emptyIconWrap}>
+              <CategoryIcon category={entry.category} size={32} />
             </div>
-            <div className={styles.pickerCol}>
-              <Link to={entry.category === slotKey ? `/browse/${entry.category}` : `/browse/${entry.category}/${slotKey}`} className={styles.emptyButton}>
-                <Plus size={16} />
-                {addLabel}
-              </Link>
+            <div className={styles.emptyLabel}>
+              {catLabel}
+              {count > 0 && <span className={styles.slotCount}>{count}</span>}
             </div>
-            <div className={styles.priceCol} />
-          </div>
+            <div className={styles.emptyAction}>
+              <Plus size={16} />
+              <span>{addLabel}</span>
+            </div>
+          </Link>
         </div>
       );
     }
