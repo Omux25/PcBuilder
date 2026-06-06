@@ -242,27 +242,6 @@ export function Configurator() {
     );
   };
 
-  return (
-    <div className={styles.configurator}>
-      {/* Header */}
-      <header className={styles.header}>
-        <h1 className={styles.title}>Configurateur</h1>
-        {compat && (
-          <div className={`${styles.statusBadge} ${!compat.compatible
-            ? styles.statusFail
-            : compat.warnings.length > 0
-              ? styles.statusWarn
-              : styles.statusOk
-            }`}>
-            {!compat.compatible
-              ? <><AlertCircle size={16} /> Incompatibilités</>
-              : compat.warnings.length > 0
-                ? <><AlertCircle size={16} /> {compat.warnings.length} avertissement{compat.warnings.length > 1 ? 's' : ''}</>
-                : <><CheckCircle2 size={16} /> Configuration compatible</>
-            }
-          </div>
-        )}
-      </header>
 
   return (
     <div className={styles.configurator}>
