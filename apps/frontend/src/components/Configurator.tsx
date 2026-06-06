@@ -118,28 +118,6 @@ export function Configurator() {
     return 'storage_1';
   }
 
-  return (
-    <div className={styles.configurator}>
-      {/* Header */}
-      <header className={styles.header}>
-        <h1 className={styles.title}>Configurateur</h1>
-        {compat && (
-          <div className={`${styles.statusBadge} ${!compat.compatible
-            ? styles.statusFail
-            : compat.warnings.length > 0
-              ? styles.statusWarn
-              : styles.statusOk
-            }`}>
-            {!compat.compatible
-              ? <><AlertCircle size={16} /> Incompatibilités</>
-              : compat.warnings.length > 0
-                ? <><AlertCircle size={16} /> {compat.warnings.length} avertissement{compat.warnings.length > 1 ? 's' : ''}</>
-                : <><CheckCircle2 size={16} /> Configuration compatible</>
-            }
-          </div>
-        )}
-      </header>
-
   const coreRows = rows.filter(r => CORE_CATEGORIES.includes(r.category));
   const otherRows = rows.filter(r => !CORE_CATEGORIES.includes(r.category));
 
@@ -263,6 +241,28 @@ export function Configurator() {
       </div>
     );
   };
+
+  return (
+    <div className={styles.configurator}>
+      {/* Header */}
+      <header className={styles.header}>
+        <h1 className={styles.title}>Configurateur</h1>
+        {compat && (
+          <div className={`${styles.statusBadge} ${!compat.compatible
+            ? styles.statusFail
+            : compat.warnings.length > 0
+              ? styles.statusWarn
+              : styles.statusOk
+            }`}>
+            {!compat.compatible
+              ? <><AlertCircle size={16} /> Incompatibilités</>
+              : compat.warnings.length > 0
+                ? <><AlertCircle size={16} /> {compat.warnings.length} avertissement{compat.warnings.length > 1 ? 's' : ''}</>
+                : <><CheckCircle2 size={16} /> Configuration compatible</>
+            }
+          </div>
+        )}
+      </header>
 
   return (
     <div className={styles.configurator}>
