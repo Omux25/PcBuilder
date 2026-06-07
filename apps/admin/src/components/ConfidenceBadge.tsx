@@ -5,53 +5,52 @@
  * Requirements: 11.1–11.5
  */
 
-import { CATEGORY_LABELS } from '@shared/types';
-import type { ComponentCategory } from '@shared/types';
 
 interface Props {
     confidence: 'high' | 'medium' | 'low' | 'unknown';
-    category: string | null;
 }
 
 const CONFIDENCE_STYLES: Record<string, React.CSSProperties> = {
     high: {
-        background: 'transparent',
-        color: 'var(--accent-blue)',
-        border: '1px solid var(--accent-blue)',
+        background: 'rgba(34, 197, 94, 0.15)',
+        color: '#4ade80',
+        border: '1px solid rgba(34, 197, 94, 0.2)',
     },
     medium: {
-        background: 'transparent',
-        color: 'var(--warning)',
-        border: '1px solid var(--warning)',
+        background: 'rgba(245, 158, 11, 0.15)',
+        color: '#fbbf24',
+        border: '1px solid rgba(245, 158, 11, 0.2)',
     },
     low: {
-        background: 'transparent',
-        color: 'var(--text-muted)',
-        border: '1px solid var(--border-2)',
+        background: 'rgba(156, 163, 175, 0.1)',
+        color: '#9ca3af',
+        border: '1px solid rgba(156, 163, 175, 0.2)',
     },
     unknown: {
-        background: 'transparent',
+        background: 'rgba(156, 163, 175, 0.05)',
         color: 'var(--text-muted)',
-        border: '1px solid var(--border-2)',
+        border: '1px solid rgba(156, 163, 175, 0.1)',
     },
 };
 
 const CONFIDENCE_LABELS: Record<string, string> = {
     high: '✓',
-    medium: '~',
+    medium: '•',
     low: '?',
     unknown: '?',
 };
 
-export function ConfidenceBadge({ confidence, category }: Props) {
+const CONFIDENCE_TEXT: Record<string, string> = {
+    high: 'Élevée',
+    medium: 'Moyenne',
+    low: 'Faible',
+    unknown: 'Inconnue',
+};
+
+export function ConfidenceBadge({ confidence }: Props) {
     const style = CONFIDENCE_STYLES[confidence] ?? CONFIDENCE_STYLES.unknown;
     const indicator = CONFIDENCE_LABELS[confidence] ?? '?';
-
-    const categoryLabel = category
-        ? (CATEGORY_LABELS[category as ComponentCategory] ?? category)
-        : 'Inconnu';
-
-    const isUnknown = confidence === 'low' || confidence === 'unknown' || !category;
+    const text = CONFIDENCE_TEXT[confidence] ?? 'Inconnue';
 
     return (
         <span
@@ -66,11 +65,11 @@ export function ConfidenceBadge({ confidence, category }: Props) {
                 whiteSpace: 'nowrap',
                 ...style,
             }}
-            title={`Confiance: ${confidence}`}
-            aria-label={`Catégorie suggérée: ${isUnknown ? 'Inconnue' : categoryLabel}, confiance: ${confidence}`}
+            title={`Confiance: ${text}`}
+            aria-label={`Confiance: ${text}`}
         >
             <span style={{ fontSize: '10px' }}>{indicator}</span>
-            {isUnknown ? 'Inconnu' : categoryLabel}
+            {text}
         </span>
     );
 }

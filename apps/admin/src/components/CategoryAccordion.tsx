@@ -9,7 +9,7 @@
  * Requirements: 1.1, 1.4, 1.5, 1.6, 2.1–2.6, 5.1–5.3, 8.1–8.4
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ChevronDown, ChevronRight, Link2 } from 'lucide-react';
 import { CanonicalGroupRow } from './CanonicalGroupRow';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -64,23 +64,7 @@ export function CategoryAccordion({
     const loading = state?.loading ?? false;
     const error = state?.error ?? null;
 
-    // ── Fetch first batch on first open or if open on mount ──────────────────
-    useEffect(() => {
-        if (isOpen && !state && !loading) {
-            fetchGroups(0);
-        }
-    }, [isOpen, state, loading]);
-
-    // ── Fetch first batch on first open ──────────────────────────────────────
-    async function handleToggle() {
-        onToggle();
-        if (!isOpen && !state) {
-            // First open — fetch initial batch
-            await fetchGroups(0);
-        }
-    }
-
-    async function fetchGroups(offset: number) {
+    const fetchGroups = useCallback(async (offset: number) => {
         onStateChange({ loading: true, error: null });
         try {
             const data = await getGroupedUnmatched({
@@ -102,6 +86,22 @@ export function CategoryAccordion({
             }
         } catch (err) {
             onStateChange({ loading: false, error: getErrorMessage(err) });
+        }
+    }, [category, expandAllGroups, onStateChange, state]);
+
+    // ── Fetch first batch on first open or if open on mount ──────────────────
+    useEffect(() => {
+        if (isOpen && !state && !loading) {
+            fetchGroups(0);
+        }
+    }, [isOpen, state, loading, fetchGroups]);
+
+    // ── Fetch first batch on first open ──────────────────────────────────────
+    async function handleToggle() {
+        onToggle();
+        if (!isOpen && !state) {
+            // First open — fetch initial batch
+            await fetchGroups(0);
         }
     }
 
@@ -273,11 +273,11 @@ export function CategoryAccordion({
                                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
                                     <th style={{ width: '32px' }} />
                                     <th style={{ width: '48px' }} />
-                                    <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nom canonique</th>
-                                    <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Confiance</th>
-                                    <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Revendeurs</th>
-                                    <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prix</th>
-                                    <th style={{ textAlign: 'right', padding: '8px 12px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actions</th>
+                                    <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nom canonique</th>
+                                    <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Confiance</th>
+                                    <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Revendeurs</th>
+                                    <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prix</th>
+                                    <th style={{ textAlign: 'right', padding: '12px 14px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>

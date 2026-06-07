@@ -42,6 +42,7 @@ export interface Suggestion {
     brand: string | null;
     existing_component_id: number | null;
     specs_hint: Record<string, unknown>;
+    base_canonical_name: string; // The category-independent canonical name, used for learning
 }
 
 // ── Token lists ───────────────────────────────────────────────────────────────
@@ -498,6 +499,7 @@ export function suggestForListing(
     adminRules?: KeywordRule[],
     url?: string,
     aliasRules?: AliasRule[],
+    learnedCategories?: Map<string, string>,
 ): Suggestion {
     // Decode HTML entities first (retailers store names with &#8211;, &Prime;, etc.)
     const name = decodeHtml(scrapedName);
@@ -506,7 +508,10 @@ export function suggestForListing(
     // Step 1.5: Infer category FIRST to avoid cross-pollination
     // Let's resolve the category before deriving the final canonical name so we can pass it in
     const tempCanonical = deriveCanonicalName(name, brand, null, aliasRules);
-    const inferredCategory = resolveCategory(name) ?? resolveCategory(tempCanonical) ?? (url ? inferCategoryFromUrl(url) : null);
+    const learnedCat = learnedCategories?.get(tempCanonical);
+    
+    // If we have a learned category for this exact base canonical name, use it!
+    const inferredCategory = learnedCat ?? resolveCategory(name) ?? resolveCategory(tempCanonical) ?? (url ? inferCategoryFromUrl(url) : null);
 
     const canonical_name = deriveCanonicalName(name, brand, inferredCategory, aliasRules);
 
@@ -519,6 +524,7 @@ export function suggestForListing(
             brand,
             existing_component_id: null,
             specs_hint: {},
+            base_canonical_name: tempCanonical,
         };
     }
 
@@ -538,6 +544,7 @@ export function suggestForListing(
                 brand,
                 existing_component_id: perfectMatch.componentId,
                 specs_hint: buildSpecsHint(name, matched.category as SuggestionCategory),
+                base_canonical_name: tempCanonical,
             };
         }
     }
@@ -554,6 +561,7 @@ export function suggestForListing(
                 brand,
                 existing_component_id: partialMatch.componentId,
                 specs_hint: buildSpecsHint(name, matched.category as SuggestionCategory),
+                base_canonical_name: tempCanonical,
             };
         }
     }
@@ -575,6 +583,7 @@ export function suggestForListing(
                     brand,
                     existing_component_id: null,
                     specs_hint: buildSpecsHint(name, category),
+                    base_canonical_name: tempCanonical,
                 };
             }
             // Multiple rules disagree — fall through to keyword scorer
@@ -584,11 +593,12 @@ export function suggestForListing(
     // Step 5: Keyword scorer fallback (use decoded name)
     return {
         category: category as SuggestionCategory,
-        confidence: (inferredCategory && !kwCategory) ? 'high' : kwConfidence,
+        confidence: (inferredCategory && (!kwCategory || kwCategory === inferredCategory)) ? 'high' : kwConfidence,
         canonical_name,
         brand,
         existing_component_id: null,
         specs_hint: buildSpecsHint(name, category as SuggestionCategory),
+        base_canonical_name: tempCanonical,
     };
 }
 
@@ -605,10 +615,11 @@ export function processBatch(
     catalog: CatalogComponent[],
     adminRules?: KeywordRule[],
     aliasRules?: AliasRule[],
+    learnedCategories?: Map<string, string>,
 ): Map<number, Suggestion> {
     const results = new Map<number, Suggestion>();
     for (const listing of listings) {
-        results.set(listing.id, suggestForListing(listing.scraped_name, catalog, adminRules, listing.product_url, aliasRules));
+        results.set(listing.id, suggestForListing(listing.scraped_name, catalog, adminRules, listing.product_url, aliasRules, learnedCategories));
     }
     return results;
 }

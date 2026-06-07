@@ -22,7 +22,7 @@ import type { ComponentCategory } from '@shared/types';
 import { cleanName } from '@shared/hardware/cleaning';
 import styles from './Form.module.css';
 import { getKeywordRules, reprocessSuggestions, getErrorMessage, scrapeUrls, createAndLinkComponent } from '../api';
-import type { CanonicalGroup, KeywordRuleResponse, CreateAndLinkPayload } from '../api';
+import type { CanonicalGroup, CreateAndLinkPayload } from '../api';
 import { fmtPriceRange, fmtPrice } from '../utils/fmt';
 
 export interface CreateAndLinkResult {
@@ -98,7 +98,7 @@ export function CreateAndLinkModal({ group, isOpen, onClose, onSuccess }: Props)
         setCategory(newCat);
     }
 
-    async function handleRuleSaved(_rule: KeywordRuleResponse) {
+    async function handleRuleSaved() {
         // Re-process suggestions for this group after a new rule is saved
         try {
             await reprocessSuggestions();
@@ -234,7 +234,6 @@ export function CreateAndLinkModal({ group, isOpen, onClose, onSuccess }: Props)
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     <ConfidenceBadge
                         confidence={group.confidence as 'high' | 'medium' | 'low' | 'unknown'}
-                        category={group.category}
                     />
                     <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
                         {group.listing_count} listing{group.listing_count !== 1 ? 's' : ''} ·{' '}

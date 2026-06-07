@@ -137,7 +137,7 @@ export class UnmatchedService {
         } else {
           // Create new component
           const slug = await getUniqueSlug(brandVal, canonicalName);
-          const s = this.enrichSpecs(category, canonicalName, sample.specs_hint ?? {});
+          const s = this.enrichSpecs(category, canonicalName, { ...sample.specs_hint });
 
           let specsPayload: Record<string, any> | null = null;
           if (category === 'gpu') {
@@ -402,7 +402,7 @@ export class UnmatchedService {
     if (listings.length === 0) throw new AppError('NOT_FOUND', 'No pending listings found', 404);
 
     const slug = await getUniqueSlug(brandVal, canonicalName);
-    const s = this.enrichSpecs(category, canonicalName, specs ?? {});
+    const s = this.enrichSpecs(category, canonicalName, { ...specs });
 
     let specsPayload: Record<string, any> | null = null;
     if (category === 'gpu') {

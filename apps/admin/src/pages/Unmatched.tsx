@@ -77,8 +77,8 @@ export function Unmatched() {
       const sorted = [...(data.categories ?? [])].sort((a, b) => {
         if (a.category === null) return 1;
         if (b.category === null) return -1;
-        const ai = CATEGORY_ORDER.indexOf(a.category as any);
-        const bi = CATEGORY_ORDER.indexOf(b.category as any);
+        const ai = CATEGORY_ORDER.indexOf(a.category as ComponentCategory);
+        const bi = CATEGORY_ORDER.indexOf(b.category as ComponentCategory);
         return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
       });
       setCategorySummary(sorted);
@@ -318,7 +318,7 @@ export function Unmatched() {
           <button
             onClick={handleConfirmCategories}
             disabled={confirmingCategories}
-            title="Confirmer et créer automatiquement tous les produits qui ont une catégorie suggérée ou manuelle"
+            title="Confirmer et créer automatiquement tous les produits avec une confiance ÉLEVÉE ou une catégorie manuelle"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -349,7 +349,7 @@ export function Unmatched() {
                 flexShrink: 0,
               }}
             />
-            {confirmingCategories ? 'Confirmation...' : 'Confirmer les Catégories'}
+            {confirmingCategories ? 'Confirmation...' : 'Confirmer Hautes Confiances'}
           </button>
 
           <button
@@ -474,7 +474,7 @@ export function Unmatched() {
         {searchQuery ? (
           <SearchOverrideView
             query={searchQuery}
-            onGroupRemoved={(canonicalName, _category) => handleGroupRemoved(canonicalName)}
+            onGroupRemoved={(canonicalName) => handleGroupRemoved(canonicalName)}
             onToast={showToast}
           />
         ) : summaryLoading ? (
