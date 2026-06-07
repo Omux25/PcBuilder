@@ -15,6 +15,7 @@ import { getSql } from '../../../core/db/index.js';
 import { processBatch } from './suggestionEngine.js';
 import { loadAdminRules } from './keywordRulesService.js';
 import { loadAliasRules } from './aliasRulesService.js';
+import { loadLearnedCategories, saveLearnedCategories } from './learnedCategoriesService.js';
 import { logger } from '../engine/utils/logger.js';
 import type { CatalogComponent } from '../../../core/utils/componentMatcher.js';
 
@@ -48,12 +49,14 @@ export async function runSuggestionPreprocessing(force = false): Promise<Preproc
     WHERE is_active = true
   `) as CatalogComponent[];
 
-  // Step 1b: Load admin keyword rules & alias rules once per batch
+  // Step 1b: Load admin keyword rules, alias rules & learned categories once per batch
   let adminRules: Awaited<ReturnType<typeof loadAdminRules>> = [];
   let aliasRules: Awaited<ReturnType<typeof loadAliasRules>> = [];
+  let learnedCategories: Awaited<ReturnType<typeof loadLearnedCategories>> = new Map();
   try {
     adminRules = await loadAdminRules();
     aliasRules = await loadAliasRules();
+    learnedCategories = await loadLearnedCategories();
   } catch (err) {
     await logger.error(
       `[SUGGESTION-PREPROCESSOR] Failed to load rules: ${err instanceof Error ? err.message : String(err)}`,
@@ -86,7 +89,7 @@ export async function runSuggestionPreprocessing(force = false): Promise<Preproc
   const SUGGESTION_BATCH_SIZE = 50;
   for (let i = 0; i < pending.length; i += SUGGESTION_BATCH_SIZE) {
     const chunk = pending.slice(i, i + SUGGESTION_BATCH_SIZE);
-    const chunkSuggestions = processBatch(chunk, catalog, adminRules, aliasRules);
+    const chunkSuggestions = processBatch(chunk, catalog, adminRules, aliasRules, learnedCategories);
     for (const [id, suggestion] of chunkSuggestions) {
       suggestions.set(id, suggestion);
     }
@@ -96,6 +99,8 @@ export async function runSuggestionPreprocessing(force = false): Promise<Preproc
 
   // Step 4: Batch upsert results into unmatched_suggestions
   const upsertRows: any[] = [];
+  const newLearningsMap = new Map<string, string>();
+
   for (const listing of pending) {
     const suggestion = suggestions.get(listing.id);
     if (!suggestion) {
@@ -104,13 +109,18 @@ export async function runSuggestionPreprocessing(force = false): Promise<Preproc
     }
 
     if (listing.manual_category === 'standby') {
-      suggestion.category = null;
+      suggestion.category = null as any;
       suggestion.confidence = 'low';
       suggestion.canonical_name = listing.scraped_name;
       suggestion.existing_component_id = null;
     } else if (listing.manual_category) {
       suggestion.category = listing.manual_category as any;
       suggestion.confidence = 'high';
+      
+      // Capture the learning!
+      if (suggestion.base_canonical_name) {
+        newLearningsMap.set(suggestion.base_canonical_name, listing.manual_category as string);
+      }
     }
 
     upsertRows.push({
@@ -147,6 +157,22 @@ export async function runSuggestionPreprocessing(force = false): Promise<Preproc
     } catch (err) {
       await logger.error(
         `[SUGGESTION-PREPROCESSOR] Bulk upsert failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
+  // Step 5: Save any new learned categories
+  if (newLearningsMap.size > 0) {
+    try {
+      const newLearnings = Array.from(newLearningsMap.entries()).map(([canonical_name, category]) => ({
+        canonical_name,
+        category
+      }));
+      await saveLearnedCategories(newLearnings);
+      await logger.info(`[SUGGESTION-PREPROCESSOR] Captured ${newLearningsMap.size} learned categories from manual corrections.`);
+    } catch (err) {
+      await logger.error(
+        `[SUGGESTION-PREPROCESSOR] Failed to save learned categories: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
   }

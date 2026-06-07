@@ -8,7 +8,7 @@
  * Requirements: 6.3, 6.6, 6.7
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CanonicalGroupRow } from './CanonicalGroupRow';
 import { CreateAndLinkModal } from './CreateAndLinkModal';
 import type { CreateAndLinkResult } from './CreateAndLinkModal';
@@ -35,6 +35,20 @@ export function SearchOverrideView({ query, onGroupRemoved, onToast }: Props) {
     const [createLinkTarget, setCreateLinkTarget] = useState<CanonicalGroup | null>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    const fetchResults = useCallback(async (q: string) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const data = await getGroupedUnmatched({ search: q, limit: String(SEARCH_LIMIT) });
+            setGroups((data.groups ?? []) as CanonicalGroup[]);
+            setTotalGroups(data.total_groups ?? 0);
+        } catch (err) {
+            setError(getErrorMessage(err));
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     useEffect(() => {
         if (debounceRef.current) clearTimeout(debounceRef.current);
         if (!query.trim()) {
@@ -48,21 +62,7 @@ export function SearchOverrideView({ query, onGroupRemoved, onToast }: Props) {
         return () => {
             if (debounceRef.current) clearTimeout(debounceRef.current);
         };
-    }, [query]);
-
-    async function fetchResults(q: string) {
-        setLoading(true);
-        setError(null);
-        try {
-            const data = await getGroupedUnmatched({ search: q, limit: String(SEARCH_LIMIT) });
-            setGroups((data.groups ?? []) as CanonicalGroup[]);
-            setTotalGroups(data.total_groups ?? 0);
-        } catch (err) {
-            setError(getErrorMessage(err));
-        } finally {
-            setLoading(false);
-        }
-    }
+    }, [query, fetchResults]);
 
     function handleGroupRemoved(canonicalName: string) {
         const group = groups.find((g) => g.canonical_name === canonicalName);

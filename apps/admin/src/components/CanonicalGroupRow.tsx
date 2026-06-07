@@ -131,10 +131,10 @@ export function CanonicalGroupRow({
                 </td>
 
                 {/* Thumbnail */}
-                <td style={{ width: '48px', padding: '4px 0' }}>
-                    {listings[0]?.image_url ? (
+                <td style={{ width: '48px', padding: '8px 0' }}>
+                    {listings.find(l => l.image_url)?.image_url ? (
                         <img
-                            src={listings[0].image_url}
+                            src={listings.find(l => l.image_url)!.image_url}
                             alt=""
                             referrerPolicy="no-referrer"
                             style={{
@@ -185,7 +185,7 @@ export function CanonicalGroupRow({
 
                 {/* Confidence badge */}
                 <td onClick={(e) => e.stopPropagation()}>
-                    <ConfidenceBadge confidence={confidence} category={group.category} />
+                    <ConfidenceBadge confidence={confidence} />
                 </td>
 
                 {/* Retailer count */}
@@ -199,8 +199,8 @@ export function CanonicalGroupRow({
                 </td>
 
                 {/* Actions */}
-                <td onClick={(e) => e.stopPropagation()}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <td onClick={(e) => e.stopPropagation()} style={{ paddingRight: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
                         <select
                             value={group.category || ''}
                             onChange={async (e) => {
@@ -219,7 +219,8 @@ export function CanonicalGroupRow({
                             }}
                             disabled={rejecting}
                             style={{
-                                padding: '3px 6px',
+                                padding: '5px 8px',
+                                paddingRight: '24px',
                                 fontSize: '12px',
                                 border: '1px solid var(--border)',
                                 borderRadius: 'var(--radius)',
@@ -227,7 +228,9 @@ export function CanonicalGroupRow({
                                 color: 'var(--text)',
                                 cursor: 'pointer',
                                 outline: 'none',
-                                maxWidth: '125px'
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden'
                             }}
                         >
                             <option value="">— Standby / Aucun —</option>
@@ -245,7 +248,7 @@ export function CanonicalGroupRow({
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '4px',
-                                padding: '4px 10px',
+                                padding: '5px 12px',
                                 background: 'var(--accent)',
                                 color: '#fff',
                                 border: 'none',
@@ -268,12 +271,27 @@ export function CanonicalGroupRow({
                                 background: 'none',
                                 border: '1px solid var(--border)',
                                 borderRadius: 'var(--radius)',
-                                padding: '4px 8px',
+                                padding: '5px 8px',
                                 cursor: rejecting ? 'not-allowed' : 'pointer',
                                 color: 'var(--text-dim)',
                                 opacity: rejecting ? 0.5 : 1,
                                 display: 'inline-flex',
                                 alignItems: 'center',
+                                transition: 'all 0.2s',
+                            }}
+                            onMouseOver={(e) => {
+                                if (!rejecting) {
+                                    e.currentTarget.style.color = '#ef4444';
+                                    e.currentTarget.style.borderColor = '#ef4444';
+                                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                                }
+                            }}
+                            onMouseOut={(e) => {
+                                if (!rejecting) {
+                                    e.currentTarget.style.color = 'var(--text-dim)';
+                                    e.currentTarget.style.borderColor = 'var(--border)';
+                                    e.currentTarget.style.background = 'none';
+                                }
                             }}
                         >
                             <X size={13} />
@@ -285,7 +303,7 @@ export function CanonicalGroupRow({
             {/* Inline error on group reject failure */}
             {rowError && (
                 <tr>
-                    <td colSpan={6} style={{ padding: '4px 8px 4px 40px' }}>
+                    <td colSpan={7} style={{ padding: '4px 8px 4px 40px' }}>
                         <span style={{ color: 'var(--danger, #e05252)', fontSize: '11px' }}>
                             ⚠ {rowError}
                         </span>

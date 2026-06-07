@@ -229,6 +229,7 @@ export class UnmatchedRepository {
       WHERE ul.status = 'pending'
         AND us.category IS NOT NULL
         AND us.category != 'standby'
+        AND us.confidence = 'high'
       ORDER BY ul.scraped_at DESC
     `) as any[];
   }

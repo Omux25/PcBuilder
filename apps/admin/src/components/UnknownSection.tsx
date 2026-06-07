@@ -10,7 +10,7 @@
  * Requirements: 7.1–7.7
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import type { CanonicalGroupListing } from '../api';
 import {
@@ -39,12 +39,7 @@ export function UnknownSection({ onCategoryAssigned, refreshTrigger }: Props) {
     const [error, setError] = useState<string | null>(null);
     const [rowErrors, setRowErrors] = useState<Map<number, string>>(new Map());
 
-    useEffect(() => {
-        fetchListings();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [refreshTrigger]);
-
-    async function fetchListings() {
+    const fetchListings = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
@@ -58,7 +53,11 @@ export function UnknownSection({ onCategoryAssigned, refreshTrigger }: Props) {
         } finally {
             setLoading(false);
         }
-    }
+    }, []);
+
+    useEffect(() => {
+        fetchListings();
+    }, [refreshTrigger, fetchListings]);
 
     function setRowError(id: number, msg: string | null) {
         setRowErrors((prev) => {

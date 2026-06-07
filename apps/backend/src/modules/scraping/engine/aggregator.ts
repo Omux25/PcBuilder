@@ -971,6 +971,8 @@ export async function reprocessUnmatched(): Promise<AggregateResult & { autoMapp
     price: Number(item.scraped_price),
     in_stock: true,
     product_description: '',
+    image_url: (item as any).image_url ?? undefined,
+    image_urls: Array.isArray((item as any).image_urls) ? (item as any).image_urls : undefined,
     manual_category: item.manual_category ?? undefined,
     sug_category: item.sug_category
   } as any));
