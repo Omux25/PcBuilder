@@ -308,6 +308,11 @@
   min-width: 180px;
 }
 
+.filterGroup:first-child {
+  flex: 1.5;
+  min-width: 340px;
+}
+
 .filterGroup:last-child {
   flex: 0;
   min-width: fit-content;
