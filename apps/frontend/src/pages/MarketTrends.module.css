@@ -128,8 +128,8 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.55rem 1.25rem;
-  border: none;
+  padding: 0.5rem 1.2rem;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--text-muted);
   font-size: 0.85rem;
@@ -141,21 +141,21 @@
 
 .trendTab:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-surface-hover);
 }
 
 .trendTabActiveDrops {
   background: var(--bg-surface);
   color: var(--success) !important;
   box-shadow: var(--shadow-sm), 0 0 15px rgba(var(--success-rgb), 0.1);
-  border: 1px solid rgba(var(--success-rgb), 0.15);
+  border-color: rgba(var(--success-rgb), 0.15);
 }
 
 .trendTabActiveHikes {
   background: var(--bg-surface);
   color: var(--danger) !important;
   box-shadow: var(--shadow-sm), 0 0 15px rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.15);
 }
 
 /* ── Stats Dashboard Row ────────────────────────────────────────────────── */
@@ -331,13 +331,16 @@
   border: 1px solid var(--border);
   width: fit-content;
   height: 38px;
-  align-items: center;
+  align-items: stretch;
 }
 
 .dayPill {
-  padding: 0.35rem 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.85rem;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 8px;
   font-size: 0.8rem;
   font-weight: 700;
@@ -348,7 +351,7 @@
 
 .dayPill:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-surface-hover);
 }
 
 .dayPillHoverDrops:hover {
@@ -360,15 +363,15 @@
 }
 
 .dayPillActiveDrops {
-  background: rgba(var(--success-rgb), 0.15) !important;
+  background: rgba(var(--success-rgb), 0.12) !important;
   color: var(--success) !important;
-  border: 1px solid rgba(var(--success-rgb), 0.25) !important;
+  border-color: rgba(var(--success-rgb), 0.25) !important;
 }
 
 .dayPillActiveHikes {
-  background: rgba(239, 68, 68, 0.15) !important;
+  background: rgba(239, 68, 68, 0.12) !important;
   color: var(--danger) !important;
-  border: 1px solid rgba(239, 68, 68, 0.25) !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
 }
 
 .customSelectContainer {
