@@ -3,9 +3,22 @@
  * Accessible at /market-trends
  */
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingDown, TrendingUp, ShoppingCart, BarChart3, Share2, Check } from 'lucide-react';
+import { 
+  TrendingDown, 
+  TrendingUp, 
+  ShoppingCart, 
+  BarChart3, 
+  Share2, 
+  Check, 
+  RotateCcw, 
+  SlidersHorizontal, 
+  DollarSign, 
+  Sparkles, 
+  Calendar,
+  ChevronDown
+} from 'lucide-react';
 import { getMarketTrends, getComponentById, type MarketTrend } from '../api';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { Skeleton } from '../components/Skeleton';
@@ -19,10 +32,74 @@ import styles from './MarketTrends.module.css';
 
 const DAY_OPTIONS = [3, 7, 14, 30];
 
+interface CustomSelectOption {
+  value: string;
+  label: string;
+  icon?: React.ReactNode;
+}
+
+interface CustomSelectProps {
+  value: string;
+  options: CustomSelectOption[];
+  onChange: (val: string) => void;
+}
+
+function CustomSelect({ value, options, onChange }: CustomSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find(opt => opt.value === value) || options[0];
+
+  return (
+    <div className={styles.customSelectContainer} ref={containerRef}>
+      <button
+        type="button"
+        className={`${styles.customSelectTrigger} ${isOpen ? styles.customSelectTriggerActive : ''}`}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className={styles.customSelectTriggerText}>
+          {selectedOption.icon && <span className={styles.customSelectOptionIcon}>{selectedOption.icon}</span>}
+          {selectedOption.label}
+        </span>
+        <ChevronDown size={14} className={`${styles.customSelectChevron} ${isOpen ? styles.customSelectChevronOpen : ''}`} />
+      </button>
+      {isOpen && (
+        <div className={styles.customSelectDropdown}>
+          {options.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              className={`${styles.customSelectOption} ${opt.value === value ? styles.customSelectOptionSelected : ''}`}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+            >
+              {opt.icon && <span className={styles.customSelectOptionIcon}>{opt.icon}</span>}
+              <span className={styles.customSelectOptionLabel}>{opt.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function MarketTrends() {
   const { addToBuild } = useBuild();
   const [trends, setTrends] = useState<MarketTrend[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState(7);
   const [category, setCategory] = useState('');
@@ -33,9 +110,17 @@ export function MarketTrends() {
   const [copied, setCopied] = useState(false);
   const [sortBy, setSortBy] = useState<string>('pct');
 
+  const isInitialLoad = useRef(true);
+
   useEffect(() => {
-    setLoading(true);
+    let active = true;
+    if (isInitialLoad.current) {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
     setError(null);
+
     getMarketTrends({
       days,
       limit: 40,
@@ -43,9 +128,27 @@ export function MarketTrends() {
       type: trendType,
       in_stock: showOutOfStock ? 'all' : 'true'
     })
-      .then(r => setTrends(r.trends))
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
+      .then(r => {
+        if (active) {
+          setTrends(r.trends);
+          isInitialLoad.current = false;
+        }
+      })
+      .catch((e: Error) => {
+        if (active) {
+          setError(e.message);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, [days, category, trendType, showOutOfStock]);
 
   const sortedTrends = useMemo(() => {
@@ -92,7 +195,6 @@ export function MarketTrends() {
     setAdding(trend.component_id);
     try {
       const component = await getComponentById(trend.component_id);
-      // Guarantee the price is available, falling back to the trend's current price
       component.lowest_price = component.lowest_price || trend.price_after;
       addToBuild(component);
       setAdded(trend.component_id);
@@ -110,12 +212,40 @@ export function MarketTrends() {
     setTimeout(() => setCopied(false), 2000);
   }
 
+
+  const categoryOptions = useMemo(() => {
+    const base = [{ value: '', label: UI.trends.allCategories }];
+    const cats = CATEGORY_ORDER.map(cat => ({
+      value: cat,
+      label: CATEGORY_LABELS[cat] || cat,
+      icon: <CategoryIcon category={cat as ComponentCategory} size={13} />
+    }));
+    return [...base, ...cats];
+  }, []);
+
+  const sortOptions = useMemo(() => {
+    return [
+      {
+        value: 'pct',
+        label: trendType === 'drops' ? 'Remise la plus élevée (%)' : 'Hausse la plus élevée (%)'
+      },
+      {
+        value: 'amount',
+        label: trendType === 'drops' ? 'Économie la plus élevée (MAD)' : 'Impact le plus élevé (MAD)'
+      },
+      { value: 'price_asc', label: 'Prix : du moins cher au plus cher' },
+      { value: 'price_desc', label: 'Prix : du plus cher au moins cher' }
+    ];
+  }, [trendType]);
+
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
         <div className={styles.headerTop}>
           <div className={styles.titleRow}>
-            <BarChart3 size={24} className={styles.titleIcon} />
+            <div className={styles.titleIconWrapper}>
+              <BarChart3 size={24} className={styles.titleIcon} />
+            </div>
             <div>
               <h1 className={styles.title}>{UI.trends.title}</h1>
               <p className={styles.subtitle}>{UI.trends.subtitle}</p>
@@ -152,9 +282,14 @@ export function MarketTrends() {
         {!loading && trends.length > 0 && (
           <div className={styles.statsRow}>
             <div className={styles.statCard}>
-              <span className={styles.statLabel}>
-                {trendType === 'drops' ? 'Offres en baisse' : 'Hausses détectées'}
-              </span>
+              <div className={styles.statHeader}>
+                <span className={styles.statLabel}>
+                  {trendType === 'drops' ? 'Offres en baisse' : 'Hausses détectées'}
+                </span>
+                <div className={`${styles.statIconWrapper} ${trendType === 'drops' ? styles.statIconGreen : styles.statIconRed}`}>
+                  {trendType === 'drops' ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
+                </div>
+              </div>
               <span className={styles.statValue}>
                 {trends.length} {trends.length > 1 ? 'produits' : 'produit'}
               </span>
@@ -162,9 +297,14 @@ export function MarketTrends() {
             </div>
 
             <div className={styles.statCard}>
-              <span className={styles.statLabel}>
-                {trendType === 'drops' ? 'Meilleure réduction' : 'Plus forte hausse'}
-              </span>
+              <div className={styles.statHeader}>
+                <span className={styles.statLabel}>
+                  {trendType === 'drops' ? 'Meilleure réduction' : 'Plus forte hausse'}
+                </span>
+                <div className={`${styles.statIconWrapper} ${trendType === 'drops' ? styles.statIconGreen : styles.statIconRed}`}>
+                  {trendType === 'drops' ? <Sparkles size={14} /> : <TrendingUp size={14} />}
+                </div>
+              </div>
               <span className={`${styles.statValue} ${trendType === 'drops' ? styles.statGreen : styles.statRed}`}>
                 {trendType === 'drops' ? '−' : '+'}{stats.bestChangePct}%
               </span>
@@ -174,9 +314,14 @@ export function MarketTrends() {
             </div>
 
             <div className={styles.statCard}>
-              <span className={styles.statLabel}>
-                {trendType === 'drops' ? 'Économie maximale' : 'Impact maximal'}
-              </span>
+              <div className={styles.statHeader}>
+                <span className={styles.statLabel}>
+                  {trendType === 'drops' ? 'Économie maximale' : 'Impact maximal'}
+                </span>
+                <div className={`${styles.statIconWrapper} ${styles.statIconBlue}`}>
+                  <DollarSign size={14} />
+                </div>
+              </div>
               <span className={styles.statValue}>
                 {formatPrice(stats.maxSavings)}
               </span>
@@ -187,61 +332,61 @@ export function MarketTrends() {
           </div>
         )}
 
-        <div className={styles.filters}>
-          <div className={styles.filterGroup}>
-            <label className={styles.filterLabel}>{UI.trends.period}</label>
-            <div className={styles.dayPills}>
-              {DAY_OPTIONS.map(d => (
-                <button
-                  key={d}
-                  className={`
-                    ${styles.dayPill} 
-                    ${trendType === 'drops' ? styles.dayPillHoverDrops : styles.dayPillHoverHikes}
-                    ${days === d ? (trendType === 'drops' ? styles.dayPillActiveDrops : styles.dayPillActiveHikes) : ''}
-                  `}
-                  onClick={() => setDays(d)}
-                >
-                  {UI.trends.dayUnit(d)}
-                </button>
-              ))}
+        <div className={styles.filtersWrapper}>
+          <div className={styles.filtersHeader}>
+            <SlidersHorizontal size={14} className={styles.filtersHeaderIcon} />
+            <span className={styles.filtersHeaderTitle}>Filtres & Options</span>
+          </div>
+          <div className={styles.filters}>
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>{UI.trends.period}</label>
+              <div className={styles.dayPills}>
+                {DAY_OPTIONS.map(d => (
+                  <button
+                    key={d}
+                    className={`
+                      ${styles.dayPill} 
+                      ${trendType === 'drops' ? styles.dayPillHoverDrops : styles.dayPillHoverHikes}
+                      ${days === d ? (trendType === 'drops' ? styles.dayPillActiveDrops : styles.dayPillActiveHikes) : ''}
+                    `}
+                    onClick={() => setDays(d)}
+                  >
+                    {UI.trends.dayUnit(d)}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className={styles.filterGroup}>
-            <label className={styles.filterLabel}>{UI.trends.category}</label>
-            <select className={styles.catSelect} value={category} onChange={e => setCategory(e.target.value)}>
-              <option value="">{UI.trends.allCategories}</option>
-              {CATEGORY_ORDER.map(cat => (
-                <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className={styles.filterGroup}>
-            <label className={styles.filterLabel}>Trier par</label>
-            <select className={styles.catSelect} value={sortBy} onChange={e => setSortBy(e.target.value)}>
-              <option value="pct">
-                {trendType === 'drops' ? 'Remise la plus élevée (%)' : 'Hausse la plus élevée (%)'}
-              </option>
-              <option value="amount">
-                {trendType === 'drops' ? 'Économie la plus élevée (MAD)' : 'Impact le plus élevé (MAD)'}
-              </option>
-              <option value="price_asc">Prix : du moins cher au plus cher</option>
-              <option value="price_desc">Prix : du plus cher au moins cher</option>
-            </select>
-          </div>
-
-          <div className={styles.filterGroup}>
-            <span className={styles.filterLabel}>Stock</span>
-            <label className={styles.checkboxLabel}>
-              <input
-                type="checkbox"
-                checked={showOutOfStock}
-                onChange={e => setShowOutOfStock(e.target.checked)}
-                className={styles.checkboxInput}
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>{UI.trends.category}</label>
+              <CustomSelect
+                value={category}
+                options={categoryOptions}
+                onChange={setCategory}
               />
-              <span className={styles.checkboxText}>{UI.trends.showOos}</span>
-            </label>
+            </div>
+
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>Trier par</label>
+              <CustomSelect
+                value={sortBy}
+                options={sortOptions}
+                onChange={setSortBy}
+              />
+            </div>
+
+            <div className={styles.filterGroup}>
+              <span className={styles.filterLabel}>Stock</span>
+              <label className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={showOutOfStock}
+                  onChange={e => setShowOutOfStock(e.target.checked)}
+                  className={styles.checkboxInput}
+                />
+                <span className={styles.checkboxText}>{UI.trends.showOos}</span>
+              </label>
+            </div>
           </div>
         </div>
       </div>
@@ -264,14 +409,50 @@ export function MarketTrends() {
           ))}
         </div>
       ) : sortedTrends.length === 0 ? (
-        <div className={styles.empty}>
-          <BarChart3 size={40} className={styles.emptyIcon} />
-          <p>{UI.trends.noResults(days)}</p>
+        <div className={`${styles.emptyContainer} ${refreshing ? styles.gridRefreshing : ''}`}>
+          <div className={styles.emptyCard}>
+            <div className={styles.emptyVisual}>
+              <div className={styles.emptyGlow} />
+              <div className={styles.emptyIconCircle}>
+                <BarChart3 size={32} className={styles.emptyIcon} />
+              </div>
+              <div className={styles.emptyMiniCircle}>
+                <SlidersHorizontal size={12} />
+              </div>
+            </div>
+            <h3 className={styles.emptyTitle}>Aucune variation détectée</h3>
+            <p className={styles.emptyText}>
+              {UI.trends.noResults(days)} Essayez de modifier vos filtres ou d'élargir la période.
+            </p>
+            <div className={styles.emptyActions}>
+              {(category !== '' || showOutOfStock) && (
+                <button 
+                  className={styles.emptyResetBtn} 
+                  onClick={() => {
+                    setCategory('');
+                    setShowOutOfStock(false);
+                  }}
+                >
+                  <RotateCcw size={14} />
+                  Réinitialiser les filtres
+                </button>
+              )}
+              {days < 30 && (
+                <button 
+                  className={styles.emptyExpandBtn} 
+                  onClick={() => setDays(30)}
+                >
+                  <Calendar size={14} />
+                  Analyser sur 30 jours
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       ) : (
         <>
           <p className={styles.resultCount}>{UI.trends.resultCount(sortedTrends.length, days)}</p>
-          <div className={styles.grid}>
+          <div className={`${styles.grid} ${refreshing ? styles.gridRefreshing : ''}`}>
             {sortedTrends.map(trend => (
               <TrendCard
                 key={trend.component_id}
