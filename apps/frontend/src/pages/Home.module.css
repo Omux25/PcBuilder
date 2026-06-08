@@ -400,6 +400,9 @@
   .heroSubtitle {
     max-width: 600px;
   }
+  .heroImageWrap {
+    transform: none !important;
+  }
   .presetsCta {
     grid-template-columns: 1fr;
     padding: 4rem 2.5rem;
@@ -420,11 +423,42 @@
 }
 
 @media (max-width: 768px) {
+  .hero {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    min-height: auto;
+    gap: 2.5rem;
+  }
   .heroTitle {
-    font-size: 3.25rem;
+    font-size: 2.25rem;
+    line-height: 1.15;
+  }
+  .heroSubtitle {
+    font-size: 1rem;
+    margin-bottom: 2rem;
+  }
+  .heroActions {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.75rem;
+  }
+  .ctaPrimary,
+  .ctaSecondary {
+    width: 100%;
+    padding: 0.85rem 1.5rem;
+    font-size: 0.95rem;
+  }
+  .heroImageWrap {
+    max-width: 100%;
+    transform: none !important;
+  }
+  .sectionTitle {
+    font-size: 1.75rem;
+    margin-bottom: 2.5rem;
   }
   .home {
-    gap: 6rem;
+    gap: 4.5rem;
+    padding-bottom: 4.5rem;
   }
 }
 
