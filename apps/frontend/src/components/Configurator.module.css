@@ -86,9 +86,9 @@
 }
 
 .statusOk {
-  background: rgba(34, 197, 94, 0.1);
+  background: rgba(var(--success-rgb), 0.1);
   color: var(--success);
-  border: 1px solid rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(var(--success-rgb), 0.2);
 }
 
 .statusWarn {
@@ -969,7 +969,7 @@
 .checkedItem:not(:last-child)::after {
   background-color: var(--success);
   opacity: 1;
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+  box-shadow: 0 0 8px rgba(var(--success-rgb), 0.5);
 }
 
 .checkedItem {
@@ -985,7 +985,7 @@
 .checkIconActive {
   color: var(--success);
   flex-shrink: 0;
-  filter: drop-shadow(0 0 6px rgba(34, 197, 94, 0.4));
+  filter: drop-shadow(0 0 6px rgba(var(--success-rgb), 0.4));
   animation: scaleIn 0.2s var(--ease-spring);
   position: relative;
   z-index: 1;
@@ -1084,9 +1084,9 @@
   }
 
   .mobileCompatOk {
-    background: rgba(34, 197, 94, 0.1);
+    background: rgba(var(--success-rgb), 0.1);
     color: var(--success);
-    border: 1px solid rgba(34, 197, 94, 0.2);
+    border: 1px solid rgba(var(--success-rgb), 0.2);
   }
 
   .mobileCompatWarn {
