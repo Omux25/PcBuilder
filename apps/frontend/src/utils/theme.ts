@@ -22,6 +22,12 @@ export function getInitialTheme(): Theme {
 export function applyTheme(theme: Theme): void {
   document.documentElement.setAttribute('data-theme', theme);
   try {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+      meta.setAttribute('content', theme === 'dark' ? '#09090b' : '#ffffff');
+    }
+  } catch { /* ignore */ }
+  try {
     localStorage.setItem(STORAGE_KEY, theme);
   } catch { /* ignore */ }
 }
