@@ -148,7 +148,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  background: rgba(255,255,255,0.03);
+  background: var(--bg-surface-2);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   color: var(--text-primary);
@@ -161,7 +161,7 @@
 }
 
 .ctaSecondary:hover {
-  background: rgba(255,255,255,0.07);
+  background: var(--bg-surface-hover);
   border-color: var(--border-2);
   transform: translateY(-2px);
 }
@@ -277,7 +277,7 @@
 .categoryCard:hover {
   transform: translateY(-8px);
   border-color: var(--accent-blue-glow);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 20px var(--accent-blue-tint);
+  box-shadow: var(--shadow-xl), 0 0 20px var(--accent-blue-tint);
 }
 
 .categoryCard:hover::before {
