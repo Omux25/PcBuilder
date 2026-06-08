@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, Store, Radio, AlertCircle, Layers, Upload, LogOut, Tag } from 'lucide-react';
+import { LayoutDashboard, Package, Store, Radio, AlertCircle, Layers, Upload, LogOut, Tag, Activity } from 'lucide-react';
 import { logout } from '../api';
 import styles from './Layout.module.css';
 
@@ -12,6 +12,7 @@ const NAV = [
   { to: '/admin/unmatched', label: 'Non associes', icon: AlertCircle },
   { to: '/admin/presets', label: 'Configurations', icon: Layers },
   { to: '/admin/keyword-rules', label: 'Règles mots-clés', icon: Tag },
+  { to: '/admin/traffic', label: 'Trafic', icon: Activity },
 ];
 
 export function Layout() {

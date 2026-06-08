@@ -1028,6 +1028,94 @@ export function CategoryBrowse() {
             </table>
           </div>
 
+          {/* Mobile Cards View */}
+          <div className={`${styles.mobileCards} ${fetching ? styles.mobileCardsFetching : ''}`}>
+            {loading && components.length === 0 ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className={styles.mobileCardSkeleton}>
+                  <Skeleton height={130} />
+                </div>
+              ))
+            ) : components.length === 0 ? (
+              <div className={styles.emptyMobile}>Aucun résultat trouvé.</div>
+            ) : (
+              components.map(c => {
+                const isIncompatible = c.compatibility === 'incompatible';
+                const isCompared = isInCompare(c.id);
+                return (
+                  <div 
+                    key={c.id} 
+                    className={`${styles.mobileCard} ${isIncompatible ? styles.incompatibleCard : ''}`}
+                    onClick={() => navigate(LinkEngine.getProductUrl(c))}
+                  >
+                    <div className={styles.mobileCardTop}>
+                      <div className={styles.mobileCardImg}>
+                        {c.image_url
+                          ? <img src={c.image_url} alt="" referrerPolicy="no-referrer" />
+                          : <div className={styles.compThumbPlaceholder}><CategoryIcon category={cat} size={20} /></div>
+                        }
+                      </div>
+                      <div className={styles.mobileCardInfo}>
+                        <span className={styles.mobileCardBrand}>{c.brand}</span>
+                        <h3 className={styles.mobileCardName}>
+                          {formatComponentName(c, { excludeBrand: true })}
+                        </h3>
+                        <div className={styles.mobileCardSpecs}>
+                          {colDefs.map(col => {
+                            const val = col.render(c);
+                            if (val === '—' || val === 'None' || val === 'Non') return null;
+                            return (
+                              <span key={col.header} className={styles.mobileSpecTag}>
+                                <strong>{col.header}:</strong> {val}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={styles.mobileCardBottom} onClick={e => e.stopPropagation()}>
+                      <div className={styles.mobileCardPriceWrap}>
+                        <span className={styles.mobileCardPricePrefix} style={{ visibility: c.total_offers && c.total_offers > 1 ? 'visible' : 'hidden' }}>
+                          À partir de
+                        </span>
+                        <span className={styles.mobileCardPrice}>
+                          {Math.floor(c.primary_price ?? c.lowest_price ?? 0)} MAD
+                        </span>
+                        <span className={`${styles.mobileStockBadge} ${c.in_stock ? styles.mobileInStock : styles.mobileOutStock}`}>
+                          <span className={c.in_stock ? styles.stockDotActive : styles.stockDotInactive} />
+                          {c.in_stock ? 'En stock' : 'Rupture'}
+                        </span>
+                      </div>
+                      <div className={styles.mobileCardActions}>
+                        <button 
+                          className={`${styles.mobileIconBtn} ${isCompared ? styles.mobileIconBtnActive : ''}`}
+                          onClick={() => {
+                            if (isCompared) removeFromCompare(c.id);
+                            else addToCompare(c.id, c.category, formatComponentName(c));
+                          }}
+                          title="Comparer"
+                        >
+                          <GitCompare size={16} />
+                        </button>
+                        <button 
+                          className={`${styles.mobileAddBtn} ${isIncompatible ? styles.mobileAddBtnDisabled : ''}`}
+                          onClick={() => {
+                            if (!isIncompatible) handleAdd(c);
+                          }}
+                          disabled={isIncompatible}
+                          title={isIncompatible ? (c as any).compatibility_issues?.join(' | ') : undefined}
+                        >
+                          {isIncompatible ? 'Incom.' : isSelecting ? 'Choisir' : 'Ajouter'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
           {totalPages > 1 && (
             <div className={styles.pagination}>
               <button className={styles.pageBtn} disabled={page <= 1} onClick={() => changePage(page - 1)}><ChevronLeft size={16} /></button>

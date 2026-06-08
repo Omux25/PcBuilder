@@ -8,7 +8,7 @@ import {
   HardDrive, Zap, Box, Wind, Fan, Thermometer,
   Keyboard, Mouse, Headphones, Speaker, Camera,
   Globe, Network, Wifi, Music, Package, Settings,
-  Database, Disc, Battery, Wrench,
+  Database, Disc, Battery, Wrench, Gpu,
 } from 'lucide-react';
 import type { ComponentCategory } from '../types';
 
@@ -22,7 +22,7 @@ interface Props {
 const ICONS: Record<ComponentCategory, React.ComponentType<{ size?: number; className?: string; 'aria-hidden'?: boolean }>> = {
   cpu: Cpu,
   motherboard: CircuitBoard,
-  gpu: Monitor,
+  gpu: Gpu,
   ram: MemoryStick,
   storage: HardDrive,
   psu: Zap,

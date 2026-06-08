@@ -13,6 +13,7 @@ const Scrapers = lazy(() => import('./pages/Scrapers').then(m => ({ default: m.S
 const Unmatched = lazy(() => import('./pages/Unmatched').then(m => ({ default: m.Unmatched })));
 const Presets = lazy(() => import('./pages/Presets').then(m => ({ default: m.Presets })));
 const KeywordRules = lazy(() => import('./pages/KeywordRules').then(m => ({ default: m.KeywordRules })));
+const Traffic = lazy(() => import('./pages/Traffic').then(m => ({ default: m.Traffic })));
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   if (!getAccessToken()) {
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="unmatched" element={<Unmatched />} />
           <Route path="presets" element={<Presets />} />
           <Route path="keyword-rules" element={<KeywordRules />} />
+          <Route path="traffic" element={<Traffic />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/admin/login" replace />} />

@@ -179,6 +179,32 @@ export const clearAdminLogs = (mode: 'keep7' | 'all') => {
   return request<{ deleted: number }>(`/admin/logs?${qs}`, { method: 'DELETE' });
 };
 
+// ── Traffic Logs ──────────────────────────────────────────────────────────────
+
+export interface TrafficLogEntry {
+  id: number;
+  ip: string | null;
+  method: string;
+  path: string;
+  userAgent: string | null;
+  statusCode: number;
+  responseTimeMs: number;
+  createdAt: string;
+}
+
+export interface TrafficLogsResponse {
+  data: TrafficLogEntry[];
+  total: number;
+}
+
+export const getAdminTrafficLogs = (params: Record<string, string> = {}) => {
+  const qs = new URLSearchParams(params).toString();
+  return request<TrafficLogsResponse>(`/admin/traffic${qs ? `?${qs}` : ''}`);
+};
+
+export const clearAllTrafficLogs = () =>
+  request<{ success: boolean; message: string }>('/admin/traffic', { method: 'DELETE' });
+
 // ── Unmatched listings ────────────────────────────────────────────────────────
 
 export interface UnmatchedListingsResponse {

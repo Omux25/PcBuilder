@@ -123,6 +123,7 @@ export function formatComponentName(c: Partial<Component>, options: { excludeBra
             parts.push(c.chipset);
         }
       }
+      appendIfMissing(c.form_factor);
       break;
 
     case 'case':

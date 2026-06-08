@@ -19,6 +19,8 @@ import { adminRouter } from './modules/admin/admin.routes.js';
 import { scrapingRouter } from './modules/scraping/scraping.routes.js';
 import { unmatchedRouter } from './modules/scraping/unmatched/unmatched.routes.js';
 import { rulesRouter } from './modules/scraping/rules/rules.routes.js';
+import { adminTrafficRouter } from './modules/admin/traffic.routes.js';
+import { trafficLogger } from './modules/traffic/traffic.middleware.js';
 import { AppError } from './core/errors/errors.js';
 
 const app = new Hono();
@@ -28,6 +30,7 @@ app.use('*', secureHeaders());
 
 // ── Request logging ──────────────────────────────────────────────────────────
 app.use('*', logger());
+app.use('*', trafficLogger());
 
 // ── Prevent browser caching on admin APIs ────────────────────────────────────
 app.use('/api/admin/*', async (c, next) => {
@@ -78,7 +81,8 @@ const routes = app
   .route('/api/admin', adminBuildsRouter)
   .route('/api/admin/scrapers', scrapingRouter)
   .route('/api/admin/unmatched-listings', unmatchedRouter)
-  .route('/api/admin/keyword-rules', rulesRouter);
+  .route('/api/admin/keyword-rules', rulesRouter)
+  .route('/api/admin', adminTrafficRouter);
 
 // ── Global 404 ───────────────────────────────────────────────────────────────
 

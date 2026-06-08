@@ -8,6 +8,7 @@
 
 import { app } from './app.js';
 import { startRefreshTokenCleanup, stopRefreshTokenCleanup } from './modules/auth/auth.routes.js';
+import { trafficService } from './modules/traffic/traffic.service.js';
 
 // ── Startup validation ────────────────────────────────────────────────────────
 // Fail fast on missing required environment variables rather than silently
@@ -51,6 +52,14 @@ const server = Bun.serve({
 // Start background cleanup for expired refresh tokens (every 6 hours)
 startRefreshTokenCleanup();
 
+// Trim traffic logs every hour
+const trafficTrimInterval = setInterval(() => {
+  trafficService.trimTrafficLogs().catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error('[TrafficService] Failed to trim logs:', err);
+  });
+}, 1000 * 60 * 60);
+
 // Start the scraper scheduler (only in production — not in test/dev without explicit opt-in)
 if (process.env.ENABLE_SCHEDULER === 'true') {
   const { startScheduler } = await import('./modules/scraping/engine/scheduler.js');
@@ -74,6 +83,7 @@ async function shutdown(signal: string): Promise<void> {
 
   // Stop the refresh token cleanup interval
   stopRefreshTokenCleanup();
+  clearInterval(trafficTrimInterval);
 
   // Stop accepting new connections
   server.stop();
