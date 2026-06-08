@@ -1015,8 +1015,8 @@
 }
 
 .emptyIconCircle {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: transparent;
+  border: none;
   width: 64px;
   height: 64px;
   border-radius: 50%;
@@ -1024,7 +1024,6 @@
   align-items: center;
   justify-content: center;
   color: var(--text-primary);
-  box-shadow: var(--shadow-sm);
   z-index: 1;
 }
 
@@ -1038,20 +1037,7 @@
 }
 
 .emptyMiniCircle {
-  position: absolute;
-  bottom: 0px;
-  right: 0px;
-  background: var(--bg-app);
-  border: 1.5px solid var(--border);
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-  box-shadow: var(--shadow-sm);
-  z-index: 2;
+  display: none;
 }
 
 .emptyTitle {
