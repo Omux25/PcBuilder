@@ -234,9 +234,9 @@
 }
 
 .statIconBlue {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-surface-3);
   color: var(--text-primary);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-2);
 }
 
 .statValue {
@@ -989,7 +989,7 @@
   left: -20%;
   right: -20%;
   bottom: 50%;
-  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.02), transparent 60%);
+  background: radial-gradient(circle at center, var(--accent-glow), transparent 60%);
   pointer-events: none;
 }
 
@@ -1006,7 +1006,7 @@
 .emptyGlow {
   position: absolute;
   inset: -15px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.03) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
   filter: blur(10px);
   animation: gentlePulse 3s infinite ease-in-out;
 }
@@ -1104,7 +1104,7 @@
   width: 100%;
   padding: 0.75rem 1.5rem;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
   color: var(--text-secondary);
   border-radius: var(--radius-lg);
   font-weight: 700;
@@ -1117,8 +1117,8 @@
 }
 
 .emptyExpandBtn:hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--bg-surface-hover);
+  border-color: var(--border-2);
   color: var(--text-primary);
   transform: translateY(-2px);
 }
