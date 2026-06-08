@@ -64,6 +64,7 @@
   --success-rgb: 34, 197, 94;
   --success-tint: rgba(var(--success-rgb), 0.08);
   --success-row: rgba(var(--success-rgb), 0.05);
+  --card-bg: linear-gradient(180deg, var(--bg-surface) 0%, rgba(17, 17, 19, 0.7) 100%);
 
   /* Compat aliases */
   --bg: var(--bg-app);
@@ -142,6 +143,7 @@
   --success-rgb: 22, 163, 74;
   --success-tint: rgba(var(--success-rgb), 0.08);
   --success-row: rgba(var(--success-rgb), 0.04);
+  --card-bg: linear-gradient(180deg, var(--bg-surface) 0%, rgba(228, 228, 231, 0.4) 100%);
 
   /* Compat aliases */
   --bg: var(--bg-app);
@@ -191,6 +193,8 @@ html,
 body {
   max-width: 100%;
   overflow-x: hidden;
+  background: var(--bg-app);
+  color: var(--text-primary);
 }
 
 body {
