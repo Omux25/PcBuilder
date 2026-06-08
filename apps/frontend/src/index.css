@@ -6,6 +6,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ── Dark theme (default) ─────────────────────────────────────────────────── */
@@ -217,6 +218,15 @@ button {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+}
+
+button:focus {
+  outline: none;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
 }
 
 button:disabled {
