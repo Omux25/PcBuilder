@@ -1501,5 +1501,236 @@
   padding-left: calc(0.85rem - 1px) !important;
 }
 
+/* ── Mobile Responsive Card Layouts ──────────────────────────────────────── */
+.mobileCards {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .tableWrap {
+    display: none !important;
+  }
+
+  .mobileCards {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    margin-bottom: 2rem;
+  }
+}
+
+.mobileCardsFetching {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.mobileCardSkeleton {
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 1.25rem;
+}
+
+.emptyMobile {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.mobileCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s var(--ease-out);
+}
+
+.mobileCard:active {
+  transform: scale(0.99);
+}
+
+.incompatibleCard {
+  opacity: 0.6;
+}
+
+.mobileCardTop {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.mobileCardImg {
+  width: 64px;
+  height: 64px;
+  background: #ffffff;
+  padding: 4px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mobileCardImg img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.mobileCardInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.mobileCardBrand {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--accent-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.1rem;
+  display: inline-block;
+}
+
+.mobileCardName {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobileCardSpecs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.mobileSpecTag {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.mobileSpecTag strong {
+  color: var(--text-muted);
+}
+
+.mobileCardBottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 0.85rem;
+}
+
+.mobileCardPriceWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.mobileCardPricePrefix {
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.mobileCardPrice {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.1;
+}
+
+.mobileStockBadge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.25rem;
+}
+
+.mobileInStock {
+  color: var(--success);
+}
+
+.mobileOutStock {
+  color: var(--danger);
+}
+
+.mobileCardActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.mobileIconBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+
+.mobileIconBtnActive {
+  background: var(--accent-blue-tint) !important;
+  border-color: var(--accent-blue) !important;
+  color: var(--accent-blue) !important;
+}
+
+.mobileAddBtn {
+  background: var(--text-primary);
+  color: var(--bg-app);
+  padding: 0.45rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+  box-shadow: var(--shadow-sm);
+  border: none;
+}
+
+.mobileAddBtnDisabled {
+  background: var(--surface-3);
+  color: var(--text-dim) !important;
+  border: 1px solid var(--border);
+  cursor: not-allowed;
+  opacity: 0.5;
+  box-shadow: none;
+}
+
+
 
 

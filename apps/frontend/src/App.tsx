@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate, Navigate, useParams } from 'react-router-dom';
-import { Cpu, Sun, Moon, LayoutGrid, Search, GitCompare } from 'lucide-react';
+import { Cpu, Sun, Moon, LayoutGrid, Search, GitCompare, Home as HomeIcon, Sliders, Sparkles, TrendingUp } from 'lucide-react';
 import { Configurator } from './components/Configurator';
 import { Skeleton } from './components/Skeleton';
 import { CompareTray } from './components/CompareTray';
@@ -61,6 +61,27 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => { setSearchOpen(false); }, [location.pathname]);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === '/') {
+        const active = document.activeElement;
+        if (
+          active &&
+          (active.tagName === 'INPUT' ||
+            active.tagName === 'TEXTAREA' ||
+            active.getAttribute('contenteditable') === 'true')
+        ) {
+          return;
+        }
+        e.preventDefault();
+        setSearchOpen(true);
+        setTimeout(() => searchRef.current?.focus(), 50);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
   // Scroll to top on every route change (BrowserRouter has no built-in ScrollRestoration)
   useEffect(() => { window.scrollTo(0, 0); }, [location.pathname]);
   useEffect(() => {
@@ -112,61 +133,70 @@ export default function App() {
     <div className={styles.app}>
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <Link to="/" className={styles.logoLink}>
-            <span className={styles.logoIcon}><Cpu size={16} strokeWidth={2.5} /></span>
-            <h1 className={styles.logo}>{UI.app.name} <span className={styles.sub}>{UI.app.subtitle}</span></h1>
-          </Link>
-          <nav className={styles.nav}>
-            <Link to="/" className={`${styles.navLink} ${isHome ? styles.navLinkActive : ''}`}>
-              {UI.nav.home}
+        <div className={styles.headerInner}>
+          <div className={styles.headerLeft}>
+            <Link to="/" className={styles.logoLink}>
+              <span className={styles.logoIcon}><Cpu size={14} strokeWidth={2.5} /></span>
+              <h1 className={styles.logo}>{UI.app.name} <span className={styles.sub}>{UI.app.subtitle}</span></h1>
             </Link>
-            <Link to="/build" className={`${styles.navLink} ${isBuild ? styles.navLinkActive : ''}`}>
-              {UI.nav.configurator}
-            </Link>
-            <Link to="/components" className={`${styles.navLink} ${isComponents ? styles.navLinkActive : ''}`}>
-              <LayoutGrid size={13} className={styles.navIcon} />
-              {UI.nav.components}
-            </Link>
-            <Link to="/presets" className={`${styles.navLink} ${isPresets ? styles.navLinkActive : ''}`}>
-              {UI.nav.presets}
-            </Link>
-            <Link to="/compare" className={`${styles.navLink} ${location.pathname === '/compare' ? styles.navLinkActive : ''}`}>
-              <GitCompare size={13} className={styles.navIcon} />
-              {UI.nav.compare}
-            </Link>
-            <Link to="/market-trends" className={`${styles.navLink} ${location.pathname === '/market-trends' ? styles.navLinkActive : ''}`}>
-              {UI.nav.trends}
-            </Link>
-          </nav>
-        </div>
+            <nav className={styles.nav}>
+              <Link to="/" className={`${styles.navLink} ${isHome ? styles.navLinkActive : ''}`}>
+                <HomeIcon size={13} className={styles.navIcon} />
+                {UI.nav.home}
+              </Link>
+              <Link to="/build" className={`${styles.navLink} ${isBuild ? styles.navLinkActive : ''}`}>
+                <Sliders size={13} className={styles.navIcon} />
+                {UI.nav.configurator}
+              </Link>
+              <Link to="/components" className={`${styles.navLink} ${isComponents ? styles.navLinkActive : ''}`}>
+                <LayoutGrid size={13} className={styles.navIcon} />
+                {UI.nav.components}
+              </Link>
+              <Link to="/presets" className={`${styles.navLink} ${isPresets ? styles.navLinkActive : ''}`}>
+                <Sparkles size={13} className={styles.navIcon} />
+                {UI.nav.presets}
+              </Link>
+              <Link to="/compare" className={`${styles.navLink} ${location.pathname === '/compare' ? styles.navLinkActive : ''}`}>
+                <GitCompare size={13} className={styles.navIcon} />
+                {UI.nav.compare}
+              </Link>
+              <Link to="/market-trends" className={`${styles.navLink} ${location.pathname === '/market-trends' ? styles.navLinkActive : ''}`}>
+                <TrendingUp size={13} className={styles.navIcon} />
+                {UI.nav.trends}
+              </Link>
+            </nav>
+          </div>
 
-        <div className={styles.headerRight}>
-          {searchOpen ? (
-            <form className={styles.headerSearchForm} onSubmit={handleSearchSubmit}>
-              <input
-                ref={searchRef}
-                type="search"
-                className={styles.headerSearchInput}
-                placeholder={`${UI.nav.search}…`}
-                value={searchInput}
-                onChange={e => setSearchInput(e.target.value)}
-                onBlur={() => { if (!searchInput) setSearchOpen(false); }}
-                onKeyDown={e => { if (e.key === 'Escape') { setSearchOpen(false); setSearchInput(''); } }}
-              />
-            </form>
-          ) : (
-            <button className={styles.iconBtn} onClick={() => setSearchOpen(true)} aria-label={UI.nav.search} title={UI.nav.search}>
-              <Search size={16} />
+          <div className={styles.headerRight}>
+            <div className={`${styles.searchContainer} ${searchOpen ? styles.searchOpen : ''}`}>
+              <button className={styles.iconBtn} onClick={() => setSearchOpen(true)} aria-label={UI.nav.search} title={UI.nav.search}>
+                <Search size={15} />
+              </button>
+              <form className={styles.headerSearchForm} onSubmit={handleSearchSubmit}>
+                <div className={styles.searchInputWrapper}>
+                  <input
+                    ref={searchRef}
+                    type="text"
+                    className={styles.headerSearchInput}
+                    placeholder={`${UI.nav.search}…`}
+                    value={searchInput}
+                    onChange={e => setSearchInput(e.target.value)}
+                    onBlur={() => { if (!searchInput) setSearchOpen(false); }}
+                    onKeyDown={e => { if (e.key === 'Escape') { setSearchOpen(false); setSearchInput(''); } }}
+                  />
+                  <Search size={13} className={styles.searchFieldIcon} />
+                  <span className={styles.searchShortcut}>/</span>
+                </div>
+              </form>
+            </div>
+            <button
+              className={styles.themeToggle}
+              onClick={handleToggleTheme}
+              aria-label={theme === 'dark' ? UI.app.themeLight : UI.app.themeDark}
+            >
+              {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
             </button>
-          )}
-          <button
-            className={styles.themeToggle}
-            onClick={handleToggleTheme}
-            aria-label={theme === 'dark' ? UI.app.themeLight : UI.app.themeDark}
-          >
-            {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
-          </button>
+          </div>
         </div>
       </header>
 
@@ -258,13 +288,39 @@ export default function App() {
       </Routes>
 
       <footer className={styles.footer}>
-        <span className={styles.footerText}>{UI.footer.tagline}</span>
-        <div className={styles.footerLinks}>
-          <Link to="/search" className={styles.footerLink}>{UI.footer.search}</Link>
-          <Link to="/compare" className={styles.footerLink}>{UI.footer.compare}</Link>
-          <Link to="/market-trends" className={styles.footerLink}>{UI.footer.trends}</Link>
+        <div className={styles.footerInner}>
+          <span className={styles.footerText}>{UI.footer.tagline}</span>
+          <div className={styles.footerLinks}>
+            <Link to="/search" className={styles.footerLink}>{UI.footer.search}</Link>
+            <Link to="/compare" className={styles.footerLink}>{UI.footer.compare}</Link>
+            <Link to="/market-trends" className={styles.footerLink}>{UI.footer.trends}</Link>
+          </div>
         </div>
       </footer>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className={styles.mobileNav}>
+        <Link to="/" className={`${styles.mobileNavLink} ${isHome ? styles.mobileNavLinkActive : ''}`}>
+          <HomeIcon size={20} />
+          <span className={styles.mobileNavText}>{UI.nav.home}</span>
+        </Link>
+        <Link to="/build" className={`${styles.mobileNavLink} ${isBuild ? styles.mobileNavLinkActive : ''}`}>
+          <Sliders size={20} />
+          <span className={styles.mobileNavText}>{UI.nav.configurator}</span>
+        </Link>
+        <Link to="/components" className={`${styles.mobileNavLink} ${isComponents ? styles.mobileNavLinkActive : ''}`}>
+          <LayoutGrid size={20} />
+          <span className={styles.mobileNavText}>{UI.nav.components}</span>
+        </Link>
+        <Link to="/presets" className={`${styles.mobileNavLink} ${isPresets ? styles.mobileNavLinkActive : ''}`}>
+          <Sparkles size={20} />
+          <span className={styles.mobileNavText}>{UI.nav.presets}</span>
+        </Link>
+        <Link to="/compare" className={`${styles.mobileNavLink} ${location.pathname === '/compare' ? styles.mobileNavLinkActive : ''}`}>
+          <GitCompare size={20} />
+          <span className={styles.mobileNavText}>{UI.nav.compare}</span>
+        </Link>
+      </nav>
 
       <CompareTray />
       <CategoryConflictModal />

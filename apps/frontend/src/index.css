@@ -11,6 +11,8 @@
 /* ── Dark theme (default) ─────────────────────────────────────────────────── */
 :root,
 [data-theme="dark"] {
+  --container-max-width: 1200px;
+  --accent-alpha-10: rgba(250, 250, 250, 0.1);
   /* Surfaces */
   --bg-app: #09090b;
   --bg-surface: #111113;
@@ -95,6 +97,7 @@
 
 /* ── Light theme ──────────────────────────────────────────────────────────── */
 [data-theme="light"] {
+  --accent-alpha-10: rgba(24, 24, 27, 0.1);
   /* Surfaces */
   --bg-app: #f4f4f5;
   --bg-surface: #ffffff;
@@ -382,4 +385,26 @@ table tbody tr:hover {
 
 .animate-scaleIn {
   animation: scaleIn 0.2s var(--ease-spring);
+}
+
+/* ── Responsive Container & Fluid base typography scaling ────────────────── */
+@media (min-width: 1440px) {
+  :root {
+    --container-max-width: 1360px;
+    font-size: 14.5px;
+  }
+}
+
+@media (min-width: 1920px) {
+  :root {
+    --container-max-width: 1600px;
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 2560px) {
+  :root {
+    --container-max-width: 1800px;
+    font-size: 16px;
+  }
 }

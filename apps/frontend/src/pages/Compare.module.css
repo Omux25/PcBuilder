@@ -1,7 +1,7 @@
 /* ── Page Layout ──────────────────────────────────────────────────────────── */
 
 .page {
-  max-width: 1200px;
+  max-width: var(--container-max-width);
   margin: 0 auto;
   padding: 2.5rem 1.5rem 5rem;
   animation: fadeIn 0.4s var(--ease-out);
@@ -155,7 +155,7 @@
   background: rgba(17, 17, 19, 0.95);
   border-bottom: 2px solid var(--border-subtle);
   position: sticky;
-  top: 52px;
+  top: 58px;
   z-index: 10;
   backdrop-filter: blur(12px);
 }
@@ -872,4 +872,114 @@
   color: var(--text-muted);
   letter-spacing: 0.05em;
   margin-bottom: 0.5rem;
+}
+
+/* ── Mobile Responsive Swipe Comparison ──────────────────────────────────── */
+@media (max-width: 768px) {
+  .page {
+    padding: 1rem 0.75rem calc(4rem + 56px);
+  }
+
+  .headerContent {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .title {
+    font-size: 2rem;
+  }
+
+  .vsContainer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.25rem;
+    padding: 1.25rem;
+  }
+
+  .vsHeroInfo {
+    max-width: 100%;
+  }
+
+  .compareGrid {
+    overflow-x: auto;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .rowSticky {
+    top: 50px;
+    grid-template-columns: 120px repeat(var(--cols), 180px);
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .specRow {
+    grid-template-columns: 120px repeat(var(--cols), 180px);
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .cornerCol,
+  .labelCol {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-subtle);
+    width: 120px !important;
+    min-width: 120px;
+    padding: 1rem 0.75rem;
+    font-size: 0.78rem;
+    text-align: left;
+    display: flex;
+    align-items: center;
+  }
+
+  .cornerCol {
+    z-index: 12;
+  }
+
+  .valCol {
+    padding: 1rem 0.75rem;
+    font-size: 0.82rem;
+    width: 180px;
+  }
+
+  .imgWrap {
+    width: 80px;
+    height: 80px;
+    padding: 0.5rem;
+  }
+
+  .name {
+    font-size: 0.82rem;
+    height: 2.4rem;
+  }
+
+  .price {
+    font-size: 1rem;
+  }
+
+  .addSlot {
+    width: 180px;
+    min-height: auto;
+    height: 100%;
+    padding: 1rem;
+  }
+
+  .addSlot::before {
+    inset: 0.5rem;
+  }
+
+  .quickAddContainer {
+    inset: 0.5rem;
+  }
+
+  .sectionDivider {
+    width: max-content;
+    min-width: 100%;
+    padding: 0.6rem 1rem;
+    font-size: 0.7rem;
+  }
 }

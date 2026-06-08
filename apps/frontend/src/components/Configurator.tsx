@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { InlinePrices } from './InlinePrices';
 import { CategoryIcon } from './CategoryIcon';
+import { ConfiguratorChecklist } from './ConfiguratorChecklist';
+import { ConfiguratorTotals } from './ConfiguratorTotals';
 import type { ComponentCategory } from '../types';
 import { CATEGORY_LABELS, RULE_LABELS, slotKeyToCategory, CATEGORY_ORDER, CORE_CATEGORIES } from '../types';
 import { useBuild } from '../context/BuildContext';
@@ -61,6 +63,19 @@ export function Configurator() {
   const [copied, setCopied] = useState(false);
 
   const hasComponents = Object.keys(build).length > 0;
+
+  const checklist = [
+    { key: 'cpu', label: 'Processeur', checked: !!build.cpu },
+    { key: 'cooling', label: 'Refroidissement', checked: !!build.cooling },
+    { key: 'motherboard', label: 'Carte Mère', checked: !!build.motherboard },
+    { key: 'ram', label: 'Mémoire RAM', checked: countRam(build) > 0 },
+    { key: 'storage', label: 'Stockage', checked: countStorage(build) > 0 },
+    { key: 'gpu', label: 'Carte Graphique', checked: !!build.gpu },
+    { key: 'case', label: 'Boîtier', checked: !!build.case },
+    { key: 'psu', label: 'Alimentation', checked: !!build.psu },
+  ];
+
+  const checklistKeys = checklist.map(item => item.key);
 
   const shareUrl = (() => {
     const params = encodeBuildToUrl(build);
@@ -128,10 +143,12 @@ export function Configurator() {
       const count = isRam ? countRam(build) : countStorage(build);
       const addLabel = isRam ? 'Ajouter de la mémoire' : 'Ajouter un stockage';
       const catLabel = CATEGORY_LABELS[entry.category];
+      const isRequired = checklistKeys.includes(entry.category);
+      const targetUrl = entry.category === slotKey ? `/browse/${entry.category}` : `/browse/${entry.category}/${slotKey}`;
 
       return (
-        <div key={`add-${entry.category}`} className={styles.rowWrap}>
-          <div className={`${styles.row} ${styles.rowEmpty}`}>
+        <div key={`add-${entry.category}`} className={`${styles.rowWrap} ${styles.rowWrapEmpty}`}>
+          <Link to={targetUrl} className={`${styles.row} ${styles.rowEmpty} ${styles.rowLink}`}>
             <div className={styles.catCol}>
               <div className={styles.catIconWrap}>
                 <CategoryIcon category={entry.category} size={18} />
@@ -142,13 +159,17 @@ export function Configurator() {
               </div>
             </div>
             <div className={styles.pickerCol}>
-              <Link to={entry.category === slotKey ? `/browse/${entry.category}` : `/browse/${entry.category}/${slotKey}`} className={styles.emptyButton}>
-                <Plus size={16} />
-                {addLabel}
-              </Link>
+              <div className={styles.emptyAction}>
+                <Plus size={16} className={styles.plusIcon} />
+                <span>{addLabel}</span>
+              </div>
             </div>
-            <div className={styles.priceCol} />
-          </div>
+            <div className={styles.priceCol}>
+              <span className={`${styles.statusTag} ${isRequired ? styles.statusTagRequired : styles.statusTagOptional}`}>
+                {isRequired ? 'Requis' : 'Optionnel'}
+              </span>
+            </div>
+          </Link>
         </div>
       );
     }
@@ -157,11 +178,39 @@ export function Configurator() {
     const selected = build[slotKey];
     const label = slotLabel(slotKey);
     const isExpanded = expandedKey === slotKey;
+    const isRequired = checklistKeys.includes(category);
+
+    if (!selected) {
+      const targetUrl = category === slotKey ? `/browse/${category}` : `/browse/${category}/${slotKey}`;
+      return (
+        <div key={slotKey} className={`${styles.rowWrap} ${styles.rowWrapEmpty}`}>
+          <Link to={targetUrl} className={`${styles.row} ${styles.rowEmpty} ${styles.rowLink}`}>
+            <div className={styles.catCol}>
+              <div className={styles.catIconWrap}>
+                <CategoryIcon category={category} size={18} />
+              </div>
+              <div className={styles.catLabel}>{label}</div>
+            </div>
+            <div className={styles.pickerCol}>
+              <div className={styles.emptyAction}>
+                <Plus size={16} className={styles.plusIcon} />
+                <span>Choisir un composant</span>
+              </div>
+            </div>
+            <div className={styles.priceCol}>
+              <span className={`${styles.statusTag} ${isRequired ? styles.statusTagRequired : styles.statusTagOptional}`}>
+                {isRequired ? 'Requis' : 'Optionnel'}
+              </span>
+            </div>
+          </Link>
+        </div>
+      );
+    }
 
     return (
       <div key={slotKey} className={styles.rowWrap}>
         <div
-          className={`${styles.row} ${selected ? styles.rowFilled : styles.rowEmpty}`}
+          className={`${styles.row} ${styles.rowFilled}`}
           style={{ cursor: 'default' }}
         >
           <div className={styles.catCol}>
@@ -172,64 +221,53 @@ export function Configurator() {
           </div>
 
           <div className={styles.pickerCol}>
-            {selected ? (
-              <div className={styles.filledState}>
-                {selected.image_url ? (
-                  <Link
-                    to={LinkEngine.getProductUrl(selected)}
-                    className={styles.compThumbLink}
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <img src={selected.image_url} alt="" className={styles.compThumb} referrerPolicy="no-referrer" />
-                  </Link>
-                ) : null}
-                <div className={styles.compInfo}>
-                  <span className={styles.compBrand}>{selected.brand}</span>
-                  <Link
-                    to={LinkEngine.getProductUrl(selected)}
-                    className={styles.compNameLink}
-                    onClick={e => e.stopPropagation()}
-                  >
-                    {formatComponentName(selected, { excludeBrand: true })}
-                  </Link>
-                  <span className={styles.compSpecs}>{getSpecLine(selected)}</span>
-                  
-                  <button
-                    type="button"
-                    className={`${styles.offersBtn} ${isExpanded ? styles.offersBtnActive : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setExpandedKey(isExpanded ? null : slotKey);
-                    }}
-                  >
-                    <Tag size={12} className={styles.tagIcon} />
-                    <span>{isExpanded ? 'Masquer les offres' : 'Voir les offres'}</span>
-                    <span className={`${styles.chevronIcon} ${isExpanded ? styles.chevronIconOpen : ''}`}>▼</span>
-                  </button>
-                </div>
+            <div className={styles.filledState}>
+              {selected.image_url ? (
+                <Link
+                  to={LinkEngine.getProductUrl(selected)}
+                  className={styles.compThumbLink}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <img src={selected.image_url} alt="" className={styles.compThumb} referrerPolicy="no-referrer" />
+                </Link>
+              ) : null}
+              <div className={styles.compInfo}>
+                <span className={styles.compBrand}>{selected.brand}</span>
+                <Link
+                  to={LinkEngine.getProductUrl(selected)}
+                  className={styles.compNameLink}
+                  onClick={e => e.stopPropagation()}
+                >
+                  {formatComponentName(selected, { excludeBrand: true })}
+                </Link>
+                <span className={styles.compSpecs}>{getSpecLine(selected)}</span>
+                
+                <button
+                  type="button"
+                  className={`${styles.offersBtn} ${isExpanded ? styles.offersBtnActive : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExpandedKey(isExpanded ? null : slotKey);
+                  }}
+                >
+                  <Tag size={12} className={styles.tagIcon} />
+                  <span>{isExpanded ? 'Masquer les offres' : 'Voir les offres'}</span>
+                  <span className={`${styles.chevronIcon} ${isExpanded ? styles.chevronIconOpen : ''}`}>▼</span>
+                </button>
               </div>
-            ) : (
-              <Link to={category === slotKey ? `/browse/${category}` : `/browse/${category}/${slotKey}`} className={styles.emptyButton}>
-                <Plus size={16} />
-                Choisir un composant
-              </Link>
-            )}
+            </div>
           </div>
 
           <div className={styles.priceCol}>
-            {selected ? (
-              <>
-                <span className={styles.priceVal}>
-                  {selected.lowest_price ? formatPrice(selected.lowest_price) : '—'}
-                </span>
-                <button
-                  className={styles.actionBtn}
-                  onClick={(e) => { e.stopPropagation(); removeFromBuild(slotKey); }}
-                >
-                  <X size={18} />
-                </button>
-              </>
-            ) : null}
+            <span className={styles.priceVal}>
+              {selected.lowest_price ? formatPrice(selected.lowest_price) : '—'}
+            </span>
+            <button
+              className={styles.actionBtn}
+              onClick={(e) => { e.stopPropagation(); removeFromBuild(slotKey); }}
+            >
+              <X size={18} />
+            </button>
           </div>
         </div>
 
@@ -287,66 +325,23 @@ export function Configurator() {
 
         {/* Right Column: Sticky Sidebar */}
         <div className={styles.sidebar}>
-          {hasComponents && (
-            <div className={styles.powerMeter}>
-              <div className={styles.powerMain}>
-                <div className={styles.powerInfo}>
-                  <div className={styles.powerLabel}>
-                    <Zap size={16} className={styles.zapIcon} />
-                    <span>Consommation</span>
-                  </div>
-                  <div className={styles.tdpVal}>{tdp}W</div>
-                </div>
-                <div className={styles.progressBar}>
-                  <div 
-                    className={`${styles.progressFill} ${styles['psu_' + psuStatus]}`}
-                    style={{ width: `${psuPercent}%` }}
-                  />
-                </div>
-                <div className={styles.psuTarget}>
-                  Conseillé: <strong>{compat?.recommended_psu_wattage}W</strong>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className={styles.totalCard}>
-            <div className={styles.totalInfo}>
-              <span className={styles.totalLabel}>Total estimé</span>
-              <span className={styles.totalPrice}>{formatPrice(totalPrice)}</span>
-            </div>
-            {hasComponents && (
-              <div className={styles.footerActions}>
-                <button
-                  className={`${styles.shareBtn} ${copied ? styles.shareBtnDone : ''}`}
-                  onClick={handleShare}
-                >
-                  {copied ? <><Check size={18} /> Copié !</> : <><Share2 size={18} /> Partager</>}
-                </button>
-                
-                <button
-                  className={styles.exportBtn}
-                  onClick={() => window.print()}
-                >
-                  <Printer size={16} /> Exporter PDF
-                </button>
-                {confirmReset ? (
-                  <div className={styles.resetConfirm}>
-                    <button className={styles.resetConfirmYes} onClick={() => { resetBuild(); setConfirmReset(false); }}>
-                      Vider ?
-                    </button>
-                    <button className={styles.resetConfirmNo} onClick={() => setConfirmReset(false)}>
-                      Non
-                    </button>
-                  </div>
-                ) : (
-                  <button className={styles.resetBtn} onClick={() => setConfirmReset(true)}>
-                    <RefreshCw size={16} />
-                    Réinitialiser
-                  </button>
-                )}
-              </div>
-            )}
+          {/* Unified Sidebar Card */}
+          <div className={styles.sidebarCard}>
+            <ConfiguratorChecklist checklist={checklist} />
+            <ConfiguratorTotals
+              hasComponents={hasComponents}
+              tdp={tdp}
+              psuPercent={psuPercent}
+              psuStatus={psuStatus}
+              recommendedWattage={compat?.recommended_psu_wattage}
+              totalPrice={totalPrice}
+              copied={copied}
+              confirmReset={confirmReset}
+              onShare={handleShare}
+              onReset={() => setConfirmReset(true)}
+              onResetConfirm={() => { resetBuild(); setConfirmReset(false); }}
+              onResetCancel={() => setConfirmReset(false)}
+            />
           </div>
 
           {compat && (compat.errors.length > 0 || compat.warnings.length > 0) && (
@@ -374,6 +369,51 @@ export function Configurator() {
         </div>
       </div>
 
+      {/* Mobile Sticky Summary Bar */}
+      {hasComponents && (
+        <div className={styles.mobileStickySummary}>
+          <div className={styles.mobileSummaryLeft}>
+            <span className={styles.mobileTotalLabel}>Total estimé</span>
+            <span className={styles.mobileTotalPrice}>{formatPrice(totalPrice)}</span>
+          </div>
+          <div className={styles.mobileSummaryRight}>
+            {compat && (
+              <div 
+                className={`${styles.mobileCompatDot} ${!compat.compatible 
+                  ? styles.mobileCompatFail 
+                  : compat.warnings.length > 0 
+                    ? styles.mobileCompatWarn 
+                    : styles.mobileCompatOk
+                }`}
+                title={!compat.compatible ? 'Incompatibilités détectées' : compat.warnings.length > 0 ? 'Avertissements détectés' : 'Configuration compatible'}
+                onClick={() => {
+                  const el = document.querySelector(`.${styles.sidebar}`);
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                {!compat.compatible ? (
+                  <><AlertCircle size={14} /> <span className={styles.mobileCompatText}>Incompatible</span></>
+                ) : compat.warnings.length > 0 ? (
+                  <><AlertCircle size={14} /> <span className={styles.mobileCompatText}>Alerte ({compat.warnings.length})</span></>
+                ) : (
+                  <><CheckCircle2 size={14} /> <span className={styles.mobileCompatText}>Compatible</span></>
+                )}
+              </div>
+            )}
+            <button 
+              type="button"
+              className={styles.mobileSummaryButton}
+              onClick={() => {
+                const el = document.querySelector(`.${styles.sidebar}`);
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              Détails
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Print Proposal Sheet (Only visible when printing) ── */}
       <div className={styles.printOnlyContainer}>
         <div className={styles.printHeader}>
@@ -398,7 +438,7 @@ export function Configurator() {
           </thead>
           <tbody>
             {Object.entries(build)
-              .filter(([_, comp]) => !!comp)
+              .filter(([, comp]) => !!comp)
               .map(([slotKey, comp]) => {
                 if (!comp) return null;
                 return (
