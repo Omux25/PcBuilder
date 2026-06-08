@@ -92,7 +92,7 @@
   background: var(--success);
   border-color: var(--success);
   color: #fff;
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
+  box-shadow: 0 4px 12px rgba(var(--success-rgb), 0.2);
 }
 
 .back {
@@ -397,7 +397,7 @@
 
 .isBest {
   font-weight: 700;
-  background: rgba(34, 197, 94, 0.03);
+  background: rgba(var(--success-rgb), 0.03);
 }
 
 .bestIcon {
@@ -405,7 +405,7 @@
   top: 0.5rem;
   right: 0.5rem;
   color: var(--success);
-  filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.2));
+  filter: drop-shadow(0 0 4px rgba(var(--success-rgb), 0.2));
 }
 
 /* ── Versus Split Hero Card (Exactly 2 items) ───────────────────────────── */
@@ -513,7 +513,7 @@
 
 .valueBadge.gagnant {
   background: var(--success-tint);
-  border-color: rgba(34, 197, 94, 0.25);
+  border-color: rgba(var(--success-rgb), 0.25);
   color: var(--success);
 }
 

@@ -105,8 +105,8 @@
 }
 
 .shareBtn.copied {
-  background: rgba(34, 197, 94, 0.1);
-  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(var(--success-rgb), 0.1);
+  border-color: rgba(var(--success-rgb), 0.3);
   color: var(--success);
 }
 
@@ -147,8 +147,8 @@
 .trendTabActiveDrops {
   background: var(--bg-surface);
   color: var(--success) !important;
-  box-shadow: var(--shadow-sm), 0 0 15px rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.15);
+  box-shadow: var(--shadow-sm), 0 0 15px rgba(var(--success-rgb), 0.1);
+  border: 1px solid rgba(var(--success-rgb), 0.15);
 }
 
 .trendTabActiveHikes {
@@ -222,9 +222,9 @@
 }
 
 .statIconGreen {
-  background: rgba(34, 197, 94, 0.1);
+  background: rgba(var(--success-rgb), 0.1);
   color: var(--success);
-  border: 1px solid rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(var(--success-rgb), 0.15);
 }
 
 .statIconRed {
@@ -250,7 +250,7 @@
 
 .statGreen {
   color: var(--success);
-  text-shadow: 0 0 15px rgba(34, 197, 94, 0.12);
+  text-shadow: 0 0 15px rgba(var(--success-rgb), 0.12);
 }
 
 .statRed {
@@ -360,9 +360,9 @@
 }
 
 .dayPillActiveDrops {
-  background: rgba(34, 197, 94, 0.15) !important;
+  background: rgba(var(--success-rgb), 0.15) !important;
   color: var(--success) !important;
-  border: 1px solid rgba(34, 197, 94, 0.25) !important;
+  border: 1px solid rgba(var(--success-rgb), 0.25) !important;
 }
 
 .dayPillActiveHikes {
@@ -635,8 +635,8 @@
 }
 
 .cardDrops:hover {
-  border-color: rgba(34, 197, 94, 0.3);
-  box-shadow: var(--shadow-xl), 0 0 20px rgba(34, 197, 94, 0.05);
+  border-color: rgba(var(--success-rgb), 0.3);
+  box-shadow: var(--shadow-xl), 0 0 20px rgba(var(--success-rgb), 0.05);
 }
 
 .cardHikes:hover {
@@ -711,9 +711,9 @@
 }
 
 .dropBadge {
-  background: rgba(34, 197, 94, 0.12);
+  background: rgba(var(--success-rgb), 0.12);
   color: var(--success);
-  border: 1px solid rgba(34, 197, 94, 0.25);
+  border: 1px solid rgba(var(--success-rgb), 0.25);
 }
 
 .hikeBadge {
@@ -735,7 +735,7 @@
   border-radius: 8px;
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(16, 185, 129, 0.25));
+  background: linear-gradient(135deg, rgba(var(--success-rgb), 0.18), rgba(16, 185, 129, 0.25));
   color: #10b981;
   border: 1px solid rgba(16, 185, 129, 0.45);
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
@@ -937,9 +937,9 @@
 }
 
 .addBtnDone {
-  background: rgba(34, 197, 94, 0.1) !important;
+  background: rgba(var(--success-rgb), 0.1) !important;
   color: var(--success) !important;
-  border: 1px solid rgba(34, 197, 94, 0.2) !important;
+  border: 1px solid rgba(var(--success-rgb), 0.2) !important;
 }
 
 /* ── Beautiful Monochromatic Empty State ───────────────────────────────────── */
@@ -1158,9 +1158,9 @@
 }
 
 .inStock {
-  background: rgba(34, 197, 94, 0.1);
+  background: rgba(var(--success-rgb), 0.1);
   color: var(--success);
-  border-color: rgba(34, 197, 94, 0.2);
+  border-color: rgba(var(--success-rgb), 0.2);
 }
 
 .outStock {

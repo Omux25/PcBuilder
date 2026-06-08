@@ -828,7 +828,7 @@
 .inStock {
   background: var(--success-tint);
   color: var(--success-soft);
-  border-color: rgba(34, 197, 94, 0.15);
+  border-color: rgba(var(--success-rgb), 0.15);
 }
 
 .outStock {

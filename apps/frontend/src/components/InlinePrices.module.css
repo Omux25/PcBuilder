@@ -44,7 +44,7 @@
 }
 
 .best {
-  background: linear-gradient(90deg, rgba(34, 197, 94, 0.02) 0%, rgba(34, 197, 94, 0) 100%);
+  background: linear-gradient(90deg, rgba(var(--success-rgb), 0.02) 0%, rgba(var(--success-rgb), 0) 100%);
   border-color: var(--border-subtle);
 }
 
@@ -59,7 +59,7 @@
 }
 
 .best:hover {
-  background: linear-gradient(90deg, rgba(34, 197, 94, 0.05) 0%, rgba(34, 197, 94, 0.01) 100%);
+  background: linear-gradient(90deg, rgba(var(--success-rgb), 0.05) 0%, rgba(var(--success-rgb), 0.01) 100%);
   border-color: var(--border-focus);
 }
 
