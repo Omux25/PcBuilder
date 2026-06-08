@@ -1,7 +1,7 @@
 import type { Context } from 'hono';
 import { UnmatchedService } from '../services/unmatchedService.js';
 import { logActivity } from '../../../admin/services/adminService.js';
-import { componentSchema } from '@shared/schemas/component.schema.js';
+import { baseComponentSchema, componentCategorySchema } from '@shared/schemas/component.schema.js';
 
 export class UnmatchedController {
   private service = new UnmatchedService();
@@ -124,7 +124,7 @@ export class UnmatchedController {
     }
 
     const resultBody = { name, brand, category, specs, listing_ids, link_to_existing, existing_component_id };
-    const validated = componentSchema.safeParse(resultBody);
+    const validated = baseComponentSchema.safeParse({ name, brand, category, specs: specs ?? {} });
     if (!validated.success && !link_to_existing) {
        return c.json({ 
          error: { 
