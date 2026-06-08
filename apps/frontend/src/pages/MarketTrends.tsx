@@ -412,12 +412,8 @@ export function MarketTrends() {
         <div className={`${styles.emptyContainer} ${refreshing ? styles.gridRefreshing : ''}`}>
           <div className={styles.emptyCard}>
             <div className={styles.emptyVisual}>
-              <div className={styles.emptyGlow} />
               <div className={styles.emptyIconCircle}>
-                <BarChart3 size={32} className={styles.emptyIcon} />
-              </div>
-              <div className={styles.emptyMiniCircle}>
-                <SlidersHorizontal size={12} />
+                <BarChart3 size={24} />
               </div>
             </div>
             <h3 className={styles.emptyTitle}>Aucune variation détectée</h3>
