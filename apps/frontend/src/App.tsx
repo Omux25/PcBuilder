@@ -10,6 +10,7 @@ import { getInitialTheme, applyTheme, toggleTheme } from './utils/theme';
 import { getComponentById, getComponentBySlug } from './api';
 import { UI } from './ui-strings';
 import styles from './App.module.css';
+import { MarketTrends } from './pages/MarketTrends';
 
 const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
 const ComponentDetail = lazy(() => import('./pages/ComponentDetail').then(m => ({ default: m.ComponentDetail })));
@@ -18,7 +19,6 @@ const CategoryBrowse = lazy(() => import('./pages/CategoryBrowse').then(m => ({ 
 const ComponentsIndex = lazy(() => import('./pages/ComponentsIndex').then(m => ({ default: m.ComponentsIndex })));
 const Compare = lazy(() => import('./pages/Compare').then(m => ({ default: m.Compare })));
 const GlobalSearch = lazy(() => import('./pages/GlobalSearch').then(m => ({ default: m.GlobalSearch })));
-const MarketTrends = lazy(() => import('./pages/MarketTrends').then(m => ({ default: m.MarketTrends })));
 const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })));
 
 function ProductRedirect() {
@@ -264,9 +264,7 @@ export default function App() {
 
         <Route path="/market-trends" element={
           <main className={styles.main}>
-            <Suspense fallback={<Skeleton height={400} />}>
-              <MarketTrends />
-            </Suspense>
+            <MarketTrends />
           </main>
         } />
 
@@ -306,7 +304,7 @@ export default function App() {
         </Link>
         <Link to="/build" className={`${styles.mobileNavLink} ${isBuild ? styles.mobileNavLinkActive : ''}`}>
           <Sliders size={20} />
-          <span className={styles.mobileNavText}>{UI.nav.configurator}</span>
+          <span className={styles.mobileNavText}>Config</span>
         </Link>
         <Link to="/components" className={`${styles.mobileNavLink} ${isComponents ? styles.mobileNavLinkActive : ''}`}>
           <LayoutGrid size={20} />
@@ -314,11 +312,15 @@ export default function App() {
         </Link>
         <Link to="/presets" className={`${styles.mobileNavLink} ${isPresets ? styles.mobileNavLinkActive : ''}`}>
           <Sparkles size={20} />
-          <span className={styles.mobileNavText}>{UI.nav.presets}</span>
+          <span className={styles.mobileNavText}>Presets</span>
         </Link>
         <Link to="/compare" className={`${styles.mobileNavLink} ${location.pathname === '/compare' ? styles.mobileNavLinkActive : ''}`}>
           <GitCompare size={20} />
           <span className={styles.mobileNavText}>{UI.nav.compare}</span>
+        </Link>
+        <Link to="/market-trends" className={`${styles.mobileNavLink} ${location.pathname === '/market-trends' ? styles.mobileNavLinkActive : ''}`}>
+          <TrendingUp size={20} />
+          <span className={styles.mobileNavText}>{UI.nav.trends}</span>
         </Link>
       </nav>
 
