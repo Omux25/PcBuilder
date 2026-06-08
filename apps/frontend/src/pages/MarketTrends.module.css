@@ -85,7 +85,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.55rem 1.25rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-surface-2);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--border);
@@ -99,7 +99,7 @@
 }
 
 .shareBtn:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--bg-surface-hover);
   border-color: var(--border-2);
   transform: translateY(-2px);
 }
@@ -117,11 +117,11 @@
   gap: 0.25rem;
   margin-bottom: 2rem;
   padding: 0.25rem;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   width: fit-content;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .trendTab {
@@ -168,7 +168,7 @@
 }
 
 .statCard {
-  background: linear-gradient(145deg, var(--bg-surface) 0%, rgba(17, 17, 19, 0.7) 100%);
+  background: var(--card-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border);
@@ -266,7 +266,7 @@
   text-overflow: ellipsis;
   max-width: 100%;
   margin-top: 0.15rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.03);
+  border-top: 1px solid var(--border-subtle);
   padding-top: 0.4rem;
 }
 
@@ -325,10 +325,10 @@
 .dayPills {
   display: flex;
   gap: 0.25rem;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-surface-2);
   padding: 0.2rem;
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
   width: fit-content;
   height: 38px;
   align-items: center;
@@ -954,10 +954,10 @@
 }
 
 .emptyCard {
-  background: linear-gradient(180deg, var(--bg-surface) 0%, rgba(17, 17, 19, 0.7) 100%);
+  background: var(--card-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
   border-radius: 24px;
   padding: 3.5rem 2.5rem;
   max-width: 480px;
@@ -1068,8 +1068,8 @@
 .emptyResetBtn {
   width: 100%;
   padding: 0.75rem 1.5rem;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--bg-surface-3);
+  border: 1px solid var(--border-2);
   color: var(--text-primary);
   border-radius: var(--radius-lg);
   font-weight: 700;
@@ -1083,10 +1083,10 @@
 }
 
 .emptyResetBtn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--bg-surface-hover);
+  border-color: var(--border-focus);
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 15px rgba(var(--accent-rgb), 0.05);
 }
 
 .emptyExpandBtn {
