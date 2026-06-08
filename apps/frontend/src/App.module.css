@@ -415,8 +415,10 @@
     color: var(--text-primary);
   }
 
-  .mobileNavLinkActive {
-    color: var(--accent-blue);
+  .mobileNavLinkActive,
+  .mobileNavLinkActive:hover,
+  .mobileNavLinkActive:focus {
+    color: var(--accent-blue) !important;
   }
 
   .mobileNavText {
