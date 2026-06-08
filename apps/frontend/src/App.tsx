@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate, Navigate, useParams } from 'react-router-dom';
 import { Cpu, Sun, Moon, LayoutGrid, Search, GitCompare, Home as HomeIcon, Sliders, Sparkles, TrendingUp } from 'lucide-react';
 import { Configurator } from './components/Configurator';
@@ -11,15 +11,14 @@ import { getComponentById, getComponentBySlug } from './api';
 import { UI } from './ui-strings';
 import styles from './App.module.css';
 import { MarketTrends } from './pages/MarketTrends';
-
-const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
-const ComponentDetail = lazy(() => import('./pages/ComponentDetail').then(m => ({ default: m.ComponentDetail })));
-const Presets = lazy(() => import('./pages/Presets').then(m => ({ default: m.Presets })));
-const CategoryBrowse = lazy(() => import('./pages/CategoryBrowse').then(m => ({ default: m.CategoryBrowse })));
-const ComponentsIndex = lazy(() => import('./pages/ComponentsIndex').then(m => ({ default: m.ComponentsIndex })));
-const Compare = lazy(() => import('./pages/Compare').then(m => ({ default: m.Compare })));
-const GlobalSearch = lazy(() => import('./pages/GlobalSearch').then(m => ({ default: m.GlobalSearch })));
-const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })));
+import { Home } from './pages/Home';
+import { ComponentDetail } from './pages/ComponentDetail';
+import { Presets } from './pages/Presets';
+import { CategoryBrowse } from './pages/CategoryBrowse';
+import { ComponentsIndex } from './pages/ComponentsIndex';
+import { Compare } from './pages/Compare';
+import { GlobalSearch } from './pages/GlobalSearch';
+import { NotFound } from './pages/NotFound';
 
 function ProductRedirect() {
   const { slug } = useParams<{ slug: string }>();
@@ -204,9 +203,7 @@ export default function App() {
         {/* ── Home ────────────────────────────────────────────────────── */}
         <Route path="/" element={
           <main className={styles.main}>
-            <Suspense fallback={<Skeleton height={400} />}>
-              <Home />
-            </Suspense>
+            <Home />
           </main>
         } />
 
@@ -222,17 +219,13 @@ export default function App() {
 
         <Route path="/components/:category/:identifier" element={
           <main className={styles.main}>
-            <Suspense fallback={<Skeleton height={400} />}>
-              <ComponentDetail onAddToBuild={addToBuild} />
-            </Suspense>
+            <ComponentDetail onAddToBuild={addToBuild} />
           </main>
         } />
 
         <Route path="/components" element={
           <main className={styles.main}>
-            <Suspense fallback={<Skeleton height={400} />}>
-              <ComponentsIndex />
-            </Suspense>
+            <ComponentsIndex />
           </main>
         } />
 
@@ -240,25 +233,19 @@ export default function App() {
 
         <Route path="/browse/:category/:slotKey?" element={
           <main className={styles.main}>
-            <Suspense fallback={<Skeleton height={400} />}>
-              <CategoryBrowse />
-            </Suspense>
+            <CategoryBrowse />
           </main>
         } />
 
         <Route path="/compare" element={
           <main className={styles.main}>
-            <Suspense fallback={<Skeleton height={400} />}>
-              <Compare />
-            </Suspense>
+            <Compare />
           </main>
         } />
 
         <Route path="/search" element={
           <main className={styles.main}>
-            <Suspense fallback={<Skeleton height={400} />}>
-              <GlobalSearch />
-            </Suspense>
+            <GlobalSearch />
           </main>
         } />
 
@@ -270,17 +257,13 @@ export default function App() {
 
         <Route path="/presets" element={
           <main className={styles.main}>
-            <Suspense fallback={<Skeleton height={400} />}>
-              <Presets onLoadPreset={handleLoadPreset} />
-            </Suspense>
+            <Presets onLoadPreset={handleLoadPreset} />
           </main>
         } />
 
         <Route path="*" element={
           <main className={styles.main}>
-            <Suspense fallback={<Skeleton height={400} />}>
-              <NotFound />
-            </Suspense>
+            <NotFound />
           </main>
         } />
       </Routes>
