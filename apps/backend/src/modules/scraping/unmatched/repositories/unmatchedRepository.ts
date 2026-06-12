@@ -45,11 +45,13 @@ export class UnmatchedRepository {
           OR (${category ?? ''} = 'none' AND us.category IS NULL)
           OR us.category = ${category ?? ''}
         )
-        AND (
-          ${search ?? ''}::text = ''
-          OR ul.scraped_name ILIKE '%' || ${search ?? ''} || '%'
-          OR COALESCE(us.canonical_name, ul.scraped_name) ILIKE '%' || ${search ?? ''} || '%'
-        )
+        AND (${search ?? ''}::text = '' OR (
+          SELECT bool_and(
+            ul.scraped_name ILIKE '%' || word || '%'
+            OR COALESCE(us.canonical_name, ul.scraped_name) ILIKE '%' || word || '%'
+          )
+          FROM unnest(string_to_array(trim(regexp_replace(${search ?? ''}, '\\s+', ' ', 'g')), ' ')) AS word
+        ))
       ORDER BY ul.scraped_at DESC
     `) as any[];
   }
@@ -172,7 +174,10 @@ export class UnmatchedRepository {
           OR us.category = ${category}
         )
         AND (${search ?? null}::text IS NULL OR (
-          SELECT bool_and(ul.scraped_name ILIKE '%' || word || '%')
+          SELECT bool_and(
+            ul.scraped_name ILIKE '%' || word || '%'
+            OR COALESCE(us.canonical_name, ul.scraped_name) ILIKE '%' || word || '%'
+          )
           FROM unnest(string_to_array(trim(regexp_replace(${search ?? ''}, '\\s+', ' ', 'g')), ' ')) AS word
         ))
       ORDER BY ul.scraped_at DESC
