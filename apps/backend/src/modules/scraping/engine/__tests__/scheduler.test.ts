@@ -84,7 +84,7 @@ beforeEach(() => {
   setAggregatorSql(makeAggregatorSql());
   setCatalogBuilderSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
   // Mock session's own SQL (for SELECT retailers + UPDATE retailers status)
-  setSessionSql((strings: TemplateStringsArray, ..._values: unknown[]) => {
+  const sessionMockSql = (strings: TemplateStringsArray, ..._values: unknown[]) => {
     const query = strings.join('?');
     if (query.includes('SELECT id, base_url FROM retailers')) {
       return Promise.resolve([
@@ -94,8 +94,18 @@ beforeEach(() => {
         { id: 14, base_url: 'https://www.pcgamercasa.ma' },
       ]);
     }
+    if (query.includes('pg_try_advisory_xact_lock')) {
+      return Promise.resolve([{ acquired: true }]);
+    }
+    if (query.includes('SELECT id, name, scraping_interval_hours FROM retailers') || query.includes('SELECT id, name, scraping_interval_hours\n        FROM retailers')) {
+      return Promise.resolve([
+        { id: 10, name: 'UltraPC', scraping_interval_hours: 24 }
+      ]);
+    }
     return Promise.resolve([]);
-  });
+  };
+  sessionMockSql.begin = (cb: any) => cb(sessionMockSql);
+  setSessionSql(sessionMockSql as any);
   setFetch(makeEmptyPageFetch());
   setUltraPcFetch(makeEmptyUltraPcFetch());
   setNextLevelFetch((_url: string) => Promise.resolve({

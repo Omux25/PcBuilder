@@ -19,29 +19,49 @@ import { getSql } from '../../../core/db/index.js';
 let sessionRunning = false;
 
 async function runDueRetailers(): Promise<void> {
-  // Guard: skip if a session is already in progress
+  // Guard: skip if a session is already in progress locally
   if (sessionRunning) {
-    await logger.warn('[SCHEDULER] Skipping scheduled run — a session is already running');
+    await logger.warn('[SCHEDULER] Skipping scheduled run — a session is already running locally');
     return;
   }
 
-  let retailers: { id: number; name: string; scraping_interval_hours: number }[];
+  let retailers: { id: number; name: string; scraping_interval_hours: number }[] = [];
 
   try {
     const sql = getSql();
-    // Use parameterized interval calculation to avoid string concatenation (P147)
-    retailers = (await sql`
-      SELECT id, name, scraping_interval_hours
-      FROM retailers
-      WHERE is_active = true
-        AND scraping_enabled = true
-        AND (
-          last_scrape_at IS NULL
-          OR last_scrape_at < NOW() - (scraping_interval_hours * INTERVAL '1 hour')
-        )
-    `) as { id: number; name: string; scraping_interval_hours: number }[];
+    await sql.begin(async (tx) => {
+      // Try to acquire transaction-level advisory lock (using lock ID 54321)
+      const lock = await tx`SELECT pg_try_advisory_xact_lock(54321) as acquired` as { acquired: boolean }[];
+      if (!lock[0]?.acquired) {
+        return; // another instance is running the check
+      }
+
+      // Query due retailers
+      const due = await tx`
+        SELECT id, name, scraping_interval_hours
+        FROM retailers
+        WHERE is_active = true
+          AND scraping_enabled = true
+          AND (
+            last_scrape_at IS NULL
+            OR last_scrape_at < NOW() - (scraping_interval_hours * INTERVAL '1 hour')
+          )
+      ` as { id: number; name: string; scraping_interval_hours: number }[];
+
+      if (due.length > 0) {
+        // Mark them as scraping immediately by updating their last_scrape_at
+        // to prevent other instances from picking them up once transaction commits
+        const ids = due.map(r => r.id);
+        await tx`
+          UPDATE retailers
+          SET last_scrape_at = NOW()
+          WHERE id IN (${ids})
+        `;
+        retailers = due;
+      }
+    });
   } catch (err) {
-    await logger.error(`Failed to query retailers for scheduling: ${(err as Error).message}`);
+    await logger.error(`Failed to query/lock retailers for scheduling: ${(err as Error).message}`);
     return;
   }
 

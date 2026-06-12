@@ -7,6 +7,7 @@ import type { Component, PriceOffer, ComponentInput, ComponentFilters } from '@s
 import { checkSocketCompatibility, evaluateCompatibility } from '../../builds/services/compatibilityService.js';
 import { getSql } from '../../../core/db/index.js';
 import { getPriceHistory } from './priceHistoryService.js';
+import { buildSpecsPayload } from '@shared/hardware/specs/buildSpecs.js';
 
 export interface ComponentListResult {
   components: Component[];
@@ -142,7 +143,8 @@ export class ComponentService {
             }
         }
         if (category === 'motherboard') {
-            const ram = currentBuild.ram;
+            const ramKey = Object.keys(currentBuild).find(k => k === 'ram' || /^ram_\d+$/.test(k));
+            const ram = ramKey ? currentBuild[ramKey] : undefined;
             if (ram?.ram_type) compatHints.compat_ram_type = ram.ram_type;
             
             const pcCase = currentBuild.case;
@@ -430,10 +432,12 @@ export class ComponentService {
 
   private extractComponentFields(data: ComponentInput) {
     const d = data as Partial<Component>;
+    const category = d.category || 'cpu';
+    const computedSpecs = buildSpecsPayload(category, { ...(d.specs ?? {}), ...d });
     return {
       category: d.category,
       description: d.description ?? null,
-      specs: d.specs ?? null,
+      specs: computedSpecs,
       image_url: d.image_url ?? null,
       image_urls: d.image_urls ?? null,
       release_year: d.release_year ?? null,

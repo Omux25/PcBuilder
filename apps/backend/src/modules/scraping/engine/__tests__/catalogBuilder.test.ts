@@ -25,6 +25,7 @@ mock.module('../utils/deepScraper.js', () => {
 });
 
 import { buildFromUnmatched, setSql, resetSql } from '../catalogBuilder.js';
+import { setSql as setLoggerSql, resetSql as resetLoggerSql } from '../utils/logger.js';
 
 // ── Mock helpers ──────────────────────────────────────────────────────────────
 
@@ -93,8 +94,14 @@ function makeSql(
   return { mock, insertedComponents, insertedMappings, updatedListings };
 }
 
-beforeEach(() => { });
-afterAll(() => resetSql());
+beforeEach(() => {
+  setLoggerSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
+});
+
+afterAll(() => {
+  resetSql();
+  resetLoggerSql();
+});
 
 // ── Core behavior ─────────────────────────────────────────────────────────────
 

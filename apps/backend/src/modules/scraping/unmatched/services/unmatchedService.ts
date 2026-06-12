@@ -9,7 +9,7 @@ import { extractCpuSpecs } from '@shared/hardware/specs/cpu.js';
 import { extractGpuSpecs } from '@shared/hardware/specs/gpu.js';
 import { extractRamSpecs } from '@shared/hardware/specs/ram.js';
 import { extractMotherboardSpecs } from '@shared/hardware/specs/motherboard.js';
-import { extractPsuSpecs } from '@shared/hardware/specs/psu.js';
+import { extractPsuSpecs, normalizeEfficiencyRating, normalizeModularity, normalizePsuFormFactor } from '@shared/hardware/specs/psu.js';
 import { extractCaseSpecs } from '@shared/hardware/specs/case.js';
 import { extractCoolingSpecs } from '@shared/hardware/specs/cooling.js';
 import { extractFanSpecs } from '@shared/hardware/specs/fan.js';
@@ -17,6 +17,7 @@ import { extractThermalPasteSpecs } from '@shared/hardware/specs/thermal-paste.j
 import { extractStorageSpecs } from '@shared/hardware/specs/storage.js';
 import { extractBrand } from '@shared/hardware/brands.js';
 import { AppError } from '../../../../core/errors/errors.js';
+import { buildSpecsPayload } from '@shared/hardware/specs/buildSpecs.js';
 
 export class UnmatchedService {
   private repository = new UnmatchedRepository();
@@ -139,23 +140,22 @@ export class UnmatchedService {
           const slug = await getUniqueSlug(brandVal, canonicalName);
           const s = this.enrichSpecs(category, canonicalName, { ...sample.specs_hint });
 
-          let specsPayload: Record<string, any> | null = null;
-          if (category === 'gpu') {
-            specsPayload = {
-              chipset: s.chipset ?? null,
-              vram_gb: s.vram_gb ?? null,
-              tdp: s.tdp ?? null,
-              length_mm: s.length_mm ?? null,
-            };
-          } else if (category === 'motherboard') {
-            specsPayload = {
-              socket: s.socket ?? null,
-              supported_ram_types: s.supported_ram_types ?? null,
-              max_ram_frequency: s.max_ram_frequency ?? null,
-              form_factor: s.form_factor ?? null,
-              ram_slots: s.ram_slots ?? null,
-            };
+          // Pick the best image_url and collect all unique image_urls from the group listings
+          const primaryListing = groupListings.find(l => l.image_url) ?? sample;
+          const imageUrl = primaryListing.image_url ?? null;
+
+          const uniqueImages = new Set<string>();
+          for (const listing of groupListings) {
+            if (listing.image_url) uniqueImages.add(listing.image_url);
+            if (listing.image_urls && Array.isArray(listing.image_urls)) {
+              for (const url of listing.image_urls) {
+                if (url) uniqueImages.add(url);
+              }
+            }
           }
+          const imageUrls = Array.from(uniqueImages);
+
+          const specsPayload = buildSpecsPayload(category, s);
 
           const inserted = (await tx`
             INSERT INTO components (
@@ -173,7 +173,12 @@ export class UnmatchedService {
               tags,
               chipset,
               specs,
-              is_active
+              image_url, image_urls,
+              is_active,
+              base_clock_ghz, boost_clock_ghz,
+              interface_type, read_speed_mbps, write_speed_mbps,
+              efficiency_rating, modular,
+              mpn
             ) VALUES (
               ${slug}, ${canonicalName}, ${brandVal}, ${category},
               ${(s.socket) ?? null},
@@ -209,7 +214,13 @@ export class UnmatchedService {
               ${(s.tags && s.tags.length > 0) ? `{${s.tags.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}::text[],
               ${(s.chipset) ?? null},
               ${specsPayload ? JSON.stringify(specsPayload) : null},
-              true
+              ${imageUrl},
+              ${(imageUrls && imageUrls.length > 0) ? `{${imageUrls.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}::text[],
+              true,
+              ${(s.base_clock_ghz) ?? null}, ${(s.boost_clock_ghz) ?? null},
+              ${(s.interface_type) ?? null}, ${(s.read_speed_mbps) ?? null}, ${(s.write_speed_mbps) ?? null},
+              ${(s.efficiency_rating) ?? null}, ${(s.modular) ?? null},
+              ${(s.mpn) ?? null}
             )
             RETURNING id
           `) as { id: number }[];
@@ -404,23 +415,22 @@ export class UnmatchedService {
     const slug = await getUniqueSlug(brandVal, canonicalName);
     const s = this.enrichSpecs(category, canonicalName, { ...specs });
 
-    let specsPayload: Record<string, any> | null = null;
-    if (category === 'gpu') {
-      specsPayload = {
-        chipset: s.chipset ?? null,
-        vram_gb: s.vram_gb ?? null,
-        tdp: s.tdp ?? null,
-        length_mm: s.length_mm ?? null,
-      };
-    } else if (category === 'motherboard') {
-      specsPayload = {
-        socket: s.socket ?? null,
-        supported_ram_types: s.supported_ram_types ?? null,
-        max_ram_frequency: s.max_ram_frequency ?? null,
-        form_factor: s.form_factor ?? null,
-        ram_slots: s.ram_slots ?? null,
-      };
+    // Pick the best image_url and collect all unique image_urls from listings
+    const primaryListing = listings.find(l => l.image_url);
+    const imageUrl = primaryListing ? primaryListing.image_url : null;
+
+    const uniqueImages = new Set<string>();
+    for (const listing of listings) {
+      if (listing.image_url) uniqueImages.add(listing.image_url);
+      if (listing.image_urls && Array.isArray(listing.image_urls)) {
+        for (const url of listing.image_urls) {
+          if (url) uniqueImages.add(url);
+        }
+      }
     }
+    const imageUrls = Array.from(uniqueImages);
+
+    const specsPayload = buildSpecsPayload(category, s);
 
     let newComponentId: number;
     await sql.begin(async (tx) => {
@@ -440,7 +450,12 @@ export class UnmatchedService {
           tags,
           chipset,
           specs,
-          is_active
+          image_url, image_urls,
+          is_active,
+          base_clock_ghz, boost_clock_ghz,
+          interface_type, read_speed_mbps, write_speed_mbps,
+          efficiency_rating, modular,
+          mpn
         ) VALUES (
           ${slug}, ${canonicalName}, ${brandVal}, ${category},
           ${(s.socket) ?? null},
@@ -476,7 +491,13 @@ export class UnmatchedService {
           ${(s.tags && s.tags.length > 0) ? `{${s.tags.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}::text[],
           ${(s.chipset) ?? null},
           ${specsPayload ? JSON.stringify(specsPayload) : null},
-          true
+          ${imageUrl},
+          ${(imageUrls && imageUrls.length > 0) ? `{${imageUrls.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}::text[],
+          true,
+          ${(s.base_clock_ghz) ?? null}, ${(s.boost_clock_ghz) ?? null},
+          ${(s.interface_type) ?? null}, ${(s.read_speed_mbps) ?? null}, ${(s.write_speed_mbps) ?? null},
+          ${(s.efficiency_rating) ?? null}, ${(s.modular) ?? null},
+          ${(s.mpn) ?? null}
         )
         RETURNING id
       `) as { id: number }[];
@@ -508,6 +529,9 @@ export class UnmatchedService {
         if (!s.core_count && extracted.core_count) s.core_count = extracted.core_count;
         if (!s.thread_count && extracted.thread_count) s.thread_count = extracted.thread_count;
         if (!s.tdp && extracted.tdp) s.tdp = extracted.tdp;
+        if (!s.base_clock_ghz && extracted.base_clock_ghz) s.base_clock_ghz = extracted.base_clock_ghz;
+        if (!s.boost_clock_ghz && extracted.boost_clock_ghz) s.boost_clock_ghz = extracted.boost_clock_ghz;
+        if ((!s.supported_ram_types || s.supported_ram_types.length === 0) && extracted.supported_ram_types) s.supported_ram_types = extracted.supported_ram_types;
       }
     } else if (category === 'gpu') {
       const extracted = extractGpuSpecs(name);
@@ -532,10 +556,17 @@ export class UnmatchedService {
       if (extracted) {
         if (!s.capacity_gb && extracted.capacity_gb) s.capacity_gb = extracted.capacity_gb;
         if (!s.interface_type && extracted.interface_type) s.interface_type = extracted.interface_type;
+        if (!s.read_speed_mbps && extracted.read_speed_mbps) s.read_speed_mbps = extracted.read_speed_mbps;
+        if (!s.write_speed_mbps && extracted.write_speed_mbps) s.write_speed_mbps = extracted.write_speed_mbps;
       }
     } else if (category === 'psu') {
       const extracted = extractPsuSpecs(name);
-      if (!s.wattage && extracted?.wattage) s.wattage = extracted.wattage;
+      if (extracted) {
+        if (!s.wattage && extracted.wattage) s.wattage = extracted.wattage;
+        if (!s.efficiency_rating && extracted.efficiency) s.efficiency_rating = normalizeEfficiencyRating(extracted.efficiency);
+        if (!s.modular && extracted.modularity) s.modular = normalizeModularity(extracted.modularity);
+        if (!s.psu_form_factor && extracted.form_factor) s.psu_form_factor = normalizePsuFormFactor(extracted.form_factor);
+      }
     } else if (category === 'cooling') {
       const extracted = extractCoolingSpecs(name);
       if (!s.tdp && extracted?.tdp) s.tdp = extracted.tdp;

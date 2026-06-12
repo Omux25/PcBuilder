@@ -172,7 +172,7 @@ describe('Bug Condition: Stale files do not exist', () => {
 describe('Bug Condition: Bulk import has no broken sql.begin() wrapper', () => {
   test('admin/components.ts import handler does not use sql.begin()', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../modules/catalog/controllers/adminComponentController.ts'),
+      join(import.meta.dirname, '../modules/catalog/controllers/componentController.ts'),
       'utf-8'
     );
     expect(src).not.toContain('sql.begin(');
@@ -180,7 +180,7 @@ describe('Bug Condition: Bulk import has no broken sql.begin() wrapper', () => {
 
   test('admin/components.ts does not import SqlFn type (only used by broken wrapper)', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../modules/catalog/controllers/adminComponentController.ts'),
+      join(import.meta.dirname, '../modules/catalog/controllers/componentController.ts'),
       'utf-8'
     );
     expect(src).not.toContain('import type { SqlFn }');

@@ -175,7 +175,7 @@ export class ComponentRepository {
       let socketCond = this.sql`true`;
       if (compat_socket) {
         if (category === 'cooling') {
-          socketCond = this.sql`(c.specs->'supported_sockets')::jsonb @> jsonb_build_array(${compat_socket})`;
+          socketCond = this.sql`(c.supported_sockets IS NOT NULL AND c.supported_sockets @> ARRAY[${compat_socket}]::text[] OR (c.specs->'supported_sockets')::jsonb @> jsonb_build_array(${compat_socket}))`;
         } else {
           socketCond = this.sql`COALESCE(c.socket, c.specs->>'socket') = ${compat_socket}`;
         }
@@ -189,7 +189,7 @@ export class ComponentRepository {
       let formCond = this.sql`true`;
       if (compat_form_factors && compat_form_factors.length > 0) {
         if (category === 'case') {
-          formCond = this.sql`(c.specs->'supported_motherboards')::jsonb ?| ${(this.sql as any).array(compat_form_factors)}::text[]`;
+          formCond = this.sql`(c.supported_motherboards IS NOT NULL AND c.supported_motherboards && ${(this.sql as any).array(compat_form_factors)}::text[] OR (c.specs->'supported_motherboards')::jsonb ?| ${(this.sql as any).array(compat_form_factors)}::text[])`;
         } else {
           formCond = this.sql`COALESCE(c.form_factor, c.specs->>'form_factor') IN ${this.sql(compat_form_factors)}`;
         }
@@ -205,9 +205,13 @@ export class ComponentRepository {
         (c.category = 'case' AND (COALESCE(c.form_factor, c.specs->>'form_factor') IS NULL OR COALESCE(c.max_gpu_length_mm, (c.specs->>'max_gpu_length_mm')::integer) IS NULL)) OR
         (c.category = 'psu' AND (COALESCE(c.wattage, (c.specs->>'wattage')::integer) IS NULL OR COALESCE(c.efficiency_rating, c.specs->>'efficiency_rating') IS NULL OR COALESCE(c.modular, c.specs->>'modular') IS NULL)) OR
         (c.category = 'motherboard' AND (COALESCE(c.socket, c.specs->>'socket') IS NULL OR COALESCE(c.chipset, c.specs->>'chipset') IS NULL OR COALESCE(c.form_factor, c.specs->>'form_factor') IS NULL)) OR
-        (c.category = 'cpu' AND (COALESCE(c.socket, c.specs->>'socket') IS NULL OR COALESCE(c.core_count, (c.specs->>'core_count')::integer) IS NULL OR COALESCE(c.frequency_mhz, (c.specs->>'frequency_mhz')::integer) IS NULL)) OR
+        (c.category = 'cpu' AND (COALESCE(c.socket, c.specs->>'socket') IS NULL OR COALESCE(c.core_count, (c.specs->>'core_count')::integer) IS NULL OR COALESCE(c.tdp, (c.specs->>'tdp')::integer) IS NULL)) OR
         (c.category = 'storage' AND (COALESCE(c.capacity_gb, (c.specs->>'capacity_gb')::integer) IS NULL OR COALESCE(c.interface_type, c.specs->>'interface_type') IS NULL OR COALESCE(c.form_factor, c.specs->>'form_factor') IS NULL)) OR
-        (c.category = 'cooling' AND ((c.specs->'supported_sockets')::jsonb IS NULL OR COALESCE(c.height_mm, (c.specs->>'height_mm')::integer) IS NULL OR COALESCE(c.tdp, (c.specs->>'tdp')::integer) IS NULL))
+        (c.category = 'cooling' AND (
+          ( (c.supported_sockets IS NULL OR c.supported_sockets = ARRAY[]::text[]) AND ((c.specs->'supported_sockets')::jsonb IS NULL OR (c.specs->'supported_sockets')::jsonb = '[]'::jsonb) ) OR 
+          COALESCE(c.height_mm, (c.specs->>'height_mm')::integer) IS NULL OR 
+          COALESCE(c.max_tdp, COALESCE((c.specs->>'max_tdp')::integer, (c.specs->>'tdp')::integer)) IS NULL
+        ))
       )
     `;
 
@@ -705,7 +709,7 @@ export class ComponentRepository {
       // Compatibility hints (strict filters when compatibleOnly is active)
       if (compat_socket) {
         if (category === 'cooling') {
-          conditions = this.sql`${conditions} AND (c.specs->'supported_sockets')::jsonb @> jsonb_build_array(${compat_socket})`;
+          conditions = this.sql`${conditions} AND (c.supported_sockets IS NOT NULL AND c.supported_sockets @> ARRAY[${compat_socket}]::text[] OR (c.specs->'supported_sockets')::jsonb @> jsonb_build_array(${compat_socket}))`;
         } else if (excludeKey !== 'socket') {
           conditions = this.sql`${conditions} AND COALESCE(c.socket, c.specs->>'socket') = ${compat_socket}`;
         }
@@ -715,7 +719,7 @@ export class ComponentRepository {
       }
       if (compat_form_factors && compat_form_factors.length > 0) {
         if (category === 'case') {
-          conditions = this.sql`${conditions} AND (c.specs->'supported_motherboards')::jsonb ?| ${(this.sql as any).array(compat_form_factors)}::text[]`;
+          conditions = this.sql`${conditions} AND (c.supported_motherboards IS NOT NULL AND c.supported_motherboards && ${(this.sql as any).array(compat_form_factors)}::text[] OR (c.specs->'supported_motherboards')::jsonb ?| ${(this.sql as any).array(compat_form_factors)}::text[])`;
         } else if (excludeKey !== 'form_factor') {
           conditions = this.sql`${conditions} AND COALESCE(c.form_factor, c.specs->>'form_factor') IN ${this.sql(compat_form_factors)}`;
         }

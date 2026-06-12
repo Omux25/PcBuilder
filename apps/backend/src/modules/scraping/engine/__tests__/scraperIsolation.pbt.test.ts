@@ -49,7 +49,15 @@ beforeEach(() => {
   setLoggerSql(makeLoggerSql());
   setAggregatorSql(makeAggregatorSql());
   setCatalogBuilderSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
-  setSessionSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
+  const pbtMockSql = (strings: TemplateStringsArray, ..._values: unknown[]) => {
+    const query = strings.join('?');
+    if (query.includes('pg_try_advisory_xact_lock')) {
+      return Promise.resolve([{ acquired: true }]);
+    }
+    return Promise.resolve([]);
+  };
+  pbtMockSql.begin = (cb: any) => cb(pbtMockSql);
+  setSessionSql(pbtMockSql as any);
   setRetryDelay(0);
   setSilent(true);
   setUltraPcFetch((_url: string) => Promise.resolve({
