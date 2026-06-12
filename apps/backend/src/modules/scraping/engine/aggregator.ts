@@ -47,6 +47,7 @@ import { loadAdminRules, matchesRule, type KeywordRule } from '../services/keywo
 import type { ComponentCategory } from '@shared/types';
 import { scoreImageQuality } from '@shared/image-utils';
 import { validateBrandAuthority } from '@shared/brand-authority';
+import { buildSpecsPayload } from '@shared/hardware/specs/buildSpecs.js';
 
 // Re-export DI helpers so tests can inject a mock SQL function.
 export { setSql, resetSql };
@@ -420,15 +421,23 @@ export async function aggregate(
 
       if (category === 'cpu') {
         const s = extractCpuSpecs(compositeText);
-        row = { ...row, socket: s?.socket ?? null, tdp: s?.tdp ?? null };
+        const specsPayload = s ? buildSpecsPayload('cpu', s) : null;
+        row = { 
+          ...row, 
+          socket: s?.socket ?? null, 
+          tdp: s?.tdp ?? null,
+          core_count: s?.core_count ?? null,
+          thread_count: s?.thread_count ?? null,
+          base_clock_ghz: s?.base_clock_ghz ?? null,
+          boost_clock_ghz: s?.boost_clock_ghz ?? null,
+          supported_ram_types: s?.supported_ram_types && s.supported_ram_types.length > 0
+            ? `{${s.supported_ram_types.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}`
+            : null,
+          specs: specsPayload
+        };
       } else if (category === 'gpu') {
         const s = extractGpuSpecs(compositeText);
-        const specsPayload = s ? {
-          chipset: s.chipset ?? null,
-          vram_gb: s.vram_gb ?? null,
-          tdp: s.tdp ?? null,
-          length_mm: s.length_mm ?? null,
-        } : null;
+        const specsPayload = s ? buildSpecsPayload('gpu', s) : null;
         row = { 
           ...row, 
           length_mm: s?.length_mm ?? null, 
@@ -440,24 +449,29 @@ export async function aggregate(
       } else if (category === 'ram') {
         const s = extractRamSpecs(compositeText);
         const ramType = s?.ram_type ?? (compositeText.toLowerCase().includes('ddr5') ? 'DDR5' : 'DDR4');
+        const ramFrequency = s?.frequency_mhz ?? (ramType === 'DDR5' ? 4800 : 3200);
+        const ramCapacity = s?.capacity_gb ?? null;
+        const ramKit = s?.kit_count ?? 1;
+        const ramCas = s?.cas_latency ?? null;
+        const specsPayload = buildSpecsPayload('ram', {
+          ram_type: ramType,
+          frequency_mhz: ramFrequency,
+          capacity_gb: ramCapacity,
+          kit_count: ramKit,
+          cas_latency: ramCas
+        });
         row = { 
           ...row, 
           ram_type: ramType, 
-          frequency_mhz: s?.frequency_mhz ?? (ramType === 'DDR5' ? 4800 : 3200),
-          capacity_gb: s?.capacity_gb ?? null,
-          kit_count: s?.kit_count ?? 1,
-          cas_latency: s?.cas_latency ?? null
+          frequency_mhz: ramFrequency,
+          capacity_gb: ramCapacity,
+          kit_count: ramKit,
+          cas_latency: ramCas,
+          specs: specsPayload
         };
       } else if (category === 'motherboard') {
         const s = extractMotherboardSpecs(compositeText, brand);
-        const specsPayload = s ? {
-          socket: s.socket ?? null,
-          chipset: s.chipset ?? null,
-          supported_ram_types: s.supported_ram_types ?? null,
-          max_ram_frequency: s.max_ram_frequency ?? null,
-          form_factor: s.form_factor ?? null,
-          ram_slots: s.ram_slots ?? null,
-        } : null;
+        const specsPayload = s ? buildSpecsPayload('motherboard', s) : null;
         row = { 
           ...row, 
           socket: s?.socket ?? null, 
@@ -470,26 +484,63 @@ export async function aggregate(
         };
       } else if (category === 'psu') {
         const s = extractPsuSpecs(compositeText);
+        const psuWatts = s?.wattage ?? null;
+        const psuEff = normalizeEfficiencyRating(s?.efficiency);
+        const psuMod = normalizeModularity(s?.modularity);
+        const psuForm = normalizePsuFormFactor(s?.form_factor);
+        const specsPayload = buildSpecsPayload('psu', {
+          wattage: psuWatts,
+          efficiency_rating: psuEff,
+          modular: psuMod,
+          psu_form_factor: psuForm
+        });
         row = { 
           ...row, 
-          wattage: s?.wattage ?? null,
-          efficiency_rating: normalizeEfficiencyRating(s?.efficiency),
-          modular: normalizeModularity(s?.modularity),
-          psu_form_factor: normalizePsuFormFactor(s?.form_factor)
+          wattage: psuWatts,
+          efficiency_rating: psuEff,
+          modular: psuMod,
+          psu_form_factor: psuForm,
+          specs: specsPayload
         };
       } else if (category === 'cooling') {
         const s = extractCoolingSpecs(compositeText, brand ?? undefined);
         const tags = s?.tags || [];
-        row = { ...row, tdp: s?.tdp ?? null, height_mm: s?.height_mm ?? null, tags: tags.length > 0 ? `{${tags.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null };
+        const specsPayload = s ? buildSpecsPayload('cooling', s) : null;
+        row = { 
+          ...row, 
+          tdp: s?.tdp ?? null, 
+          height_mm: s?.height_mm ?? null, 
+          tags: tags.length > 0 ? `{${tags.map((t: string) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null,
+          specs: specsPayload
+        };
       } else if (category === 'case') {
         const s = extractCaseSpecs(compositeText);
-        row = { ...row, max_gpu_length_mm: s?.max_gpu_length_mm ?? null, max_cooler_height_mm: s?.max_cooler_height_mm ?? null };
+        const specsPayload = s ? buildSpecsPayload('case', s) : null;
+        row = { 
+          ...row, 
+          max_gpu_length_mm: s?.max_gpu_length_mm ?? null, 
+          max_cooler_height_mm: s?.max_cooler_height_mm ?? null,
+          specs: specsPayload
+        };
       } else if (category === 'fan') {
         const s = extractFanSpecs(compositeText);
-        row = { ...row, size_mm: s?.size_mm ?? null, rgb: s?.rgb ?? null, pack_size: s?.pack_size ?? null };
+        const specsPayload = s ? buildSpecsPayload('fan', s) : null;
+        row = { 
+          ...row, 
+          size_mm: s?.size_mm ?? null, 
+          rgb: s?.rgb ?? null, 
+          pack_size: s?.pack_size ?? null,
+          specs: specsPayload
+        };
       } else if (category === 'thermal_paste') {
         const s = extractThermalPasteSpecs(compositeText);
-        row = { ...row, weight_grams: s?.weight_grams ?? null, paste_type: s?.paste_type ?? null };
+        const specsPayload = s ? buildSpecsPayload('thermal_paste', s) : null;
+        row = { 
+          ...row, 
+          weight_grams: s?.weight_grams ?? null, 
+          paste_type: s?.paste_type ?? null,
+          specs: specsPayload
+        };
       }
       // storage + misc categories: just slug/name/brand/category/is_active
 

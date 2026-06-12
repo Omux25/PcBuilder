@@ -33,3 +33,26 @@ export function setSql(mockSql: SqlFn): void {
 export function resetSql(): void {
   _sql = bunSql as unknown as SqlFn;
 }
+
+if (typeof process !== 'undefined') {
+  const isPostgresCloseError = (err: any) => {
+    return err && (
+      err.code === 'ERR_POSTGRES_CONNECTION_CLOSED' || 
+      (typeof err.message === 'string' && err.message.includes('Connection closed'))
+    );
+  };
+
+  process.on('unhandledRejection', (reason: any) => {
+    if (isPostgresCloseError(reason)) {
+      return;
+    }
+  });
+
+  process.on('uncaughtException', (err: any) => {
+    if (isPostgresCloseError(err)) {
+      return;
+    }
+    console.error('Uncaught Exception:', err);
+    process.exit(1);
+  });
+}

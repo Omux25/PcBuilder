@@ -88,6 +88,13 @@ async function shutdown(signal: string): Promise<void> {
   // Stop accepting new connections
   server.stop();
 
+  // Flush any remaining traffic logs in the buffer
+  try {
+    await trafficService.flushAllPending();
+  } catch (err) {
+    console.error('[shutdown] Failed to flush remaining traffic logs:', err);
+  }
+
   console.log('[shutdown] Server stopped.');
   process.exit(0);
 }

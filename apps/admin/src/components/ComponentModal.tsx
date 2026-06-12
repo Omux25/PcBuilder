@@ -13,23 +13,61 @@ import formLayout from './FormLayout.module.css';
 
 // Category-specific required fields
 const CATEGORY_FIELDS: Record<string, { key: string; label: string; type: 'text' | 'number'; placeholder: string }[]> = {
-  cpu: [{ key: 'socket', label: 'Socket', type: 'text', placeholder: 'Ex: AM5, LGA1700' }],
+  cpu: [
+    { key: 'socket', label: 'Socket', type: 'text', placeholder: 'Ex: AM5, LGA1700' },
+    { key: 'core_count', label: 'Nombre de cœurs', type: 'number', placeholder: 'Ex: 6' },
+    { key: 'thread_count', label: 'Nombre de threads', type: 'number', placeholder: 'Ex: 12' },
+    { key: 'base_clock_ghz', label: 'Fréquence de base (GHz)', type: 'number', placeholder: 'Ex: 3.7' },
+    { key: 'boost_clock_ghz', label: 'Fréquence boost (GHz)', type: 'number', placeholder: 'Ex: 4.6' },
+    { key: 'tdp', label: 'TDP (W)', type: 'number', placeholder: 'Ex: 65' },
+  ],
   motherboard: [
     { key: 'socket', label: 'Socket', type: 'text', placeholder: 'Ex: AM5' },
+    { key: 'chipset', label: 'Chipset', type: 'text', placeholder: 'Ex: B650' },
+    { key: 'form_factor', label: 'Format', type: 'text', placeholder: 'Ex: ATX, Micro-ATX' },
+    { key: 'supported_ram_types', label: 'RAM supportée (virgules)', type: 'text', placeholder: 'Ex: DDR5' },
     { key: 'max_ram_frequency', label: 'Fréq. RAM max (MHz)', type: 'number', placeholder: 'Ex: 6000' },
     { key: 'ram_slots', label: 'Slots RAM', type: 'number', placeholder: 'Ex: 4' },
     { key: 'm2_slots', label: 'Slots M.2', type: 'number', placeholder: 'Ex: 2' },
     { key: 'sata_ports', label: 'Ports SATA', type: 'number', placeholder: 'Ex: 4' },
   ],
-  gpu: [{ key: 'length_mm', label: 'Longueur (mm)', type: 'number', placeholder: 'Ex: 320' }],
-  ram: [
-    { key: 'frequency_mhz', label: 'Fréquence (MHz)', type: 'number', placeholder: 'Ex: 6000' },
-    { key: 'capacity_gb', label: 'Capacité (GB)', type: 'number', placeholder: 'Ex: 16' },
+  gpu: [
+    { key: 'chipset', label: 'Chipset', type: 'text', placeholder: 'Ex: RTX 4070' },
+    { key: 'vram_gb', label: 'VRAM (Go)', type: 'number', placeholder: 'Ex: 12' },
+    { key: 'tdp', label: 'TDP (W)', type: 'number', placeholder: 'Ex: 200' },
+    { key: 'length_mm', label: 'Longueur (mm)', type: 'number', placeholder: 'Ex: 320' },
   ],
-  psu: [{ key: 'wattage', label: 'Puissance (W)', type: 'number', placeholder: 'Ex: 850' }],
-  case: [{ key: 'max_gpu_length_mm', label: 'GPU max (mm)', type: 'number', placeholder: 'Ex: 380' }],
-  storage: [{ key: 'capacity_gb', label: 'Capacité (GB)', type: 'number', placeholder: 'Ex: 1000' }],
-  cooling: [],
+  ram: [
+    { key: 'ram_type', label: 'Type RAM', type: 'text', placeholder: 'Ex: DDR4, DDR5' },
+    { key: 'capacity_gb', label: 'Capacité (GB)', type: 'number', placeholder: 'Ex: 16' },
+    { key: 'frequency_mhz', label: 'Fréquence (MHz)', type: 'number', placeholder: 'Ex: 6000' },
+    { key: 'kit_count', label: 'Nombre de barrettes', type: 'number', placeholder: 'Ex: 2' },
+    { key: 'cas_latency', label: 'Latence CAS (CL)', type: 'number', placeholder: 'Ex: 30' },
+  ],
+  psu: [
+    { key: 'wattage', label: 'Puissance (W)', type: 'number', placeholder: 'Ex: 850' },
+    { key: 'psu_form_factor', label: 'Format PSU', type: 'text', placeholder: 'Ex: ATX, SFX' },
+    { key: 'efficiency_rating', label: 'Certification', type: 'text', placeholder: 'Ex: Gold, Platinum' },
+    { key: 'modular', label: 'Modularité', type: 'text', placeholder: 'Ex: Full, Semi, Non' },
+  ],
+  case: [
+    { key: 'form_factor', label: 'Format supporté', type: 'text', placeholder: 'Ex: ATX, Micro-ATX' },
+    { key: 'supported_motherboards', label: 'CM supportées (virgules)', type: 'text', placeholder: 'Ex: ATX, Micro-ATX, Mini-ITX' },
+    { key: 'supported_psu_form_factors', label: 'PSU supportés (virgules)', type: 'text', placeholder: 'Ex: ATX, SFX' },
+    { key: 'max_gpu_length_mm', label: 'GPU max (mm)', type: 'number', placeholder: 'Ex: 380' },
+    { key: 'max_cooler_height_mm', label: 'Ventirad max (mm)', type: 'number', placeholder: 'Ex: 160' },
+  ],
+  storage: [
+    { key: 'capacity_gb', label: 'Capacité (GB)', type: 'number', placeholder: 'Ex: 1000' },
+    { key: 'interface_type', label: 'Interface', type: 'text', placeholder: 'Ex: NVMe, SATA' },
+    { key: 'read_speed_mbps', label: 'Vitesse lecture (Mo/s)', type: 'number', placeholder: 'Ex: 5000' },
+    { key: 'write_speed_mbps', label: 'Vitesse écriture (Mo/s)', type: 'number', placeholder: 'Ex: 4000' },
+  ],
+  cooling: [
+    { key: 'height_mm', label: 'Hauteur (mm)', type: 'number', placeholder: 'Ex: 154 (pour Air) ou 27 (épaisseur AIO)' },
+    { key: 'supported_sockets', label: 'Sockets supportés (virgules)', type: 'text', placeholder: 'Ex: LGA1700, AM5, AM4' },
+    { key: 'max_tdp', label: 'TDP max supporté (W)', type: 'number', placeholder: 'Ex: 250' },
+  ],
   fan: [],
   thermal_paste: [],
 };
@@ -67,16 +105,26 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
   useEffect(() => {
     if (isOpen) {
       if (component) {
-        // Map component data to form input shape
-        const formData: ComponentInput = {
-          name: component.name,
+        // Map component data to form input shape (including flat properties)
+        const formData: any = {
+          ...component,
           brand: component.brand ?? null,
-          category: component.category,
           description: component.description ?? undefined,
           release_year: component.release_year ?? new Date().getFullYear(),
           specs: (component.specs as Record<string, unknown>) ?? {},
-          is_active: component.is_active,
         };
+        if (Array.isArray(formData.supported_ram_types)) {
+          formData.supported_ram_types = formData.supported_ram_types.join(', ');
+        }
+        if (Array.isArray(formData.supported_motherboards)) {
+          formData.supported_motherboards = formData.supported_motherboards.join(', ');
+        }
+        if (Array.isArray(formData.supported_psu_form_factors)) {
+          formData.supported_psu_form_factors = formData.supported_psu_form_factors.join(', ');
+        }
+        if (Array.isArray(formData.supported_sockets)) {
+          formData.supported_sockets = formData.supported_sockets.join(', ');
+        }
         reset(formData);
       } else {
         reset({

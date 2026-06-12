@@ -22,7 +22,13 @@ export const baseComponentSchema = z.object({
   specs: z.record(z.string(), z.unknown()).default({}),
 });
 
-// ── Per-category specs ───────────────────────────────────────────────────────
+// Helper to preprocess comma-separated string inputs to arrays of strings
+const stringOrArrayToArray = (inner: z.ZodTypeAny = z.array(z.string().min(1))) => z.preprocess((val) => {
+  if (typeof val === 'string') {
+    return val.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  return val;
+}, inner);
 
 export const cpuSpecsSchema = baseComponentSchema.extend({
   category: z.literal('cpu'),
@@ -38,7 +44,7 @@ export const motherboardSpecsSchema = baseComponentSchema.extend({
   category: z.literal('motherboard'),
   socket: z.string().min(1, 'Socket requis'),
   form_factor: z.string().optional(),
-  supported_ram_types: z.array(z.string().min(1)).min(1, 'Au moins un type de RAM requis'),
+  supported_ram_types: stringOrArrayToArray(z.array(z.string().min(1)).min(1, 'Au moins un type de RAM requis')),
   max_ram_frequency: z.number(),
   ram_slots: z.number().int().min(1).optional(),
   m2_slots: z.number().int().min(0).optional(),
@@ -83,15 +89,15 @@ export const caseSpecsSchema = baseComponentSchema.extend({
   category: z.literal('case'),
   max_gpu_length_mm: z.number(),
   form_factor: z.string().optional(),
-  supported_motherboards: z.array(z.string().min(1)).optional(),
+  supported_motherboards: stringOrArrayToArray().optional(),
   max_cooler_height_mm: z.number().optional(),
-  supported_psu_form_factors: z.array(z.string().min(1)).optional(),
+  supported_psu_form_factors: stringOrArrayToArray().optional(),
 });
 
 export const coolingSpecsSchema = baseComponentSchema.extend({
   category: z.literal('cooling'),
   height_mm: z.number().optional(),
-  supported_sockets: z.array(z.string().min(1)).optional(),
+  supported_sockets: stringOrArrayToArray().optional(),
   max_tdp: z.number().int().positive().optional(),
 });
 

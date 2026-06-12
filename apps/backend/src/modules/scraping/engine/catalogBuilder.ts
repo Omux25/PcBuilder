@@ -42,6 +42,7 @@ import { loadAdminRules, matchesRule, type KeywordRule } from '../services/keywo
 import { getDynamicEnrichment } from '@shared/hardware/services/dynamicEnrichment';
 import { dbHardwareCache } from '../services/dynamicEnrichmentService.js';
 import { scrapeProductPage } from '../utils/deepScraper.js';
+import { buildSpecsPayload } from '@shared/hardware/specs/buildSpecs.js';
 
 // ── Case Negative Keyword Guard ───────────────────────────────────────────────
 // Any product title matching one of these keywords must NOT be categorised as a
@@ -306,9 +307,21 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
 
       if (category === 'cpu') {
         const specs = extractCpuSpecs(nameForExtraction);
+        const ramTypes = specs.supported_ram_types;
+        const specsPayload = buildSpecsPayload('cpu', specs);
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, socket, tdp, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'cpu', ${specs?.socket ?? null}, ${specs?.tdp ?? null}, ${listing.image_url}, true)
+          INSERT INTO components (
+            slug, name, brand, category, socket, tdp, image_url, is_active,
+            core_count, thread_count, base_clock_ghz, boost_clock_ghz, supported_ram_types, specs
+          )
+          VALUES (
+            ${slug}, ${cleanedName}, ${brand}, 'cpu', 
+            ${specs.socket ?? null}, ${specs.tdp ?? null}, ${listing.image_url}, true,
+            ${specs.core_count ?? null}, ${specs.thread_count ?? null},
+            ${specs.base_clock_ghz ?? null}, ${specs.boost_clock_ghz ?? null},
+            ${ramTypes && ramTypes.length > 0 ? `{${ramTypes.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}::text[],
+            ${specsPayload}
+          )
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
@@ -323,12 +336,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
           }
         }
 
-        const specsPayload = {
-          chipset: specs.chipset ?? null,
-          vram_gb: specs.vram_gb ?? null,
-          tdp: specs.tdp ?? null,
-          length_mm: specs.length_mm ?? null,
-        };
+        const specsPayload = buildSpecsPayload('gpu', specs);
         const rows = await sql`
           INSERT INTO components (slug, name, brand, category, length_mm, tdp, chipset, vram_gb, specs, image_url, is_active)
           VALUES (${slug}, ${cleanedName}, ${brand}, 'gpu', ${specs.length_mm}, ${specs.tdp}, ${specs.chipset}, ${specs.vram_gb}, ${specsPayload}, ${listing.image_url}, true)
@@ -355,17 +363,25 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
           }
         }
 
+        const specsPayload = buildSpecsPayload('ram', {
+          ram_type: ramType,
+          frequency_mhz: freqMhz,
+          kit_count: kitCount,
+          cas_latency: casLatency,
+          capacity_gb: capacityGb
+        });
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, ram_type, frequency_mhz, kit_count, cas_latency, capacity_gb, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'ram', ${ramType}, ${freqMhz}, ${kitCount}, ${casLatency}, ${capacityGb}, ${listing.image_url}, true)
+          INSERT INTO components (slug, name, brand, category, ram_type, frequency_mhz, kit_count, cas_latency, capacity_gb, specs, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'ram', ${ramType}, ${freqMhz}, ${kitCount}, ${casLatency}, ${capacityGb}, ${specsPayload}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
       } else if (category === 'storage') {
         const specs = extractStorageSpecs(nameForExtraction);
+        const specsPayload = buildSpecsPayload('storage', specs);
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, capacity_gb, interface_type, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'storage', ${specs.capacity_gb}, ${specs.interface_type}, ${listing.image_url}, true)
+          INSERT INTO components (slug, name, brand, category, capacity_gb, interface_type, specs, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'storage', ${specs.capacity_gb}, ${specs.interface_type}, ${specsPayload}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
@@ -389,14 +405,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
 
         // Use extracted specs or create with null fields — better to have the component than skip it
         const ramTypes = specs ? specs.supported_ram_types : null;
-        const specsPayload = specs ? {
-          socket: specs.socket ?? null,
-          chipset: specs.chipset ?? null,
-          supported_ram_types: specs.supported_ram_types ?? null,
-          max_ram_frequency: specs.max_ram_frequency ?? null,
-          form_factor: specs.form_factor ?? null,
-          ram_slots: specs.ram_slots ?? null,
-        } : null;
+        const specsPayload = specs ? buildSpecsPayload('motherboard', specs) : null;
         const rows = await sql`
           INSERT INTO components (slug, name, brand, category, socket, chipset, supported_ram_types, max_ram_frequency, ram_slots, form_factor, specs, image_url, is_active)
           VALUES (
@@ -437,18 +446,25 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         const modular = normalizeModularity(specs?.modularity);
         const psu_form_factor = normalizePsuFormFactor(specs?.form_factor);
 
+        const specsPayload = buildSpecsPayload('psu', {
+          wattage,
+          efficiency_rating,
+          modular,
+          psu_form_factor
+        });
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, wattage, efficiency_rating, modular, psu_form_factor, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'psu', ${wattage}, ${efficiency_rating}, ${modular}, ${psu_form_factor}, ${listing.image_url}, true)
+          INSERT INTO components (slug, name, brand, category, wattage, efficiency_rating, modular, psu_form_factor, specs, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'psu', ${wattage}, ${efficiency_rating}, ${modular}, ${psu_form_factor}, ${specsPayload}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
       } else if (category === 'cooling') {
         const specs = extractCoolingSpecs(nameForExtraction, brand ?? undefined);
         const tags = specs?.tags || [];
-        const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, tdp, height_mm, tags, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'cooling', ${specs?.tdp ?? null}, ${specs?.height_mm ?? null}, ${tags.length > 0 ? `{${tags.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}, ${listing.image_url}, true)
+        const specsPayload = specs ? buildSpecsPayload('cooling', specs) : null;
+          const rows = await sql`
+          INSERT INTO components (slug, name, brand, category, tdp, height_mm, tags, specs, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'cooling', ${specs?.tdp ?? null}, ${specs?.height_mm ?? null}, ${tags.length > 0 ? `{${tags.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}, ${specsPayload}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
@@ -470,9 +486,10 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
           const fanSpecs = extractFanSpecs(nameForExtraction);
           if (pollutantRedirect === 'fan') {
             const fSlug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
+            const fSpecsPayload = buildSpecsPayload('fan', fanSpecs);
             const fRows = await sql`
-              INSERT INTO components (slug, name, brand, category, size_mm, rgb, pack_size, image_url, is_active)
-              VALUES (${fSlug}, ${cleanedName}, ${brand}, 'fan', ${fanSpecs.size_mm}, ${fanSpecs.rgb}, ${fanSpecs.pack_size}, ${listing.image_url}, true)
+              INSERT INTO components (slug, name, brand, category, size_mm, rgb, pack_size, specs, image_url, is_active)
+              VALUES (${fSlug}, ${cleanedName}, ${brand}, 'fan', ${fanSpecs.size_mm}, ${fanSpecs.rgb}, ${fanSpecs.pack_size}, ${fSpecsPayload}, ${listing.image_url}, true)
               RETURNING id
             ` as { id: number }[];
             newId = fRows[0]?.id;
@@ -480,18 +497,20 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
             const cSpecs = extractCoolingSpecs(nameForExtraction, brand ?? undefined);
             const cTags = cSpecs?.tags || [];
             const cSlug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
+            const cSpecsPayload = cSpecs ? buildSpecsPayload('cooling', cSpecs) : null;
             const cRows = await sql`
-              INSERT INTO components (slug, name, brand, category, tdp, height_mm, tags, image_url, is_active)
-              VALUES (${cSlug}, ${cleanedName}, ${brand}, 'cooling', ${cSpecs?.tdp ?? null}, ${cSpecs?.height_mm ?? null}, ${cTags.length > 0 ? `{${cTags.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}, ${listing.image_url}, true)
+              INSERT INTO components (slug, name, brand, category, tdp, height_mm, tags, specs, image_url, is_active)
+              VALUES (${cSlug}, ${cleanedName}, ${brand}, 'cooling', ${cSpecs?.tdp ?? null}, ${cSpecs?.height_mm ?? null}, ${cTags.length > 0 ? `{${cTags.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : null}, ${cSpecsPayload}, ${listing.image_url}, true)
               RETURNING id
             ` as { id: number }[];
             newId = cRows[0]?.id;
           } else if (pollutantRedirect === 'thermal_paste') {
             const tSpecs = extractThermalPasteSpecs(nameForExtraction);
             const tSlug = generateUniqueSlug(componentSlug(brand, cleanedName), existingSlugs);
+            const tSpecsPayload = buildSpecsPayload('thermal_paste', tSpecs);
             const tRows = await sql`
-              INSERT INTO components (slug, name, brand, category, weight_grams, paste_type, image_url, is_active)
-              VALUES (${tSlug}, ${cleanedName}, ${brand}, 'thermal_paste', ${tSpecs.weight_grams}, ${tSpecs.paste_type}, ${listing.image_url}, true)
+              INSERT INTO components (slug, name, brand, category, weight_grams, paste_type, specs, image_url, is_active)
+              VALUES (${tSlug}, ${cleanedName}, ${brand}, 'thermal_paste', ${tSpecs.weight_grams}, ${tSpecs.paste_type}, ${tSpecsPayload}, ${listing.image_url}, true)
               RETURNING id
             ` as { id: number }[];
             newId = tRows[0]?.id;
@@ -514,11 +533,11 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
             }
           }
 
-          const specsPayload = {
+          const specsPayload = buildSpecsPayload('case', {
             max_gpu_length_mm,
-            max_cpu_cooler_height_mm,
-            form_factors
-          };
+            max_cooler_height_mm: max_cpu_cooler_height_mm,
+            supported_motherboards: form_factors
+          });
 
           const rows = await sql`
             INSERT INTO components (slug, name, brand, category, max_gpu_length_mm, max_cooler_height_mm, supported_motherboards, specs, image_url, is_active)
@@ -529,23 +548,25 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         }
       } else if (category === 'fan') {
         const specs = extractFanSpecs(nameForExtraction);
+        const specsPayload = buildSpecsPayload('fan', specs);
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, size_mm, rgb, pack_size, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'fan', ${specs.size_mm}, ${specs.rgb}, ${specs.pack_size}, ${listing.image_url}, true)
+          INSERT INTO components (slug, name, brand, category, size_mm, rgb, pack_size, specs, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'fan', ${specs.size_mm}, ${specs.rgb}, ${specs.pack_size}, ${specsPayload}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
       } else if (category === 'thermal_paste') {
         const specs = extractThermalPasteSpecs(nameForExtraction);
+        const specsPayload = buildSpecsPayload('thermal_paste', specs);
         const rows = await sql`
-          INSERT INTO components (slug, name, brand, category, weight_grams, paste_type, image_url, is_active)
-          VALUES (${slug}, ${cleanedName}, ${brand}, 'thermal_paste', ${specs.weight_grams}, ${specs.paste_type}, ${listing.image_url}, true)
+          INSERT INTO components (slug, name, brand, category, weight_grams, paste_type, specs, image_url, is_active)
+          VALUES (${slug}, ${cleanedName}, ${brand}, 'thermal_paste', ${specs.weight_grams}, ${specs.paste_type}, ${specsPayload}, ${listing.image_url}, true)
           RETURNING id
         ` as { id: number }[];
         newId = rows[0]?.id;
       }
 
-      if (!newId) { skipped++; await logger.error(`[CATALOG] Skipped: category=${category} name="${cleanedName}" brand="${brand}"`); } else {
+      if (!newId) { skipped++; await logger.info(`[CATALOG] Skipped non-hardware category component: category=${category} name="${cleanedName}" brand="${brand}"`); } else {
         existingSlugs.add(slug);
         existingComponents.push({ id: newId, name: cleanedName, brand, category });
         await sql`

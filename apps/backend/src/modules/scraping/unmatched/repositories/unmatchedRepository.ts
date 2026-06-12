@@ -97,7 +97,7 @@ export class UnmatchedRepository {
     // This expects listing objects but we can fetch them or pass them
     // For simplicity, let's fetch them in the service or here
     const listings = (await tx`
-      SELECT id, retailer_id, product_url, scraped_name
+      SELECT id, retailer_id, product_url, scraped_name, scraped_price
       FROM unmatched_listings
       WHERE id IN ${bunSql(listingIds)}
     `) as any[];
@@ -116,6 +116,18 @@ export class UnmatchedRepository {
         WHERE id = ${listing.id}
       `;
       await tx`DELETE FROM unmatched_suggestions WHERE unmatched_listing_id = ${listing.id}`;
+
+      // Insert/update price immediately so the catalog reflects it!
+      if (listing.scraped_price !== null && listing.scraped_price !== undefined) {
+        await tx`
+          INSERT INTO prices (component_id, retailer_id, product_url, price, in_stock, last_updated)
+          VALUES (${componentId}, ${listing.retailer_id}, ${listing.product_url}, ${listing.scraped_price}, true, NOW())
+          ON CONFLICT (component_id, retailer_id, product_url) DO UPDATE SET
+            price = EXCLUDED.price,
+            in_stock = true,
+            last_updated = NOW()
+        `;
+      }
     }
     return listings.length;
   }
@@ -274,6 +286,18 @@ export class UnmatchedRepository {
         SET status = 'linked', linked_component_id = ${componentId}
         WHERE id = ${id}
       `;
+
+      // Insert/update price immediately so the catalog reflects it!
+      if (listing.scraped_price !== null && listing.scraped_price !== undefined) {
+        await tx`
+          INSERT INTO prices (component_id, retailer_id, product_url, price, in_stock, last_updated)
+          VALUES (${componentId}, ${listing.retailer_id}, ${listing.product_url}, ${listing.scraped_price}, true, NOW())
+          ON CONFLICT (component_id, retailer_id, product_url) DO UPDATE SET
+            price = EXCLUDED.price,
+            in_stock = true,
+            last_updated = NOW()
+        `;
+      }
 
       return mappings[0].id;
     });

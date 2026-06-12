@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { describe, test, expect, beforeEach, afterAll } from 'bun:test';
 import { aggregate, setSql, resetSql } from '../aggregator.js';
+import { setSql as setLoggerSql, resetSql as resetLoggerSql } from '../utils/logger.js';
 import type { ScrapedPrice } from '../scrapers/baseScraper.js';
 
 // ── Sample data ───────────────────────────────────────────────────────────────
@@ -55,10 +56,12 @@ function makeThrowingSql() {
 
 beforeEach(() => {
   resetSql();
+  setLoggerSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
 });
 
 afterAll(() => {
   resetSql();
+  resetLoggerSql();
 });
 
 // ── aggregate() — matched products ───────────────────────────────────────────

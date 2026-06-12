@@ -106,7 +106,7 @@ describe('Preservation: app.ts never imported the dead route files', () => {
 describe('Preservation: Bulk import per-row error handling is intact', () => {
   test('admin/components.ts import handler still has per-row try/catch', async () => {
     const src = await readFile(
-      join(import.meta.dirname, '../modules/catalog/controllers/adminComponentController.ts'),
+      join(import.meta.dirname, '../modules/catalog/controllers/componentController.ts'),
       'utf-8'
     );
     expect(src).toContain('results.imported++');

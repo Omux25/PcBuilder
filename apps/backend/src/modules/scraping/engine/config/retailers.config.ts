@@ -58,7 +58,7 @@ export const RETAILER_SCRAPERS: RetailerScraperConfig[] = [
         run: (retailer_id: number) => new SetupGameScraper().scrapeAllCategories(retailer_id),
     },
     {
-        baseUrl: 'https://pcgamercasa.ma',
+        baseUrl: 'https://www.pcgamercasa.ma',
         name: 'PC Gamer Casa',
         run: (retailer_id: number) => new PcGamerCasaScraper().scrapeAllCategories(retailer_id),
     },

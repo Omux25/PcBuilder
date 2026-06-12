@@ -10,26 +10,64 @@ export interface TrafficLogEntry {
 }
 
 const MAX_LOGS = 10000;
+const MAX_QUEUE_SIZE = 100;
+const FLUSH_INTERVAL_MS = 10000; // 10 seconds
+
+const logQueue: TrafficLogEntry[] = [];
+let flushTimeout: Timer | null = null;
+
+async function flushLogs() {
+  if (flushTimeout) {
+    clearTimeout(flushTimeout);
+    flushTimeout = null;
+  }
+
+  if (logQueue.length === 0) return;
+
+  const batch = [...logQueue];
+  logQueue.length = 0;
+
+  const sql = getSql();
+  try {
+    const mappedRows = batch.map(entry => ({
+      ip: entry.ip ?? null,
+      method: entry.method,
+      path: entry.path,
+      user_agent: entry.userAgent ?? null,
+      status_code: entry.statusCode,
+      response_time_ms: entry.responseTimeMs
+    }));
+
+    await sql`
+      INSERT INTO traffic_logs ${ sql(mappedRows) }
+    `;
+  } catch (err) {
+    console.error('[TrafficService] Failed to flush traffic logs batch:', err);
+  }
+}
 
 export const trafficService = {
   async logTraffic(entry: TrafficLogEntry) {
-    const sql = getSql();
-    try {
-      await sql`
-        INSERT INTO traffic_logs (
-          ip, method, path, user_agent, status_code, response_time_ms
-        ) VALUES (
-          ${entry.ip ?? null}, 
-          ${entry.method}, 
-          ${entry.path}, 
-          ${entry.userAgent ?? null}, 
-          ${entry.statusCode}, 
-          ${entry.responseTimeMs}
-        )
-      `;
-    } catch (err) {
-      console.error('[TrafficService] Failed to insert traffic log', err);
+    logQueue.push(entry);
+    
+    if (logQueue.length >= MAX_QUEUE_SIZE) {
+      flushLogs().catch(err => {
+        console.error('[TrafficService] Immediate flush failed:', err);
+      });
+    } else if (!flushTimeout) {
+      flushTimeout = setTimeout(() => {
+        flushLogs().catch(err => {
+          console.error('[TrafficService] Scheduled flush failed:', err);
+        });
+      }, FLUSH_INTERVAL_MS) as any;
+      if (flushTimeout && typeof flushTimeout.unref === 'function') {
+        flushTimeout.unref();
+      }
     }
+  },
+
+  async flushAllPending() {
+    await flushLogs();
   },
 
   async trimTrafficLogs() {

@@ -18,11 +18,25 @@ import * as fc from 'fast-check';
 import { Hono } from 'hono';
 import jwt from 'jsonwebtoken';
 import { adminRouter } from '../../modules/admin/admin.routes.js';
+import { setSql, resetSql } from '../../core/db/index.js';
 
 const TEST_SECRET = 'pbt-logs-test-secret';
 
-beforeAll(() => { process.env.JWT_SECRET = TEST_SECRET; });
-afterAll(()  => { delete process.env.JWT_SECRET; });
+beforeAll(() => {
+  process.env.JWT_SECRET = TEST_SECRET;
+  setSql((strings: TemplateStringsArray, ..._values: unknown[]) => {
+    const query = strings.join('?').toLowerCase();
+    if (query.includes('count')) {
+      return Promise.resolve([{ total: 0 }]);
+    }
+    return Promise.resolve([]);
+  });
+});
+
+afterAll(() => {
+  delete process.env.JWT_SECRET;
+  resetSql();
+});
 
 function makeApp() {
   const app = new Hono();
