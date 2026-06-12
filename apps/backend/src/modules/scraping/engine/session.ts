@@ -161,15 +161,16 @@ async function runDataQualityPass(sql: SqlFn): Promise<void> {
 export async function runScrapingSession(targetRetailerId?: number): Promise<void> {
   const sql = getSql();
 
-  // Normalize a URL to just its origin (scheme + hostname, no path, no trailing slash).
+  // Normalize a URL to just its origin (scheme + hostname, no path, no trailing slash),
+  // and strip "www." subdomain to prevent matching failures between domains with/without it.
   // e.g. "https://setupgame.ma/components" → "https://setupgame.ma"
-  //      "https://www.ultrapc.ma/"         → "https://www.ultrapc.ma"
+  //      "https://www.ultrapc.ma/"         → "https://ultrapc.ma"
   function normalizeUrl(url: string): string {
     try {
       const { origin } = new URL(url.startsWith('http') ? url : `https://${url}`);
-      return origin;
+      return origin.replace('://www.', '://');
     } catch {
-      return url.replace(/\/+$/, ''); // fallback: just strip trailing slashes
+      return url.replace('://www.', '://').replace(/\/+$/, ''); // fallback: just strip trailing slashes
     }
   }
 
