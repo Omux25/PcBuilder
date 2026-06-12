@@ -3,30 +3,14 @@
  * Shows all 8 categories as cards with a count and link to browse.
  */
 
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getComponentCounts } from '../api';
 import { CategoryIcon } from '../components/CategoryIcon';
 import type { ComponentCategory } from '../types';
-import { CATEGORY_LABELS, CATEGORY_ORDER, CORE_CATEGORIES, CATEGORY_GROUPS } from '../types';
+import { CATEGORY_LABELS, CORE_CATEGORIES, CATEGORY_GROUPS } from '../types';
 import { UI } from '../ui-strings';
 import styles from './ComponentsIndex.module.css';
 
-interface CategoryStat {
-  category: ComponentCategory;
-  count: number;
-}
-
 export function ComponentsIndex() {
-  const [stats, setStats] = useState<Record<ComponentCategory, number>>({} as any);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getComponentCounts()
-      .then(setStats)
-      .finally(() => setLoading(false));
-  }, []);
-
   const renderGrid = (categories: ComponentCategory[], isCore = false) => (
     <div className={`${styles.grid} ${isCore ? styles.coreGrid : ''}`}>
       {categories.map(cat => (
@@ -39,9 +23,6 @@ export function ComponentsIndex() {
           </div>
           <div className={styles.cardInfo}>
             <h2 className={styles.cardTitle}>{CATEGORY_LABELS[cat]}</h2>
-            <p className={styles.cardCount}>
-              {loading ? '…' : UI.componentsIndex.count(stats[cat] ?? 0)}
-            </p>
           </div>
           <span className={styles.cardArrow}>→</span>
         </Link>

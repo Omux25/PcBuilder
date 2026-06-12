@@ -91,7 +91,7 @@ beforeEach(() => {
         { id: 10, base_url: 'https://www.ultrapc.ma' },
         { id: 11, base_url: 'https://nextlevelpc.ma' },
         { id: 13, base_url: 'https://setupgame.ma' },
-        { id: 14, base_url: 'https://www.pcgamercasa.ma' },
+        { id: 14, base_url: 'https://pcgamercasa.ma' },
       ]);
     }
     if (query.includes('pg_try_advisory_xact_lock')) {
