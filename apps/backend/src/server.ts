@@ -9,6 +9,7 @@
 import { app } from './app.js';
 import { startRefreshTokenCleanup, stopRefreshTokenCleanup } from './modules/auth/auth.routes.js';
 import { trafficService } from './modules/traffic/traffic.service.js';
+import { getSql } from './core/db/index.js';
 
 // ── Startup validation ────────────────────────────────────────────────────────
 // Fail fast on missing required environment variables rather than silently
@@ -67,6 +68,12 @@ if (process.env.ENABLE_SCHEDULER === 'true') {
 }
 
 console.log(`Server running on http://localhost:${server.port}`);
+
+// Pre-warm the database connection pool on startup
+const sql = getSql();
+sql`SELECT 1`
+  .then(() => console.log('[startup] Database connection pool pre-warmed successfully.'))
+  .catch((err) => console.error('[startup] Database pre-warm failed:', err));
 
 // ── Graceful shutdown ─────────────────────────────────────────────────────────
 // Handle SIGTERM (Docker stop, Kubernetes) and SIGINT (Ctrl+C) gracefully.

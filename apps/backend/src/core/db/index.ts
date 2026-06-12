@@ -8,7 +8,7 @@
  *   - A clear import path: `from '../core/db/index.js'`
  */
 
-import { sql as bunSql } from 'bun';
+import { SQL } from 'bun';
 
 export type SqlFn = {
   (strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
@@ -17,7 +17,25 @@ export type SqlFn = {
   unsafe(query: string, params?: unknown[]): Promise<unknown[]>;
 };
 
-let _sql: SqlFn = bunSql as unknown as SqlFn;
+// Configure SQL connection pool with optimization parameters
+const dbUrl = process.env.DATABASE_URL;
+const config: any = {
+  max: 10,                 // Keep up to 10 connections warm in the pool
+  idleTimeout: 30,         // Keep idle connections open for 30 seconds
+  connectionTimeout: 5,    // Fail fast if database is unreachable
+};
+
+if (dbUrl) {
+  config.url = dbUrl;
+} else {
+  config.host = process.env.PGHOST;
+  config.port = Number(process.env.PGPORT) || 5432;
+  config.database = process.env.PGDATABASE;
+  config.username = process.env.PGUSER;
+  config.password = process.env.PGPASSWORD;
+}
+
+let _sql: SqlFn = new SQL(config) as unknown as SqlFn;
 
 /** Returns the current SQL tagged template function. */
 export function getSql(): SqlFn {
@@ -31,8 +49,9 @@ export function setSql(mockSql: SqlFn): void {
 
 /** Resets the SQL function back to the real Bun.sql. */
 export function resetSql(): void {
-  _sql = bunSql as unknown as SqlFn;
+  _sql = new SQL(config) as unknown as SqlFn;
 }
+
 
 if (typeof process !== 'undefined') {
   const isPostgresCloseError = (err: any) => {
