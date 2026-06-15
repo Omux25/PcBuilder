@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { writeFile, readFile, access } from 'node:fs/promises';
+import { writeFile, readFile, access, mkdir } from 'node:fs/promises';
 import { getSql } from '../db/index.js';
 import { logger } from '../../modules/scraping/engine/utils/logger.js';
 
@@ -116,6 +116,8 @@ export class CurationPersistenceService {
         dismissed
       };
 
+      // Ensure seed directory exists (may be missing in Docker containers)
+      await mkdir(SEED_DIR, { recursive: true });
       // Write to curated_catalog.json
       await writeFile(CURATED_CATALOG_PATH, JSON.stringify(payload, null, 2), 'utf-8');
       await logger.info(`[CURATION] Successfully exported curated catalog: ${components.length} components, ${mappings.length} mappings, ${dismissed.length} dismissals.`);

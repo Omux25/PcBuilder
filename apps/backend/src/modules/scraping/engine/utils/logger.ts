@@ -10,25 +10,26 @@
  * Requirements: 9.1, 9.2
  */
 
-import { sql as bunSql } from 'bun';
+import { getSql } from '../../../../core/db/index.js';
 
 export type LogLevel = 'INFO' | 'WARNING' | 'ERROR';
 
 // ── Dependency injection ──────────────────────────────────────────────────────
-// Same pattern as componentService.ts — tests inject a mock via setSql().
+// Allows unit tests to inject a mock via setSql() without touching the real DB.
+// In production the logger always calls getSql() which uses the shared pool.
 
 type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>;
 
-let _sql: SqlFn = bunSql as unknown as SqlFn;
+let _mockSql: SqlFn | null = null;
 
 /** Replace the SQL executor — used in unit tests to inject a mock. */
 export function setSql(mockSql: SqlFn): void {
-  _sql = mockSql;
+  _mockSql = mockSql;
 }
 
-/** Reset the SQL executor back to the real Bun.sql — call in afterEach/afterAll. */
+/** Reset the SQL executor back to the real getSql() — call in afterEach/afterAll. */
 export function resetSql(): void {
-  _sql = bunSql as unknown as SqlFn;
+  _mockSql = null;
 }
 
 // ── Core log function ─────────────────────────────────────────────────────────
@@ -44,7 +45,8 @@ async function log(level: LogLevel, message: string, site?: string): Promise<voi
   console.log(`[${ts}] ${levelPad} ${message}`);
 
   try {
-    await _sql`
+    const sql = (_mockSql ?? getSql()) as SqlFn;
+    await sql`
       INSERT INTO scraper_logs (level, site, message)
       VALUES (${level}, ${site ?? null}, ${message})
     `;

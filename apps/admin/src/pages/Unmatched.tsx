@@ -60,6 +60,7 @@ export function Unmatched() {
   // ── Reprocess ─────────────────────────────────────────────────────────────
   const [reprocessing, setReprocessing] = useState(false);
   const [confirmingCategories, setConfirmingCategories] = useState(false);
+  const [confirmingCategory, setConfirmingCategory] = useState<string | null>(null);
 
   // ── Unknown section refresh trigger ──────────────────────────────────────
   const [unknownRefresh, setUnknownRefresh] = useState(0);
@@ -240,6 +241,8 @@ export function Unmatched() {
 
   // ── Category confirmation handler ──────────────────────────────────────────
   async function handleConfirmCategory(category: string) {
+    if (confirmingCategory) return;
+    setConfirmingCategory(category);
     try {
       const result = await bulkConfirmAllWithCategories(category);
       showToast({
@@ -259,6 +262,8 @@ export function Unmatched() {
       });
     } catch (err) {
       showToast({ message: getErrorMessage(err), type: 'error' });
+    } finally {
+      setConfirmingCategory(null);
     }
   }
 
@@ -615,6 +620,7 @@ export function Unmatched() {
                 summary={entry}
                 state={categoryState.get(entry.category!)}
                 isOpen={accordionOpen.get(entry.category!) ?? false}
+                isConfirming={confirmingCategory === entry.category!}
                 filterConfidence={filterConfidence}
                 filterHasExisting={filterHasExisting}
                 onToggle={() => toggleAccordion(entry.category!)}
@@ -640,6 +646,7 @@ export function Unmatched() {
             isOpen={true}
             hideHeader={true}
             expandAllGroups={true}
+            isConfirming={confirmingCategory === activeCategory}
             filterConfidence={filterConfidence}
             filterHasExisting={filterHasExisting}
             onToggle={() => {}}
