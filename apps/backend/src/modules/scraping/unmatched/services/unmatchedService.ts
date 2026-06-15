@@ -76,7 +76,11 @@ export class UnmatchedService {
   async bulkUpdateCategory(ids: number[], category: string | null) {
     const count = await this.repository.bulkUpdateManualCategory(ids, category);
     if (count > 0) {
-      await runSuggestionPreprocessing(true);
+      // Fire-and-forget: runs in background so it never blocks the HTTP response.
+      // A synchronous await here was blocking for minutes on large datasets.
+      runSuggestionPreprocessing(true).catch((err: Error) => {
+        logger.error(`[SUGGESTION] Background preprocessing failed after bulkUpdateCategory: ${err.message}`);
+      });
     }
     CurationPersistenceService.exportCuratedCatalog().catch(err => {
       logger.error(`[CURATION] Background export failed on bulkUpdateCategory: ${err.message}`);

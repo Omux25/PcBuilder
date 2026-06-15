@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronRight, Link2, CheckCircle } from 'lucide-react';
+import { ChevronDown, ChevronRight, Link2, CheckCircle, RefreshCw } from 'lucide-react';
 import { CanonicalGroupRow } from './CanonicalGroupRow';
 import { ConfirmDialog } from './ConfirmDialog';
 import { CreateAndLinkModal } from './CreateAndLinkModal';
@@ -42,6 +42,8 @@ interface Props {
     expandAllGroups?: boolean;
     filterConfidence?: string;
     filterHasExisting?: string;
+    /** True while bulkConfirmAllWithCategories is running for this category. */
+    isConfirming?: boolean;
 }
 
 export function CategoryAccordion({
@@ -59,6 +61,7 @@ export function CategoryAccordion({
     expandAllGroups = false,
     filterConfidence = '',
     filterHasExisting = '',
+    isConfirming = false,
 }: Props) {
     const [confirmAssociate, setConfirmAssociate] = useState(false);
     const [createLinkTarget, setCreateLinkTarget] = useState<CanonicalGroup | null>(null);
@@ -230,22 +233,30 @@ export function CategoryAccordion({
                         {highConfidenceCount > 0 && onConfirmCategory && (
                             <button
                                 onClick={handleConfirmCategoryClick}
-                                title={`Confirmer et créer automatiquement les suggestions haute confiance pour la catégorie ${label}`}
+                                disabled={isConfirming}
+                                title={isConfirming ? 'Confirmation en cours...' : `Confirmer et créer automatiquement les suggestions haute confiance pour la catégorie ${label}`}
                                 style={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     gap: '4px',
                                     padding: '4px 10px',
-                                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                                    color: '#fff',
+                                    background: isConfirming
+                                        ? 'var(--surface-3)'
+                                        : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                    color: isConfirming ? 'var(--text-dim)' : '#fff',
                                     border: 'none',
                                     borderRadius: 'var(--radius)',
                                     fontSize: '12px',
                                     fontWeight: 600,
-                                    cursor: 'pointer',
+                                    cursor: isConfirming ? 'not-allowed' : 'pointer',
+                                    opacity: isConfirming ? 0.7 : 1,
+                                    transition: 'all 0.2s',
                                 }}
                             >
-                                <CheckCircle size={12} /> Confirmer ({highConfidenceCount})
+                                {isConfirming
+                                    ? <><RefreshCw size={12} className="spin" /> Confirmation...</>
+                                    : <><CheckCircle size={12} /> Confirmer ({highConfidenceCount})</>
+                                }
                             </button>
                         )}
                     </div>
@@ -294,21 +305,29 @@ export function CategoryAccordion({
                             {highConfidenceCount > 0 && onConfirmCategory && (
                                 <button
                                     onClick={handleConfirmCategoryClick}
+                                    disabled={isConfirming}
                                     style={{
                                         display: 'inline-flex',
                                         alignItems: 'center',
                                         gap: '4px',
                                         padding: '6px 14px',
-                                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                                        color: '#fff',
+                                        background: isConfirming
+                                            ? 'var(--surface-3)'
+                                            : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                        color: isConfirming ? 'var(--text-dim)' : '#fff',
                                         border: 'none',
                                         borderRadius: 'var(--radius)',
                                         fontSize: '12px',
                                         fontWeight: 600,
-                                        cursor: 'pointer',
+                                        cursor: isConfirming ? 'not-allowed' : 'pointer',
+                                        opacity: isConfirming ? 0.7 : 1,
+                                        transition: 'all 0.2s',
                                     }}
                                 >
-                                    <CheckCircle size={12} /> Confirmer ({highConfidenceCount})
+                                    {isConfirming
+                                        ? <><RefreshCw size={12} className="spin" /> Confirmation...</>
+                                        : <><CheckCircle size={12} /> Confirmer ({highConfidenceCount})</>
+                                    }
                                 </button>
                             )}
                         </div>
