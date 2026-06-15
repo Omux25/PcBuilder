@@ -19,6 +19,7 @@ import { RefreshCw, Search, X, CheckCircle } from 'lucide-react';
 import { CategoryAccordion } from '../components/CategoryAccordion';
 import { UnknownSection } from '../components/UnknownSection';
 import { SearchOverrideView } from '../components/SearchOverrideView';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import type {
   CategorySummaryEntry,
   CategoryState,
@@ -61,6 +62,7 @@ export function Unmatched() {
   const [reprocessing, setReprocessing] = useState(false);
   const [confirmingCategories, setConfirmingCategories] = useState(false);
   const [confirmingCategory, setConfirmingCategory] = useState<string | null>(null);
+  const [confirmAllDialog, setConfirmAllDialog] = useState(false);
 
   // ── Unknown section refresh trigger ──────────────────────────────────────
   const [unknownRefresh, setUnknownRefresh] = useState(0);
@@ -217,10 +219,6 @@ export function Unmatched() {
 
   async function handleConfirmCategories() {
     if (confirmingCategories) return;
-    if (!window.confirm("Êtes-vous sûr de vouloir confirmer et créer automatiquement des composants pour TOUS les produits avec catégories ? Cette action associera les correspondances et créera des entrées de catalogue propres pour les nouveaux produits.")) {
-      return;
-    }
-
     setConfirmingCategories(true);
     try {
       const result = await bulkConfirmAllWithCategories();
@@ -358,7 +356,7 @@ export function Unmatched() {
           </div>
 
           <button
-            onClick={handleConfirmCategories}
+            onClick={() => { if (!confirmingCategories) setConfirmAllDialog(true); }}
             disabled={confirmingCategories}
             title="Confirmer et créer automatiquement tous les produits avec une confiance ÉLEVÉE ou une catégorie manuelle"
             style={{
@@ -658,6 +656,17 @@ export function Unmatched() {
           />
         )}
       </div>
+
+      {/* Global confirm-all dialog */}
+      {confirmAllDialog && (
+        <ConfirmDialog
+          title="Confirmer toutes les hautes confiances"
+          message="Créer automatiquement des composants pour TOUS les produits haute confiance ou avec catégorie manuelle ? Les correspondances existantes seront liées, les nouvelles créées."
+          confirmLabel="Confirmer"
+          onConfirm={() => { setConfirmAllDialog(false); handleConfirmCategories(); }}
+          onCancel={() => setConfirmAllDialog(false)}
+        />
+      )}
     </div>
   );
 }

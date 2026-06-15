@@ -64,6 +64,7 @@ export function CategoryAccordion({
     isConfirming = false,
 }: Props) {
     const [confirmAssociate, setConfirmAssociate] = useState(false);
+    const [confirmCategoryDialog, setConfirmCategoryDialog] = useState(false);
     const [createLinkTarget, setCreateLinkTarget] = useState<CanonicalGroup | null>(null);
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
     const label = CATEGORY_LABELS[category as ComponentCategory] ?? category;
@@ -147,11 +148,14 @@ export function CategoryAccordion({
 
     function handleConfirmCategoryClick(e: React.MouseEvent) {
         e.stopPropagation();
-        const msg = `Êtes-vous sûr de vouloir confirmer et créer automatiquement tous les produits avec catégorie pour la catégorie "${label}" ? Cette action associera les correspondances et créera de nouveaux composants pour les suggestions haute confiance.`;
-        if (window.confirm(msg)) {
-            if (onConfirmCategory) {
-                onConfirmCategory(category);
-            }
+        if (isConfirming) return;
+        setConfirmCategoryDialog(true);
+    }
+
+    function handleConfirmCategoryDialogConfirm() {
+        setConfirmCategoryDialog(false);
+        if (onConfirmCategory) {
+            onConfirmCategory(category);
         }
     }
 
@@ -410,6 +414,17 @@ export function CategoryAccordion({
                     confirmLabel={`Associer ${eligibleCount}`}
                     onConfirm={handleAssociateToutConfirm}
                     onCancel={() => setConfirmAssociate(false)}
+                />
+            )}
+
+            {/* Confirm per-category ingestion */}
+            {confirmCategoryDialog && (
+                <ConfirmDialog
+                    title={`Confirmer — ${label}`}
+                    message={`Créer automatiquement tous les composants haute confiance pour la catégorie "${label}" ? Les correspondances existantes seront liées, les nouvelles créées.`}
+                    confirmLabel={`Confirmer (${highConfidenceCount})`}
+                    onConfirm={handleConfirmCategoryDialogConfirm}
+                    onCancel={() => setConfirmCategoryDialog(false)}
                 />
             )}
 
