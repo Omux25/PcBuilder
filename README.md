@@ -61,6 +61,19 @@ To start the entire environment (Frontend, Backend, and Admin) in parallel, run 
 
 ---
 
+## 📚 Documentation Hub
+
+For detailed guides, architecture maps, and developer workflows, see:
+
+- 🗺️ [**Architecture Codemap**](./codemaps/architecture.md) — Core architecture, monorepo layout, and system relations.
+- 🧠 [**Backend Layout & Routes**](./codemaps/backend.md) — Hono subrouters, database pool configs, and controllers.
+- 🎨 [**Frontend State & Pages**](./codemaps/frontend.md) — React routing, active build context, and layout helpers.
+- 🗄️ [**Data Models & Schemas**](./codemaps/data.md) — Database entity maps and shared Zod validation schemas.
+- ⚙️ [**Catalog Ingestion Pipelines**](./docs/component_creation_pipelines.md) — Scraper aggregation, matching heuristics, and database sync.
+- 📂 [**Curated Files Catalog**](./docs/project_files_catalog.md) — Reference index of the primary source files.
+
+---
+
 ## 🔒 Security & Standards
 
 - **Environment Variables:** Each application contains a `.env.example`. Copy these to `.env` and fill in the required secrets.

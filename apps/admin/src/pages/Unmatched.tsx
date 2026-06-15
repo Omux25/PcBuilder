@@ -64,16 +64,29 @@ export function Unmatched() {
   // ── Unknown section refresh trigger ──────────────────────────────────────
   const [unknownRefresh, setUnknownRefresh] = useState(0);
 
+  // ── Filtering states ──────────────────────────────────────────────────────
+  const [filterConfidence, setFilterConfidence] = useState<string>('');
+  const [filterHasExisting, setFilterHasExisting] = useState<string>('');
+
   // ── Load category summary on mount ───────────────────────────────────────
   useEffect(() => {
-    loadSummary();
+    loadSummary(filterConfidence, filterHasExisting);
   }, []);
 
-  async function loadSummary() {
+  // ── Reload summary and clear cache when filters change ───────────────────
+  useEffect(() => {
+    loadSummary(filterConfidence, filterHasExisting);
+    setCategoryState(new Map());
+  }, [filterConfidence, filterHasExisting]);
+
+  async function loadSummary(confidence = filterConfidence, hasExisting = filterHasExisting) {
     setSummaryLoading(true);
     setSummaryError(null);
     try {
-      const data = await getCategoryUnmatchedSummary();
+      const data = await getCategoryUnmatchedSummary({
+        confidence: confidence ?? '',
+        hasExisting: hasExisting ?? '',
+      });
       const sorted = [...(data.categories ?? [])].sort((a, b) => {
         if (a.category === null) return 1;
         if (b.category === null) return -1;
@@ -222,6 +235,30 @@ export function Unmatched() {
       showToast({ message: getErrorMessage(err), type: 'error' });
     } finally {
       setConfirmingCategories(false);
+    }
+  }
+
+  // ── Category confirmation handler ──────────────────────────────────────────
+  async function handleConfirmCategory(category: string) {
+    try {
+      const result = await bulkConfirmAllWithCategories(category);
+      showToast({
+        message: `✓ Ingestion réussie pour la catégorie : ${result.created_components} composants créés, ${result.created_listings} listings associés aux nouveaux, ${result.linked_listings} listings associés aux existants.`,
+        type: 'success',
+      });
+      loadSummary(filterConfidence, filterHasExisting);
+      setCategoryState((prev) => {
+        const next = new Map(prev);
+        next.delete(category);
+        return next;
+      });
+      setAccordionOpen((prev) => {
+        const next = new Map(prev);
+        next.set(category, false);
+        return next;
+      });
+    } catch (err) {
+      showToast({ message: getErrorMessage(err), type: 'error' });
     }
   }
 
@@ -429,6 +466,81 @@ export function Unmatched() {
         </div>
       )}
 
+      {/* ── Filter Bar ────────────────────────────────────────────────────────── */}
+      {!summaryLoading && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '12px 24px',
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--surface-2)',
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>Filtrer par :</span>
+          
+          {/* Confidence Filter */}
+          <select
+            value={filterConfidence}
+            onChange={(e) => setFilterConfidence(e.target.value)}
+            style={{
+              padding: '6px 12px',
+              fontSize: '12px',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              background: 'var(--surface)',
+              color: 'var(--text)',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="">Toutes les confiances</option>
+            <option value="high">Confiance : Élevée</option>
+            <option value="medium">Confiance : Moyenne</option>
+            <option value="low">Confiance : Faible</option>
+            <option value="unknown">Confiance : Inconnue</option>
+          </select>
+
+          {/* Association / Match Filter */}
+          <select
+            value={filterHasExisting}
+            onChange={(e) => setFilterHasExisting(e.target.value)}
+            style={{
+              padding: '6px 12px',
+              fontSize: '12px',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              background: 'var(--surface)',
+              color: 'var(--text)',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="">Tous les statuts d'association</option>
+            <option value="true">Composant existant trouvé</option>
+            <option value="false">Nouveau composant à créer</option>
+          </select>
+
+          {(filterConfidence || filterHasExisting) && (
+            <button
+              onClick={() => {
+                setFilterConfidence('');
+                setFilterHasExisting('');
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--accent-blue)',
+                fontSize: '12px',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+                padding: 0,
+              }}
+            >
+              Réinitialiser
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ── Main Content (full width) ─────────────────────────────────────────── */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px', background: 'var(--bg)' }}>
         {/* Toast */}
@@ -474,6 +586,8 @@ export function Unmatched() {
         {searchQuery ? (
           <SearchOverrideView
             query={searchQuery}
+            filterConfidence={filterConfidence}
+            filterHasExisting={filterHasExisting}
             onGroupRemoved={(canonicalName) => handleGroupRemoved(canonicalName)}
             onToast={showToast}
           />
@@ -501,9 +615,12 @@ export function Unmatched() {
                 summary={entry}
                 state={categoryState.get(entry.category!)}
                 isOpen={accordionOpen.get(entry.category!) ?? false}
+                filterConfidence={filterConfidence}
+                filterHasExisting={filterHasExisting}
                 onToggle={() => toggleAccordion(entry.category!)}
                 onStateChange={(patch) => patchCategoryState(entry.category!, patch)}
                 onAssociateTout={handleAssociateTout}
+                onConfirmCategory={handleConfirmCategory}
                 onGroupRemoved={handleGroupRemoved}
                 onToast={showToast}
               />
@@ -523,9 +640,12 @@ export function Unmatched() {
             isOpen={true}
             hideHeader={true}
             expandAllGroups={true}
+            filterConfidence={filterConfidence}
+            filterHasExisting={filterHasExisting}
             onToggle={() => {}}
             onStateChange={(patch) => patchCategoryState(activeCategory, patch)}
             onAssociateTout={handleAssociateTout}
+            onConfirmCategory={handleConfirmCategory}
             onGroupRemoved={handleGroupRemoved}
             onToast={showToast}
           />

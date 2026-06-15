@@ -58,7 +58,9 @@ export class UnmatchedController {
   }
 
   async getByCategory(c: Context) {
-    const categories = await this.service.getCategorySummary();
+    const confidence = c.req.query('confidence')?.trim();
+    const hasExisting = c.req.query('hasExisting')?.trim();
+    const categories = await this.service.getCategorySummary({ confidence, hasExisting });
     return c.json({ categories });
   }
 
@@ -67,12 +69,14 @@ export class UnmatchedController {
     const retailerIdRaw = c.req.query('retailer_id');
     const retailerId = retailerIdRaw ? Number(retailerIdRaw) : null;
     const category = c.req.query('category')?.trim();
+    const confidence = c.req.query('confidence')?.trim();
+    const hasExisting = c.req.query('hasExisting')?.trim();
     const page = Math.max(1, Number(c.req.query('page') ?? 1) || 1);
     const limit = Math.min(100, Math.max(1, Number(c.req.query('limit') ?? 50) || 50));
     const offsetParam = c.req.query('offset');
     const offset = offsetParam !== undefined ? Number(offsetParam) : undefined;
 
-    const result = await this.service.getGroupedListings({ search, retailerId, category }, page, limit, offset);
+    const result = await this.service.getGroupedListings({ search, retailerId, category, confidence, hasExisting }, page, limit, offset);
     return c.json(result);
   }
 
@@ -212,10 +216,17 @@ export class UnmatchedController {
 
   async bulkConfirmCategories(c: Context) {
     const admin = c.get('admin') as { id: number } | undefined;
-    const result = await this.service.bulkConfirmAllWithCategories();
+    let category: string | undefined = undefined;
+    try {
+      const body = await c.req.json();
+      category = body.category;
+    } catch (e) {
+      category = c.req.query('category') || undefined;
+    }
+    const result = await this.service.bulkConfirmAllWithCategories(category);
 
     if (admin?.id) {
-      await logActivity(admin.id, 'bulk_confirm_categories', 'unmatched_listings', undefined, result);
+      await logActivity(admin.id, 'bulk_confirm_categories', 'unmatched_listings', undefined, { ...result, category });
     }
 
     return c.json(result);

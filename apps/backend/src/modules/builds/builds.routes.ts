@@ -1,9 +1,11 @@
 import { Hono } from 'hono';
 import { authMiddleware } from '../../core/middleware/auth.js';
 import { PresetController } from './controllers/presetController.js';
+import { ShareController } from './controllers/shareController.js';
 import { lookup } from 'node:dns/promises';
 
 const presetController = new PresetController();
+const shareController = new ShareController();
 
 async function isSafeUrl(urlStr: string): Promise<boolean> {
   try {
@@ -65,6 +67,8 @@ async function isSafeUrl(urlStr: string): Promise<boolean> {
 const buildsRouter = new Hono()
   .get('/presets', (c) => presetController.index(c))
   .get('/presets/:id', (c) => presetController.show(c))
+  .post('/share', (c) => shareController.share(c))
+  .get('/share/:id', (c) => shareController.retrieve(c))
   .get('/proxy-image', async (c) => {
     const imageUrl = c.req.query('url');
     if (!imageUrl) {
@@ -118,4 +122,4 @@ const adminRouter = new Hono()
   .put('/presets/:id', (c) => presetController.update(c))
   .delete('/presets/:id', (c) => presetController.delete(c));
 
-export { buildsRouter, adminRouter as adminBuildsRouter };
+export { buildsRouter, adminRouter as adminBuildsRouter, shareController };

@@ -84,10 +84,10 @@ export class UnmatchedService {
     return count;
   }
 
-  async bulkConfirmAllWithCategories() {
+  async bulkConfirmAllWithCategories(category?: string) {
     const sql = getSql();
     // 1. Fetch all pending listings with suggested categories
-    const listings = await this.repository.getPendingWithCategory();
+    const listings = await this.repository.getPendingWithCategory(category);
     if (listings.length === 0) {
       return { linked_listings: 0, created_components: 0, created_listings: 0 };
     }
@@ -244,8 +244,8 @@ export class UnmatchedService {
     return { linked_listings, created_components, created_listings };
   }
 
-  async getCategorySummary() {
-    return this.repository.getCategorySummary();
+  async getCategorySummary(filters?: { confidence?: string; hasExisting?: string }) {
+    return this.repository.getCategorySummary(filters);
   }
 
   async getGroupedListings(filters: UnmatchedListingFilter, page: number, limit: number, offsetParam?: number) {
@@ -273,7 +273,14 @@ export class UnmatchedService {
       groupMap.get(key)!.listings.push(row);
     }
 
-    const allGroups = [...groupMap.values()].sort((a, b) => b.listings.length - a.listings.length);
+    const allGroups = [...groupMap.values()].sort((a, b) => {
+      const aNotHigh = a.confidence !== 'high' ? 1 : 0;
+      const bNotHigh = b.confidence !== 'high' ? 1 : 0;
+      if (aNotHigh !== bNotHigh) {
+        return bNotHigh - aNotHigh;
+      }
+      return b.listings.length - a.listings.length;
+    });
     const total_groups = allGroups.length;
     const total_listings = rows.length;
     const paginatedGroups = allGroups.slice(offset, offset + limit);
