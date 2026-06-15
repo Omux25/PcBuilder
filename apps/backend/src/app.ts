@@ -12,7 +12,7 @@ import { secureHeaders } from 'hono/secure-headers';
 import { serveStatic } from 'hono/bun';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { catalogRouter, adminCatalogRouter } from './modules/catalog/catalog.routes.js';
-import { buildsRouter, adminBuildsRouter } from './modules/builds/builds.routes.js';
+import { buildsRouter, adminBuildsRouter, shareController } from './modules/builds/builds.routes.js';
 import { compatibilityRouter } from './modules/builds/compatibility.routes.js';
 import { healthRouter } from './modules/health/health.routes.js';
 import { adminRouter } from './modules/admin/admin.routes.js';
@@ -67,6 +67,9 @@ app.use('/api/*', cors({
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
 }));
+
+app.get('/b/:id', (c) => shareController.redirect(c));
+app.get('/share/:id', (c) => shareController.redirect(c));
 
 const routes = app
   // ── Public routes ─────────────────────────────────────────────────────────────

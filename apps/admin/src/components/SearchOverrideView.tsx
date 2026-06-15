@@ -22,11 +22,19 @@ const DEBOUNCE_MS = 300;
 
 interface Props {
     query: string;
+    filterConfidence?: string;
+    filterHasExisting?: string;
     onGroupRemoved: (canonicalName: string, category: string) => void;
     onToast: (toast: ToastState) => void;
 }
 
-export function SearchOverrideView({ query, onGroupRemoved, onToast }: Props) {
+export function SearchOverrideView({
+    query,
+    filterConfidence = '',
+    filterHasExisting = '',
+    onGroupRemoved,
+    onToast,
+}: Props) {
     const [groups, setGroups] = useState<CanonicalGroup[]>([]);
     const [totalGroups, setTotalGroups] = useState(0);
     const [loading, setLoading] = useState(false);
@@ -39,7 +47,12 @@ export function SearchOverrideView({ query, onGroupRemoved, onToast }: Props) {
         setLoading(true);
         setError(null);
         try {
-            const data = await getGroupedUnmatched({ search: q, limit: String(SEARCH_LIMIT) });
+            const data = await getGroupedUnmatched({
+                search: q,
+                limit: String(SEARCH_LIMIT),
+                confidence: filterConfidence,
+                hasExisting: filterHasExisting,
+            });
             setGroups((data.groups ?? []) as CanonicalGroup[]);
             setTotalGroups(data.total_groups ?? 0);
         } catch (err) {
@@ -47,7 +60,7 @@ export function SearchOverrideView({ query, onGroupRemoved, onToast }: Props) {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [filterConfidence, filterHasExisting]);
 
     useEffect(() => {
         if (debounceRef.current) clearTimeout(debounceRef.current);

@@ -291,3 +291,19 @@ export async function getPresets(useCase?: string): Promise<PresetBuild[]> {
   const data = await res.json();
   return data.presets as unknown as PresetBuild[];
 }
+
+/** Fetch a shared build configuration by ID. */
+export async function getSharedBuild(id: string): Promise<Record<string, number>> {
+  return request<Record<string, number>>(`/builds/share/${id}`);
+}
+
+/** Share/save a build configuration to get a short URL/code. */
+export async function shareBuild(buildIds: Record<string, number>): Promise<{ id: string; url: string }> {
+  return request<{ id: string; url: string }>('/builds/share', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(buildIds),
+  });
+}

@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronRight, Link2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Link2, CheckCircle } from 'lucide-react';
 import { CanonicalGroupRow } from './CanonicalGroupRow';
 import { ConfirmDialog } from './ConfirmDialog';
 import { CreateAndLinkModal } from './CreateAndLinkModal';
@@ -35,10 +35,13 @@ interface Props {
     onToggle: () => void;
     onStateChange: (patch: Partial<CategoryState>) => void;
     onAssociateTout: (canonicalNames: string[]) => void;
+    onConfirmCategory?: (category: string) => void;
     onGroupRemoved: (canonicalName: string) => void;
     onToast: (toast: ToastState) => void;
     hideHeader?: boolean;
     expandAllGroups?: boolean;
+    filterConfidence?: string;
+    filterHasExisting?: string;
 }
 
 export function CategoryAccordion({
@@ -49,10 +52,13 @@ export function CategoryAccordion({
     onToggle,
     onStateChange,
     onAssociateTout,
+    onConfirmCategory,
     onGroupRemoved,
     onToast,
     hideHeader = false,
     expandAllGroups = false,
+    filterConfidence = '',
+    filterHasExisting = '',
 }: Props) {
     const [confirmAssociate, setConfirmAssociate] = useState(false);
     const [createLinkTarget, setCreateLinkTarget] = useState<CanonicalGroup | null>(null);
@@ -71,6 +77,8 @@ export function CategoryAccordion({
                 category,
                 offset: String(offset),
                 limit: String(LOAD_SIZE),
+                confidence: filterConfidence,
+                hasExisting: filterHasExisting,
             });
             const newGroups = data.groups as CanonicalGroup[];
             onStateChange({
@@ -87,7 +95,7 @@ export function CategoryAccordion({
         } catch (err) {
             onStateChange({ loading: false, error: getErrorMessage(err) });
         }
-    }, [category, expandAllGroups, onStateChange, state]);
+    }, [category, expandAllGroups, onStateChange, state, filterConfidence, filterHasExisting]);
 
     // ── Fetch first batch on first open or if open on mount ──────────────────
     useEffect(() => {
@@ -134,6 +142,16 @@ export function CategoryAccordion({
         onAssociateTout(eligible.map((g) => g.canonical_name));
     }
 
+    function handleConfirmCategoryClick(e: React.MouseEvent) {
+        e.stopPropagation();
+        const msg = `Êtes-vous sûr de vouloir confirmer et créer automatiquement tous les produits avec catégorie pour la catégorie "${label}" ? Cette action associera les correspondances et créera de nouveaux composants pour les suggestions haute confiance.`;
+        if (window.confirm(msg)) {
+            if (onConfirmCategory) {
+                onConfirmCategory(category);
+            }
+        }
+    }
+
     // ── CreateAndLinkModal ────────────────────────────────────────────────────
     function handleCreateLinkSuccess(result: CreateAndLinkResult) {
         setCreateLinkTarget(null);
@@ -157,6 +175,7 @@ export function CategoryAccordion({
     }
 
     const eligibleCount = summary.high_confidence_linkable_count;
+    const highConfidenceCount = summary.high_confidence_count ?? 0;
 
     return (
         <>
@@ -186,28 +205,50 @@ export function CategoryAccordion({
                     <span style={{ color: 'var(--text-dim)', fontSize: '12px' }}>
                         {summary.group_count} groupe{summary.group_count !== 1 ? 's' : ''}
                     </span>
-                    {eligibleCount > 0 && (
-                        <button
-                            onClick={handleAssociateToutClick}
-                            title={`Associer ${eligibleCount} groupe${eligibleCount !== 1 ? 's' : ''} haute confiance`}
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '4px 10px',
-                                background: 'var(--success, #22c55e)',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: 'var(--radius)',
-                                fontSize: '12px',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                flexShrink: 0,
-                            }}
-                        >
-                            <Link2 size={12} /> Associer tout ({eligibleCount})
-                        </button>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                        {eligibleCount > 0 && (
+                            <button
+                                onClick={handleAssociateToutClick}
+                                title={`Associer ${eligibleCount} groupe${eligibleCount !== 1 ? 's' : ''} haute confiance`}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '4px 10px',
+                                    background: 'var(--success, #22c55e)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: 'var(--radius)',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                <Link2 size={12} /> Associer tout ({eligibleCount})
+                            </button>
+                        )}
+                        {highConfidenceCount > 0 && onConfirmCategory && (
+                            <button
+                                onClick={handleConfirmCategoryClick}
+                                title={`Confirmer et créer automatiquement les suggestions haute confiance pour la catégorie ${label}`}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '4px 10px',
+                                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: 'var(--radius)',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                <CheckCircle size={12} /> Confirmer ({highConfidenceCount})
+                            </button>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -221,32 +262,55 @@ export function CategoryAccordion({
                     overflow: 'hidden',
                     background: 'var(--surface)',
                 }}>
-                    {hideHeader && eligibleCount > 0 && (
+                    {hideHeader && (eligibleCount > 0 || (highConfidenceCount > 0 && onConfirmCategory)) && (
                         <div style={{
                             padding: '10px 14px',
                             borderBottom: '1px solid var(--border)',
                             display: 'flex',
                             justifyContent: 'flex-end',
+                            gap: '8px',
                             background: 'var(--bg)',
                         }}>
-                             <button
-                                onClick={handleAssociateToutClick}
-                                style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                    padding: '6px 14px',
-                                    background: 'var(--success, #22c55e)',
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: 'var(--radius)',
-                                    fontSize: '12px',
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                <Link2 size={12} /> Associer tout ({eligibleCount})
-                            </button>
+                            {eligibleCount > 0 && (
+                                <button
+                                    onClick={handleAssociateToutClick}
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '6px 14px',
+                                        background: 'var(--success, #22c55e)',
+                                        color: '#fff',
+                                        border: 'none',
+                                        borderRadius: 'var(--radius)',
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    <Link2 size={12} /> Associer tout ({eligibleCount})
+                                </button>
+                            )}
+                            {highConfidenceCount > 0 && onConfirmCategory && (
+                                <button
+                                    onClick={handleConfirmCategoryClick}
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '6px 14px',
+                                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                        color: '#fff',
+                                        border: 'none',
+                                        borderRadius: 'var(--radius)',
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    <CheckCircle size={12} /> Confirmer ({highConfidenceCount})
+                                </button>
+                            )}
                         </div>
                     )}
                     {loading && groups.length === 0 && (

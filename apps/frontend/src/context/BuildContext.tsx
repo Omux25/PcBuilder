@@ -11,7 +11,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import type { BuildConfig, Component, ComponentCategory, CompatibilityResult } from '../types';
 import { validateCompatibility } from '@shared/engine/compatibility.engine';
-import { getComponentsByIds } from '../api';
+import { getComponentsByIds, getSharedBuild } from '../api';
 import {
   saveBuildToStorage,
   loadBuildFromStorage,
@@ -56,9 +56,21 @@ export function BuildProvider({ children }: { children: ReactNode }) {
   // Restore build from URL params or localStorage on mount
   useEffect(() => {
     async function restoreBuild() {
-      const urlIds = decodeBuildFromUrl(window.location.search);
-      const storageIds = loadBuildFromStorage();
-      const idMap = Object.keys(urlIds).length > 0 ? urlIds : storageIds;
+      let idMap: Record<string, number> = {};
+      const params = new URLSearchParams(window.location.search);
+      const shareId = params.get('s');
+
+      if (shareId) {
+        try {
+          idMap = await getSharedBuild(shareId);
+        } catch (err) {
+          console.error('Failed to fetch shared build:', err);
+        }
+      } else {
+        const urlIds = decodeBuildFromUrl(window.location.search);
+        const storageIds = loadBuildFromStorage();
+        idMap = Object.keys(urlIds).length > 0 ? urlIds : storageIds;
+      }
       const ids = [...new Set(Object.values(idMap).filter(Boolean) as number[])];
 
       if (ids.length === 0) {

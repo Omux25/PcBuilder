@@ -317,6 +317,7 @@ export interface CategorySummaryEntry {
   category: string | null;
   group_count: number;
   high_confidence_linkable_count: number;
+  high_confidence_count: number;
 }
 
 export interface CategorySummaryResponse {
@@ -354,8 +355,10 @@ export interface CategoryState {
   expandedGroups: Set<string>;
 }
 
-export const getCategoryUnmatchedSummary = () =>
-  request<CategorySummaryResponse>('/admin/unmatched-listings/by-category');
+export const getCategoryUnmatchedSummary = (params: Record<string, string> = {}) => {
+  const qs = new URLSearchParams(params).toString();
+  return request<CategorySummaryResponse>(`/admin/unmatched-listings/by-category${qs ? `?${qs}` : ''}`);
+};
 
 export const rejectUnmatchedListings = (listingIds: number[]) =>
   request<{ rejected: number }>('/admin/unmatched-listings/reject', {
@@ -381,9 +384,10 @@ export const bulkUpdateUnmatchedCategory = (listingIds: number[], category: stri
     body: JSON.stringify({ listing_ids: listingIds, category }),
   });
 
-export const bulkConfirmAllWithCategories = () =>
+export const bulkConfirmAllWithCategories = (category?: string) =>
   request<BulkConfirmResponse>('/admin/unmatched-listings/bulk-confirm-categories', {
     method: 'POST',
+    body: category ? JSON.stringify({ category }) : undefined,
   });
 
 // ── Presets ───────────────────────────────────────────────────────────────────

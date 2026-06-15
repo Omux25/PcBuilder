@@ -5,6 +5,8 @@ export interface UnmatchedListingFilter {
   search?: string;
   retailerId?: number | null;
   category?: string;
+  confidence?: string;
+  hasExisting?: string;
 }
 
 export class UnmatchedRepository {
@@ -13,7 +15,7 @@ export class UnmatchedRepository {
   }
 
   async getPendingListingsWithSuggestions(filters: UnmatchedListingFilter) {
-    const { search, retailerId, category } = filters;
+    const { search, retailerId, category, confidence, hasExisting } = filters;
 
     return (await this.sql`
       SELECT
@@ -44,6 +46,12 @@ export class UnmatchedRepository {
           ${category ?? ''}::text = ''
           OR (${category ?? ''} = 'none' AND us.category IS NULL)
           OR us.category = ${category ?? ''}
+        )
+        AND (${confidence ?? ''}::text = '' OR COALESCE(us.confidence, 'unknown') = ${confidence ?? ''})
+        AND (
+          ${hasExisting ?? ''}::text = ''
+          OR (${hasExisting ?? ''} = 'true' AND us.existing_component_id IS NOT NULL)
+          OR (${hasExisting ?? ''} = 'false' AND us.existing_component_id IS NULL)
         )
         AND (${search ?? ''}::text = '' OR (
           SELECT bool_and(
@@ -225,7 +233,7 @@ export class UnmatchedRepository {
     return rows.length;
   }
 
-  async getPendingWithCategory() {
+  async getPendingWithCategory(category?: string) {
     return (await this.sql`
       SELECT
         ul.id          AS listing_id,
@@ -247,11 +255,13 @@ export class UnmatchedRepository {
         AND us.category IS NOT NULL
         AND us.category != 'standby'
         AND us.confidence = 'high'
+        AND (${category ?? null}::text IS NULL OR us.category = ${category ?? null})
       ORDER BY ul.scraped_at DESC
     `) as any[];
   }
 
-  async getCategorySummary() {
+  async getCategorySummary(filters?: { confidence?: string; hasExisting?: string }) {
+    const { confidence, hasExisting } = filters ?? {};
     return (await this.sql`
       SELECT
         us.category,
@@ -259,16 +269,27 @@ export class UnmatchedRepository {
         COUNT(DISTINCT CASE
           WHEN us.confidence = 'high' AND us.existing_component_id IS NOT NULL
           THEN COALESCE(us.canonical_name, ul.scraped_name)
-        END)::int AS high_confidence_linkable_count
+        END)::int AS high_confidence_linkable_count,
+        COUNT(DISTINCT CASE
+          WHEN us.confidence = 'high'
+          THEN COALESCE(us.canonical_name, ul.scraped_name)
+        END)::int AS high_confidence_count
       FROM unmatched_listings ul
       LEFT JOIN unmatched_suggestions us ON us.unmatched_listing_id = ul.id
       WHERE ul.status = 'pending'
+        AND (${confidence ?? ''}::text = '' OR COALESCE(us.confidence, 'unknown') = ${confidence ?? ''})
+        AND (
+          ${hasExisting ?? ''}::text = ''
+          OR (${hasExisting ?? ''} = 'true' AND us.existing_component_id IS NOT NULL)
+          OR (${hasExisting ?? ''} = 'false' AND us.existing_component_id IS NULL)
+        )
       GROUP BY us.category
       ORDER BY us.category ASC NULLS LAST
     `) as {
       category: string | null;
       group_count: number;
       high_confidence_linkable_count: number;
+      high_confidence_count: number;
     }[];
   }
 

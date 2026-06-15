@@ -64,10 +64,10 @@ export function ConfiguratorTotals({
         {hasComponents && (
           <div className={styles.footerActions}>
             <button
-              className={`${styles.shareBtn} ${copied ? styles.shareBtnDone : ''}`}
+              className={styles.shareBtn}
               onClick={onShare}
             >
-              {copied ? <><Check size={18} /> Copié !</> : <><Share2 size={18} /> Partager</>}
+              <Share2 size={18} /> Partager
             </button>
 
             <button

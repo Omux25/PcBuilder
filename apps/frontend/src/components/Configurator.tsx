@@ -16,6 +16,7 @@ import { InlinePrices } from './InlinePrices';
 import { CategoryIcon } from './CategoryIcon';
 import { ConfiguratorChecklist } from './ConfiguratorChecklist';
 import { ConfiguratorTotals } from './ConfiguratorTotals';
+import { ShareModal } from './ShareModal';
 import type { ComponentCategory } from '../types';
 import { CATEGORY_LABELS, RULE_LABELS, slotKeyToCategory, CATEGORY_ORDER, CORE_CATEGORIES } from '../types';
 import { useBuild } from '../context/BuildContext';
@@ -60,7 +61,7 @@ export function Configurator() {
   const totalPrice = calculateBuildTotalPrice(build);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const hasComponents = Object.keys(build).length > 0;
 
@@ -82,12 +83,7 @@ export function Configurator() {
     return `${window.location.origin}${window.location.pathname}?${params}`;
   })();
 
-  function handleShare() {
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }
+
 
   const psu = build.psu;
   const tdp = compat?.total_tdp || 0;
@@ -335,9 +331,8 @@ export function Configurator() {
               psuStatus={psuStatus}
               recommendedWattage={compat?.recommended_psu_wattage}
               totalPrice={totalPrice}
-              copied={copied}
               confirmReset={confirmReset}
-              onShare={handleShare}
+              onShare={() => setIsShareModalOpen(true)}
               onReset={() => setConfirmReset(true)}
               onResetConfirm={() => { resetBuild(); setConfirmReset(false); }}
               onResetCancel={() => setConfirmReset(false)}
@@ -368,6 +363,13 @@ export function Configurator() {
           )}
         </div>
       </div>
+
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        build={build}
+        totalPrice={totalPrice}
+      />
 
       {/* Mobile Sticky Summary Bar */}
       {hasComponents && (
