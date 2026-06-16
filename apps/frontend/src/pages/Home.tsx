@@ -53,9 +53,10 @@ export function Home() {
         <div className={styles.heroVisual}>
           <div className={styles.heroImageWrap}>
             <img 
-              src="/premium_pc_hero.png" 
+              src="/premium_pc_hero.webp" 
               alt="Premium PC Build" 
               className={styles.heroImage} 
+              fetchpriority="high"
             />
             <div className={styles.heroImageGlow} />
           </div>
