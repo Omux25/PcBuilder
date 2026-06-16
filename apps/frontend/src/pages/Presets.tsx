@@ -46,7 +46,7 @@ export function Presets({ onLoadPreset }: Props) {
       <div className={styles.page}>
         <SEO title="Configurations prêtes à l'emploi" description="Choisissez une configuration PC Gamer ou bureautique adaptée à votre usage au Maroc." />
         <div className={styles.pageHeader}>
-          <Link to="/build" className={styles.back}>{UI.presets.back}</Link>
+          <Link to="/configurateur" className={styles.back}>{UI.presets.back}</Link>
           <h1 className={styles.title}>{UI.presets.title}</h1>
         </div>
         <div className={styles.group}>
@@ -70,7 +70,7 @@ export function Presets({ onLoadPreset }: Props) {
     <div className={styles.page}>
       <SEO title="Configurations prêtes à l'emploi" description="Choisissez une configuration PC Gamer ou bureautique adaptée à votre usage au Maroc." />
       <div className={styles.pageHeader}>
-        <Link to="/build" className={styles.back}>{UI.presets.back}</Link>
+        <Link to="/configurateur" className={styles.back}>{UI.presets.back}</Link>
         <h1 className={styles.title}>{UI.presets.title}</h1>
         <p className={styles.subtitle}>{UI.presets.subtitle}</p>
       </div>

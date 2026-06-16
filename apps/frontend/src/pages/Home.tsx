@@ -40,11 +40,11 @@ export function Home() {
             {UI.home.heroSubtitle}
           </p>
           <div className={styles.heroActions}>
-            <Link to="/build" className={styles.ctaPrimary}>
+            <Link to="/configurateur" className={styles.ctaPrimary}>
               <Gamepad2 size={20} />
               {UI.home.ctaBuild}
             </Link>
-            <Link to="/components" className={styles.ctaSecondary}>
+            <Link to="/composants" className={styles.ctaSecondary}>
               <LayoutGrid size={20} />
               {UI.home.ctaBrowse}
             </Link>
@@ -98,13 +98,13 @@ export function Home() {
         <h2 className={styles.sectionTitle}>{UI.home.sections.categories}</h2>
         <div className={styles.categoriesGrid}>
           {FEATURED_CATEGORIES.map(cat => (
-            <Link key={cat} to={`/browse/${cat}`} className={styles.categoryCard}>
+            <Link key={cat} to={`/parcourir/${cat}`} className={styles.categoryCard}>
               <CategoryIcon category={cat} size={32} className={styles.categoryIcon} />
               <span className={styles.categoryName}>{CATEGORY_LABELS[cat]}</span>
               <ChevronRight size={14} className={styles.categoryArrow} />
             </Link>
           ))}
-          <Link to="/components" className={styles.categoryCard}>
+          <Link to="/composants" className={styles.categoryCard}>
             <LayoutGrid size={32} className={styles.categoryIcon} />
             <span className={styles.categoryName}>Tout voir</span>
             <ChevronRight size={14} className={styles.categoryArrow} />
@@ -120,7 +120,7 @@ export function Home() {
             <p className={styles.presetsDesc}>
               Besoin d'inspiration ? Découvrez nos configurations optimisées pour le gaming, le travail ou le budget.
             </p>
-            <Link to="/presets" className={styles.ctaSecondary}>
+            <Link to="/configurations" className={styles.ctaSecondary}>
               Voir les configurations
             </Link>
           </div>
