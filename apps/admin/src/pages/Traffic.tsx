@@ -37,6 +37,36 @@ function parseUserAgent(ua: string | null) {
   return ua.length > 25 ? ua.substring(0, 25) + '...' : ua;
 }
 
+function formatPathName(path: string | null): string {
+  if (!path) return 'Accueil';
+  
+  let cleanPath = path.replace('/api', '');
+  if (!cleanPath) cleanPath = '/';
+
+  const PAGE_NAMES: Record<string, string> = {
+    '/': 'Accueil',
+    '/build': 'Configurateur',
+    '/components': 'Composants',
+    '/presets': 'Configurations',
+    '/compare': 'Comparer',
+    '/market-trends': 'Tendances',
+    '/search': 'Recherche',
+    '/auth/refresh': 'Rafraîchissement Auth',
+    '/auth/login': 'Connexion',
+    '/traffic/route': 'Télémétrie',
+    '/pulse/route': 'Télémétrie'
+  };
+
+  if (PAGE_NAMES[cleanPath]) return PAGE_NAMES[cleanPath];
+
+  if (cleanPath.startsWith('/components/smart-search')) return 'Recherche Intelligente';
+  if (cleanPath.startsWith('/components/')) return 'Détail Composant';
+  if (cleanPath.startsWith('/build/')) return 'Détail Configuration';
+  if (cleanPath.startsWith('/presets/')) return 'Détail Configuration';
+
+  return cleanPath;
+}
+
 export function Traffic() {
   const [activeTab, setActiveTab] = useState<'visitors' | 'raw'>('visitors');
   const [ipFilter, setIpFilter] = useState<string | null>(null);
@@ -280,7 +310,7 @@ export function Traffic() {
                           </span>
                         </td>
                         <td className={styles.pathCell} title={log.path}>
-                          {log.path.replace('/api', '') || '/'}
+                          {formatPathName(log.path)}
                         </td>
                         <td>
                           <span className={`${styles.statusBadge} ${log.statusCode >= 400 ? styles.statusError : styles.statusOk}`}>

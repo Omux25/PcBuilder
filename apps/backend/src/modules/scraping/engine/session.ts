@@ -298,7 +298,7 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
     })()
   ]);
 
-  await logger.info('[SESSION] ✨ All tasks fully completed. Session closed.');
+  await logger.info('[SESSION] All tasks fully completed. Session closed.');
 }
 
 
