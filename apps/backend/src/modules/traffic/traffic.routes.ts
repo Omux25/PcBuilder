@@ -8,7 +8,10 @@ publicTrafficRouter.post('/track', async (c) => {
     const { path } = await c.req.json();
     if (!path) return c.json({ success: false });
 
-    const ip = c.req.header('x-forwarded-for') || c.req.header('cf-connecting-ip') || '127.0.0.1';
+    const ip = c.req.header('x-vercel-forwarded-for') || 
+               c.req.header('x-forwarded-for') || 
+               c.req.header('cf-connecting-ip') || 
+               '127.0.0.1';
     const userAgent = c.req.header('user-agent');
     
     trafficService.logTraffic({

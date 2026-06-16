@@ -7,7 +7,7 @@ const CompareTray = lazy(() => import('./components/CompareTray').then(m => ({ d
 const CategoryConflictModal = lazy(() => import('./components/CategoryConflictModal').then(m => ({ default: m.CategoryConflictModal })));
 import { useBuild } from './context/BuildContext';
 import { getInitialTheme, applyTheme, toggleTheme } from './utils/theme';
-import { getComponentById, getComponentBySlug } from './api';
+import { getComponentById, getComponentBySlug, trackTraffic } from './api';
 import { UI } from './ui-strings';
 import styles from './App.module.css';
 import { Home } from './pages/Home';
@@ -81,8 +81,11 @@ export default function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-  // Scroll to top on every route change (BrowserRouter has no built-in ScrollRestoration)
-  useEffect(() => { window.scrollTo(0, 0); }, [location.pathname]);
+  // Scroll to top on every route change and track traffic
+  useEffect(() => { 
+    window.scrollTo(0, 0); 
+    trackTraffic(location.pathname);
+  }, [location.pathname]);
   useEffect(() => {
     if (searchOpen) setTimeout(() => searchRef.current?.focus(), 50);
   }, [searchOpen]);

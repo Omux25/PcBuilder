@@ -12,7 +12,13 @@ export const trafficLogger = (): MiddlewareHandler => {
     await next();
     const end = performance.now();
 
-    const ip = c.req.header('x-forwarded-for') || c.req.header('cf-connecting-ip') || '127.0.0.1';
+    // Vercel proxies send the real user IP in x-vercel-forwarded-for.
+    // Render might overwrite x-forwarded-for.
+    const ip = c.req.header('x-vercel-forwarded-for') || 
+               c.req.header('x-forwarded-for') || 
+               c.req.header('cf-connecting-ip') || 
+               '127.0.0.1';
+               
     const method = c.req.method;
     const path = new URL(c.req.url).pathname;
     const userAgent = c.req.header('user-agent');
