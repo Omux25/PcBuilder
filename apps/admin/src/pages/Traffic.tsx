@@ -38,39 +38,9 @@ function parseUserAgent(ua: string | null) {
 }
 
 function formatPathName(path: string | null): string {
-  if (!path) return '/Accueil';
-  
-  let cleanPath = path.replace('/api', '');
-  if (!cleanPath) cleanPath = '/';
-
-  const PAGE_NAMES: Record<string, string> = {
-    '/': '/Accueil',
-    '/build': '/Configurateur',
-    '/configurateur': '/Configurateur',
-    '/components': '/Composants',
-    '/composants': '/Composants',
-    '/presets': '/Configurations',
-    '/configurations': '/Configurations',
-    '/compare': '/Comparer',
-    '/comparer': '/Comparer',
-    '/market-trends': '/Tendances',
-    '/tendances': '/Tendances',
-    '/search': '/Recherche',
-    '/recherche': '/Recherche',
-    '/auth/refresh': '/Rafraîchissement Auth',
-    '/auth/login': '/Connexion',
-    '/traffic/route': '/Télémétrie',
-    '/pulse/route': '/Télémétrie'
-  };
-
-  if (PAGE_NAMES[cleanPath]) return PAGE_NAMES[cleanPath];
-
-  if (cleanPath.startsWith('/components/smart-search') || cleanPath.startsWith('/composants/smart-search')) return '/Recherche Intelligente';
-  if (cleanPath.startsWith('/components/') || cleanPath.startsWith('/composants/')) return '/Détail Composant';
-  if (cleanPath.startsWith('/build/') || cleanPath.startsWith('/configurateur/')) return '/Détail Configuration';
-  if (cleanPath.startsWith('/presets/') || cleanPath.startsWith('/configurations/')) return '/Détail Configuration';
-
-  return cleanPath;
+  if (!path) return '/';
+  // If it's an API route tracked internally, maybe strip /api, but we'll just show the raw path
+  return path;
 }
 
 export function Traffic() {
