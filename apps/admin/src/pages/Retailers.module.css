@@ -45,37 +45,39 @@
 .editBtn {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.4rem;
   font-size: 0.78rem;
   font-weight: 600;
-  padding: 0.3rem 0.7rem;
-  background: var(--surface-3);
-  color: var(--text-muted);
-  border-radius: 6px;
-  border: 1px solid var(--border);
+  padding: 0.4rem 0.8rem;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-2);
+  border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   transition: var(--transition);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .editBtn:hover:not(:disabled) {
   filter: none;
-  background: var(--border-2);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--text);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .deleteBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.3rem 0.5rem;
-  background: rgba(239, 68, 68, 0.08);
+  padding: 0.4rem 0.6rem;
+  background: rgba(239, 68, 68, 0.05);
   color: var(--danger-soft);
-  border-radius: 6px;
+  border-radius: var(--radius);
   border: 1px solid rgba(239, 68, 68, 0.15);
   transition: var(--transition);
 }
 
 .deleteBtn:hover:not(:disabled) {
   filter: none;
-  background: rgba(239, 68, 68, 0.18);
+  background: rgba(239, 68, 68, 0.15);
   border-color: rgba(239, 68, 68, 0.3);
 }

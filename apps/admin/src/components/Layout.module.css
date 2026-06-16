@@ -1,105 +1,159 @@
 .shell {
   display: flex;
   min-height: 100dvh;
+  background: var(--bg);
 }
 
 .sidebar {
-  width: 224px;
+  width: 250px;
   flex-shrink: 0;
   background: var(--surface);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  padding: 1.25rem 0;
+  padding: 1.5rem 0;
   position: sticky;
   top: 0;
   height: 100dvh;
+  z-index: 10;
 }
 
 .brand {
-  padding: 0 1.25rem 1.25rem;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 0.75rem;
+  padding: 0 1.5rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 1rem;
 }
 
 .brandName {
   display: block;
-  font-size: 1rem;
+  font-size: 1.15rem;
   font-weight: 800;
   color: var(--text);
   letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .brandSub {
-  font-size: 0.68rem;
-  color: var(--text-dim);
+  font-size: 0.7rem;
+  color: var(--accent-h);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-top: 1px;
+  letter-spacing: 0.15em;
+  font-weight: 700;
+  margin-top: 2px;
+  display: inline-block;
 }
 
 .nav {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
-  padding: 0 0.65rem;
+  padding: 0 1rem;
   overflow-y: auto;
+}
+
+.navGroup {
+  margin-bottom: 1.5rem;
+}
+
+.navGroupTitle {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  font-weight: 700;
+  margin-bottom: 0.6rem;
+  padding: 0 0.5rem;
+}
+
+.navGroupItems {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .navLink {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.52rem 0.75rem;
-  border-radius: var(--radius);
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-lg);
   font-size: 0.85rem;
   font-weight: 500;
   color: var(--text-muted);
   text-decoration: none;
-  transition: all 0.15s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.navIcon {
+  color: var(--text-dim);
+  transition: all 0.2s;
 }
 
 .navLink:hover {
   color: var(--text);
-  background: var(--surface-2);
+  background: rgba(255, 255, 255, 0.03);
   text-decoration: none;
 }
 
+.navLink:hover .navIcon {
+  color: var(--text-2);
+}
+
 .active {
-  color: var(--accent-blue) !important;
-  background: rgba(137, 180, 250, 0.08) !important;
+  color: var(--accent-h) !important;
+  background: rgba(99, 102, 241, 0.1) !important;
   font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.active .navIcon {
+  color: var(--accent-h) !important;
 }
 
 .logoutBtn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.6rem;
-  margin: 0.65rem;
-  padding: 0.52rem 0.75rem;
-  border-radius: var(--radius);
+  margin: 1rem;
+  padding: 0.75rem 0.75rem;
+  border-radius: var(--radius-lg);
   font-size: 0.85rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-dim);
-  background: none;
-  transition: all 0.15s;
-  border-top: 1px solid var(--border);
-  padding-top: 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   margin-top: auto;
 }
 
 .logoutBtn:hover:not(:disabled) {
   filter: none;
   color: var(--danger-soft);
-  background: rgba(243, 139, 168, 0.08);
+  background: rgba(243, 139, 168, 0.1);
+  border-color: rgba(243, 139, 168, 0.2);
 }
 
 .main {
   flex: 1;
   overflow-y: auto;
+  position: relative;
   background: var(--bg);
   min-width: 0;
+}
+
+.glassLayer {
+  position: fixed;
+  top: 0;
+  left: 250px;
+  right: 0;
+  height: 150px;
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.03) 0%, rgba(15, 17, 23, 0) 100%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 @media (max-width: 768px) {

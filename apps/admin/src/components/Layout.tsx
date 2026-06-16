@@ -3,16 +3,31 @@ import { LayoutDashboard, Package, Store, Radio, AlertCircle, Layers, Upload, Lo
 import { logout } from '../api';
 import styles from './Layout.module.css';
 
-const NAV = [
-  { to: '/admin/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
-  { to: '/admin/components', label: 'Composants', icon: Package },
-  { to: '/admin/components/import', label: 'Import en masse', icon: Upload },
-  { to: '/admin/retailers', label: 'Revendeurs', icon: Store },
-  { to: '/admin/scrapers', label: 'Scrapers', icon: Radio },
-  { to: '/admin/unmatched', label: 'Non associes', icon: AlertCircle },
-  { to: '/admin/presets', label: 'Configurations', icon: Layers },
-  { to: '/admin/keyword-rules', label: 'Règles mots-clés', icon: Tag },
-  { to: '/admin/traffic', label: 'Trafic', icon: Activity },
+const NAV_GROUPS = [
+  {
+    title: 'Vue d\'ensemble',
+    items: [
+      { to: '/admin/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
+      { to: '/admin/traffic', label: 'Trafic', icon: Activity },
+    ],
+  },
+  {
+    title: 'Catalogue',
+    items: [
+      { to: '/admin/components', label: 'Composants', icon: Package },
+      { to: '/admin/presets', label: 'Configurations', icon: Layers },
+      { to: '/admin/components/import', label: 'Import en masse', icon: Upload },
+    ],
+  },
+  {
+    title: 'Pipeline & Données',
+    items: [
+      { to: '/admin/retailers', label: 'Revendeurs', icon: Store },
+      { to: '/admin/scrapers', label: 'Scrapers', icon: Radio },
+      { to: '/admin/unmatched', label: 'Non associés', icon: AlertCircle },
+      { to: '/admin/keyword-rules', label: 'Règles mots-clés', icon: Tag },
+    ],
+  },
 ];
 
 export function Layout() {
@@ -28,29 +43,37 @@ export function Layout() {
       <aside className={styles.sidebar}>
         <div className={styles.brand}>
           <span className={styles.brandName}>PC Builder</span>
-          <span className={styles.brandSub}>Admin</span>
+          <span className={styles.brandSub}>Admin Pro</span>
         </div>
 
         <nav className={styles.nav}>
-          {NAV.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
-            >
-              <Icon size={17} aria-hidden />
-              {label}
-            </NavLink>
+          {NAV_GROUPS.map((group) => (
+            <div key={group.title} className={styles.navGroup}>
+              <h3 className={styles.navGroupTitle}>{group.title}</h3>
+              <div className={styles.navGroupItems}>
+                {group.items.map(({ to, label, icon: Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
+                  >
+                    <Icon size={18} strokeWidth={2.5} aria-hidden className={styles.navIcon} />
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 
         <button className={styles.logoutBtn} onClick={handleLogout}>
           <LogOut size={16} aria-hidden />
-          Deconnexion
+          Déconnexion
         </button>
       </aside>
 
       <main className={styles.main}>
+        <div className={styles.glassLayer}></div>
         <Outlet />
       </main>
     </div>
