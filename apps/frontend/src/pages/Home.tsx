@@ -57,6 +57,8 @@ export function Home() {
               alt="Premium PC Build" 
               className={styles.heroImage} 
               fetchpriority="high"
+              width="1024"
+              height="640"
             />
             <div className={styles.heroImageGlow} />
           </div>
