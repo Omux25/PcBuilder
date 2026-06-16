@@ -2,6 +2,14 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/component/(.*)",
+      "destination": "/api/seo?path=/component/$1"
+    },
+    {
+      "source": "/presets",
+      "destination": "/api/seo?path=/presets"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "https://pcbuilder-m2nf.onrender.com/api/$1"
     },

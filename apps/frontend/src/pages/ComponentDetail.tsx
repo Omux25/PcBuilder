@@ -18,6 +18,7 @@ import { CATEGORY_LABELS } from '../types';
 import { UI } from '../ui-strings';
 import { formatPrice } from '@shared/formatting/price.formatter';
 import { formatComponentName } from '@shared/formatting/component-name.formatter';
+import { SEO } from '../components/SEO';
 import styles from './ComponentDetail.module.css';
 
 interface Props {
@@ -164,9 +165,16 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
   
   // Gallery logic — always show thumbnails if we have at least one image
   const showGallery = images.length > 0;
+  
+  const compName = formatComponentName(component);
 
   return (
     <div className={styles.page}>
+      <SEO 
+        title={`Prix ${compName} Maroc`}
+        description={`Achetez le ${compName} au meilleur prix au Maroc. Spécifications, avis et compatibilité PC Gamer.`}
+        image={images[0]}
+      />
       {/* ── Anchor Header ────────────────────────────────────────────── */}
       <header className={styles.headerSection}>
         <nav className={styles.breadcrumbs}>
@@ -186,7 +194,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
         </nav>
         <div className={styles.titleRow}>
           <h1 className={styles.pageTitle}>
-            {formatComponentName(component)}
+            {compName}
           </h1>
           <button className={`${styles.shareBtn} ${copied ? styles.copied : ''}`} onClick={handleShare}>
             {copied ? <Check size={16} /> : <Share2 size={16} />}

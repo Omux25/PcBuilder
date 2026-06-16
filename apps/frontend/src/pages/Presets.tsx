@@ -15,8 +15,9 @@ import { formatPrice } from '@shared/formatting/price.formatter';
 import styles from './Presets.module.css';
 
 interface Props {
-  onLoadPreset: (components: Record<string, number>) => void;
 }
+
+import { SEO } from '../components/SEO';
 
 export function Presets({ onLoadPreset }: Props) {
   const [presets, setPresets] = useState<PresetBuild[]>([]);
@@ -43,6 +44,7 @@ export function Presets({ onLoadPreset }: Props) {
   if (loading) {
     return (
       <div className={styles.page}>
+        <SEO title="Configurations prêtes à l'emploi" description="Choisissez une configuration PC Gamer ou bureautique adaptée à votre usage au Maroc." />
         <div className={styles.pageHeader}>
           <Link to="/build" className={styles.back}>{UI.presets.back}</Link>
           <h1 className={styles.title}>{UI.presets.title}</h1>
@@ -66,6 +68,7 @@ export function Presets({ onLoadPreset }: Props) {
 
   return (
     <div className={styles.page}>
+      <SEO title="Configurations prêtes à l'emploi" description="Choisissez une configuration PC Gamer ou bureautique adaptée à votre usage au Maroc." />
       <div className={styles.pageHeader}>
         <Link to="/build" className={styles.back}>{UI.presets.back}</Link>
         <h1 className={styles.title}>{UI.presets.title}</h1>
