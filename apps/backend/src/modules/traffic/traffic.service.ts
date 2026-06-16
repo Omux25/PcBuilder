@@ -7,6 +7,7 @@ export interface TrafficLogEntry {
   userAgent?: string;
   statusCode: number;
   responseTimeMs: number;
+  createdAt?: Date;
 }
 
 const MAX_LOGS = 10000;
@@ -35,7 +36,8 @@ async function flushLogs() {
       path: entry.path,
       user_agent: entry.userAgent ?? null,
       status_code: entry.statusCode,
-      response_time_ms: entry.responseTimeMs
+      response_time_ms: entry.responseTimeMs,
+      created_at: entry.createdAt
     }));
 
     await sql`
@@ -48,6 +50,9 @@ async function flushLogs() {
 
 export const trafficService = {
   async logTraffic(entry: TrafficLogEntry) {
+    if (!entry.createdAt) {
+      entry.createdAt = new Date();
+    }
     logQueue.push(entry);
     
     if (logQueue.length >= MAX_QUEUE_SIZE) {
