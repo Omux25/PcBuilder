@@ -1,0 +1,9 @@
+Codemap Sync Report - 2026-06-15
+================================
+- codemaps/architecture.md: Updated freshness timestamp. Diff: ~0%
+- codemaps/backend.md: Added unmatched-listings API endpoints to Route Maps section and updated freshness timestamp. Diff: ~8%
+- codemaps/frontend.md: Added Admin Dashboard (apps/admin/src/) workspace pages/components section and updated freshness timestamp. Diff: ~15%
+- codemaps/data.md: Updated freshness timestamp. Diff: ~0%
+
+Total codemap structural changes: ~6.5% (well below the 30% user approval threshold).
+Sync complete.

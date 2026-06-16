@@ -90,7 +90,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
       onAddToBuild(component);
     } else {
       // Navigate to home with this component pre-selected via URL
-      navigate(`/build?${component.category}=${component.id}`);
+      navigate(`/configurateur?${component.category}=${component.id}`);
     }
     setAddedToBuild(true);
     setTimeout(() => setAddedToBuild(false), 2000);
@@ -108,7 +108,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
     if (location.key !== 'default') {
       navigate(-1);
     } else if (component) {
-      navigate(`/browse/${component.category}`);
+      navigate(`/parcourir/${component.category}`);
     } else {
       navigate('/components');
     }
@@ -180,9 +180,9 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
         <nav className={styles.breadcrumbs}>
           <Link to="/" className={styles.breadcrumbLink}>Accueil</Link>
           <span className={styles.breadcrumbSep}>/</span>
-          <Link to="/components" className={styles.breadcrumbLink}>Composants</Link>
+          <Link to="/composants" className={styles.breadcrumbLink}>Composants</Link>
           <span className={styles.breadcrumbSep}>/</span>
-          <Link to={`/browse/${component.category}`} className={styles.breadcrumbLink}>
+          <Link to={`/parcourir/${component.category}`} className={styles.breadcrumbLink}>
             {CATEGORY_LABELS[component.category as ComponentCategory]}
           </Link>
           {component.brand && (

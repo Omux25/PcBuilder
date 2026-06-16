@@ -140,7 +140,7 @@ export function Configurator() {
       const addLabel = isRam ? 'Ajouter de la mémoire' : 'Ajouter un stockage';
       const catLabel = CATEGORY_LABELS[entry.category];
       const isRequired = checklistKeys.includes(entry.category);
-      const targetUrl = entry.category === slotKey ? `/browse/${entry.category}` : `/browse/${entry.category}/${slotKey}`;
+      const targetUrl = entry.category === slotKey ? `/parcourir/${entry.category}` : `/parcourir/${entry.category}/${slotKey}`;
 
       return (
         <div key={`add-${entry.category}`} className={`${styles.rowWrap} ${styles.rowWrapEmpty}`}>
@@ -177,7 +177,7 @@ export function Configurator() {
     const isRequired = checklistKeys.includes(category);
 
     if (!selected) {
-      const targetUrl = category === slotKey ? `/browse/${category}` : `/browse/${category}/${slotKey}`;
+      const targetUrl = category === slotKey ? `/parcourir/${category}` : `/parcourir/${category}/${slotKey}`;
       return (
         <div key={slotKey} className={`${styles.rowWrap} ${styles.rowWrapEmpty}`}>
           <Link to={targetUrl} className={`${styles.row} ${styles.rowEmpty} ${styles.rowLink}`}>

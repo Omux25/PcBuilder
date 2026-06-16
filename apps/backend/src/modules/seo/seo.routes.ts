@@ -22,12 +22,12 @@ seoRouter.get('/sitemap.xml', async (c) => {
     // Core static pages
     const staticPages = [
       '',
-      '/build',
-      '/components',
-      '/compare',
-      '/search',
-      '/market-trends',
-      '/presets'
+      '/configurateur',
+      '/composants',
+      '/comparer',
+      '/recherche',
+      '/tendances',
+      '/configurations'
     ];
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
@@ -47,7 +47,7 @@ seoRouter.get('/sitemap.xml', async (c) => {
       // Format date as YYYY-MM-DD
       const date = new Date(comp.updated_at).toISOString().split('T')[0];
       xml += `  <url>\n`;
-      xml += `    <loc>${baseUrl}/components/${encodeURIComponent(comp.category)}/${encodeURIComponent(comp.slug)}</loc>\n`;
+      xml += `    <loc>${baseUrl}/composants/${encodeURIComponent(comp.category)}/${encodeURIComponent(comp.slug)}</loc>\n`;
       xml += `    <lastmod>${date}</lastmod>\n`;
       xml += `    <changefreq>weekly</changefreq>\n`;
       xml += `    <priority>0.6</priority>\n`;

@@ -146,23 +146,23 @@ export default function App() {
                 <HomeIcon size={13} className={styles.navIcon} />
                 {UI.nav.home}
               </Link>
-              <Link to="/build" className={`${styles.navLink} ${isBuild ? styles.navLinkActive : ''}`}>
+              <Link to="/configurateur" className={`${styles.navLink} ${isBuild ? styles.navLinkActive : ''}`}>
                 <Sliders size={13} className={styles.navIcon} />
                 {UI.nav.configurator}
               </Link>
-              <Link to="/components" className={`${styles.navLink} ${isComponents ? styles.navLinkActive : ''}`}>
+              <Link to="/composants" className={`${styles.navLink} ${isComponents ? styles.navLinkActive : ''}`}>
                 <LayoutGrid size={13} className={styles.navIcon} />
                 {UI.nav.components}
               </Link>
-              <Link to="/presets" className={`${styles.navLink} ${isPresets ? styles.navLinkActive : ''}`}>
+              <Link to="/configurations" className={`${styles.navLink} ${isPresets ? styles.navLinkActive : ''}`}>
                 <Sparkles size={13} className={styles.navIcon} />
                 {UI.nav.presets}
               </Link>
-              <Link to="/compare" className={`${styles.navLink} ${location.pathname === '/compare' ? styles.navLinkActive : ''}`}>
+              <Link to="/comparer" className={`${styles.navLink} ${location.pathname === '/comparer' ? styles.navLinkActive : ''}`}>
                 <GitCompare size={13} className={styles.navIcon} />
                 {UI.nav.compare}
               </Link>
-              <Link to="/market-trends" className={`${styles.navLink} ${location.pathname === '/market-trends' ? styles.navLinkActive : ''}`}>
+              <Link to="/tendances" className={`${styles.navLink} ${location.pathname === '/tendances' ? styles.navLinkActive : ''}`}>
                 <TrendingUp size={13} className={styles.navIcon} />
                 {UI.nav.trends}
               </Link>
@@ -211,59 +211,77 @@ export default function App() {
             </main>
           } />
 
-          <Route path="/build" element={
+          <Route path="/configurateur" element={
             <main className={styles.main}>
               <Configurator />
             </main>
           } />
+          <Route path="/build" element={<Navigate to="/configurateur" replace />} />
 
-          <Route path="/product/:slug" element={
+          <Route path="/produit/:slug" element={
             <ProductRedirect />
           } />
+          <Route path="/product/:slug" element={<ProductRedirect />} />
 
+          <Route path="/composants/:category/:identifier" element={
+            <main className={styles.main}>
+              <ComponentDetail onAddToBuild={addToBuild} />
+            </main>
+          } />
           <Route path="/components/:category/:identifier" element={
             <main className={styles.main}>
               <ComponentDetail onAddToBuild={addToBuild} />
             </main>
           } />
 
-          <Route path="/components" element={
+          <Route path="/composants" element={
             <main className={styles.main}>
               <ComponentsIndex />
             </main>
           } />
+          <Route path="/components" element={<Navigate to="/composants" replace />} />
 
-          <Route path="/browse" element={<Navigate to="/components" replace />} />
+          <Route path="/parcourir" element={<Navigate to="/composants" replace />} />
+          <Route path="/browse" element={<Navigate to="/composants" replace />} />
 
+          <Route path="/parcourir/:category/:slotKey?" element={
+            <main className={styles.main}>
+              <CategoryBrowse />
+            </main>
+          } />
           <Route path="/browse/:category/:slotKey?" element={
             <main className={styles.main}>
               <CategoryBrowse />
             </main>
           } />
 
-          <Route path="/compare" element={
+          <Route path="/comparer" element={
             <main className={styles.main}>
               <Compare />
             </main>
           } />
+          <Route path="/compare" element={<Navigate to="/comparer" replace />} />
 
-          <Route path="/search" element={
+          <Route path="/recherche" element={
             <main className={styles.main}>
               <GlobalSearch />
             </main>
           } />
+          <Route path="/search" element={<Navigate to="/recherche" replace />} />
 
-          <Route path="/market-trends" element={
+          <Route path="/tendances" element={
             <main className={styles.main}>
               <MarketTrends />
             </main>
           } />
+          <Route path="/market-trends" element={<Navigate to="/tendances" replace />} />
 
-          <Route path="/presets" element={
+          <Route path="/configurations" element={
             <main className={styles.main}>
               <Presets onLoadPreset={handleLoadPreset} />
             </main>
           } />
+          <Route path="/presets" element={<Navigate to="/configurations" replace />} />
 
           <Route path="*" element={
             <main className={styles.main}>
@@ -277,9 +295,9 @@ export default function App() {
         <div className={styles.footerInner}>
           <span className={styles.footerText}>{UI.footer.tagline}</span>
           <div className={styles.footerLinks}>
-            <Link to="/search" className={styles.footerLink}>{UI.footer.search}</Link>
-            <Link to="/compare" className={styles.footerLink}>{UI.footer.compare}</Link>
-            <Link to="/market-trends" className={styles.footerLink}>{UI.footer.trends}</Link>
+            <Link to="/recherche" className={styles.footerLink}>{UI.footer.search}</Link>
+            <Link to="/comparer" className={styles.footerLink}>{UI.footer.compare}</Link>
+            <Link to="/tendances" className={styles.footerLink}>{UI.footer.trends}</Link>
           </div>
         </div>
       </footer>
@@ -290,23 +308,23 @@ export default function App() {
           <HomeIcon size={20} />
           <span className={styles.mobileNavText}>{UI.nav.home}</span>
         </Link>
-        <Link to="/build" className={`${styles.mobileNavLink} ${isBuild ? styles.mobileNavLinkActive : ''}`}>
+        <Link to="/configurateur" className={`${styles.mobileNavLink} ${isBuild ? styles.mobileNavLinkActive : ''}`}>
           <Sliders size={20} />
           <span className={styles.mobileNavText}>Config</span>
         </Link>
-        <Link to="/components" className={`${styles.mobileNavLink} ${isComponents ? styles.mobileNavLinkActive : ''}`}>
+        <Link to="/composants" className={`${styles.mobileNavLink} ${isComponents ? styles.mobileNavLinkActive : ''}`}>
           <LayoutGrid size={20} />
           <span className={styles.mobileNavText}>{UI.nav.components}</span>
         </Link>
-        <Link to="/presets" className={`${styles.mobileNavLink} ${isPresets ? styles.mobileNavLinkActive : ''}`}>
+        <Link to="/configurations" className={`${styles.mobileNavLink} ${isPresets ? styles.mobileNavLinkActive : ''}`}>
           <Sparkles size={20} />
           <span className={styles.mobileNavText}>Presets</span>
         </Link>
-        <Link to="/compare" className={`${styles.mobileNavLink} ${location.pathname === '/compare' ? styles.mobileNavLinkActive : ''}`}>
+        <Link to="/comparer" className={`${styles.mobileNavLink} ${location.pathname === '/comparer' ? styles.mobileNavLinkActive : ''}`}>
           <GitCompare size={20} />
           <span className={styles.mobileNavText}>{UI.nav.compare}</span>
         </Link>
-        <Link to="/market-trends" className={`${styles.mobileNavLink} ${location.pathname === '/market-trends' ? styles.mobileNavLinkActive : ''}`}>
+        <Link to="/tendances" className={`${styles.mobileNavLink} ${location.pathname === '/tendances' ? styles.mobileNavLinkActive : ''}`}>
           <TrendingUp size={20} />
           <span className={styles.mobileNavText}>{UI.nav.trends}</span>
         </Link>

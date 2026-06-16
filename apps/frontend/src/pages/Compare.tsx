@@ -249,7 +249,7 @@ export function Compare() {
         <div className={styles.emptyIconWrap}><BarChart3 size={48} strokeWidth={1.5} /></div>
         <h2 className={styles.emptyTitle}>{UI.compare.emptyTitle}</h2>
         <p className={styles.emptyText}>{UI.compare.emptyText}</p>
-        <Link to="/components" className={styles.browseBtn}>{UI.compare.browseCatalog}</Link>
+        <Link to="/composants" className={styles.browseBtn}>{UI.compare.browseCatalog}</Link>
       </div>
     );
   }

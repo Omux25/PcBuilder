@@ -15,7 +15,7 @@ export function ComponentsIndex() {
   const renderGrid = (categories: ComponentCategory[], isCore = false) => (
     <div className={`${styles.grid} ${isCore ? styles.coreGrid : ''}`}>
       {categories.map(cat => (
-        <Link key={cat} to={`/browse/${cat}`} className={`${styles.card} ${isCore ? styles.coreCard : ''}`}>
+        <Link key={cat} to={`/parcourir/${cat}`} className={`${styles.card} ${isCore ? styles.coreCard : ''}`}>
           <div className={styles.cardBgIcon}>
             <CategoryIcon category={cat} size={isCore ? 120 : 100} />
           </div>

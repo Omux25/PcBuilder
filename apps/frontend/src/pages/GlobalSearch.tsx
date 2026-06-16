@@ -130,7 +130,7 @@ export function GlobalSearch() {
                 <h2 className={styles.groupTitle}>{CATEGORY_LABELS[category]}</h2>
                 <span className={styles.groupCount}>{UI.search.groupCount(total)}</span>
                 {total > MAX_PER_CATEGORY && (
-                  <Link to={`/browse/${category}?q=${encodeURIComponent(query)}`} className={styles.seeAll}>
+                  <Link to={`/parcourir/${category}?q=${encodeURIComponent(query)}`} className={styles.seeAll}>
                     {UI.search.seeAll}
                   </Link>
                 )}
@@ -166,7 +166,7 @@ export function GlobalSearch() {
           <div className={styles.suggestions}>
             <p className={styles.suggestLabel}>{UI.search.suggestions}</p>
             {CATEGORY_ORDER.map(cat => (
-              <Link key={cat} to={`/browse/${cat}`} className={styles.suggestLink}>
+              <Link key={cat} to={`/parcourir/${cat}`} className={styles.suggestLink}>
                 <CategoryIcon category={cat} size={13} />
                 {CATEGORY_LABELS[cat]}
               </Link>
@@ -180,7 +180,7 @@ export function GlobalSearch() {
           <p className={styles.initialHint}>{UI.search.browseBy}</p>
           <div className={styles.catGrid}>
             {CATEGORY_ORDER.map(cat => (
-              <Link key={cat} to={`/browse/${cat}`} className={styles.catCard}>
+              <Link key={cat} to={`/parcourir/${cat}`} className={styles.catCard}>
                 <CategoryIcon category={cat} size={24} />
                 <span>{CATEGORY_LABELS[cat]}</span>
               </Link>
