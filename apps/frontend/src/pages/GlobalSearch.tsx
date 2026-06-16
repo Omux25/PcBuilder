@@ -193,7 +193,15 @@ export function GlobalSearch() {
 }
 
 function getKeySpec(c: Component): string | null {
-  const specs = c.specs as Record<string, unknown> | undefined;
+  let parsedSpecs: Record<string, unknown> | undefined = undefined;
+  if (c.specs) {
+    if (typeof c.specs === 'string') {
+      try { parsedSpecs = JSON.parse(c.specs); } catch (e) {}
+    } else {
+      parsedSpecs = c.specs as Record<string, unknown>;
+    }
+  }
+  const specs = parsedSpecs;
   const get = (k: string) => specs?.[k] ?? (c as unknown as Record<string, unknown>)[k];
   switch (c.category) {
     case 'cpu': return c.socket ? `Socket ${c.socket}` : null;

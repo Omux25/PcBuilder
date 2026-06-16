@@ -111,7 +111,7 @@ export function ComponentModal({ isOpen, onClose, onSaved, component }: Props) {
           brand: component.brand ?? null,
           description: component.description ?? undefined,
           release_year: component.release_year ?? new Date().getFullYear(),
-          specs: (component.specs as Record<string, unknown>) ?? {},
+          specs: (typeof component.specs === 'string' ? JSON.parse(component.specs) : component.specs) ?? {},
         };
         if (Array.isArray(formData.supported_ram_types)) {
           formData.supported_ram_types = formData.supported_ram_types.join(', ');

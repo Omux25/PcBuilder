@@ -628,7 +628,15 @@ export function Compare() {
 function getSpecValue(component: Component, key: string): unknown {
   const flat = (component as unknown as Record<string, unknown>)[key];
   if (flat !== undefined && flat !== null) return flat;
-  const specs = component.specs as Record<string, unknown> | undefined;
+  let parsedSpecs: Record<string, unknown> | undefined = undefined;
+  if (component.specs) {
+    if (typeof component.specs === 'string') {
+      try { parsedSpecs = JSON.parse(component.specs); } catch (e) {}
+    } else {
+      parsedSpecs = component.specs as Record<string, unknown>;
+    }
+  }
+  const specs = parsedSpecs;
   return specs?.[key] ?? null;
 }
 

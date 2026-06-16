@@ -142,9 +142,19 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
     );
   }
 
-  const specs = component.specs as Record<string, unknown> | undefined;
-
-  // Simulated gallery images (fallback to product image)
+  let parsedSpecs: Record<string, unknown> | undefined = undefined;
+  if (component.specs) {
+    if (typeof component.specs === 'string') {
+      try {
+        parsedSpecs = JSON.parse(component.specs);
+      } catch (e) {
+        console.error('Failed to parse component specs:', e);
+      }
+    } else {
+      parsedSpecs = component.specs as Record<string, unknown>;
+    }
+  }
+  const specs = parsedSpecs;  // Simulated gallery images (fallback to product image)
   const images = component?.image_urls && component.image_urls.length > 0
     ? component.image_urls
     : component?.image_url 
