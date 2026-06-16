@@ -45,7 +45,7 @@ export const extractRamSpecs = (n: string) => {
 
   // Extract CAS Latency early so we can use it for type inference
   const clMatch = n.match(/\b[Cc][Ll]?(\d{2})\b/);
-  const cas_latency = clMatch ? parseInt(clMatch[1]) : undefined;
+  let cas_latency = clMatch ? parseInt(clMatch[1]) : undefined;
 
   let ram_type = typeMatch ? typeMatch[1].toUpperCase() : undefined;
   
