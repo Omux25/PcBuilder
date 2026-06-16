@@ -132,29 +132,33 @@ export function CanonicalGroupRow({
 
                 {/* Thumbnail */}
                 <td style={{ width: '48px', padding: '8px 0' }}>
-                    {listings.find(l => l.image_url)?.image_url ? (
-                        <img
-                            src={listings.find(l => l.image_url)!.image_url}
-                            alt=""
-                            referrerPolicy="no-referrer"
-                            style={{
+                    {(() => {
+                        const listingWithImage = listings.find(l => l.image_url || (l.image_urls && l.image_urls.length > 0));
+                        const imgUrl = listingWithImage?.image_url || (listingWithImage?.image_urls && listingWithImage.image_urls[0]);
+                        return imgUrl ? (
+                            <img
+                                src={imgUrl}
+                                alt=""
+                                referrerPolicy="no-referrer"
+                                style={{
+                                    width: '40px',
+                                    height: '40px',
+                                    objectFit: 'contain',
+                                    background: '#fff',
+                                    borderRadius: '4px',
+                                    border: '1px solid var(--border)',
+                                }}
+                            />
+                        ) : (
+                            <div style={{
                                 width: '40px',
                                 height: '40px',
-                                objectFit: 'contain',
-                                background: '#fff',
+                                background: 'var(--surface-3)',
                                 borderRadius: '4px',
                                 border: '1px solid var(--border)',
-                            }}
-                        />
-                    ) : (
-                        <div style={{
-                            width: '40px',
-                            height: '40px',
-                            background: 'var(--surface-3)',
-                            borderRadius: '4px',
-                            border: '1px solid var(--border)',
-                        }} />
-                    )}
+                            }} />
+                        );
+                    })()}
                 </td>
 
                 {/* Canonical name + brand + count */}
