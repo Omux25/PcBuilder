@@ -7,7 +7,7 @@ import {
   LayoutGrid, 
   ChevronRight
 } from 'lucide-react';
-import { CATEGORY_LABELS } from '../types';
+import { CATEGORY_LABELS, CATEGORY_SLUGS } from '../types';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { UI } from '../ui-strings';
 import styles from './Home.module.css';
@@ -98,7 +98,7 @@ export function Home() {
         <h2 className={styles.sectionTitle}>{UI.home.sections.categories}</h2>
         <div className={styles.categoriesGrid}>
           {FEATURED_CATEGORIES.map(cat => (
-            <Link key={cat} to={`/parcourir/${cat}`} className={styles.categoryCard}>
+            <Link key={cat} to={`/parcourir/${CATEGORY_SLUGS[cat] || cat}`} className={styles.categoryCard}>
               <CategoryIcon category={cat} size={32} className={styles.categoryIcon} />
               <span className={styles.categoryName}>{CATEGORY_LABELS[cat]}</span>
               <ChevronRight size={14} className={styles.categoryArrow} />

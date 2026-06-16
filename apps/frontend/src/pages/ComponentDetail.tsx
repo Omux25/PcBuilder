@@ -14,7 +14,7 @@ import { CategoryIcon } from '../components/CategoryIcon';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { useCompare } from '../context/CompareContext';
 import type { Component, PriceOffer, PriceHistoryEntry, ComponentCategory } from '../types';
-import { CATEGORY_LABELS } from '../types';
+import { CATEGORY_LABELS, SLUG_TO_CATEGORY, CATEGORY_SLUGS } from '../types';
 import { UI } from '../ui-strings';
 import { formatPrice } from '@shared/formatting/price.formatter';
 import { formatComponentName } from '@shared/formatting/component-name.formatter';
@@ -26,7 +26,8 @@ interface Props {
 }
 
 export function ComponentDetail({ onAddToBuild }: Props = {}) {
-  const { slug, category, identifier } = useParams<{ slug?: string; category?: string; identifier?: string }>();
+  const { slug, category: rawCategory, identifier } = useParams<{ slug?: string; category?: string; identifier?: string }>();
+  const category = (SLUG_TO_CATEGORY[rawCategory || ''] || rawCategory) as ComponentCategory;
   const navigate = useNavigate();
   const location = useLocation();  const { addToCompare, removeFromCompare, isInCompare, compareIds, compareCategory } = useCompare();
   const [component, setComponent] = useState<Component | null>(null);
@@ -108,7 +109,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
     if (location.key !== 'default') {
       navigate(-1);
     } else if (component) {
-      navigate(`/parcourir/${component.category}`);
+      navigate(`/parcourir/${CATEGORY_SLUGS[component.category as ComponentCategory] || component.category}`);
     } else {
       navigate('/components');
     }
@@ -182,7 +183,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
           <span className={styles.breadcrumbSep}>/</span>
           <Link to="/composants" className={styles.breadcrumbLink}>Composants</Link>
           <span className={styles.breadcrumbSep}>/</span>
-          <Link to={`/parcourir/${component.category}`} className={styles.breadcrumbLink}>
+          <Link to={`/parcourir/${CATEGORY_SLUGS[component.category as ComponentCategory] || component.category}`} className={styles.breadcrumbLink}>
             {CATEGORY_LABELS[component.category as ComponentCategory]}
           </Link>
           {component.brand && (

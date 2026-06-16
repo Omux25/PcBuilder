@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { getSql } from '../../core/db/index.js';
+import { CATEGORY_SLUGS } from '@shared/constants/build.constants.js';
 
 export const seoRouter = new Hono();
 
@@ -47,7 +48,8 @@ seoRouter.get('/sitemap.xml', async (c) => {
       // Format date as YYYY-MM-DD
       const date = new Date(comp.updated_at).toISOString().split('T')[0];
       xml += `  <url>\n`;
-      xml += `    <loc>${baseUrl}/composants/${encodeURIComponent(comp.category)}/${encodeURIComponent(comp.slug)}</loc>\n`;
+      const slugCat = (CATEGORY_SLUGS as Record<string, string>)[comp.category] || comp.category;
+      xml += `    <loc>${baseUrl}/composants/${encodeURIComponent(slugCat)}/${encodeURIComponent(comp.slug)}</loc>\n`;
       xml += `    <lastmod>${date}</lastmod>\n`;
       xml += `    <changefreq>weekly</changefreq>\n`;
       xml += `    <priority>0.6</priority>\n`;

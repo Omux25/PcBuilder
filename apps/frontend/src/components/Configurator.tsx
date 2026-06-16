@@ -18,7 +18,7 @@ import { ConfiguratorChecklist } from './ConfiguratorChecklist';
 import { ConfiguratorTotals } from './ConfiguratorTotals';
 import { ShareModal } from './ShareModal';
 import type { ComponentCategory } from '../types';
-import { CATEGORY_LABELS, RULE_LABELS, slotKeyToCategory, CATEGORY_ORDER, CORE_CATEGORIES } from '../types';
+import { CATEGORY_LABELS, RULE_LABELS, slotKeyToCategory, CATEGORY_ORDER, CORE_CATEGORIES, CATEGORY_SLUGS } from '../types';
 import { useBuild } from '../context/BuildContext';
 import { calculateBuildTotalPrice } from '@shared/engine/pricing.engine';
 import { encodeBuildToUrl } from '../utils/buildUrl';
@@ -140,7 +140,7 @@ export function Configurator() {
       const addLabel = isRam ? 'Ajouter de la mémoire' : 'Ajouter un stockage';
       const catLabel = CATEGORY_LABELS[entry.category];
       const isRequired = checklistKeys.includes(entry.category);
-      const targetUrl = entry.category === slotKey ? `/parcourir/${entry.category}` : `/parcourir/${entry.category}/${slotKey}`;
+      const targetUrl = entry.category === slotKey ? `/parcourir/${CATEGORY_SLUGS[entry.category] || entry.category}` : `/parcourir/${CATEGORY_SLUGS[entry.category] || entry.category}/${slotKey}`;
 
       return (
         <div key={`add-${entry.category}`} className={`${styles.rowWrap} ${styles.rowWrapEmpty}`}>
@@ -177,7 +177,7 @@ export function Configurator() {
     const isRequired = checklistKeys.includes(category);
 
     if (!selected) {
-      const targetUrl = category === slotKey ? `/parcourir/${category}` : `/parcourir/${category}/${slotKey}`;
+      const targetUrl = category === slotKey ? `/parcourir/${CATEGORY_SLUGS[category] || category}` : `/parcourir/${CATEGORY_SLUGS[category] || category}/${slotKey}`;
       return (
         <div key={slotKey} className={`${styles.rowWrap} ${styles.rowWrapEmpty}`}>
           <Link to={targetUrl} className={`${styles.row} ${styles.rowEmpty} ${styles.rowLink}`}>
