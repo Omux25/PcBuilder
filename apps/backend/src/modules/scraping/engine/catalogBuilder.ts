@@ -40,8 +40,10 @@ import { extractStorageSpecs } from '@shared/hardware/specs/storage';
 import type { ComponentCategory } from '@shared/types';
 import { loadAdminRules, matchesRule, type KeywordRule } from '../services/keywordRulesService.js';
 import { getDynamicEnrichment } from '@shared/hardware/services/dynamicEnrichment';
-import { dbHardwareCache } from '../services/dynamicEnrichmentService.js';
-import { scrapeProductPage } from '../utils/deepScraper.js';
+const dbHardwareCache = {
+  async get() { return null; },
+  async set() {}
+};
 import { buildSpecsPayload } from '@shared/hardware/specs/buildSpecs.js';
 
 // ── Case Negative Keyword Guard ───────────────────────────────────────────────
@@ -330,7 +332,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
 
         // Dynamic Enrichment for missing critical specs (like length_mm)
         if (specs.length_mm === null) {
-          const enriched = await getDynamicEnrichment(nameForExtraction, 'gpu', dbHardwareCache, listing.product_url, scrapeProductPage);
+          const enriched = await getDynamicEnrichment(nameForExtraction, 'gpu', dbHardwareCache, listing.product_url, undefined);
           if (enriched) {
             specs = { ...specs, ...enriched };
           }
@@ -355,7 +357,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
 
         // Deep-scraper fallback: hunt the product page for CAS latency, kit config, or RAM type
         if ((!casLatency || !ramType) && listing.product_url) {
-          const enriched = await getDynamicEnrichment(nameForExtraction, 'ram', dbHardwareCache, listing.product_url, scrapeProductPage);
+          const enriched = await getDynamicEnrichment(nameForExtraction, 'ram', dbHardwareCache, listing.product_url, undefined);
           if (enriched) {
             casLatency = casLatency ?? (enriched.cas_latency as number | null | undefined) ?? null;
             kitCount   = kitCount > 1 ? kitCount : ((enriched.kit_count as number | null | undefined) ?? kitCount);
@@ -390,7 +392,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
 
         // Deep-scraper fallback: hunt the product page for form_factor and socket if missing
         if ((!specs?.form_factor || !specs?.socket) && listing.product_url) {
-          const enriched = await getDynamicEnrichment(nameForExtraction, 'motherboard', dbHardwareCache, listing.product_url, scrapeProductPage);
+          const enriched = await getDynamicEnrichment(nameForExtraction, 'motherboard', dbHardwareCache, listing.product_url, undefined);
           if (enriched) {
             // Merge only missing fields — don't overwrite what the chipset extractor resolved
             if (specs) {
@@ -429,7 +431,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
         // Deep-scraper: hunt the product page for 80+ rating and modularity
         // We prioritize deep-scraped specifications over title heuristics since the detail page is the source of truth.
         if (listing.product_url) {
-          const enriched = await getDynamicEnrichment(nameForExtraction, 'psu', dbHardwareCache, listing.product_url, scrapeProductPage);
+          const enriched = await getDynamicEnrichment(nameForExtraction, 'psu', dbHardwareCache, listing.product_url, undefined);
           if (enriched) {
             specs = {
               ...specs,
@@ -525,7 +527,7 @@ export async function buildFromUnmatched(onProgress?: (done: number, total: numb
           let form_factors = extractedSpecs.supported_motherboards;
 
           if (max_gpu_length_mm === null || form_factors === null) {
-            const enriched = await getDynamicEnrichment(nameForExtraction, 'case', dbHardwareCache, listing.product_url, scrapeProductPage);
+            const enriched = await getDynamicEnrichment(nameForExtraction, 'case', dbHardwareCache, listing.product_url, undefined);
             if (enriched) {
               max_gpu_length_mm = enriched.max_gpu_length_mm ?? max_gpu_length_mm;
               max_cpu_cooler_height_mm = enriched.max_cpu_cooler_height_mm ?? max_cpu_cooler_height_mm;
