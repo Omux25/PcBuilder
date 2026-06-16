@@ -16,9 +16,15 @@ const FEATURED_CATEGORIES: (keyof typeof CATEGORY_LABELS)[] = [
   'cpu', 'gpu', 'motherboard', 'ram', 'storage', 'monitor', 'mouse'
 ];
 
+import { SEO } from '../components/SEO';
+
 export function Home() {
   return (
     <div className={styles.home}>
+      <SEO 
+        title="Accueil" 
+        description="Configurez votre PC, vérifiez la compatibilité et comparez les prix chez les meilleurs revendeurs au Maroc." 
+      />
       {/* ── Hero Section ────────────────────────────────────────────────── */}
       <header className={styles.hero}>
         <div className={styles.heroContent}>
