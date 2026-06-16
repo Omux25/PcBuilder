@@ -3,8 +3,14 @@ import { trafficService } from './traffic.service.js';
 
 export const trafficLogger = (): MiddlewareHandler => {
   return async (c, next) => {
-    // Ignore OPTIONS requests, internal health checks, or explicit page views
-    if (c.req.method === 'OPTIONS' || c.req.path.startsWith('/api/health') || c.req.path === '/api/traffic/track') {
+    const pathStr = c.req.path;
+    // Ignore OPTIONS requests, internal health checks, explicit page views, and admin API calls
+    if (
+      c.req.method === 'OPTIONS' || 
+      pathStr.includes('/health') || 
+      pathStr.includes('/traffic/route') ||
+      pathStr.includes('/admin')
+    ) {
       return next();
     }
 
