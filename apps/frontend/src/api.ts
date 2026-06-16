@@ -222,7 +222,7 @@ export async function getPriceHistory(
 /** Validate a build configuration. */
 export function trackTraffic(path: string) {
   // Fire and forget
-  request('/pulse/route', {
+  request('/ui/state', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path })
