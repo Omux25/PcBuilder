@@ -13,7 +13,7 @@ import * as fc from 'fast-check';
 import { runScrapingSession } from '../scheduler.js';
 import { setSql as setLoggerSql, resetSql as resetLoggerSql } from '../utils/logger.js';
 import { setSql as setAggregatorSql, resetSql as resetAggregatorSql } from '../aggregator.js';
-import { setSql as setCatalogBuilderSql, resetSql as resetCatalogBuilderSql } from '../catalogBuilder.js';
+
 import { setSql as setSessionSql, resetSql as resetSessionSql } from '../../../../core/db/index.js';
 import { setFetch, resetFetchAndLoad, setRetryDelay, setSilent } from '../scrapers/baseScraper.js';
 import { setUltraPcFetch, resetUltraPcFetch } from '../scrapers/ultrapcScraper.js';
@@ -48,7 +48,7 @@ beforeEach(() => {
   logEntries.length = 0;
   setLoggerSql(makeLoggerSql());
   setAggregatorSql(makeAggregatorSql());
-  setCatalogBuilderSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
+
   const pbtMockSql = (strings: TemplateStringsArray, ..._values: unknown[]) => {
     const query = strings.join('?');
     if (query.includes('pg_try_advisory_xact_lock')) {
@@ -75,7 +75,7 @@ beforeEach(() => {
 afterAll(() => {
   resetLoggerSql();
   resetAggregatorSql();
-  resetCatalogBuilderSql();
+
   resetSessionSql();
   resetFetchAndLoad();
   resetUltraPcFetch();
