@@ -160,7 +160,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
     : component?.image_url 
       ? [component.image_url] 
       : [];
-  const quickSpecs = specs ? Object.entries(specs).slice(0, 4) : [];
+  const allSpecs = specs ? Object.entries(specs) : [];
   
   // Gallery logic — always show thumbnails if we have at least one image
   const showGallery = images.length > 0;
@@ -241,9 +241,9 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
             </div>
           )}
 
-          {quickSpecs.length > 0 && (
+          {allSpecs.length > 0 && (
             <div className={styles.quickSpecsList}>
-              {quickSpecs.map(([key, val]) => (
+              {allSpecs.map(([key, val]) => (
                 <div key={key} className={styles.quickSpecItem}>
                   <span className={styles.quickSpecKey}>{formatSpecKey(key)}</span>
                   <span className={styles.quickSpecVal}>{formatSpecValue(val)}</span>
@@ -365,22 +365,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
             />
           </section>
 
-          {/* Full Specs */}
-          {specs && Object.keys(specs).length > 4 && (
-            <section className={styles.card}>
-              <h3 className={styles.cardTitle}>Toutes les Caractéristiques</h3>
-              <table className={styles.specsTable}>
-                <tbody>
-                  {Object.entries(specs).slice(4).map(([key, value]) => (
-                    <tr key={key}>
-                      <td className={styles.specKey}>{formatSpecKey(key)}</td>
-                      <td className={styles.specValue}>{formatSpecValue(value)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          )}
+
         </div>
       </div>
     </div>
