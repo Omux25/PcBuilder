@@ -88,6 +88,7 @@ export const trafficService = {
   },
 
   async getTrafficLogs(limit = 50, offset = 0, ip?: string) {
+    await flushLogs(); // Ensure real-time accuracy for the dashboard
     const sql = getSql();
     
     // We use a trick: if ip is provided, we filter where ip LIKE %ip%.
@@ -122,6 +123,7 @@ export const trafficService = {
   },
 
   async getTrafficVisitors(limit = 50, offset = 0) {
+    await flushLogs(); // Ensure real-time accuracy for the dashboard
     const sql = getSql();
     const rows = await sql`
       SELECT 
@@ -150,6 +152,11 @@ export const trafficService = {
   },
 
   async clearAllLogs() {
+    logQueue.length = 0; // Clear the memory queue so old logs don't resurrect
+    if (flushTimeout) {
+      clearTimeout(flushTimeout);
+      flushTimeout = null;
+    }
     const sql = getSql();
     await sql`TRUNCATE TABLE traffic_logs`;
   }
