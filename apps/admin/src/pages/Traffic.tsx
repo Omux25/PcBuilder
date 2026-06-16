@@ -39,6 +39,7 @@ function parseUserAgent(ua: string | null) {
 
 export function Traffic() {
   const [activeTab, setActiveTab] = useState<'visitors' | 'raw'>('visitors');
+  const [ipFilter, setIpFilter] = useState<string | null>(null);
   
   const [visitors, setVisitors] = useState<TrafficVisitorEntry[]>([]);
   const [logs, setLogs] = useState<TrafficLogEntry[]>([]);
@@ -51,7 +52,7 @@ export function Traffic() {
   useEffect(() => {
     setPage(1);
     fetchData();
-  }, [activeTab]);
+  }, [activeTab, ipFilter]);
 
   useEffect(() => {
     fetchData();
@@ -65,7 +66,10 @@ export function Traffic() {
         setVisitors(res.data);
         setTotal(res.total);
       } else {
-        const res = await getAdminTrafficLogs({ limit: String(limit), offset: String((page - 1) * limit) });
+        const params: Record<string, string> = { limit: String(limit), offset: String((page - 1) * limit) };
+        if (ipFilter) params.ip = ipFilter;
+        
+        const res = await getAdminTrafficLogs(params);
         setLogs(res.data);
         setTotal(res.total);
       }
@@ -85,6 +89,11 @@ export function Traffic() {
     } catch (err) {
       console.error('Failed to clear traffic logs', err);
     }
+  }
+
+  function handleVisitorClick(ip: string) {
+    setIpFilter(ip);
+    setActiveTab('raw');
   }
 
   const totalPages = Math.ceil(total / limit);
@@ -115,7 +124,7 @@ export function Traffic() {
       <div className={styles.tabs}>
         <button 
           className={`${styles.tab} ${activeTab === 'visitors' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('visitors')}
+          onClick={() => { setActiveTab('visitors'); setIpFilter(null); }}
         >
           <Users size={16} /> Visiteurs
         </button>
@@ -123,8 +132,17 @@ export function Traffic() {
           className={`${styles.tab} ${activeTab === 'raw' ? styles.tabActive : ''}`}
           onClick={() => setActiveTab('raw')}
         >
-          <List size={16} /> Requêtes Brutes
+          <List size={16} /> Requêtes Brutes {ipFilter && `(Filtre: ${ipFilter})`}
         </button>
+        {ipFilter && activeTab === 'raw' && (
+          <button 
+            className={styles.tab}
+            style={{ marginLeft: 'auto', color: 'var(--danger-soft)' }}
+            onClick={() => setIpFilter(null)}
+          >
+            Effacer le filtre
+          </button>
+        )}
       </div>
 
       {/* Stats Grid */}
@@ -199,10 +217,17 @@ export function Traffic() {
                     <tr><td colSpan={6} className={styles.empty}>Aucun visiteur enregistré.</td></tr>
                   ) : (
                     visitors.map(visitor => (
-                      <tr key={visitor.ip}>
+                      <tr 
+                        key={visitor.ip} 
+                        style={{ cursor: 'pointer' }} 
+                        onClick={() => handleVisitorClick(visitor.ip)}
+                        title="Cliquez pour voir toutes les requêtes de ce visiteur"
+                      >
                         <td className={styles.ipCell}>
                           <Globe size={12} className={styles.inlineIcon} />
-                          {visitor.ip}
+                          <span style={{ textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '4px' }}>
+                            {visitor.ip}
+                          </span>
                         </td>
                         <td style={{ fontWeight: 600 }}>{visitor.totalRequests.toLocaleString()}</td>
                         <td>

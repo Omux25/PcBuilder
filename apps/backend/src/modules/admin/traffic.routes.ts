@@ -11,11 +11,12 @@ adminTrafficRouter.use('/*', authMiddleware);
 const paginationSchema = z.object({
   limit: z.coerce.number().min(1).max(500).default(50),
   offset: z.coerce.number().min(0).default(0),
+  ip: z.string().optional(),
 });
 
 adminTrafficRouter.get('/traffic', zValidator('query', paginationSchema), async (c) => {
-  const { limit, offset } = c.req.valid('query');
-  const result = await trafficService.getTrafficLogs(limit, offset);
+  const { limit, offset, ip } = c.req.valid('query');
+  const result = await trafficService.getTrafficLogs(limit, offset, ip);
   return c.json(result);
 });
 
