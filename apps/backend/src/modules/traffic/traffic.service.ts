@@ -87,17 +87,32 @@ export const trafficService = {
     }
   },
 
-  async getTrafficLogs(limit = 50, offset = 0) {
+  async getTrafficLogs(limit = 50, offset = 0, ip?: string) {
     const sql = getSql();
-    const rows = await sql`
-      SELECT id, ip, method, path, user_agent as "userAgent", 
-             status_code as "statusCode", response_time_ms as "responseTimeMs", created_at as "createdAt"
-      FROM traffic_logs
-      ORDER BY created_at DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `;
+    
+    // We use a trick: if ip is provided, we filter where ip LIKE %ip%.
+    // Because ip might be "127.0.0.1" or "127.0.0.1, 10.0.0.1"
+    const rows = ip 
+      ? await sql`
+        SELECT id, ip, method, path, user_agent as "userAgent", 
+               status_code as "statusCode", response_time_ms as "responseTimeMs", created_at as "createdAt"
+        FROM traffic_logs
+        WHERE ip LIKE ${'%' + ip + '%'}
+        ORDER BY created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
+      : await sql`
+        SELECT id, ip, method, path, user_agent as "userAgent", 
+               status_code as "statusCode", response_time_ms as "responseTimeMs", created_at as "createdAt"
+        FROM traffic_logs
+        ORDER BY created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
 
-    const countResult = await sql`SELECT COUNT(*) as total FROM traffic_logs`;
+    const countResult = ip 
+      ? await sql`SELECT COUNT(*) as total FROM traffic_logs WHERE ip LIKE ${'%' + ip + '%'}`
+      : await sql`SELECT COUNT(*) as total FROM traffic_logs`;
+      
     const total = Number(countResult[0]?.total || 0);
 
     return {
