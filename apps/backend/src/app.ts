@@ -80,7 +80,7 @@ const routes = app
   .route('/api/compatibility', compatibilityRouter)
   .route('/api', catalogRouter)
   .route('/api', seoRouter)
-  .route('/api/traffic', publicTrafficRouter)
+  .route('/api/pulse', publicTrafficRouter)
   .route('/api/health', healthRouter)
   // ── Protected routes ──────────────────────────────────────────────────────────
   .route('/api/admin', adminRouter)
