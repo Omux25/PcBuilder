@@ -3,7 +3,7 @@ import { describe, test, expect, beforeEach, afterAll } from 'bun:test';
 import { runScrapingSession } from '../scheduler.js';
 import { setSql as setLoggerSql, resetSql as resetLoggerSql } from '../utils/logger.js';
 import { setSql as setAggregatorSql, resetSql as resetAggregatorSql } from '../aggregator.js';
-import { setSql as setCatalogBuilderSql, resetSql as resetCatalogBuilderSql } from '../catalogBuilder.js';
+
 import { setSql as setSessionSql, resetSql as resetSessionSql } from '../../../../core/db/index.js';
 import { setFetch, resetFetchAndLoad, setRetryDelay, setSilent } from '../scrapers/baseScraper.js';
 import { setUltraPcFetch, resetUltraPcFetch } from '../scrapers/ultrapcScraper.js';
@@ -82,7 +82,7 @@ beforeEach(() => {
   upsertedPrices.length = 0;
   setLoggerSql(makeLoggerSql());
   setAggregatorSql(makeAggregatorSql());
-  setCatalogBuilderSql((_strings: TemplateStringsArray, ..._values: unknown[]) => Promise.resolve([]));
+
   // Mock session's own SQL (for SELECT retailers + UPDATE retailers status)
   const sessionMockSql = (strings: TemplateStringsArray, ..._values: unknown[]) => {
     const query = strings.join('?');
@@ -130,7 +130,7 @@ beforeEach(() => {
 afterAll(() => {
   resetLoggerSql();
   resetAggregatorSql();
-  resetCatalogBuilderSql();
+
   resetSessionSql();
   resetFetchAndLoad();
   resetUltraPcFetch();
