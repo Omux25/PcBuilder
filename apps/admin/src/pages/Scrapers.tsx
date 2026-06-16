@@ -95,9 +95,9 @@ export function Scrapers() {
   }, []);
 
   useEffect(() => {
-    Promise.all([loadRetailers(), loadLogs(), syncStatus()]).finally(() =>
-      setLoading(false)
-    );
+    Promise.all([loadRetailers(), loadLogs(), syncStatus()])
+      .catch((e: any) => setError(e.message))
+      .finally(() => setLoading(false));
   }, [loadRetailers, loadLogs, syncStatus]);
 
   // Auto-start polling if a session is already running on mount

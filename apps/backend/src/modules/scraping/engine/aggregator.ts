@@ -227,6 +227,11 @@ export async function aggregate(
   // ── Phase A: classify all items in memory ──────────────────────────────────
   let classifiedCount = 0;
   for (const p of prices) {
+    // Yield to the event loop every 100 items to prevent blocking the Node.js server
+    if (++classifiedCount % 100 === 0) {
+      await new Promise(resolve => setImmediate(resolve));
+    }
+
     try {
       const scrapedName = decodeHtml(p.product_name ?? '');
 
