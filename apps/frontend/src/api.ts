@@ -220,6 +220,15 @@ export async function getPriceHistory(
 // ── Compatibility ─────────────────────────────────────────────────────────────
 
 /** Validate a build configuration. */
+export function trackTraffic(path: string) {
+  // Fire and forget
+  request('/traffic/track', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path })
+  }).catch(() => {});
+}
+
 export async function validateBuild(build: BuildConfig): Promise<CompatibilityResult> {
   const payload: Record<string, number> = {};
   for (const [category, component] of Object.entries(build)) {
