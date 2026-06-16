@@ -9,9 +9,12 @@ seoRouter.get('/sitemap.xml', async (c) => {
   try {
     // Get all components with a slug
     const components = await sql`
-      SELECT category, slug, updated_at 
-      FROM components 
-      WHERE slug IS NOT NULL
+      SELECT c.category, c.slug, c.updated_at 
+      FROM components c
+      WHERE c.slug IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM prices p WHERE p.component_id = c.id
+      )
     `;
 
     const baseUrl = 'https://pcbuilder.ma';
