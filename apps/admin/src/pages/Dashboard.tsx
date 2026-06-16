@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Package, Store, TrendingUp, AlertCircle, Activity } from 'lucide-react';
+import { Package, Store, TrendingUp, AlertCircle, Activity, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { getDashboard } from '../api';
 import type { DashboardData } from '../api';
 import { fmtNum, fmtDate } from '../utils/fmt';
@@ -37,6 +38,23 @@ export function Dashboard() {
   }));
   const activity = data?.recent_activity ?? [];
   const unmatchedCount = stats?.unmatched_listings_count ?? 0;
+
+  const formatAction = (action: string) => {
+    const map: Record<string, string> = {
+      'login': 'Connexion',
+      'logout': 'Déconnexion',
+      'trigger_scraper': 'Lancement du scraper',
+      'create_retailer': 'Création d\'un revendeur',
+      'update_retailer': 'Modification d\'un revendeur',
+      'delete_retailer': 'Suppression d\'un revendeur',
+      'match_listing': 'Association d\'un listing',
+      'ignore_listing': 'Listing ignoré',
+      'bulk_category_update': 'Mise à jour de catégorie en masse',
+      'create_component': 'Création d\'un composant',
+      'update_component': 'Modification d\'un composant',
+    };
+    return map[action] || action.replace(/_/g, ' ');
+  };
 
   return (
     <div className={styles.page}>
@@ -82,12 +100,17 @@ export function Dashboard() {
           icon={<AlertCircle size={20} />}
           color={unmatchedCount > 0 ? 'danger' : 'green'}
           accent={unmatchedCount > 0}
+          action={unmatchedCount > 0 ? (
+            <Link to="/admin/unmatched" className={styles.quickActionBtn}>
+              Résoudre <ArrowRight size={14} />
+            </Link>
+          ) : undefined}
         />
       </div>
 
       {/* Price updates chart */}
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Mises à jour des prix <span className={styles.sectionSub}>(30 jours)</span></h2>
+        <h2 className={styles.sectionTitle}>Mises à jour des prix <span className={styles.sectionSub}>(14 jours)</span></h2>
         <div className={styles.chart}>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={chart} margin={{ top: 5, right: 16, left: 0, bottom: 5 }}>
@@ -103,6 +126,7 @@ export function Dashboard() {
                 tickLine={false}
                 axisLine={false}
                 width={40}
+                allowDecimals={false}
               />
               <Tooltip
                 contentStyle={{
@@ -126,13 +150,15 @@ export function Dashboard() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Activité récente</h2>
         {activity.length === 0 ? (
-          <p className="admin-empty">Aucune activité récente.</p>
+          <p className="admin-empty">Aucune activité récente importante.</p>
         ) : (
           <div className={styles.activityList}>
             {activity.map((item) => (
               <div key={item.id} className={styles.activityItem}>
                 <div className={styles.activityDot} />
-                <span className={styles.activityAction}>{item.action}</span>
+                <span className={styles.activityAction} style={{ textTransform: 'capitalize' }}>
+                  {formatAction(item.action)}
+                </span>
                 {item.entity_type && (
                   <span className={styles.activityEntity}>{item.entity_type} #{item.entity_id}</span>
                 )}
@@ -152,6 +178,7 @@ interface StatCardProps {
   icon: React.ReactNode;
   color: 'blue' | 'green' | 'purple' | 'danger';
   accent?: boolean;
+  action?: React.ReactNode;
 }
 
 const colorMap = {
@@ -161,7 +188,7 @@ const colorMap = {
   danger: { icon: 'rgba(243,139,168,0.12)', text: 'var(--danger-soft)',  glow: 'rgba(243,139,168,0.15)' },
 };
 
-function StatCard({ label, value, icon, color, accent }: StatCardProps) {
+function StatCard({ label, value, icon, color, accent, action }: StatCardProps) {
   const c = colorMap[color];
   return (
     <div
@@ -175,6 +202,7 @@ function StatCard({ label, value, icon, color, accent }: StatCardProps) {
         gap: '0.75rem',
         transition: 'var(--transition)',
         boxShadow: accent ? `0 0 20px ${c.glow}` : 'none',
+        position: 'relative',
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -193,6 +221,11 @@ function StatCard({ label, value, icon, color, accent }: StatCardProps) {
         >
           {icon}
         </div>
+        {action && (
+          <div style={{ marginTop: '-4px', marginRight: '-4px' }}>
+            {action}
+          </div>
+        )}
       </div>
       <div>
         <div style={{ fontSize: '1.75rem', fontWeight: 800, lineHeight: 1, color: accent ? c.text : 'var(--text)', letterSpacing: '-0.03em' }}>

@@ -104,7 +104,26 @@ export class AdminRepository {
       ORDER BY date ASC
     `) as { date: string; count: string }[];
 
-    return rows.map((r) => ({ date: r.date, count: parseInt(r.count, 10) }));
+    const dbMap = new Map<string, number>();
+    for (const r of rows) {
+      // Postgres returns dates as e.g. "2023-10-27T00:00:00.000Z" when using postgresjs or strings, we only want YYYY-MM-DD
+      const d = new Date(r.date);
+      const key = d.toISOString().split('T')[0];
+      dbMap.set(key, parseInt(r.count, 10));
+    }
+
+    const result: PriceUpdateChartEntry[] = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      result.push({
+        date: key,
+        count: dbMap.get(key) || 0,
+      });
+    }
+
+    return result;
   }
 
   async getRecentActivity(limit: number): Promise<ActivityEntry[]> {
@@ -120,6 +139,7 @@ export class AdminRepository {
         a.username AS admin_username
       FROM admin_activity_log al
       JOIN admins a ON a.id = al.admin_id
+      WHERE al.action NOT IN ('bulk_category_update', 'system_tick', 'health_check')
       ORDER BY al.created_at DESC
       LIMIT ${limit}
     ` as Promise<ActivityEntry[]>;
