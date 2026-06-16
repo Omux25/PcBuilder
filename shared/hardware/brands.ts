@@ -1,3 +1,29 @@
+const BRANDS = [
+  '1stPlayer', 'Abkoncore', 'Acer', 'ADATA', 'Addlink', 'Aerocool', 'AMD', 'Antec', 'Apacer', 'APNX', 'Arctic', 'Arktek',
+  'ASRock', 'ASUS', 'be quiet!', 'Biostar', 'BitFenix', 'Chieftec', 'Colorful', 'Cooler Master',
+  'Connect', 'Corsair', 'Cougar', 'Crucial', 'DeepCool', 'Dell', 'Deskooze', 'EKWB', 'Enermax', 'EVGA', 'FANXIANG', 'Fractal',
+  'FSP', 'G.Skill', 'Gainward', 'Galax', 'Geil', 'Gigabyte', 'Goodram', 'HIKSEMI', 'Hikvision', 'HP', 'HAVN', 'Hybrok', 'Hyte',
+  'ID-Cooling', 'Infinity', 'Inno3D', 'Innovation IT', 'Intel', 'Intenso', 'Itek', 'KFA2', 'Kingston', 'Klevv',
+  'Kolink', 'LC Power', 'Leadtek', 'Lenovo', 'Lexar', 'Lian Li', 'M.RED', 'Manli', 'Mars Gaming', 'Matrox', 'Montech', 'MSI', 'Mushkin',
+  'Noctua', 'Nova', 'Nox', 'NVIDIA', 'NZXT', 'OCPC', 'Palit', 'Patriot', 'Phanteks', 'Philips', 'PNY',
+  'PowerColor', 'Razer', 'Reletech', 'Sabrent', 'Samsung', 'Sapphire', 'Scythe', 'Seagate', 'Seasonic',
+  'Setup Game', 'Sharkoon', 'Silicon Power', 'Silverstone', 'Sparkle', 'Spirit of Gamer', 'Super Flower',
+  'Symphony', 'Team Group', 'TeamGroup', 'Thermal Grizzly', 'Thermalright', 'Thermaltake', 'Tooq', 'Toshiba', 'Transcend', 'Twinmos', 'Verbatim',
+  'Viper', 'WD', 'Western Digital', 'XFX', 'Xigmatek', 'XPG', 'XTRMLAB', 'Yeyian', 'Zotac'
+];
+
+const PRECOMPUTED_REGEXES = new Map<string, RegExp>();
+for (const brand of BRANDS) {
+  const bLower = brand.toLowerCase();
+  const escapedBrand = bLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = bLower.includes('!')
+    ? new RegExp(`\\b${escapedBrand}`, 'i')
+    : new RegExp(`\\b${escapedBrand}\\b`, 'i');
+  PRECOMPUTED_REGEXES.set(brand, regex);
+}
+
+const CHIP_BRANDS = new Set(['Intel', 'AMD', 'NVIDIA']);
+
 export function extractBrand(name: string): string {
   const n = name.trim();
   const lower = n.toLowerCase();
@@ -28,29 +54,10 @@ export function extractBrand(name: string): string {
   // 2. Positional Brand Detection
   // We find ALL matches and pick the one that appears EARLIEST in the string.
   // This handles "Connect Arctic Frost" by picking Connect (index 0) over Arctic (index 8).
-  const BRANDS = [
-    '1stPlayer', 'Abkoncore', 'Acer', 'ADATA', 'Addlink', 'Aerocool', 'AMD', 'Antec', 'Apacer', 'APNX', 'Arctic', 'Arktek',
-    'ASRock', 'ASUS', 'be quiet!', 'Biostar', 'BitFenix', 'Chieftec', 'Colorful', 'Cooler Master',
-    'Connect', 'Corsair', 'Cougar', 'Crucial', 'DeepCool', 'Dell', 'Deskooze', 'EKWB', 'Enermax', 'EVGA', 'FANXIANG', 'Fractal',
-    'FSP', 'G.Skill', 'Gainward', 'Galax', 'Geil', 'Gigabyte', 'Goodram', 'HIKSEMI', 'Hikvision', 'HP', 'HAVN', 'Hybrok', 'Hyte',
-    'ID-Cooling', 'Infinity', 'Inno3D', 'Innovation IT', 'Intel', 'Intenso', 'Itek', 'KFA2', 'Kingston', 'Klevv',
-    'Kolink', 'LC Power', 'Leadtek', 'Lenovo', 'Lexar', 'Lian Li', 'M.RED', 'Manli', 'Mars Gaming', 'Matrox', 'Montech', 'MSI', 'Mushkin',
-    'Noctua', 'Nova', 'Nox', 'NVIDIA', 'NZXT', 'OCPC', 'Palit', 'Patriot', 'Phanteks', 'Philips', 'PNY',
-    'PowerColor', 'Razer', 'Reletech', 'Sabrent', 'Samsung', 'Sapphire', 'Scythe', 'Seagate', 'Seasonic',
-    'Setup Game', 'Sharkoon', 'Silicon Power', 'Silverstone', 'Sparkle', 'Spirit of Gamer', 'Super Flower',
-    'Symphony', 'Team Group', 'TeamGroup', 'Thermal Grizzly', 'Thermalright', 'Thermaltake', 'Tooq', 'Toshiba', 'Transcend', 'Twinmos', 'Verbatim',
-    'Viper', 'WD', 'Western Digital', 'XFX', 'Xigmatek', 'XPG', 'XTRMLAB', 'Yeyian', 'Zotac'
-  ];
-
   let bestMatch: { brand: string; index: number } | null = null;
-  const CHIP_BRANDS = new Set(['Intel', 'AMD', 'NVIDIA']);
 
   for (const brand of BRANDS) {
-    const bLower = brand.toLowerCase();
-    const escapedBrand = bLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = bLower.includes('!')
-      ? new RegExp(`\\b${escapedBrand}`, 'i')
-      : new RegExp(`\\b${escapedBrand}\\b`, 'i');
+    const regex = PRECOMPUTED_REGEXES.get(brand)!;
 
     const match = lower.match(regex);
     if (match && match.index !== undefined) {

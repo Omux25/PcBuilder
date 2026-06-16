@@ -8,15 +8,13 @@
 import PQueue from 'p-queue';
 import { logger } from './utils/logger.js';
 import { aggregate } from './aggregator.js';
-import { runSuggestionPreprocessing } from '../services/suggestionPreprocessor.js';
 import { getSql } from '../../../core/db/index.js';
 import type { SqlFn } from '../../../core/db/index.js';
 import { RETAILER_SCRAPERS } from './config/retailers.config.js';
 import type { ResolvedRetailerScraperConfig } from './config/retailers.config.js';
 import { importBenchmarks } from './benchmarkImporter.js';
 import type { ScrapedPrice } from './scrapers/baseScraper.js';
-import { runSmartBackfill, runDeepRetailerBackfill } from '../services/enrichmentService.js';
-import { runSpecMiningSession } from '../services/specMiningService.js';
+import { runSmartBackfill } from '../services/enrichmentService.js';
 
 // ── Data Quality Pass ─────────────────────────────────────────────────────────
 
@@ -272,18 +270,9 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
     await logger.error(`[SESSION] Data quality pass failed: ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  // 2. Parallel Tasks: Suggestions, Benchmarks, and Smart Inference
-  await logger.info('[SESSION] Running parallel maintenance (Suggestions, Benchmarks, Inference)...');
+  // 2. Parallel Tasks: Benchmarks and Smart Inference
+  await logger.info('[SESSION] Running parallel maintenance (Benchmarks, Inference)...');
   await Promise.all([
-    // Suggestion Preprocessing
-    (async () => {
-      try {
-        await logger.info('[SESSION] Computing suggestions for unmatched listings...');
-        await runSuggestionPreprocessing();
-      } catch (err) {
-        await logger.error(`[SESSION] Suggestion preprocessing failed: ${err instanceof Error ? err.message : String(err)}`);
-      }
-    })(),
 
     // Benchmarks
     (async () => {
@@ -307,23 +296,6 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
     })()
   ]);
 
-  // 3. Automated Spec Mining: Blocking / Awaited for completion
-  await logger.info('[SESSION] Starting automated spec mining (Retailers -> Manufacturers -> Datasets)...');
-  try {
-    await runSpecMiningSession();
-    await logger.info('[SESSION] Spec mining task finished successfully');
-  } catch (err) {
-    await logger.error(`[SESSION] Spec mining task failed: ${err instanceof Error ? err.message : String(err)}`);
-  }
-
-  // 4. Deep Retailer Backfill: Visit product pages for missing specs (uses MPN logic)
-  await logger.info('[SESSION] Starting deep retailer backfill (MPN/EAN extraction)...');
-  try {
-    await runDeepRetailerBackfill();
-    await logger.info('[SESSION] Deep backfill finished successfully');
-  } catch (err) {
-    await logger.error(`[SESSION] Deep backfill failed: ${err instanceof Error ? err.message : String(err)}`);
-  }
 }
 
 

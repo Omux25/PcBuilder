@@ -1,7 +1,6 @@
 import { UnmatchedRepository } from '../repositories/unmatchedRepository.js';
 import { CurationPersistenceService } from '../../../../core/services/curationPersistenceService.js';
 import type { UnmatchedListingFilter } from '../repositories/unmatchedRepository.js';
-import { runSuggestionPreprocessing } from '../../services/suggestionPreprocessor.js';
 import { logger } from '../../engine/utils/logger.js';
 import { getSql } from '../../../../core/db/index.js';
 import { getUniqueSlug } from '../../../catalog/services/slugService.js';
@@ -242,8 +241,6 @@ export class UnmatchedService {
       logger.error(`[CURATION] Background export failed on bulkConfirmAllWithCategories: ${err.message}`);
     });
 
-    runSuggestionPreprocessing().catch(() => {});
-
     return { linked_listings, created_components, created_listings };
   }
 
@@ -328,7 +325,6 @@ export class UnmatchedService {
       try {
         const { reprocessUnmatched } = await import('../../engine/aggregator.js');
         await reprocessUnmatched();
-        await runSuggestionPreprocessing(true);
       } catch (err: any) {
         logger.error(`[SUGGESTIONS] Background reprocessing failed: ${err.message}`);
       }
@@ -407,7 +403,6 @@ export class UnmatchedService {
         await this.repository.linkListingsToComponent(tx, listing_ids, existing_component_id);
       });
 
-      runSuggestionPreprocessing().catch(() => {});
       return { component_id: existing_component_id, linked_count: listings.length };
     }
 
@@ -520,7 +515,6 @@ export class UnmatchedService {
       logger.error(`[CURATION] Background export failed on createAndLink: ${err.message}`);
     });
 
-    runSuggestionPreprocessing().catch(() => {});
     return { component_id: newComponentId!, component_slug: slug, linked_count: listings.length };
   }
 

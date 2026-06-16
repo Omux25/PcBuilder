@@ -146,7 +146,7 @@ export class SetupGameScraper {
       } catch (err) {
         console.error(`[${SITE_NAME}] Category "${slug}" failed: ${err}`);
       }
-      const delay = getRetryDelay(200);
+      const delay = getRetryDelay(1000);
       if (delay > 0) await new Promise(r => setTimeout(r, delay));
     }
 
@@ -188,7 +188,7 @@ export class SetupGameScraper {
       if (products.length < PER_PAGE) break; // last page
       page++;
 
-      const delay = getRetryDelay(150);
+      const delay = getRetryDelay(1000);
       if (delay > 0) await new Promise(r => setTimeout(r, delay));
     }
 
@@ -210,9 +210,14 @@ export class SetupGameScraper {
         return await res.json() as StoreApiProduct[];
       } catch (err) {
         clearTimeout(timeout);
-        const isHttp = err instanceof Error && err.message.startsWith('HTTP ');
-        if (isHttp || attempt === MAX_RETRIES) throw err;
-        const delay = getRetryDelay(Math.pow(2, attempt) * 1000);
+        const isHttpError = err instanceof Error && err.message.startsWith('HTTP ');
+        const isRateLimitOrServerErr = err instanceof Error && (err.message.includes('429') || err.message.includes('503'));
+        
+        if ((isHttpError && !isRateLimitOrServerErr) || attempt === MAX_RETRIES) {
+          throw err;
+        }
+        
+        const delay = getRetryDelay(Math.pow(2, attempt) * 2000);
         await new Promise(r => setTimeout(r, delay));
       }
     }
