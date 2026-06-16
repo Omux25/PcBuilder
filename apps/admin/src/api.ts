@@ -202,6 +202,25 @@ export const getAdminTrafficLogs = (params: Record<string, string> = {}) => {
   return request<TrafficLogsResponse>(`/admin/traffic${qs ? `?${qs}` : ''}`);
 };
 
+export interface TrafficVisitorEntry {
+  ip: string;
+  userAgent: string | null;
+  firstSeen: string;
+  lastSeen: string;
+  totalRequests: number;
+  errorCount: number;
+}
+
+export interface TrafficVisitorsResponse {
+  data: TrafficVisitorEntry[];
+  total: number;
+}
+
+export const getAdminTrafficVisitors = (params: Record<string, string> = {}) => {
+  const qs = new URLSearchParams(params).toString();
+  return request<TrafficVisitorsResponse>(`/admin/traffic/visitors${qs ? `?${qs}` : ''}`);
+};
+
 export const clearAllTrafficLogs = () =>
   request<{ success: boolean; message: string }>('/admin/traffic', { method: 'DELETE' });
 

@@ -19,6 +19,12 @@ adminTrafficRouter.get('/traffic', zValidator('query', paginationSchema), async 
   return c.json(result);
 });
 
+adminTrafficRouter.get('/traffic/visitors', zValidator('query', paginationSchema), async (c) => {
+  const { limit, offset } = c.req.valid('query');
+  const result = await trafficService.getTrafficVisitors(limit, offset);
+  return c.json(result);
+});
+
 adminTrafficRouter.delete('/traffic', async (c) => {
   await trafficService.clearAllLogs();
   return c.json({ success: true, message: 'All traffic logs cleared' });
