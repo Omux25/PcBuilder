@@ -3,8 +3,8 @@ import { Routes, Route, Link, useLocation, useNavigate, Navigate, useParams } fr
 import { Cpu, Sun, Moon, LayoutGrid, Search, GitCompare, Home as HomeIcon, Sliders, Sparkles, TrendingUp } from 'lucide-react';
 import { Configurator } from './components/Configurator';
 import { Skeleton } from './components/Skeleton';
-import { CompareTray } from './components/CompareTray';
-import { CategoryConflictModal } from './components/CategoryConflictModal';
+const CompareTray = lazy(() => import('./components/CompareTray').then(m => ({ default: m.CompareTray })));
+const CategoryConflictModal = lazy(() => import('./components/CategoryConflictModal').then(m => ({ default: m.CategoryConflictModal })));
 import { useBuild } from './context/BuildContext';
 import { getInitialTheme, applyTheme, toggleTheme } from './utils/theme';
 import { getComponentById, getComponentBySlug } from './api';
@@ -309,8 +309,10 @@ export default function App() {
         </Link>
       </nav>
 
-      <CompareTray />
-      <CategoryConflictModal />
+      <Suspense fallback={null}>
+        <CompareTray />
+        <CategoryConflictModal />
+      </Suspense>
     </div>
   );
 }
