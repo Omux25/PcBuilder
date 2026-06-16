@@ -28,6 +28,7 @@ import { useBuild } from '../context/BuildContext';
 import { UI } from '../ui-strings';
 import { formatPrice } from '@shared/formatting/price.formatter';
 import { LinkEngine } from '@shared/link-engine';
+import { SEO } from '../components/SEO';
 import styles from './MarketTrends.module.css';
 
 const DAY_OPTIONS = [3, 7, 14, 30];
@@ -240,6 +241,10 @@ export function MarketTrends() {
 
   return (
     <div className={styles.page}>
+      <SEO 
+        title="Tendances des Prix des Composants PC au Maroc | PC Builder"
+        description="Suivez les baisses et hausses de prix des composants PC au Maroc. Achetez votre matériel au meilleur moment."
+      />
       <div className={styles.pageHeader}>
         <div className={styles.headerTop}>
           <div className={styles.titleRow}>

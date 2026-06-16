@@ -20,6 +20,7 @@ import { formatPrice } from '@shared/formatting/price.formatter';
 import { LinkEngine } from '@shared/link-engine';
 import { UI } from '../ui-strings';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer } from 'recharts';
+import { SEO } from '../components/SEO';
 import styles from './Compare.module.css';
 
 // Ranks for non-numeric specs
@@ -255,6 +256,10 @@ export function Compare() {
 
   return (
     <div className={styles.page}>
+      <SEO 
+        title="Comparateur de Composants PC | PC Builder Maroc"
+        description="Comparez les spécifications, performances et prix des composants PC au Maroc. Trouvez le meilleur rapport qualité/prix."
+      />
       <header className={styles.pageHeader}>
         <div className={styles.headerContent}>
           <div className={styles.headerLeft}>
@@ -400,7 +405,7 @@ export function Compare() {
                 <X size={16} />
               </button>
               <div className={styles.imgWrap}>
-                <img src={item.component.image_url} alt="" referrerPolicy="no-referrer" />
+                <img src={item.component.image_url} alt="" referrerPolicy="no-referrer" loading="lazy" fetchpriority="low" />
               </div>
               <div className={styles.compInfo}>
                 <span className={styles.brand}>{item.component.brand}</span>
@@ -455,7 +460,7 @@ export function Compare() {
                                   }}
                                >
                                   {prod.image_url ? (
-                                    <img src={prod.image_url} alt="" className={styles.quickAddThumb} referrerPolicy="no-referrer" />
+                                    <img src={prod.image_url} alt="" className={styles.quickAddThumb} referrerPolicy="no-referrer" loading="lazy" fetchpriority="low" />
                                   ) : (
                                     <div className={styles.quickAddThumbPlaceholder}><Plus size={12} /></div>
                                   )}

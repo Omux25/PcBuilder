@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate, Navigate, useParams } from 'react-router-dom';
 import { Cpu, Sun, Moon, LayoutGrid, Search, GitCompare, Home as HomeIcon, Sliders, Sparkles, TrendingUp } from 'lucide-react';
 import { Configurator } from './components/Configurator';
@@ -10,15 +10,15 @@ import { getInitialTheme, applyTheme, toggleTheme } from './utils/theme';
 import { getComponentById, getComponentBySlug } from './api';
 import { UI } from './ui-strings';
 import styles from './App.module.css';
-import { MarketTrends } from './pages/MarketTrends';
-import { Home } from './pages/Home';
-import { ComponentDetail } from './pages/ComponentDetail';
-import { Presets } from './pages/Presets';
-import { CategoryBrowse } from './pages/CategoryBrowse';
-import { ComponentsIndex } from './pages/ComponentsIndex';
-import { Compare } from './pages/Compare';
-import { GlobalSearch } from './pages/GlobalSearch';
-import { NotFound } from './pages/NotFound';
+const MarketTrends = lazy(() => import('./pages/MarketTrends').then(m => ({ default: m.MarketTrends })));
+const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
+const ComponentDetail = lazy(() => import('./pages/ComponentDetail').then(m => ({ default: m.ComponentDetail })));
+const Presets = lazy(() => import('./pages/Presets').then(m => ({ default: m.Presets })));
+const CategoryBrowse = lazy(() => import('./pages/CategoryBrowse').then(m => ({ default: m.CategoryBrowse })));
+const ComponentsIndex = lazy(() => import('./pages/ComponentsIndex').then(m => ({ default: m.ComponentsIndex })));
+const Compare = lazy(() => import('./pages/Compare').then(m => ({ default: m.Compare })));
+const GlobalSearch = lazy(() => import('./pages/GlobalSearch').then(m => ({ default: m.GlobalSearch })));
+const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })));
 
 function ProductRedirect() {
   const { slug } = useParams<{ slug: string }>();
@@ -199,74 +199,76 @@ export default function App() {
         </div>
       </header>
 
-      <Routes>
-        {/* ── Home ────────────────────────────────────────────────────── */}
-        <Route path="/" element={
-          <main className={styles.main}>
-            <Home />
-          </main>
-        } />
+      <Suspense fallback={<main className={styles.main}><Skeleton height={400} /></main>}>
+        <Routes>
+          {/* ── Home ────────────────────────────────────────────────────── */}
+          <Route path="/" element={
+            <main className={styles.main}>
+              <Home />
+            </main>
+          } />
 
-        <Route path="/build" element={
-          <main className={styles.main}>
-            <Configurator />
-          </main>
-        } />
+          <Route path="/build" element={
+            <main className={styles.main}>
+              <Configurator />
+            </main>
+          } />
 
-        <Route path="/product/:slug" element={
-          <ProductRedirect />
-        } />
+          <Route path="/product/:slug" element={
+            <ProductRedirect />
+          } />
 
-        <Route path="/components/:category/:identifier" element={
-          <main className={styles.main}>
-            <ComponentDetail onAddToBuild={addToBuild} />
-          </main>
-        } />
+          <Route path="/components/:category/:identifier" element={
+            <main className={styles.main}>
+              <ComponentDetail onAddToBuild={addToBuild} />
+            </main>
+          } />
 
-        <Route path="/components" element={
-          <main className={styles.main}>
-            <ComponentsIndex />
-          </main>
-        } />
+          <Route path="/components" element={
+            <main className={styles.main}>
+              <ComponentsIndex />
+            </main>
+          } />
 
-        <Route path="/browse" element={<Navigate to="/components" replace />} />
+          <Route path="/browse" element={<Navigate to="/components" replace />} />
 
-        <Route path="/browse/:category/:slotKey?" element={
-          <main className={styles.main}>
-            <CategoryBrowse />
-          </main>
-        } />
+          <Route path="/browse/:category/:slotKey?" element={
+            <main className={styles.main}>
+              <CategoryBrowse />
+            </main>
+          } />
 
-        <Route path="/compare" element={
-          <main className={styles.main}>
-            <Compare />
-          </main>
-        } />
+          <Route path="/compare" element={
+            <main className={styles.main}>
+              <Compare />
+            </main>
+          } />
 
-        <Route path="/search" element={
-          <main className={styles.main}>
-            <GlobalSearch />
-          </main>
-        } />
+          <Route path="/search" element={
+            <main className={styles.main}>
+              <GlobalSearch />
+            </main>
+          } />
 
-        <Route path="/market-trends" element={
-          <main className={styles.main}>
-            <MarketTrends />
-          </main>
-        } />
+          <Route path="/market-trends" element={
+            <main className={styles.main}>
+              <MarketTrends />
+            </main>
+          } />
 
-        <Route path="/presets" element={
-          <main className={styles.main}>
-            <Presets onLoadPreset={handleLoadPreset} />
-          </main>
-        } />
+          <Route path="/presets" element={
+            <main className={styles.main}>
+              <Presets onLoadPreset={handleLoadPreset} />
+            </main>
+          } />
 
-        <Route path="*" element={
-          <main className={styles.main}>
-            <NotFound />
-          </main>
-        } />
-      </Routes>
+          <Route path="*" element={
+            <main className={styles.main}>
+              <NotFound />
+            </main>
+          } />
+        </Routes>
+      </Suspense>
 
       <footer className={styles.footer}>
         <div className={styles.footerInner}>

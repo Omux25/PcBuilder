@@ -10,6 +10,7 @@ import { useBuild } from '../context/BuildContext';
 import { useCompare } from '../context/CompareContext';
 import { formatComponentName } from '@shared/formatting/component-name.formatter';
 import { LinkEngine } from '@shared/link-engine';
+import { SEO } from '../components/SEO';
 import styles from './CategoryBrowse.module.css';
 
 const LIMIT = 20;
@@ -633,6 +634,10 @@ export function CategoryBrowse() {
 
   return (
     <div className={styles.page}>
+      <SEO 
+        title={`Acheter ${CATEGORY_LABELS[cat]} au Maroc | PC Builder Maroc`}
+        description={`Parcourez et comparez les meilleurs ${CATEGORY_LABELS[cat].toLowerCase()} pour votre configuration PC Gamer ou bureautique au Maroc. Prix, spécifications et compatibilité.`}
+      />
       <nav className={styles.breadcrumb}>
         <Link to="/" className={styles.breadcrumbLink}>Accueil</Link>
         <span className={styles.breadcrumbSep}>›</span>
@@ -928,7 +933,7 @@ export function CategoryBrowse() {
                               onClick={(e) => e.stopPropagation()}
                             >
                               {c.image_url
-                                ? <img src={c.image_url} alt="" className={styles.compThumb} referrerPolicy="no-referrer" />
+                                ? <img src={c.image_url} alt="" className={styles.compThumb} referrerPolicy="no-referrer" loading="lazy" fetchpriority="low" />
                                 : <div className={styles.compThumbPlaceholder}><CategoryIcon category={cat} size={16} /></div>
                               }
                             </Link>
@@ -1051,7 +1056,7 @@ export function CategoryBrowse() {
                     <div className={styles.mobileCardTop}>
                       <div className={styles.mobileCardImg}>
                         {c.image_url
-                          ? <img src={c.image_url} alt="" referrerPolicy="no-referrer" />
+                          ? <img src={c.image_url} alt="" referrerPolicy="no-referrer" loading="lazy" fetchpriority="low" />
                           : <div className={styles.compThumbPlaceholder}><CategoryIcon category={cat} size={20} /></div>
                         }
                       </div>
