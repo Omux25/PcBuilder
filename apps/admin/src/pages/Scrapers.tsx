@@ -21,6 +21,7 @@ const INTERVAL_OPTIONS = [
 ];
 
 const STEP_PATTERNS: Array<{ match: string; label: (msg: string) => string }> = [
+  { match: 'All tasks fully completed', label: () => 'Terminé' },
   { match: 'Scraping complete', label: () => 'Finalisation...' },
   { match: 'Building catalog', label: () => 'Construction du catalogue...' },
   { match: 'Auto-mapping', label: () => 'Mapping automatique...' },

@@ -280,6 +280,7 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
         await logger.info('[SESSION] Updating benchmark scores...');
         const { updated: bUpdated } = await importBenchmarks();
         if (bUpdated > 0) await logger.info(`[BENCHMARKS] Updated ${bUpdated} component score(s)`);
+        else await logger.info('[BENCHMARKS] No benchmark updates required.');
       } catch (err) {
         await logger.error(`[SESSION] Benchmark import failed: ${err instanceof Error ? err.message : String(err)}`);
       }
@@ -290,12 +291,14 @@ export async function runScrapingSession(targetRetailerId?: number): Promise<voi
       try {
         await logger.info('[SESSION] Running smart spec inference...');
         await runSmartBackfill();
+        await logger.info('[ENRICHMENT] Smart inference completed.');
       } catch (err) {
         await logger.error(`[SESSION] Smart backfill failed: ${err instanceof Error ? err.message : String(err)}`);
       }
     })()
   ]);
 
+  await logger.info('[SESSION] ✨ All tasks fully completed. Session closed.');
 }
 
 
