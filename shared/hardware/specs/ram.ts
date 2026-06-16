@@ -43,15 +43,31 @@ export const extractRamSpecs = (n: string) => {
     }
   }
 
-  // Fallback: If ram_type is missing, infer it from frequency
+  // Extract CAS Latency early so we can use it for type inference
+  const clMatch = n.match(/\b[Cc][Ll]?(\d{2})\b/);
+  const cas_latency = clMatch ? parseInt(clMatch[1]) : undefined;
+
   let ram_type = typeMatch ? typeMatch[1].toUpperCase() : undefined;
-  if (!ram_type && frequency_mhz) {
-    if (frequency_mhz >= 4800) {
-      ram_type = 'DDR5';
-    } else if (frequency_mhz >= 2133 && frequency_mhz <= 4600) {
-      ram_type = 'DDR4';
-    } else if (frequency_mhz >= 800 && frequency_mhz <= 1866) {
-      ram_type = 'DDR3';
+  
+  // Smarter Fallback: If ram_type is missing, infer it from CL and frequency
+  if (!ram_type) {
+    if (cas_latency) {
+      if (cas_latency < 13) ram_type = 'DDR3';
+      else if (cas_latency >= 13 && cas_latency <= 26) ram_type = 'DDR4';
+      else if (cas_latency >= 28) ram_type = 'DDR5';
+    } 
+    
+    // If still no ram_type (no CL), use conservative frequency bounds
+    if (!ram_type && frequency_mhz) {
+      if (frequency_mhz >= 5200) {
+        ram_type = 'DDR5';
+      } else if (frequency_mhz >= 2133 && frequency_mhz <= 4000) {
+        ram_type = 'DDR4';
+      } else if (frequency_mhz >= 800 && frequency_mhz <= 1866) {
+        ram_type = 'DDR3';
+      }
+      // Note: 4001 - 5199 is an ambiguous zone (high-end DDR4 or low-end DDR5).
+      // We purposefully leave ram_type undefined here if we have no CL to avoid false assumptions.
     }
   }
 
@@ -66,21 +82,26 @@ export const extractRamSpecs = (n: string) => {
     total_capacity = undefined;
   }
 
-  // 3. Manufacturer Part Number (MPN) Extraction — The "No Guessing" Token
-  // Patterns for major brands: Kingston (KF/HX), Corsair (CM), G.Skill (F4/F5), Crucial (CT), Lexar (LD)
+  // 3. Manufacturer Part Number (MPN) Extraction
   const mpnMatch = n.match(/\b(KF\d[A-Z0-9-]+|HX\d[A-Z0-9-]+|CM[A-Z0-9-]+|F[45]-[A-Z0-9-]+|CT\d+[A-Z0-9-]+|LD[A-Z0-9-]+)\b/i);
   const mpn = mpnMatch ? mpnMatch[1].toUpperCase() : undefined;
 
-  // CAS latency: "CL16", "CL36", "C40", "C18", etc.
-  const clMatch = n.match(/\b[Cc][Ll]?(\d{2})\b/);
-  const cas_latency = clMatch ? parseInt(clMatch[1]) : undefined;
-
-  // Aesthetic Guardrails (Prevent variant fusion)
+  // Aesthetic Guardrails
   let color: string | undefined = undefined;
   if (/\b(white|blanc)\b/i.test(n)) color = 'White';
   else if (/\b(black|noir)\b/i.test(n)) color = 'Black';
   
   const is_rgb = /\bRGB\b/i.test(n);
+
+  // Sanity Checks for Retailer Typos
+  if (ram_type === 'DDR5' && cas_latency && cas_latency < 28) {
+    // DDR5 cannot physically have CL16 or similar low latencies. 
+    // This is a common retailer typo (copy/pasting from DDR4 listings).
+    cas_latency = undefined;
+  } else if (ram_type === 'DDR4' && cas_latency && cas_latency >= 30) {
+    // DDR4 rarely has CL >= 30. Another typo.
+    cas_latency = undefined;
+  }
 
   return {
     ram_type,
@@ -93,4 +114,3 @@ export const extractRamSpecs = (n: string) => {
     is_rgb
   };
 };
-

@@ -134,7 +134,8 @@ const CHIPSET_PATTERNS: [RegExp, string][] = [
 
 export const extractGpuSpecs = (n: string) => {
   const lengthMatch = n.match(/\b(\d{3})\s*mm\b/i);
-  const vramMatch = n.match(/\b(\d+)\s*(?:gb|go|g)(?:d?dr\d|d\d)?\b/i);
+  const vramMatch = n.match(/\b(\d+)\s*(?:gb|go|g)\s*(?:d?dr\d|d\d)?\b/i);
+  const vramTypeMatch = n.match(/\b(GDDR[567]X?|HBM\d?|DDR[345])\b/i);
 
   // TDP lookup by GPU chipset — official NVIDIA/AMD TDP values (board power)
   // Ordered longest-match first to avoid "4070" matching "4070 Ti Super"
@@ -263,6 +264,7 @@ export const extractGpuSpecs = (n: string) => {
   const rawSpecs = {
     length_mm: lengthMatch ? parseInt(lengthMatch[1]) : null,
     vram_gb: vramMatch ? parseInt(vramMatch[1]) : null,
+    vram_type: vramTypeMatch ? vramTypeMatch[1].toUpperCase() : null,
     tdp,
     chipset,
   };

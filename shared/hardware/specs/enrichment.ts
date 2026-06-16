@@ -1,6 +1,7 @@
 export interface GpuSpecs {
   length_mm: number | null;
   vram_gb: number | null;
+  vram_type?: string | null;
   tdp: number | null;
   chipset: string | null;
 }

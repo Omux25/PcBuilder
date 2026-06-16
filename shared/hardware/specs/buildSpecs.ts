@@ -25,6 +25,7 @@ export function buildSpecsPayload(category: string, s: Record<string, any>): Rec
     if (s.length_mm !== undefined) payload.length_mm = s.length_mm;
     if (s.tdp !== undefined) payload.tdp = s.tdp;
     if (s.vram_gb !== undefined) payload.vram_gb = s.vram_gb;
+    if (s.vram_type !== undefined) payload.vram_type = s.vram_type;
     if (s.chipset !== undefined) payload.chipset = s.chipset;
   } else if (category === 'ram') {
     if (s.ram_type !== undefined) payload.ram_type = s.ram_type;
@@ -37,6 +38,8 @@ export function buildSpecsPayload(category: string, s: Record<string, any>): Rec
     if (s.capacity_gb !== undefined) payload.capacity_gb = s.capacity_gb;
     if (s.read_speed_mbps !== undefined) payload.read_speed_mbps = s.read_speed_mbps;
     if (s.write_speed_mbps !== undefined) payload.write_speed_mbps = s.write_speed_mbps;
+    if (s.pcie_gen !== undefined) payload.pcie_gen = s.pcie_gen;
+    if (s.form_factor !== undefined) payload.form_factor = s.form_factor;
   } else if (category === 'psu') {
     if (s.wattage !== undefined) payload.wattage = s.wattage;
     if (s.psu_form_factor !== undefined) payload.psu_form_factor = s.psu_form_factor;
