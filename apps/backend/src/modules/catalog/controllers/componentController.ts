@@ -3,7 +3,6 @@ import Papa from 'papaparse';
 import { ComponentService } from '../services/componentService.js';
 import { logActivity } from '../../admin/services/adminService.js';
 import { componentSchema, type ComponentInput, type ComponentCategory } from '@shared/schemas/component.schema.js';
-import { runSuggestionPreprocessing } from '../../scraping/services/suggestionPreprocessor.js';
 
 export class ComponentController {
   private componentService = new ComponentService();
@@ -367,11 +366,6 @@ export class ComponentController {
         failed: results.failed,
       });
     }
-
-    if (results.imported > 0) {
-      runSuggestionPreprocessing(true).catch(() => { });
-    }
-
     return c.json(results);
   }
 }

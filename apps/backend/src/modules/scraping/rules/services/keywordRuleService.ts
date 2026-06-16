@@ -1,6 +1,5 @@
 import { KeywordRuleRepository } from '../repositories/keywordRuleRepository.js';
 import { matchesRule, clearRegexCache } from '../../services/keywordRulesService.js';
-import { runSuggestionPreprocessing } from '../../services/suggestionPreprocessor.js';
 import { AppError } from '../../../../core/errors/errors.js';
 
 export class KeywordRuleService {
@@ -57,8 +56,7 @@ export class KeywordRuleService {
   }
 
   private runAutoProcessing() {
-    runSuggestionPreprocessing(true).catch(err => {
-      console.error('[KEYWORD-RULES] Auto-processing pipeline failed:', err);
-    });
+    // The Zero-Touch pipeline runs as a scheduled job, so we don't need to trigger deep processing here anymore.
+    // If you wanted to re-run category classification instantly, you could trigger a lightweight worker here.
   }
 }
