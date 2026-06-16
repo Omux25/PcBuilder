@@ -11,18 +11,29 @@ try {
   const assetsDir = join('./dist', 'assets');
   if (existsSync(indexPath) && existsSync(assetsDir)) {
     let html = readFileSync(indexPath, 'utf-8');
-    const files = readdirSync(assetsDir);
-    const cssFiles = files.filter(f => f.endsWith('.css'));
     
     let combinedCss = '';
-    for (const file of cssFiles) {
-      combinedCss += readFileSync(join(assetsDir, file), 'utf-8');
-      const linkRegex = new RegExp(`<link[^>]*href="/assets/${file}"[^>]*>`, 'g');
-      html = html.replace(linkRegex, '');
+    const linkRegex = /<link[^>]*rel="stylesheet"[^>]*href="\/assets\/([^"]+)"[^>]*>/g;
+    let match;
+    const matches = [];
+    while ((match = linkRegex.exec(html)) !== null) {
+      matches.push(match);
     }
-    html = html.replace('</head>', `<style>${combinedCss}</style></head>`);
+    
+    for (const m of matches) {
+      const fileName = m[1];
+      const filePath = join(assetsDir, fileName);
+      if (existsSync(filePath)) {
+        combinedCss += readFileSync(filePath, 'utf-8');
+        html = html.replace(m[0], '');
+      }
+    }
+    
+    if (combinedCss) {
+      html = html.replace('</head>', `<style>${combinedCss}</style></head>`);
+    }
     writeFileSync(indexPath, html);
-    console.log('✨ CSS inlined successfully.');
+    console.log('✨ Critical CSS inlined successfully.');
   }
 
   if (existsSync('../admin/src')) {
