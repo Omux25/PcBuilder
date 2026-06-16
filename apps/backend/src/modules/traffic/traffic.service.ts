@@ -106,6 +106,34 @@ export const trafficService = {
     };
   },
 
+  async getTrafficVisitors(limit = 50, offset = 0) {
+    const sql = getSql();
+    const rows = await sql`
+      SELECT 
+        TRIM(SPLIT_PART(ip, ',', 1)) as ip,
+        MAX(user_agent) as "userAgent",
+        MIN(created_at) as "firstSeen",
+        MAX(created_at) as "lastSeen",
+        COUNT(id)::int as "totalRequests",
+        COUNT(id) FILTER (WHERE status_code >= 400)::int as "errorCount"
+      FROM traffic_logs
+      GROUP BY TRIM(SPLIT_PART(ip, ',', 1))
+      ORDER BY "lastSeen" DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+
+    const countResult = await sql`
+      SELECT COUNT(DISTINCT TRIM(SPLIT_PART(ip, ',', 1))) as total 
+      FROM traffic_logs
+    `;
+    const total = Number(countResult[0]?.total || 0);
+
+    return {
+      data: rows,
+      total,
+    };
+  },
+
   async clearAllLogs() {
     const sql = getSql();
     await sql`TRUNCATE TABLE traffic_logs`;

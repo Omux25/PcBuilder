@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import { RefreshCw, Trash2, Globe, Server, Activity, Clock, AlertTriangle, Monitor } from 'lucide-react';
-import { getAdminTrafficLogs, clearAllTrafficLogs, type TrafficLogEntry } from '../api';
+import { RefreshCw, Trash2, Globe, Server, Activity, Clock, AlertTriangle, Monitor, Users, List } from 'lucide-react';
+import { getAdminTrafficLogs, getAdminTrafficVisitors, clearAllTrafficLogs, type TrafficLogEntry, type TrafficVisitorEntry } from '../api';
 import styles from './Traffic.module.css';
 
 function parseIp(ip: string | null) {
   if (!ip) return 'Inconnu';
-  // Extracts the first IP in a comma-separated list (handles X-Forwarded-For)
   return ip.split(',')[0].trim();
 }
 
@@ -35,29 +34,43 @@ function parseUserAgent(ua: string | null) {
   if (browser !== 'Inconnu') return browser;
   if (os) return os;
   
-  // Truncate fallback
   return ua.length > 25 ? ua.substring(0, 25) + '...' : ua;
 }
 
 export function Traffic() {
+  const [activeTab, setActiveTab] = useState<'visitors' | 'raw'>('visitors');
+  
+  const [visitors, setVisitors] = useState<TrafficVisitorEntry[]>([]);
   const [logs, setLogs] = useState<TrafficLogEntry[]>([]);
   const [total, setTotal] = useState(0);
+  
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const limit = 50;
 
   useEffect(() => {
-    fetchLogs();
+    setPage(1);
+    fetchData();
+  }, [activeTab]);
+
+  useEffect(() => {
+    fetchData();
   }, [page]);
 
-  async function fetchLogs() {
+  async function fetchData() {
     setLoading(true);
     try {
-      const res = await getAdminTrafficLogs({ limit: String(limit), offset: String((page - 1) * limit) });
-      setLogs(res.data);
-      setTotal(res.total);
+      if (activeTab === 'visitors') {
+        const res = await getAdminTrafficVisitors({ limit: String(limit), offset: String((page - 1) * limit) });
+        setVisitors(res.data);
+        setTotal(res.total);
+      } else {
+        const res = await getAdminTrafficLogs({ limit: String(limit), offset: String((page - 1) * limit) });
+        setLogs(res.data);
+        setTotal(res.total);
+      }
     } catch (err) {
-      console.error('Failed to fetch traffic logs', err);
+      console.error('Failed to fetch traffic data', err);
     } finally {
       setLoading(false);
     }
@@ -68,24 +81,13 @@ export function Traffic() {
     try {
       await clearAllTrafficLogs();
       setPage(1);
-      fetchLogs();
+      fetchData();
     } catch (err) {
       console.error('Failed to clear traffic logs', err);
     }
   }
 
   const totalPages = Math.ceil(total / limit);
-
-  // Compute Page Stats
-  const avgResponseTime = logs.length > 0 
-    ? Math.round(logs.reduce((acc, log) => acc + log.responseTimeMs, 0) / logs.length) 
-    : 0;
-  
-  const errorCount = logs.filter(l => l.statusCode >= 400).length;
-  const errorRate = logs.length > 0 ? Math.round((errorCount / logs.length) * 100) : 0;
-
-  const bots = logs.filter(l => l.userAgent?.includes('bot') || l.userAgent?.includes('Go-http-client')).length;
-  const botRate = logs.length > 0 ? Math.round((bots / logs.length) * 100) : 0;
 
   return (
     <div className={styles.container}>
@@ -94,12 +96,12 @@ export function Traffic() {
           <Activity className={styles.titleIcon} size={28} />
           <div>
             <h1 className={styles.title}>Trafic Web</h1>
-            <p className={styles.subtitle}>{total.toLocaleString()} requêtes enregistrées</p>
+            <p className={styles.subtitle}>{total.toLocaleString()} {activeTab === 'visitors' ? 'visiteurs uniques' : 'requêtes enregistrées'}</p>
           </div>
         </div>
 
         <div className={styles.actions}>
-          <button onClick={fetchLogs} disabled={loading} className={styles.btnSecondary} title="Rafraîchir">
+          <button onClick={fetchData} disabled={loading} className={styles.btnSecondary} title="Rafraîchir">
             <RefreshCw size={16} className={loading ? styles.spinning : ''} />
           </button>
           <button onClick={handleClearLogs} className={styles.btnDanger} title="Purger les logs">
@@ -109,82 +111,172 @@ export function Traffic() {
         </div>
       </header>
 
-      {/* Stats Grid */}
-      <div className={styles.statsGrid}>
-        <StatCard
-          label="Temps moyen (page)"
-          value={`${avgResponseTime}ms`}
-          icon={<Clock size={20} />}
-          color={avgResponseTime > 500 ? 'danger' : 'blue'}
-        />
-        <StatCard
-          label="Taux d'erreur (page)"
-          value={`${errorRate}%`}
-          icon={<AlertTriangle size={20} />}
-          color={errorRate > 5 ? 'danger' : 'green'}
-          accent={errorRate > 10}
-        />
-        <StatCard
-          label="Trafic Bot / Scripts (page)"
-          value={`${botRate}%`}
-          icon={<Server size={20} />}
-          color="purple"
-        />
+      {/* Tabs Navigation */}
+      <div className={styles.tabs}>
+        <button 
+          className={`${styles.tab} ${activeTab === 'visitors' ? styles.tabActive : ''}`}
+          onClick={() => setActiveTab('visitors')}
+        >
+          <Users size={16} /> Visiteurs
+        </button>
+        <button 
+          className={`${styles.tab} ${activeTab === 'raw' ? styles.tabActive : ''}`}
+          onClick={() => setActiveTab('raw')}
+        >
+          <List size={16} /> Requêtes Brutes
+        </button>
       </div>
 
+      {/* Stats Grid */}
+      <div className={styles.statsGrid}>
+        {activeTab === 'visitors' ? (
+          <>
+            <StatCard
+              label="Visiteurs Uniques"
+              value={total}
+              icon={<Users size={20} />}
+              color="blue"
+            />
+            <StatCard
+              label="Visiteurs Erronés (page)"
+              value={visitors.filter(v => v.errorCount > 0).length}
+              icon={<AlertTriangle size={20} />}
+              color={visitors.some(v => v.errorCount > 0) ? 'danger' : 'green'}
+              accent={visitors.filter(v => v.errorCount > 0).length > 5}
+            />
+            <StatCard
+              label="Bots / Scripts (page)"
+              value={visitors.filter(v => v.userAgent?.includes('bot') || v.userAgent?.includes('Go-http-client')).length}
+              icon={<Server size={20} />}
+              color="purple"
+            />
+          </>
+        ) : (
+          <>
+            <StatCard
+              label="Temps moyen (page)"
+              value={`${logs.length > 0 ? Math.round(logs.reduce((acc, log) => acc + log.responseTimeMs, 0) / logs.length) : 0}ms`}
+              icon={<Clock size={20} />}
+              color={(logs.length > 0 ? Math.round(logs.reduce((acc, log) => acc + log.responseTimeMs, 0) / logs.length) : 0) > 500 ? 'danger' : 'blue'}
+            />
+            <StatCard
+              label="Taux d'erreur (page)"
+              value={`${logs.length > 0 ? Math.round((logs.filter(l => l.statusCode >= 400).length / logs.length) * 100) : 0}%`}
+              icon={<AlertTriangle size={20} />}
+              color={(logs.length > 0 ? Math.round((logs.filter(l => l.statusCode >= 400).length / logs.length) * 100) : 0) > 5 ? 'danger' : 'green'}
+              accent={(logs.length > 0 ? Math.round((logs.filter(l => l.statusCode >= 400).length / logs.length) * 100) : 0) > 10}
+            />
+            <StatCard
+              label="Trafic Bot / Scripts (page)"
+              value={`${logs.length > 0 ? Math.round((logs.filter(l => l.userAgent?.includes('bot') || l.userAgent?.includes('Go-http-client')).length / logs.length) * 100) : 0}%`}
+              icon={<Server size={20} />}
+              color="purple"
+            />
+          </>
+        )}
+      </div>
+
+      {/* Main Table */}
       <div className={styles.card}>
         <div className={styles.tableWrapper}>
           <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Méthode</th>
-                <th>Chemin</th>
-                <th>Status</th>
-                <th>Temps</th>
-                <th>IP</th>
-                <th>Client</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && logs.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className={styles.empty}>Chargement des données de trafic...</td>
-                </tr>
-              ) : logs.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className={styles.empty}>Aucun trafic enregistré.</td>
-                </tr>
-              ) : (
-                logs.map(log => (
-                  <tr key={log.id}>
-                    <td className={styles.dateCell}>{new Date(log.createdAt).toLocaleString('fr-MA')}</td>
-                    <td>
-                      <span className={`${styles.badge} ${styles['method' + log.method] || styles.methodDefault}`}>
-                        {log.method}
-                      </span>
-                    </td>
-                    <td className={styles.pathCell} title={log.path}>
-                      {log.path.replace('/api', '') || '/'}
-                    </td>
-                    <td>
-                      <span className={`${styles.statusBadge} ${log.statusCode >= 400 ? styles.statusError : styles.statusOk}`}>
-                        {log.statusCode}
-                      </span>
-                    </td>
-                    <td className={styles.timeCell}>{log.responseTimeMs}ms</td>
-                    <td className={styles.ipCell}>
-                      <Globe size={12} className={styles.inlineIcon} />
-                      {parseIp(log.ip)}
-                    </td>
-                    <td className={styles.uaCell} title={log.userAgent || ''}>
-                      <Monitor size={12} className={styles.inlineIcon} style={{marginRight: '4px'}} />
-                      {parseUserAgent(log.userAgent)}
-                    </td>
+            {activeTab === 'visitors' ? (
+              <>
+                <thead>
+                  <tr>
+                    <th>IP / Visiteur</th>
+                    <th>Requêtes</th>
+                    <th>Erreurs</th>
+                    <th>Dernière Activité</th>
+                    <th>Première Activité</th>
+                    <th>Client Principal</th>
                   </tr>
-                ))
-              )}
-            </tbody>
+                </thead>
+                <tbody>
+                  {loading && visitors.length === 0 ? (
+                    <tr><td colSpan={6} className={styles.empty}>Chargement des visiteurs...</td></tr>
+                  ) : visitors.length === 0 ? (
+                    <tr><td colSpan={6} className={styles.empty}>Aucun visiteur enregistré.</td></tr>
+                  ) : (
+                    visitors.map(visitor => (
+                      <tr key={visitor.ip}>
+                        <td className={styles.ipCell}>
+                          <Globe size={12} className={styles.inlineIcon} />
+                          {visitor.ip}
+                        </td>
+                        <td style={{ fontWeight: 600 }}>{visitor.totalRequests.toLocaleString()}</td>
+                        <td>
+                          {visitor.errorCount > 0 ? (
+                            <span className={`${styles.statusBadge} ${styles.statusError}`}>
+                              {visitor.errorCount}
+                            </span>
+                          ) : (
+                            <span className={`${styles.statusBadge} ${styles.statusOk}`}>
+                              0
+                            </span>
+                          )}
+                        </td>
+                        <td className={styles.dateCell}>{new Date(visitor.lastSeen).toLocaleString('fr-MA')}</td>
+                        <td className={styles.dateCell}>{new Date(visitor.firstSeen).toLocaleString('fr-MA')}</td>
+                        <td className={styles.uaCell} title={visitor.userAgent || ''}>
+                          <Monitor size={12} className={styles.inlineIcon} style={{marginRight: '4px'}} />
+                          {parseUserAgent(visitor.userAgent)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </>
+            ) : (
+              <>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Méthode</th>
+                    <th>Chemin</th>
+                    <th>Status</th>
+                    <th>Temps</th>
+                    <th>IP</th>
+                    <th>Client</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading && logs.length === 0 ? (
+                    <tr><td colSpan={7} className={styles.empty}>Chargement des données de trafic...</td></tr>
+                  ) : logs.length === 0 ? (
+                    <tr><td colSpan={7} className={styles.empty}>Aucun trafic enregistré.</td></tr>
+                  ) : (
+                    logs.map(log => (
+                      <tr key={log.id}>
+                        <td className={styles.dateCell}>{new Date(log.createdAt).toLocaleString('fr-MA')}</td>
+                        <td>
+                          <span className={`${styles.badge} ${styles['method' + log.method] || styles.methodDefault}`}>
+                            {log.method}
+                          </span>
+                        </td>
+                        <td className={styles.pathCell} title={log.path}>
+                          {log.path.replace('/api', '') || '/'}
+                        </td>
+                        <td>
+                          <span className={`${styles.statusBadge} ${log.statusCode >= 400 ? styles.statusError : styles.statusOk}`}>
+                            {log.statusCode}
+                          </span>
+                        </td>
+                        <td className={styles.timeCell}>{log.responseTimeMs}ms</td>
+                        <td className={styles.ipCell}>
+                          <Globe size={12} className={styles.inlineIcon} />
+                          {parseIp(log.ip)}
+                        </td>
+                        <td className={styles.uaCell} title={log.userAgent || ''}>
+                          <Monitor size={12} className={styles.inlineIcon} style={{marginRight: '4px'}} />
+                          {parseUserAgent(log.userAgent)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </>
+            )}
           </table>
         </div>
 
