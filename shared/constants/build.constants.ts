@@ -29,6 +29,40 @@ export const CATEGORY_LABELS: Record<ComponentCategory, string> = {
   accessory: 'Autre accessoire',
 };
 
+export const CATEGORY_SLUGS: Record<ComponentCategory, string> = {
+  cpu: 'processeur',
+  motherboard: 'carte-mere',
+  gpu: 'carte-graphique',
+  ram: 'memoire-ram',
+  storage: 'stockage',
+  psu: 'alimentation',
+  case: 'boitier',
+  cooling: 'refroidissement',
+  fan: 'ventilateur',
+  thermal_paste: 'pate-thermique',
+  monitor: 'ecran',
+  keyboard: 'clavier',
+  mouse: 'souris',
+  headphones: 'casque-audio',
+  speakers: 'enceintes',
+  webcam: 'webcam',
+  os: 'systeme-exploitation',
+  wired_network_adapter: 'reseau-filaire',
+  wireless_network_adapter: 'reseau-wifi',
+  sound_card: 'carte-son',
+  case_accessory: 'accessoire-boitier',
+  fan_controller: 'controleur-ventilateur',
+  external_storage: 'stockage-externe',
+  optical_drive: 'lecteur-optique',
+  ups: 'onduleur',
+  accessory: 'accessoire',
+};
+
+export const SLUG_TO_CATEGORY = Object.entries(CATEGORY_SLUGS).reduce((acc, [cat, slug]) => {
+  acc[slug] = cat as ComponentCategory;
+  return acc;
+}, {} as Record<string, ComponentCategory>);
+
 export const RULE_LABELS: Record<string, string> = {
   socket_mismatch: 'Incompatibilité de socket',
   ram_type_mismatch: 'Type de RAM incompatible',

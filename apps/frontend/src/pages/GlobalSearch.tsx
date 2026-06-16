@@ -13,7 +13,7 @@ import { formatComponentName } from '@shared/formatting/component-name.formatter
 import { LinkEngine } from '@shared/link-engine';
 import { CategoryIcon } from '../components/CategoryIcon';
 import type { Component, ComponentCategory } from '../types';
-import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
+import { CATEGORY_LABELS, CATEGORY_ORDER, CATEGORY_SLUGS } from '../types';
 import { UI } from '../ui-strings';
 import styles from './GlobalSearch.module.css';
 
@@ -130,7 +130,7 @@ export function GlobalSearch() {
                 <h2 className={styles.groupTitle}>{CATEGORY_LABELS[category]}</h2>
                 <span className={styles.groupCount}>{UI.search.groupCount(total)}</span>
                 {total > MAX_PER_CATEGORY && (
-                  <Link to={`/parcourir/${category}?q=${encodeURIComponent(query)}`} className={styles.seeAll}>
+                  <Link to={`/parcourir/${CATEGORY_SLUGS[category] || category}?q=${encodeURIComponent(query)}`} className={styles.seeAll}>
                     {UI.search.seeAll}
                   </Link>
                 )}
@@ -166,7 +166,7 @@ export function GlobalSearch() {
           <div className={styles.suggestions}>
             <p className={styles.suggestLabel}>{UI.search.suggestions}</p>
             {CATEGORY_ORDER.map(cat => (
-              <Link key={cat} to={`/parcourir/${cat}`} className={styles.suggestLink}>
+              <Link key={cat} to={`/parcourir/${CATEGORY_SLUGS[cat] || cat}`} className={styles.suggestLink}>
                 <CategoryIcon category={cat} size={13} />
                 {CATEGORY_LABELS[cat]}
               </Link>
@@ -180,7 +180,7 @@ export function GlobalSearch() {
           <p className={styles.initialHint}>{UI.search.browseBy}</p>
           <div className={styles.catGrid}>
             {CATEGORY_ORDER.map(cat => (
-              <Link key={cat} to={`/parcourir/${cat}`} className={styles.catCard}>
+              <Link key={cat} to={`/parcourir/${CATEGORY_SLUGS[cat] || cat}`} className={styles.catCard}>
                 <CategoryIcon category={cat} size={24} />
                 <span>{CATEGORY_LABELS[cat]}</span>
               </Link>

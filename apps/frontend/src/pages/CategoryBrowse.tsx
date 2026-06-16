@@ -5,7 +5,7 @@ import { smartSearch, type SmartComponent } from '../api';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { Skeleton } from '../components/Skeleton';
 import type { Component, ComponentCategory } from '../types';
-import { CATEGORY_LABELS, CATEGORY_ORDER } from '../types';
+import { CATEGORY_LABELS, CATEGORY_ORDER, SLUG_TO_CATEGORY } from '../types';
 import { useBuild } from '../context/BuildContext';
 import { useCompare } from '../context/CompareContext';
 import { formatComponentName } from '@shared/formatting/component-name.formatter';
@@ -302,7 +302,8 @@ function getColDefs(cat: ComponentCategory): ColDef[] {
 
 
 export function CategoryBrowse() {
-  const { category, slotKey } = useParams<{ category: string; slotKey?: string }>();
+  const { category: rawCategory, slotKey } = useParams<{ category: string; slotKey?: string }>();
+  const category = (SLUG_TO_CATEGORY[rawCategory || ''] || rawCategory) as ComponentCategory;
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { build, addToBuild } = useBuild();
