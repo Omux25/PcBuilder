@@ -13,7 +13,7 @@
  * Requirements: 6.1, 6.2, 6.3, 6.4
  */
 
-import { fetch } from 'undici';
+
 import * as cheerio from 'cheerio';
 import type { CheerioAPI } from 'cheerio';
 

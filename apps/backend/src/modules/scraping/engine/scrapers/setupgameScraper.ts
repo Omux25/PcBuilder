@@ -32,7 +32,7 @@
  * Requirements: 6.1, 6.2, 6.3
  */
 
-import { fetch } from 'undici';
+
 import type { ScrapedPrice } from './baseScraper.js';
 import { getRetryDelay } from './baseScraper.js';
 
@@ -150,6 +150,9 @@ export class SetupGameScraper {
       if (delay > 0) await new Promise(r => setTimeout(r, delay));
     }
 
+    if (allPrices.length === 0) {
+      throw new Error(`Scraped 0 products (possible Cloudflare block or site change)`);
+    }
     return allPrices;
   }
 

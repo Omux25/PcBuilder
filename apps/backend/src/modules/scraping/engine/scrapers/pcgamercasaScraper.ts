@@ -20,7 +20,7 @@
  * Requirements: 6.1, 6.2, 6.3
  */
 
-import { fetch } from 'undici';
+
 import type { ScrapedPrice } from './baseScraper.js';
 import { getRetryDelay } from './baseScraper.js';
 
@@ -124,6 +124,9 @@ export class PcGamerCasaScraper {
             }
         }
 
+        if (allPrices.length === 0) {
+            throw new Error(`Scraped 0 products (possible Cloudflare block or site change)`);
+        }
         return allPrices;
     }
 
@@ -194,16 +197,21 @@ export class PcGamerCasaScraper {
                         'Referer': `${BASE_URL}/${refererPath}`,
                     },
                 });
-                clearTimeout(timeout);
-                if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
+                
+                if (!res.ok) {
+                    await res.text().catch(() => {});
+                    throw new Error(`HTTP ${res.status} fetching ${url}`);
+                }
+                
                 const text = await res.text();
                 return JSON.parse(text) as PsResponse;
             } catch (err) {
-                clearTimeout(timeout);
                 const isHttp = err instanceof Error && err.message.startsWith('HTTP ');
                 if (isHttp || attempt === MAX_RETRIES) throw err;
                 const delay = getRetryDelay(Math.pow(2, attempt) * 1000);
                 await new Promise(r => setTimeout(r, delay));
+            } finally {
+                clearTimeout(timeout);
             }
         }
         throw new Error('Unreachable');
