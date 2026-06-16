@@ -18,6 +18,7 @@ export default async function handler(req, res) {
     let title = 'PC Builder Maroc — Comparateur de prix PC';
     let description = 'Configurez votre PC, vérifiez la compatibilité et comparez les prix chez les revendeurs marocains.';
     let image = 'https://pcbuilder.ma/premium_pc_hero.png';
+    let jsonLd = null;
 
     // Handle Component Detail pages
     if (path.startsWith('/component/')) {
@@ -31,6 +32,27 @@ export default async function handler(req, res) {
              description = `Achetez ${component.name} au meilleur prix au Maroc. Compatible avec votre configuration PC Gamer.`;
              if (component.image_url) {
                image = component.image_url;
+             }
+             
+             jsonLd = {
+               "@context": "https://schema.org/",
+               "@type": "Product",
+               "name": component.name,
+               "image": image,
+               "description": description,
+               "brand": {
+                 "@type": "Brand",
+                 "name": component.brand || "Unknown"
+               }
+             };
+             
+             if (component.lowest_price) {
+               jsonLd.offers = {
+                 "@type": "AggregateOffer",
+                 "url": `https://pcbuilder.ma${path}`,
+                 "priceCurrency": "MAD",
+                 "lowPrice": component.lowest_price
+               };
              }
          }
        }
@@ -68,6 +90,12 @@ export default async function handler(req, res) {
       /<meta\s+property=["']og:image["']\s+content=["'][^"']*["']\s*\/?>/i, 
       `<meta property="og:image" content="${image}" />`
     );
+
+    // Inject JSON-LD schema
+    if (jsonLd) {
+      const scriptTag = `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`;
+      html = html.replace('</head>', `${scriptTag}\n</head>`);
+    }
 
     // Set headers to cache the response at the edge for 1 hour, revalidate after 24h
     res.setHeader('Content-Type', 'text/html');
