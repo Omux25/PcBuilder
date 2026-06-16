@@ -402,43 +402,6 @@ export async function aggregate(
           finalResolved.push({ ...p, component_id: fuzzyMatchId, category: resolvedCategory, _autoLinked: true } as any);
           autoMapped++;
           continue;
-        } else if (fuzzyConfidence === 'medium') {
-          // Medium confidence -> Auto-create sandbox for structured categories, otherwise stage it
-          const STRUCTURED_CATEGORIES = new Set(['ram', 'storage', 'cpu']);
-          if (STRUCTURED_CATEGORIES.has(resolvedCategory)) {
-            const cleanedName = cleanName(nameForExtraction, resolvedBrand, resolvedCategory);
-            const baseSlug = componentSlug(resolvedBrand, cleanedName);
-            const existingPending = toCreateBySlug.get(baseSlug);
-            if (existingPending) {
-              existingPending.prices.push(p);
-            } else {
-              toCreateBySlug.set(baseSlug, {
-                slug: baseSlug,
-                cleanedName,
-                brand: resolvedBrand,
-                category: resolvedCategory,
-                nameForExtraction,
-                prices: [p]
-              });
-            }
-            continue;
-          } else {
-            // Not structured -> Send to Exception Queue
-            unmatchedListingsToUpsert.push({
-              retailer_id: p.retailer_id,
-              product_url: p.product_url,
-              scraped_name: scrapedName,
-              scraped_price: p.price,
-              image_url: p.image_url ?? null,
-              image_urls: (p.image_urls && p.image_urls.length > 0) 
-                ? `{${p.image_urls.map(u => `"${u.replace(/"/g, '\\"')}"`).join(',')}}`
-                : null,
-              linked_component_id: fuzzyMatchId,
-              confidence: fuzzyConfidence
-            });
-            unmatched++;
-            continue;
-          }
         }
       }
 
@@ -1068,6 +1031,17 @@ export async function aggregate(
           await logger.warn(
             `[PIPELINE] Retailer ${rid}: scraped ${currentCountForRid} items vs ${previousInStockCount} previously in-stock — below ${OOS_THRESHOLD * 100}% threshold, skipping OOS marking to protect data integrity`
           );
+          
+          if (process.env.DISCORD_WEBHOOK_URL) {
+            fetch(process.env.DISCORD_WEBHOOK_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                content: `🚨 **Scraper Anomaly Detected!**\nRetailer ID: ${rid}\nScraped: ${currentCountForRid} items\nPreviously in-stock: ${previousInStockCount}\nAction: Skipped Out-of-Stock marking to protect database.`
+              })
+            }).catch(e => console.error("Discord webhook failed", e));
+          }
+
           continue;
         }
 

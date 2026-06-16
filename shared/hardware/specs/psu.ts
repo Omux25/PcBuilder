@@ -76,7 +76,17 @@ export const extractPsuSpecs = (n: string) => {
   }
   
   const formFactorMatch = n.match(/\b(SFX-L|SFX|TFX)\b/i);
-  const form_factor = formFactorMatch ? formFactorMatch[1].toUpperCase() : 'ATX';
+  let form_factor = formFactorMatch ? formFactorMatch[1].toUpperCase() : undefined;
+  
+  if (!form_factor) {
+    const lowerN = n.toLowerCase();
+    if (/\b(loki|sx\d{3,4}[a-z]*|sf\d{3,4}[a-z]*|dagger\s*pro|sp\d{3,4}[a-z]*|v\d{3,4}\s*sfx)\b/.test(lowerN)) {
+      if (lowerN.includes('loki')) form_factor = 'SFX-L';
+      else form_factor = 'SFX';
+    } else {
+      form_factor = 'ATX'; // Default
+    }
+  }
 
   return { 
     wattage,

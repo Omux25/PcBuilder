@@ -98,10 +98,12 @@ export class NextLevelScraper {
     this.retailerId = retailer_id;
     this.seenIds.clear();
 
-    // Parallel — each category is a single AJAX request (~5-9s TTFB).
-    // NextLevel handles concurrent requests fine (no aggressive rate limiting).
+    // Parallel with staggered start to prevent triggering Cloudflare rate limits.
     const results = await Promise.allSettled(
-      CATEGORY_PATHS.map(path => this.scrapeCategory(path))
+      CATEGORY_PATHS.map(async (path, index) => {
+        if (index > 0) await new Promise(r => setTimeout(r, index * 1000));
+        return this.scrapeCategory(path);
+      })
     );
 
     const allPrices: ScrapedPrice[] = [];
