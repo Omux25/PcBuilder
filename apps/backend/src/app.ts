@@ -22,6 +22,7 @@ import { rulesRouter } from './modules/scraping/rules/rules.routes.js';
 import { adminTrafficRouter } from './modules/admin/traffic.routes.js';
 import { trafficLogger } from './modules/traffic/traffic.middleware.js';
 import { AppError } from './core/errors/errors.js';
+import { seoRouter } from './modules/seo/seo.routes.js';
 
 const app = new Hono();
 
@@ -77,6 +78,7 @@ const routes = app
   .route('/api/builds', buildsRouter)
   .route('/api/compatibility', compatibilityRouter)
   .route('/api', catalogRouter)
+  .route('/api', seoRouter)
   .route('/api/health', healthRouter)
   // ── Protected routes ──────────────────────────────────────────────────────────
   .route('/api/admin', adminRouter)
