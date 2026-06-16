@@ -18,6 +18,9 @@ import { sql as bunSql } from 'bun';
 import type { ScrapedPrice } from './scrapers/baseScraper.js';
 import { extractVariant } from '../../../core/utils/variantExtractor.js';
 import { getSql, setSql, resetSql } from '../../../core/db/index.js';
+import { cleanName, componentSlug } from './utils/nameNormalizer.js';
+import Fuse from 'fuse.js';
+import { tokenizeAndClean } from './utils/tokenizer.js';
 import { logger } from './utils/logger.js';
 import {
   decodeHtml
@@ -113,15 +116,30 @@ export async function aggregate(
 
   // 2. All active components (pre-grouped by category with cached DNA for O(1) matching speed)
   const existingComponents = isRealSql ? (await sql`
-    SELECT id, name, brand, category FROM components WHERE is_active = true
+    SELECT id, name, brand, category, mpn, ean FROM components WHERE is_active = true
   `) as CatalogComponent[] : [];
 
-  const componentsByCategory = new Map<string, (CatalogComponent & { dna: string[]; slug: string })[]>();
+  const componentsByCategory = new Map<string, (CatalogComponent & { dna: string[]; slug: string; tokenized: string })[]>();
+  const fuseByCategory = new Map<string, Fuse<any>>();
+
   for (const c of existingComponents) {
     const list = componentsByCategory.get(c.category) || [];
     const fullName = c.brand ? `${c.brand} ${c.name}` : c.name;
-    list.push({ ...c, dna: extractDna(fullName, c.category), slug: componentSlug(c.brand, c.name) });
+    list.push({ 
+      ...c, 
+      dna: extractDna(fullName, c.category), 
+      slug: componentSlug(c.brand, c.name),
+      tokenized: tokenizeAndClean(fullName) 
+    });
     componentsByCategory.set(c.category, list);
+  }
+
+  for (const [category, list] of componentsByCategory.entries()) {
+    fuseByCategory.set(category, new Fuse(list, {
+      keys: ['tokenized'],
+      includeScore: true,
+      threshold: 0.5
+    }));
   }
 
   // 3. All slugs (for auto-creation - use a Set for O(1) lookup)
@@ -180,7 +198,7 @@ export async function aggregate(
   //   get back IDs, then push everything into finalResolved.
 
   const finalResolved: (ScrapedPrice & { component_id: number; category: string })[] = [];
-  const unmatchedListingsToUpsert: { retailer_id: number; product_url: string; scraped_name: string; scraped_price: number; image_url: string | null; image_urls: string | null }[] = [];
+  const unmatchedListingsToUpsert: { retailer_id: number; product_url: string; scraped_name: string; scraped_price: number; image_url: string | null; image_urls: string | null; linked_component_id?: number | null; confidence?: string }[] = [];
   const dismissedListingsToUpdate: { retailer_id: number; product_url: string }[] = [];
 
   // Items that need a new component row — keyed by slug to deduplicate
@@ -292,6 +310,23 @@ export async function aggregate(
       // DNA Match against existing components
       const catComponents = componentsByCategory.get(resolvedCategory) || [];
 
+      // Phase 0: MPN / EAN Exact Match (100% Confidence bypass)
+      if (p.mpn || p.ean) {
+        let exactMatch: CatalogComponent | undefined;
+        if (p.mpn) {
+          exactMatch = catComponents.find(c => c.mpn && c.mpn.toLowerCase() === p.mpn!.toLowerCase());
+        }
+        if (!exactMatch && p.ean) {
+          exactMatch = catComponents.find(c => c.ean && c.ean === p.ean);
+        }
+
+        if (exactMatch) {
+          finalResolved.push({ ...p, component_id: exactMatch.id, category: resolvedCategory, _autoLinked: true } as any);
+          autoMapped++;
+          continue;
+        }
+      }
+
       // Use the strict matching engine with a 95%+ confidence threshold
       const strictMatch = findStrictMatch(nameForExtraction, catComponents, 95);
 
@@ -338,6 +373,75 @@ export async function aggregate(
         }
       }
 
+      // Phase 2: Fuzzy Matching via Fuse.js
+      let fuzzyMatchId: number | null = null;
+      let fuzzyConfidence: 'high' | 'medium' | 'low' = 'low';
+      
+      const tokenizedScraped = tokenizeAndClean(nameForExtraction);
+      const fuse = fuseByCategory.get(resolvedCategory);
+      
+      if (fuse) {
+        const results = fuse.search(tokenizedScraped);
+        if (results.length > 0) {
+          const best = results[0];
+          const fuseScore = best.score ?? 1; // 0 is perfect, 1 is terrible
+          
+          if (fuseScore <= 0.25) {
+            fuzzyMatchId = best.item.id;
+            fuzzyConfidence = 'high';
+          } else if (fuseScore <= 0.45) {
+            fuzzyMatchId = best.item.id;
+            fuzzyConfidence = 'medium';
+          }
+        }
+      }
+
+      if (fuzzyMatchId) {
+        if (fuzzyConfidence === 'high') {
+          // High confidence fuzzy match -> 100% bypass of staging. Map it directly.
+          finalResolved.push({ ...p, component_id: fuzzyMatchId, category: resolvedCategory, _autoLinked: true } as any);
+          autoMapped++;
+          continue;
+        } else if (fuzzyConfidence === 'medium') {
+          // Medium confidence -> Auto-create sandbox for structured categories, otherwise stage it
+          const STRUCTURED_CATEGORIES = new Set(['ram', 'storage', 'cpu']);
+          if (STRUCTURED_CATEGORIES.has(resolvedCategory)) {
+            const cleanedName = cleanName(nameForExtraction, resolvedBrand, resolvedCategory);
+            const baseSlug = componentSlug(resolvedBrand, cleanedName);
+            const existingPending = toCreateBySlug.get(baseSlug);
+            if (existingPending) {
+              existingPending.prices.push(p);
+            } else {
+              toCreateBySlug.set(baseSlug, {
+                slug: baseSlug,
+                cleanedName,
+                brand: resolvedBrand,
+                category: resolvedCategory,
+                nameForExtraction,
+                prices: [p]
+              });
+            }
+            continue;
+          } else {
+            // Not structured -> Send to Exception Queue
+            unmatchedListingsToUpsert.push({
+              retailer_id: p.retailer_id,
+              product_url: p.product_url,
+              scraped_name: scrapedName,
+              scraped_price: p.price,
+              image_url: p.image_url ?? null,
+              image_urls: (p.image_urls && p.image_urls.length > 0) 
+                ? `{${p.image_urls.map(u => `"${u.replace(/"/g, '\\"')}"`).join(',')}}`
+                : null,
+              linked_component_id: fuzzyMatchId,
+              confidence: fuzzyConfidence
+            });
+            unmatched++;
+            continue;
+          }
+        }
+      }
+
       // Step 4: Slug match (catches duplicates within this batch)
       const cleanedName = cleanName(nameForExtraction, resolvedBrand, resolvedCategory);
       const baseSlug = componentSlug(resolvedBrand, cleanedName);
@@ -358,7 +462,9 @@ export async function aggregate(
         image_url: p.image_url ?? null,
         image_urls: (p.image_urls && p.image_urls.length > 0) 
           ? `{${p.image_urls.map(u => `"${u.replace(/"/g, '\\"')}"`).join(',')}}`
-          : null
+          : null,
+        linked_component_id: fuzzyMatchId || null,
+        confidence: fuzzyConfidence
       });
       unmatched++;
       continue;
@@ -635,13 +741,14 @@ export async function aggregate(
         // PostgreSQL's ON CONFLICT DO UPDATE cannot update the same row twice
         // in a single statement, which happens when a retailer lists the same
         // URL under multiple categories (e.g. a product in two sections).
-        const mappingMap2 = new Map<string, { component_id: number; retailer_id: number; product_url: string; product_identifier: string }>();
+        const mappingMap2 = new Map<string, { component_id: number; retailer_id: number; product_url: string; product_identifier: string; auto_linked: boolean }>();
         for (const p of finalResolved) {
           mappingMap2.set(`${p.retailer_id}|${p.product_url}`, {
             component_id: p.component_id,
             retailer_id: p.retailer_id,
             product_url: p.product_url,
-            product_identifier: decodeHtml(p.product_name ?? '')
+            product_identifier: decodeHtml(p.product_name ?? ''),
+            auto_linked: (p as any)._autoLinked === true
           });
         }
         const mappingRows = [...mappingMap2.values()];
@@ -651,7 +758,8 @@ export async function aggregate(
             INSERT INTO scraper_mappings ${ (tx as any)(batch) }
             ON CONFLICT (retailer_id, product_url) DO UPDATE SET
               component_id = EXCLUDED.component_id,
-              product_identifier = EXCLUDED.product_identifier
+              product_identifier = EXCLUDED.product_identifier,
+              auto_linked = EXCLUDED.auto_linked
           `;
         }
       }
@@ -672,6 +780,8 @@ export async function aggregate(
               scraped_price = EXCLUDED.scraped_price,
               image_url = EXCLUDED.image_url,
               image_urls = EXCLUDED.image_urls,
+              linked_component_id = EXCLUDED.linked_component_id,
+              confidence = EXCLUDED.confidence,
               scraped_at = NOW(),
               status = CASE 
                 WHEN unmatched_listings.status = 'dismissed' THEN 'dismissed'

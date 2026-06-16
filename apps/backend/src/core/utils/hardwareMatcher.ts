@@ -118,6 +118,16 @@ export function extractSeries(name: string, category?: string): string[] {
 
 // ── Core Engine ───────────────────────────────────────────────────────────────
 
+interface PrecomputedCatalogComponent {
+  fullName: string;
+  brand: string | null;
+  dnaTokens: string[];
+  series: string[];
+  seriesSet: Set<string>;
+}
+
+const catalogCache = new Map<number, PrecomputedCatalogComponent>();
+
 /**
  * Calculates a strict confidence score between a scraped name and a catalog component.
  * 
@@ -129,11 +139,32 @@ export function extractSeries(name: string, category?: string): string[] {
  */
 export function calculateStrictScore(
   scrapedName: string,
-  catalogComponent: CatalogComponent
+  catalogComponent: CatalogComponent,
+  pBrand?: string | null,
+  sNorm?: string,
+  pSeries?: string[],
+  pSeriesSet?: Set<string>
 ): MatchScore {
-  const catalogFullName = catalogComponent.brand 
-    ? `${catalogComponent.brand} ${catalogComponent.name}` 
-    : catalogComponent.name;
+  let cached = catalogCache.get(catalogComponent.id);
+  if (!cached) {
+    const catalogFullName = catalogComponent.brand 
+      ? `${catalogComponent.brand} ${catalogComponent.name}` 
+      : catalogComponent.name;
+    const s = extractSeries(catalogFullName, catalogComponent.category);
+    cached = {
+      fullName: catalogFullName,
+      brand: extractBrand(catalogFullName),
+      dnaTokens: extractDna(catalogFullName, catalogComponent.category),
+      series: s,
+      seriesSet: new Set(s)
+    };
+    catalogCache.set(catalogComponent.id, cached);
+  }
+
+  if (pBrand === undefined) pBrand = extractBrand(scrapedName);
+  if (sNorm === undefined) sNorm = normalize(scrapedName);
+  if (pSeries === undefined) pSeries = extractSeries(scrapedName, catalogComponent.category);
+  if (pSeriesSet === undefined) pSeriesSet = new Set(pSeries);
 
   const res: MatchScore = {
     total: 0,
@@ -143,8 +174,7 @@ export function calculateStrictScore(
   };
 
   // 1. Brand Match (20%)
-  const pBrand = extractBrand(scrapedName);
-  const cBrand = extractBrand(catalogFullName);
+  const cBrand = cached.brand;
   
   if (pBrand && cBrand) {
     if (pBrand.toLowerCase() === cBrand.toLowerCase()) {
@@ -171,17 +201,16 @@ export function calculateStrictScore(
   }
 
   // 2. Spec (DNA) Match (40%)
-  const dnaTokens = extractDna(catalogFullName, catalogComponent.category);
+  const dnaTokens = cached.dnaTokens;
   if (dnaTokens.length === 0) {
     res.rejectionReason = 'No DNA tokens found for catalog component';
     return res;
   }
 
-  const sNorm = normalize(scrapedName);
   let matchedDna = 0;
   for (const token of dnaTokens) {
     const regex = tokenToRegex(token);
-    if (regex.test(sNorm)) matchedDna++;
+    if (regex.test(sNorm!)) matchedDna++;
   }
 
   res.specMatch = matchedDna / dnaTokens.length;
@@ -193,23 +222,19 @@ export function calculateStrictScore(
   }
 
   // 3. Series / Sub-tier Match (40%) - The Exclusion Engine
-  const pSeries = extractSeries(scrapedName, catalogComponent.category);
-  const cSeries = extractSeries(catalogFullName, catalogComponent.category);
-
-  const pSeriesSet = new Set(pSeries);
-  const cSeriesSet = new Set(cSeries);
+  const cSeriesSet = cached.seriesSet;
 
   // Negative Constraint: If offer has a sub-tier but catalog doesn't -> REJECT
-  const offerHasExtraSeries = pSeries.some(s => !cSeriesSet.has(s));
+  const offerHasExtraSeries = pSeries!.some(s => !cSeriesSet.has(s));
   if (offerHasExtraSeries) {
-    res.rejectionReason = `Offer contains extra series tokens: ${pSeries.filter(s => !cSeriesSet.has(s)).join(', ')}`;
+    res.rejectionReason = `Offer contains extra series tokens: ${pSeries!.filter(s => !cSeriesSet.has(s)).join(', ')}`;
     return res;
   }
 
   // Negative Constraint: If catalog has a sub-tier but offer doesn't -> REJECT
-  const catalogHasExtraSeries = cSeries.some(s => !pSeriesSet.has(s));
+  const catalogHasExtraSeries = cached.series.some(s => !pSeriesSet!.has(s));
   if (catalogHasExtraSeries) {
-    res.rejectionReason = `Offer missing catalog series tokens: ${cSeries.filter(s => !pSeriesSet.has(s)).join(', ')}`;
+    res.rejectionReason = `Offer missing catalog series tokens: ${cached.series.filter(s => !pSeriesSet!.has(s)).join(', ')}`;
     return res;
   }
 
@@ -230,8 +255,26 @@ export function findStrictMatch(
 ): { componentId: number; score: number } | null {
   const matches: { componentId: number; score: number }[] = [];
 
+  if (components.length === 0) return null;
+
+  const pBrand = extractBrand(scrapedName);
+  const sNorm = normalize(scrapedName);
+  
+  // Cache pSeries by category in case components list contains mixed categories
+  const pSeriesCache = new Map<string, string[]>();
+  const pSeriesSetCache = new Map<string, Set<string>>();
+
   for (const component of components) {
-    const score = calculateStrictScore(scrapedName, component);
+    let pSeries = pSeriesCache.get(component.category);
+    let pSeriesSet = pSeriesSetCache.get(component.category);
+    if (!pSeries) {
+      pSeries = extractSeries(scrapedName, component.category);
+      pSeriesSet = new Set(pSeries);
+      pSeriesCache.set(component.category, pSeries);
+      pSeriesSetCache.set(component.category, pSeriesSet);
+    }
+
+    const score = calculateStrictScore(scrapedName, component, pBrand, sNorm, pSeries, pSeriesSet);
     if (score.total >= threshold) {
       matches.push({ componentId: component.id, score: score.total });
     }

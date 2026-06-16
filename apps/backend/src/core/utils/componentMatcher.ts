@@ -38,13 +38,20 @@ export interface CatalogComponent {
   name: string;
   brand: string | null;
   category: string;
+  mpn?: string | null;
+  ean?: string | null;
 }
 
 // ── Normalization helpers ─────────────────────────────────────────────────────
 
+const normalizeCache = new Map<string, string>();
+
 /** Lowercase, strip punctuation, collapse whitespace. */
 function normalize(text: string): string {
   if (!text) return '';
+  const cached = normalizeCache.get(text);
+  if (cached) return cached;
+
   let n = text.toLowerCase();
 
   // Strip category keywords specifically to handle concatenated suffixes like "5600XTProcesseurs"
@@ -56,10 +63,13 @@ function normalize(text: string): string {
     n = n.replace(regex, '');
   }
 
-  return n
+  const result = n
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+
+  normalizeCache.set(text, result);
+  return result;
 }
 
 // ── Category-specific DNA extractors ─────────────────────────────────────────
@@ -515,18 +525,28 @@ function extractCoolingDna(name: string): string[] {
  * Extracts the "DNA" of a component — the minimal set of tokens that
  * uniquely identify it within its category.
  */
+const dnaCache = new Map<string, string[]>();
+
 export function extractDna(name: string, category: string): string[] {
+  const cacheKey = `${category}|${name}`;
+  const cached = dnaCache.get(cacheKey);
+  if (cached) return cached;
+
+  let result: string[];
   switch (category) {
-    case 'gpu': return extractGpuDna(name);
-    case 'cpu': return extractCpuDna(name);
-    case 'ram': return extractRamDna(name);
-    case 'storage': return extractStorageDna(name);
-    case 'psu': return extractPsuDna(name);
-    case 'motherboard': return extractMotherboardDna(name);
-    case 'case': return extractCaseDna(name);
-    case 'cooling': return extractCoolingDna(name);
-    default: return normalize(name).split(' ').filter((t) => t.length > 2);
+    case 'gpu': result = extractGpuDna(name); break;
+    case 'cpu': result = extractCpuDna(name); break;
+    case 'ram': result = extractRamDna(name); break;
+    case 'storage': result = extractStorageDna(name); break;
+    case 'psu': result = extractPsuDna(name); break;
+    case 'motherboard': result = extractMotherboardDna(name); break;
+    case 'case': result = extractCaseDna(name); break;
+    case 'cooling': result = extractCoolingDna(name); break;
+    default: result = normalize(name).split(' ').filter((t) => t.length > 2); break;
   }
+
+  dnaCache.set(cacheKey, result);
+  return result;
 }
 
 // ── Token → Regex ─────────────────────────────────────────────────────────────
@@ -618,6 +638,8 @@ function isGenericToken(token: string, category: string): boolean {
  * optional spaces at letter↔digit boundaries, while \b prevents substring
  * matches ("rx7900xt" won't match "rx7900xtx").
  */
+const pNormCache = new Map<string, string>();
+
 export function scoreDnaMatch(productName: string, catalogName: string, category: string, skipBrandCheck = false): {
   score: number;
   dnaTokens: string[];
@@ -626,15 +648,6 @@ export function scoreDnaMatch(productName: string, catalogName: string, category
     return { score: 0, dnaTokens: [] };
   }
   if (!productName || !catalogName) return { score: 0, dnaTokens: [] };
-
-  if (category === 'storage' || category === 'ram' || category === 'gpu') {
-    productName = productName
-      .replace(/(\d+)\s*go\b/gi, '$1gb')
-      .replace(/(\d+)\s*to\b/gi, '$1tb');
-    catalogName = catalogName
-      .replace(/(\d+)\s*go\b/gi, '$1gb')
-      .replace(/(\d+)\s*to\b/gi, '$1tb');
-  }
 
   // 1. MPN Veto Logic (Highest Precision Guardrail)
   // If BOTH names contain a standard MPN pattern, they MUST match.
@@ -685,33 +698,39 @@ export function scoreDnaMatch(productName: string, catalogName: string, category
     return { score: 0, dnaTokens };
   }
 
-  // Keep the product name naturally spaced — just lowercase and strip punctuation
-  // Also normalize speed notation: "3200MHz" → "3200" so speed tokens match
-  // Also normalize RAM kit notation: "2x8GB" → "16GB", "2x16GB" → "32GB"
-  // For PSU: expand model-embedded wattage (e.g. "CV550" → "CV550 550w")
-  // but ONLY for known PSU model prefixes to avoid false positives with motherboard chipsets
-  let productNorm = normalize(productName)
-    .replace(/(\d+)\s*mhz/g, '$1')
-    .replace(/(\d+)\s*x\s*(\d+)\s*gb/g, (_m, count, size) => {
-      const c = parseInt(count);
-      const total = c * parseInt(size);
-      return c > 1 ? `${total}gb ${c}x` : `${total}gb`;
-    });
+  const cacheKey = `${category}|${productName}`;
+  let productNorm = pNormCache.get(cacheKey);
 
-  if (category === 'psu') {
-    // Expand "850G" → "850w", "850X" → "850w" (efficiency suffix variants)
-    productNorm = productNorm.replace(/\b(\d{3,4})[gxpbt]\b/g, (match, watts) => {
-      const w = parseInt(watts);
-      return w >= 300 && w <= 2000 ? `${match} ${watts}w` : match;
-    });
-    // Expand model-embedded wattage (e.g. "CV550" → "CV550 550w")
-    productNorm = productNorm.replace(
-      /\b(cv|rm|tx|cx|hx|sf|ax|vs|cp|lp|gx|gm|gd|focus|prime|straight|dark|a|p|g|v|mwe|strix|tuf|rog)(\d{3,4})[a-z]{0,3}\b/g,
-      (match, _prefix, watts) => {
+  if (productNorm === undefined) {
+    let pName = productName;
+    if (category === 'storage' || category === 'ram' || category === 'gpu') {
+      pName = pName
+        .replace(/(\d+)\s*go\b/gi, '$1gb')
+        .replace(/(\d+)\s*to\b/gi, '$1tb');
+    }
+
+    productNorm = normalize(pName)
+      .replace(/(\d+)\s*mhz/g, '$1')
+      .replace(/(\d+)\s*x\s*(\d+)\s*gb/g, (_m, count, size) => {
+        const c = parseInt(count);
+        const total = c * parseInt(size);
+        return c > 1 ? `${total}gb ${c}x` : `${total}gb`;
+      });
+
+    if (category === 'psu') {
+      productNorm = productNorm.replace(/\b(\d{3,4})[gxpbt]\b/g, (match, watts) => {
         const w = parseInt(watts);
         return w >= 300 && w <= 2000 ? `${match} ${watts}w` : match;
-      }
-    );
+      });
+      productNorm = productNorm.replace(
+        /\b(cv|rm|tx|cx|hx|sf|ax|vs|cp|lp|gx|gm|gd|focus|prime|straight|dark|a|p|g|v|mwe|strix|tuf|rog)(\d{3,4})[a-z]{0,3}\b/g,
+        (match, _prefix, watts) => {
+          const w = parseInt(watts);
+          return w >= 300 && w <= 2000 ? `${match} ${watts}w` : match;
+        }
+      );
+    }
+    pNormCache.set(cacheKey, productNorm);
   }
 
   let matched = 0;

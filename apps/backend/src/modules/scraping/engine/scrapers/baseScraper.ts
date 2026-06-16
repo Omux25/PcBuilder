@@ -43,6 +43,10 @@ export interface ScrapedPrice {
   image_url?: string;
   /** Optional: Multiple product image URLs (e.g. gallery shots) */
   image_urls?: string[];
+  /** Optional: Manufacturer Part Number extracted from retailer */
+  mpn?: string;
+  /** Optional: European Article Number (Barcode) extracted from retailer */
+  ean?: string;
 }
 
 // ── Dependency injection ──────────────────────────────────────────────────────
