@@ -10,6 +10,14 @@
       "destination": "/api/seo?path=/presets"
     },
     {
+      "source": "/sitemap.xml",
+      "destination": "/sitemap.xml"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/robots.txt"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "https://pcbuilder-m2nf.onrender.com/api/$1"
     },
