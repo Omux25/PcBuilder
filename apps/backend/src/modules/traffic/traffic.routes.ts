@@ -3,7 +3,7 @@ import { trafficService } from './traffic.service.js';
 
 export const publicTrafficRouter = new Hono();
 
-publicTrafficRouter.post('/state', async (c) => {
+const handleTrafficRequest = async (c: any) => {
   try {
     const { path } = await c.req.json();
     if (!path) return c.json({ success: false });
@@ -27,4 +27,7 @@ publicTrafficRouter.post('/state', async (c) => {
   } catch (err) {
     return c.json({ success: false });
   }
-});
+};
+
+publicTrafficRouter.post('/state', handleTrafficRequest);
+publicTrafficRouter.post('/route', handleTrafficRequest);
