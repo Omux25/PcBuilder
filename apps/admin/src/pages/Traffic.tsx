@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { RefreshCw, Trash2, Globe, Server, Activity, Clock, AlertTriangle, Monitor, Users, List } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { RefreshCw, Trash2, Globe, Server, Activity, Clock, AlertTriangle, Monitor, Users, List, ChevronDown, ChevronRight } from 'lucide-react';
 import { getAdminTrafficLogs, getAdminTrafficVisitors, clearAllTrafficLogs, type TrafficLogEntry, type TrafficVisitorEntry } from '../api';
 import styles from './Traffic.module.css';
 
@@ -39,13 +39,100 @@ function parseUserAgent(ua: string | null) {
 
 function formatPathName(path: string | null): string {
   if (!path) return '/';
-  // If it's an API route tracked internally, maybe strip /api, but we'll just show the raw path
-  return path;
+  return path.split('?')[0];
+}
+
+function TrafficRowDetails({ log }: { log: TrafficLogEntry }) {
+  if (!log.path) return null;
+  const parts = log.path.split('?');
+  const queryStr = parts.length > 1 ? parts[1] : '';
+  const searchParams = new URLSearchParams(queryStr);
+  const chips: React.ReactNode[] = [];
+  
+  let explanation = '';
+  if (log.path.includes('/components/smart-search')) {
+    const cat = searchParams.get('category');
+    const q = searchParams.get('search');
+    if (cat && q) {
+      explanation = `L'utilisateur a recherché "${q}" dans la catégorie "${cat}".`;
+    } else if (cat) {
+      explanation = `L'utilisateur a filtré la catégorie "${cat}".`;
+    } else if (q) {
+      explanation = `L'utilisateur a recherché "${q}" dans tout le catalogue.`;
+    }
+  } else if (log.path.includes('/recherche')) {
+    const q = searchParams.get('q');
+    if (q) explanation = `L'utilisateur a effectué une recherche globale pour "${q}".`;
+  }
+
+  for (const [key, value] of searchParams.entries()) {
+    chips.push(
+      <div key={key} style={{
+        display: 'inline-flex', alignItems: 'center', padding: '4px 10px', 
+        background: 'rgba(137, 180, 250, 0.15)', color: 'var(--blue)', 
+        borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid rgba(137, 180, 250, 0.3)'
+      }}>
+        <span style={{ opacity: 0.7, marginRight: '4px' }}>{key}:</span> {value}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      padding: '1.25rem 1.5rem', background: 'rgba(0, 0, 0, 0.15)', 
+      borderBottom: '1px solid var(--border)', borderTop: '1px dashed rgba(255, 255, 255, 0.05)',
+      display: 'flex', flexDirection: 'column', gap: '1rem'
+    }}>
+      {chips.length > 0 && (
+        <div>
+          <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 700, letterSpacing: '0.05em' }}>Filtres & Paramètres</div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {chips}
+          </div>
+        </div>
+      )}
+      
+      {explanation && (
+        <div style={{ 
+          padding: '10px 14px', background: 'rgba(166, 227, 161, 0.1)', 
+          borderLeft: '3px solid var(--green)', color: 'var(--text)', 
+          fontSize: '0.85rem', borderRadius: '0 8px 8px 0', lineHeight: 1.5
+        }}>
+          💡 <strong>Interprétation :</strong> {explanation}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '2rem' }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 700, letterSpacing: '0.05em' }}>URL Complète (Raw)</div>
+          <div style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--text-muted)', wordBreak: 'break-all', background: 'rgba(0,0,0,0.2)', padding: '6px 10px', borderRadius: '6px' }}>
+            {log.path}
+          </div>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 700, letterSpacing: '0.05em' }}>User-Agent Brut</div>
+          <div style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--text-muted)', wordBreak: 'break-all', background: 'rgba(0,0,0,0.2)', padding: '6px 10px', borderRadius: '6px' }}>
+            {log.userAgent || 'N/A'}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function Traffic() {
   const [activeTab, setActiveTab] = useState<'visitors' | 'raw'>('visitors');
   const [ipFilter, setIpFilter] = useState<string | null>(null);
+  const [expandedRowIds, setExpandedRowIds] = useState<Set<number>>(new Set());
+
+  const toggleRow = (id: number) => {
+    setExpandedRowIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
   
   const [visitors, setVisitors] = useState<TrafficVisitorEntry[]>([]);
   const [logs, setLogs] = useState<TrafficLogEntry[]>([]);
@@ -262,6 +349,7 @@ export function Traffic() {
               <>
                 <thead>
                   <tr>
+                    <th style={{ width: 40 }}></th>
                     <th>Date</th>
                     <th>Méthode</th>
                     <th>Chemin</th>
@@ -273,37 +361,55 @@ export function Traffic() {
                 </thead>
                 <tbody>
                   {loading && logs.length === 0 ? (
-                    <tr><td colSpan={7} className={styles.empty}>Chargement des données de trafic...</td></tr>
+                    <tr><td colSpan={8} className={styles.empty}>Chargement des données de trafic...</td></tr>
                   ) : logs.length === 0 ? (
-                    <tr><td colSpan={7} className={styles.empty}>Aucun trafic enregistré.</td></tr>
+                    <tr><td colSpan={8} className={styles.empty}>Aucun trafic enregistré.</td></tr>
                   ) : (
-                    logs.map(log => (
-                      <tr key={log.id}>
-                        <td className={styles.dateCell}>{new Date(log.createdAt).toLocaleString('fr-MA')}</td>
-                        <td>
-                          <span className={`${styles.badge} ${styles['method' + log.method] || styles.methodDefault}`}>
-                            {log.method}
-                          </span>
-                        </td>
-                        <td className={styles.pathCell} title={log.path}>
-                          {formatPathName(log.path)}
-                        </td>
-                        <td>
-                          <span className={`${styles.statusBadge} ${log.statusCode >= 400 ? styles.statusError : styles.statusOk}`}>
-                            {log.statusCode}
-                          </span>
-                        </td>
-                        <td className={styles.timeCell}>{log.responseTimeMs}ms</td>
-                        <td className={styles.ipCell}>
-                          <Globe size={12} className={styles.inlineIcon} />
-                          {parseIp(log.ip)}
-                        </td>
-                        <td className={styles.uaCell} title={log.userAgent || ''}>
-                          <Monitor size={12} className={styles.inlineIcon} style={{marginRight: '4px'}} />
-                          {parseUserAgent(log.userAgent)}
-                        </td>
-                      </tr>
-                    ))
+                    logs.map(log => {
+                      const isExpanded = expandedRowIds.has(log.id);
+                      return (
+                        <React.Fragment key={log.id}>
+                          <tr 
+                            onClick={() => toggleRow(log.id)}
+                            style={{ cursor: 'pointer', transition: 'background-color 0.2s', backgroundColor: isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent' }}
+                          >
+                            <td style={{ color: 'var(--text-muted)' }}>
+                              {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                            </td>
+                            <td className={styles.dateCell}>{new Date(log.createdAt).toLocaleString('fr-MA')}</td>
+                            <td>
+                              <span className={`${styles.badge} ${styles['method' + log.method] || styles.methodDefault}`}>
+                                {log.method}
+                              </span>
+                            </td>
+                            <td className={styles.pathCell} title={log.path}>
+                              {formatPathName(log.path)}
+                            </td>
+                            <td>
+                              <span className={`${styles.statusBadge} ${log.statusCode >= 400 ? styles.statusError : styles.statusOk}`}>
+                                {log.statusCode}
+                              </span>
+                            </td>
+                            <td className={styles.timeCell}>{log.responseTimeMs}ms</td>
+                            <td className={styles.ipCell}>
+                              <Globe size={12} className={styles.inlineIcon} />
+                              {parseIp(log.ip)}
+                            </td>
+                            <td className={styles.uaCell} title={log.userAgent || ''}>
+                              <Monitor size={12} className={styles.inlineIcon} style={{marginRight: '4px'}} />
+                              {parseUserAgent(log.userAgent)}
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr>
+                              <td colSpan={8} style={{ padding: 0 }}>
+                                <TrafficRowDetails log={log} />
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })
                   )}
                 </tbody>
               </>
