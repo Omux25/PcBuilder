@@ -237,10 +237,10 @@ export function trackTraffic(path: string) {
     trackingQueue = [];
     
     // Fire and forget
-    request('/ui/metrics', {
+    request('/ui/theme', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paths: pathsToSend })
+      body: JSON.stringify({ keys: pathsToSend })
     }).catch(() => {});
   }, 1500); // 1.5s debounce to prevent spamming analytics endpoint which triggers AdBlockers
 }
