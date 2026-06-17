@@ -84,8 +84,8 @@ export default function App() {
   // Scroll to top on every route change and track traffic
   useEffect(() => { 
     window.scrollTo(0, 0); 
-    trackTraffic(location.pathname);
-  }, [location.pathname]);
+    trackTraffic(location.pathname + location.search);
+  }, [location.pathname, location.search]);
   useEffect(() => {
     if (searchOpen) setTimeout(() => searchRef.current?.focus(), 50);
   }, [searchOpen]);
