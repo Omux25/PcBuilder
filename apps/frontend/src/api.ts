@@ -236,12 +236,16 @@ export function trackTraffic(path: string) {
     const pathsToSend = [...trackingQueue];
     trackingQueue = [];
     
+    console.log('[Traffic] Envoi de', pathsToSend.length, 'requêtes en lot:', pathsToSend);
+    
     // Fire and forget
     request('/ui/theme', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ keys: pathsToSend })
-    }).catch(() => {});
+    }).catch((err) => {
+      console.error('[Traffic] Erreur lors de l\'envoi:', err);
+    });
   }, 1500); // 1.5s debounce to prevent spamming analytics endpoint which triggers AdBlockers
 }
 
