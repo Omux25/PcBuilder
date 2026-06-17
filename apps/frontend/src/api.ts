@@ -221,18 +221,26 @@ export async function getPriceHistory(
 
 /** Validate a build configuration. */
 let trackingTimeout: ReturnType<typeof setTimeout> | null = null;
+let trackingQueue: string[] = [];
 
 export function trackTraffic(path: string) {
+  trackingQueue.push(path);
+
   if (trackingTimeout) {
     clearTimeout(trackingTimeout);
   }
   
   trackingTimeout = setTimeout(() => {
+    if (trackingQueue.length === 0) return;
+    
+    const pathsToSend = [...trackingQueue];
+    trackingQueue = [];
+    
     // Fire and forget
     request('/ui/state', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path })
+      body: JSON.stringify({ paths: pathsToSend })
     }).catch(() => {});
   }, 1500); // 1.5s debounce to prevent spamming analytics endpoint which triggers AdBlockers
 }
