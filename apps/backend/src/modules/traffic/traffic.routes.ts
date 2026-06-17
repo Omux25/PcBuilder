@@ -5,8 +5,10 @@ export const publicTrafficRouter = new Hono();
 
 const handleTrafficRequest = async (c: any) => {
   try {
-    const { path } = await c.req.json();
-    if (!path) return c.json({ success: false });
+    const body = await c.req.json();
+    const paths = Array.isArray(body.paths) ? body.paths : (body.path ? [body.path] : []);
+    
+    if (paths.length === 0) return c.json({ success: false });
 
     const ip = c.req.header('x-vercel-forwarded-for') || 
                c.req.header('x-forwarded-for') || 
@@ -14,14 +16,16 @@ const handleTrafficRequest = async (c: any) => {
                '127.0.0.1';
     const userAgent = c.req.header('user-agent');
     
-    trafficService.logTraffic({
-      ip,
-      method: 'VIEW',
-      path,
-      userAgent,
-      statusCode: 200,
-      responseTimeMs: 0
-    }).catch(() => {});
+    for (const path of paths) {
+      trafficService.logTraffic({
+        ip,
+        method: 'VIEW',
+        path,
+        userAgent,
+        statusCode: 200,
+        responseTimeMs: 0
+      }).catch(() => {});
+    }
 
     return c.json({ success: true });
   } catch (err) {
