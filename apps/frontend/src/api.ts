@@ -220,13 +220,21 @@ export async function getPriceHistory(
 // ── Compatibility ─────────────────────────────────────────────────────────────
 
 /** Validate a build configuration. */
+let trackingTimeout: ReturnType<typeof setTimeout> | null = null;
+
 export function trackTraffic(path: string) {
-  // Fire and forget
-  request('/ui/state', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path })
-  }).catch(() => {});
+  if (trackingTimeout) {
+    clearTimeout(trackingTimeout);
+  }
+  
+  trackingTimeout = setTimeout(() => {
+    // Fire and forget
+    request('/ui/state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path })
+    }).catch(() => {});
+  }, 1500); // 1.5s debounce to prevent spamming analytics endpoint which triggers AdBlockers
 }
 
 export async function validateBuild(build: BuildConfig): Promise<CompatibilityResult> {
