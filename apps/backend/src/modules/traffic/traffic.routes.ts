@@ -33,5 +33,6 @@ const handleTrafficRequest = async (c: any) => {
   }
 };
 
+publicTrafficRouter.post('/metrics', handleTrafficRequest);
 publicTrafficRouter.post('/state', handleTrafficRequest);
 publicTrafficRouter.post('/route', handleTrafficRequest);

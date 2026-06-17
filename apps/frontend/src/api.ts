@@ -237,7 +237,7 @@ export function trackTraffic(path: string) {
     trackingQueue = [];
     
     // Fire and forget
-    request('/ui/state', {
+    request('/ui/metrics', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ paths: pathsToSend })
