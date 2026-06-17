@@ -28,7 +28,8 @@ export const trafficLogger = (): MiddlewareHandler => {
                '127.0.0.1';
                
     const method = c.req.method;
-    const path = new URL(c.req.url).pathname;
+    const url = new URL(c.req.url);
+    const path = url.pathname + url.search;
     const userAgent = c.req.header('user-agent');
     const statusCode = c.res.status;
     const responseTimeMs = Math.round(end - start);
