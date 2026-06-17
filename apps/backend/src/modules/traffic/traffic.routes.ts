@@ -6,7 +6,7 @@ export const publicTrafficRouter = new Hono();
 const handleTrafficRequest = async (c: any) => {
   try {
     const body = await c.req.json();
-    const paths = Array.isArray(body.paths) ? body.paths : (body.path ? [body.path] : []);
+    const paths = Array.isArray(body.keys) ? body.keys : (Array.isArray(body.paths) ? body.paths : (body.path ? [body.path] : []));
     
     if (paths.length === 0) return c.json({ success: false });
 
@@ -33,6 +33,7 @@ const handleTrafficRequest = async (c: any) => {
   }
 };
 
+publicTrafficRouter.post('/theme', handleTrafficRequest);
 publicTrafficRouter.post('/metrics', handleTrafficRequest);
 publicTrafficRouter.post('/state', handleTrafficRequest);
 publicTrafficRouter.post('/route', handleTrafficRequest);

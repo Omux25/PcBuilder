@@ -8,6 +8,7 @@ export const trafficLogger = (): MiddlewareHandler => {
     if (
       c.req.method === 'OPTIONS' || 
       pathStr.includes('/health') || 
+      pathStr.includes('/ui/theme') ||
       pathStr.includes('/ui/metrics') ||
       pathStr.includes('/ui/state') ||
       pathStr.includes('/pulse') ||
