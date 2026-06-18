@@ -14,6 +14,7 @@ import { LinkEngine } from '@shared/link-engine';
 import { CategoryIcon } from '../components/CategoryIcon';
 import type { Component, ComponentCategory } from '../types';
 import { CATEGORY_LABELS, CATEGORY_ORDER, CATEGORY_SLUGS } from '../types';
+import { SEO } from '../components/SEO';
 import { UI } from '../ui-strings';
 import styles from './GlobalSearch.module.css';
 
@@ -77,6 +78,10 @@ export function GlobalSearch() {
 
   return (
     <div className={styles.page}>
+      <SEO 
+        title={query ? `Recherche: ${query}` : "Recherche de Composants PC"}
+        description="Recherchez des processeurs, cartes graphiques, cartes mères et autres composants PC Gamer au Maroc."
+      />
       <div className={styles.searchSection}>
         <form className={styles.searchForm} onSubmit={handleSubmit}>
           <div className={styles.searchWrap}>

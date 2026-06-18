@@ -257,7 +257,7 @@ export function Compare() {
   return (
     <div className={styles.page}>
       <SEO 
-        title="Comparateur de Composants PC | PC Builder Maroc"
+        title="Comparateur de Composants PC"
         description="Comparez les spécifications, performances et prix des composants PC au Maroc. Trouvez le meilleur rapport qualité/prix."
       />
       <header className={styles.pageHeader}>

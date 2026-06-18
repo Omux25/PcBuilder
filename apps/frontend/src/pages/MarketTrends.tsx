@@ -242,7 +242,7 @@ export function MarketTrends() {
   return (
     <div className={styles.page}>
       <SEO 
-        title="Tendances des Prix des Composants PC au Maroc | PC Builder"
+        title="Tendances des Prix des Composants PC au Maroc"
         description="Suivez les baisses et hausses de prix des composants PC au Maroc. Achetez votre matériel au meilleur moment."
       />
       <div className={styles.pageHeader}>
