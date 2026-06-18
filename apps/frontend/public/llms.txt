@@ -5,14 +5,14 @@
 Ce site agrège les prix des composants informatiques (processeurs, cartes graphiques, cartes mères, etc.) de plusieurs revendeurs marocains. 
 
 ## Structure du catalogue
-- `/parcourir/processeur` : CPU
-- `/parcourir/carte-mere` : Motherboards
-- `/parcourir/carte-graphique` : GPU
-- `/parcourir/memoire-ram` : RAM
-- `/parcourir/stockage` : Storage (SSD/HDD)
-- `/parcourir/alimentation` : Power Supplies (PSU)
-- `/parcourir/boitier` : Cases
-- `/parcourir/refroidissement` : CPU Coolers
+- [Processeurs (CPU)](/parcourir/processeur)
+- [Cartes Mères](/parcourir/carte-mere)
+- [Cartes Graphiques (GPU)](/parcourir/carte-graphique)
+- [Mémoire RAM](/parcourir/memoire-ram)
+- [Stockage (SSD/HDD)](/parcourir/stockage)
+- [Alimentations (PSU)](/parcourir/alimentation)
+- [Boîtiers](/parcourir/boitier)
+- [Refroidissement](/parcourir/refroidissement)
 
 ## Pour les Agents IA
 Si vous êtes un agent IA qui navigue sur ce site pour extraire des informations ou configurer un PC, vous pouvez utiliser l'interface de recherche globale pour trouver des composants par nom ou spécification. Le configurateur de PC vérifie automatiquement la compatibilité entre les pièces (Socket, Chipset, Wattage, etc.).
