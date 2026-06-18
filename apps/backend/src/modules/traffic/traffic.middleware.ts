@@ -5,6 +5,7 @@ export const trafficLogger = (): MiddlewareHandler => {
   return async (c, next) => {
     const pathStr = c.req.path;
     // Ignore OPTIONS requests, internal health checks, explicit page views, and admin API calls
+    const referer = c.req.header('referer') || '';
     if (
       c.req.method === 'OPTIONS' || 
       pathStr.includes('/health') || 
@@ -13,7 +14,8 @@ export const trafficLogger = (): MiddlewareHandler => {
       pathStr.includes('/ui/state') ||
       pathStr.includes('/pulse') ||
       pathStr.includes('/traffic/route') ||
-      pathStr.includes('/admin')
+      pathStr.includes('/admin') ||
+      referer.includes('/admin')
     ) {
       return next();
     }
