@@ -13,6 +13,7 @@ function parseUserAgent(ua: string | null) {
   
   if (ua.includes('Googlebot')) return 'Googlebot';
   if (ua.includes('bingbot')) return 'Bingbot';
+  if (ua.includes('GPTBot')) return 'ChatGPT Bot';
   if (ua.includes('Go-http-client')) return 'Go HTTP Client';
   if (ua.includes('curl')) return 'Terminal (curl)';
   if (ua.includes('PostmanRuntime')) return 'Postman';
