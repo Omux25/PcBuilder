@@ -13,9 +13,6 @@ seoRouter.get('/sitemap.xml', async (c) => {
       SELECT c.category, c.slug, c.updated_at 
       FROM components c
       WHERE c.slug IS NOT NULL
-      AND EXISTS (
-        SELECT 1 FROM prices p WHERE p.component_id = c.id
-      )
     `;
 
     const baseUrl = 'https://pcbuilder.ma';
@@ -40,6 +37,15 @@ seoRouter.get('/sitemap.xml', async (c) => {
       xml += `    <loc>${baseUrl}${page}</loc>\n`;
       xml += `    <changefreq>daily</changefreq>\n`;
       xml += `    <priority>${page === '' ? '1.0' : '0.8'}</priority>\n`;
+      xml += `  </url>\n`;
+    }
+
+    // Add category browse pages
+    for (const slug of Object.values(CATEGORY_SLUGS)) {
+      xml += `  <url>\n`;
+      xml += `    <loc>${baseUrl}/parcourir/${encodeURIComponent(slug as string)}</loc>\n`;
+      xml += `    <changefreq>daily</changefreq>\n`;
+      xml += `    <priority>0.9</priority>\n`;
       xml += `  </url>\n`;
     }
 

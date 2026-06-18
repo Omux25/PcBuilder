@@ -1,13 +1,6 @@
 {
   "rewrites": [
-    {
-      "source": "/component/(.*)",
-      "destination": "/api/seo?path=/component/$1"
-    },
-    {
-      "source": "/presets",
-      "destination": "/api/seo?path=/presets"
-    },
+
     {
       "source": "/sitemap.xml",
       "destination": "https://pcbuilder-m2nf.onrender.com/api/sitemap.xml"

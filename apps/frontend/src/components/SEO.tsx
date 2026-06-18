@@ -17,7 +17,7 @@ export function SEO({
   image = 'https://pcbuilder.ma/premium_pc_hero.png', // Default image from public directory
   url = 'https://pcbuilder.ma',
 }: SEOProps) {
-  const fullTitle = `${title} | ${name}`;
+  const fullTitle = title.includes(name) ? title : `${title} | ${name}`;
 
   return (
     <Helmet>

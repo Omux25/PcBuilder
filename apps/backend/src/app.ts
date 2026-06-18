@@ -139,17 +139,17 @@ app.onError((err, c) => {
 
 if (process.env.SERVE_STATIC === 'true') {
   // Admin panel — must be mounted before the frontend catch-all
-  app.use('/admin/*', serveStatic({ 
+  app.get('/admin/*', serveStatic({ 
     root: './admin/dist',
     rewriteRequestPath: (path) => path.replace(/^\/admin/, '')
   }));
   // SPA fallback for admin panel
-  app.use('/admin/*', serveStatic({ path: './admin/dist/index.html' }));
+  app.get('/admin/*', serveStatic({ path: './admin/dist/index.html' }));
 
   // Frontend SPA
-  app.use('/*', serveStatic({ root: './frontend/dist' }));
+  app.get('/*', serveStatic({ root: './frontend/dist' }));
   // SPA fallback — serve index.html for any unmatched path (client-side routing)
-  app.use('/*', serveStatic({ path: './frontend/dist/index.html' }));
+  app.get('/*', serveStatic({ path: './frontend/dist/index.html' }));
 }
 
 export type AppRouter = typeof routes;

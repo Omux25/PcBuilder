@@ -636,7 +636,7 @@ export function CategoryBrowse() {
   return (
     <div className={styles.page}>
       <SEO 
-        title={`Acheter ${CATEGORY_LABELS[cat]} au Maroc | PC Builder Maroc`}
+        title={`Acheter ${CATEGORY_LABELS[cat]} au Maroc`}
         description={`Parcourez et comparez les meilleurs ${CATEGORY_LABELS[cat].toLowerCase()} pour votre configuration PC Gamer ou bureautique au Maroc. Prix, spécifications et compatibilité.`}
       />
       <nav className={styles.breadcrumb}>
