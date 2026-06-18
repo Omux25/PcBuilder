@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async';
+import { useLocation } from 'react-router-dom';
 
 interface SEOProps {
   title: string;
@@ -15,12 +16,17 @@ export function SEO({
   name = 'PC Builder Maroc',
   type = 'website',
   image = 'https://pcbuilder.ma/premium_pc_hero.png', // Default image from public directory
-  url = 'https://pcbuilder.ma',
+  url,
 }: SEOProps) {
+  const location = useLocation();
+  const canonicalUrl = url || `https://pcbuilder.ma${location.pathname}`;
   const fullTitle = title.includes(name) ? title : `${title} | ${name}`;
 
   return (
     <Helmet>
+      {/* Canonical URL for SEO */}
+      <link rel="canonical" href={canonicalUrl} />
+      
       {/* Standard metadata tags */}
       <title>{fullTitle}</title>
       <meta name='description' content={description} />
@@ -29,7 +35,7 @@ export function SEO({
       <meta property='og:type' content={type} />
       <meta property='og:title' content={fullTitle} />
       <meta property='og:description' content={description} />
-      <meta property='og:url' content={url} />
+      <meta property='og:url' content={canonicalUrl} />
       <meta property='og:image' content={image} />
       <meta property='og:site_name' content={name} />
       
