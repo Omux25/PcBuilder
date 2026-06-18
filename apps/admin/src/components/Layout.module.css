@@ -24,15 +24,10 @@
   margin-bottom: 1rem;
 }
 
-.brandName {
-  display: block;
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: var(--text);
-  letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.brandLogo {
+  height: 32px;
+  width: auto;
+  margin-bottom: 0.2rem;
 }
 
 .brandSub {

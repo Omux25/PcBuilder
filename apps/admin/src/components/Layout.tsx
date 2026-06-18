@@ -42,8 +42,8 @@ export function Layout() {
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
         <div className={styles.brand}>
-          <span className={styles.brandName}>PC Builder</span>
-          <span className={styles.brandSub}>Admin Pro</span>
+          <img src="/logo-full.png" alt="PC Builder Maroc" className={styles.brandLogo} />
+          <span className={styles.brandBadge}>Admin</span>
         </div>
 
         <nav className={styles.nav}>

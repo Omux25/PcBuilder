@@ -79,7 +79,7 @@ export function GlobalSearch() {
   return (
     <div className={styles.page}>
       <SEO 
-        title={query ? `Recherche: ${query}` : "Recherche de Composants PC"}
+        title={query ? `Recherche: ${query}` : "Recherche"}
         description="Recherchez des processeurs, cartes graphiques, cartes mères et autres composants PC Gamer au Maroc."
       />
       <div className={styles.searchSection}>

@@ -127,9 +127,9 @@ export default function App() {
   }
 
   const isHome = location.pathname === '/';
-  const isBuild = location.pathname === '/build';
-  const isComponents = location.pathname.startsWith('/components') || location.pathname.startsWith('/browse');
-  const isPresets = location.pathname === '/presets';
+  const isBuild = location.pathname === '/build' || location.pathname === '/configurateur';
+  const isComponents = location.pathname.startsWith('/components') || location.pathname.startsWith('/browse') || location.pathname.startsWith('/composants') || location.pathname.startsWith('/parcourir');
+  const isPresets = location.pathname === '/presets' || location.pathname === '/configurations';
 
   return (
     <div className={styles.app}>
@@ -138,8 +138,7 @@ export default function App() {
         <div className={styles.headerInner}>
           <div className={styles.headerLeft}>
             <Link to="/" className={styles.logoLink}>
-              <span className={styles.logoIcon}><Cpu size={14} strokeWidth={2.5} /></span>
-              <h1 className={styles.logo}>{UI.app.name} <span className={styles.sub}>{UI.app.subtitle}</span></h1>
+              <img src="/logo-full.png" alt="PC Builder Maroc" className={styles.logoImage} />
             </Link>
             <nav className={styles.nav}>
               <Link to="/" className={`${styles.navLink} ${isHome ? styles.navLinkActive : ''}`}>

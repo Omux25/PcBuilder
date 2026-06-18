@@ -17,6 +17,8 @@ import { CategoryIcon } from './CategoryIcon';
 import { ConfiguratorChecklist } from './ConfiguratorChecklist';
 import { ConfiguratorTotals } from './ConfiguratorTotals';
 import { ShareModal } from './ShareModal';
+import { SEO } from './SEO';
+import { UI } from '../ui-strings';
 import type { ComponentCategory } from '../types';
 import { CATEGORY_LABELS, RULE_LABELS, slotKeyToCategory, CATEGORY_ORDER, CORE_CATEGORIES, CATEGORY_SLUGS } from '../types';
 import { useBuild } from '../context/BuildContext';
@@ -224,7 +226,7 @@ export function Configurator() {
                   className={styles.compThumbLink}
                   onClick={e => e.stopPropagation()}
                 >
-                  <img src={selected.image_url} alt="" className={styles.compThumb} referrerPolicy="no-referrer" />
+                  <img src={selected.image_url} alt={selected.name} className={styles.compThumb} referrerPolicy="no-referrer" />
                 </Link>
               ) : null}
               <div className={styles.compInfo}>
@@ -279,6 +281,10 @@ export function Configurator() {
 
   return (
     <div className={styles.configurator}>
+      <SEO 
+        title="Configurateur"
+        description="Créez votre PC sur mesure avec notre configurateur intelligent. Vérifiez la compatibilité des composants et trouvez les meilleurs prix au Maroc."
+      />
       {/* Header */}
       <header className={styles.header}>
         <h1 className={styles.title}>Configurateur</h1>
