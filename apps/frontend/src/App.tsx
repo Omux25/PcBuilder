@@ -138,7 +138,7 @@ export default function App() {
         <div className={styles.headerInner}>
           <div className={styles.headerLeft}>
             <Link to="/" className={styles.logoLink}>
-              <img src="/logo-full.png" alt="PC Builder Maroc" className={styles.logoImage} />
+              <img src="/logo-full.webp" alt="PC Builder Maroc" width="338" height="56" className={styles.logoImage} />
             </Link>
             <nav className={styles.nav}>
               <Link to="/" className={`${styles.navLink} ${isHome ? styles.navLinkActive : ''}`}>
