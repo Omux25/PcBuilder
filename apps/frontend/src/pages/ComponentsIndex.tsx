@@ -34,7 +34,7 @@ export function ComponentsIndex() {
   return (
     <div className={styles.page}>
       <SEO 
-        title="Catalogue des Composants PC"
+        title="Composants"
         description="Parcourez notre catalogue complet de composants PC : Processeurs, Cartes graphiques, Cartes mères, Mémoire RAM, Stockage et plus encore."
       />
       <div className={styles.header}>

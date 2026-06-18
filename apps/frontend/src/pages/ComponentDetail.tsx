@@ -118,6 +118,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
   if (loading) {
     return (
       <div className={styles.page}>
+        <SEO title="Chargement..." description="Chargement du composant." />
         <button onClick={goBack} className={styles.back}><ArrowLeft size={14} /> Retour</button>
         <div className={styles.heroLayout}>
           <Skeleton height={160} width={160} style={{ borderRadius: '12px', flexShrink: 0 }} />
@@ -138,6 +139,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
   if (error || !component) {
     return (
       <div className={styles.error}>
+        <SEO title="Erreur" description="Composant introuvable." />
         <p>{error ?? UI.detail.notFound}</p>
         <button onClick={goBack} className={styles.back}>{UI.detail.backToConfigurator}</button>
       </div>
@@ -244,7 +246,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
                   className={`${styles.thumbBtn} ${selectedImgIdx === idx ? styles.thumbActive : ''}`}
                   onClick={() => setSelectedImgIdx(idx)}
                 >
-                  <img src={img} alt="" referrerPolicy="no-referrer" className={styles.productImg} />
+                  <img src={img} alt={`${compName} image ${idx + 1}`} referrerPolicy="no-referrer" className={styles.productImg} />
                 </button>
               ))}
             </div>

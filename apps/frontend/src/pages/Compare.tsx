@@ -246,6 +246,7 @@ export function Compare() {
   if (ids.length === 0 && !loading) {
     return (
       <div className={styles.emptyState}>
+        <SEO title="Comparateur" description="Comparez les composants PC." />
         <div className={styles.emptyIconWrap}><BarChart3 size={48} strokeWidth={1.5} /></div>
         <h2 className={styles.emptyTitle}>{UI.compare.emptyTitle}</h2>
         <p className={styles.emptyText}>{UI.compare.emptyText}</p>
@@ -257,7 +258,7 @@ export function Compare() {
   return (
     <div className={styles.page}>
       <SEO 
-        title="Comparateur de Composants PC"
+        title="Comparateur"
         description="Comparez les spécifications, performances et prix des composants PC au Maroc. Trouvez le meilleur rapport qualité/prix."
       />
       <header className={styles.pageHeader}>
@@ -405,7 +406,7 @@ export function Compare() {
                 <X size={16} />
               </button>
               <div className={styles.imgWrap}>
-                <img src={item.component.image_url} alt="" referrerPolicy="no-referrer" loading="lazy" fetchpriority="low" />
+                <img src={item.component.image_url} alt={item.component.name} referrerPolicy="no-referrer" loading="lazy" fetchpriority="low" />
               </div>
               <div className={styles.compInfo}>
                 <span className={styles.brand}>{item.component.brand}</span>
@@ -460,7 +461,7 @@ export function Compare() {
                                   }}
                                >
                                   {prod.image_url ? (
-                                    <img src={prod.image_url} alt="" className={styles.quickAddThumb} referrerPolicy="no-referrer" loading="lazy" fetchpriority="low" />
+                                    <img src={prod.image_url} alt={prod.name} className={styles.quickAddThumb} referrerPolicy="no-referrer" loading="lazy" fetchpriority="low" />
                                   ) : (
                                     <div className={styles.quickAddThumbPlaceholder}><Plus size={12} /></div>
                                   )}

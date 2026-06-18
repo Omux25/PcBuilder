@@ -44,7 +44,7 @@ export function Presets({ onLoadPreset }: Props) {
   if (loading) {
     return (
       <div className={styles.page}>
-        <SEO title="Configurations prêtes à l'emploi" description="Choisissez une configuration PC Gamer ou bureautique adaptée à votre usage au Maroc." />
+        <SEO title="Configurations" description="Choisissez une configuration PC Gamer ou bureautique adaptée à votre usage au Maroc." />
         <div className={styles.pageHeader}>
           <Link to="/configurateur" className={styles.back}>{UI.presets.back}</Link>
           <h1 className={styles.title}>{UI.presets.title}</h1>
@@ -68,7 +68,7 @@ export function Presets({ onLoadPreset }: Props) {
 
   return (
     <div className={styles.page}>
-      <SEO title="Configurations prêtes à l'emploi" description="Choisissez une configuration PC Gamer ou bureautique adaptée à votre usage au Maroc." />
+      <SEO title="Configurations" description="Choisissez une configuration PC Gamer ou bureautique adaptée à votre usage au Maroc." />
       <div className={styles.pageHeader}>
         <Link to="/configurateur" className={styles.back}>{UI.presets.back}</Link>
         <h1 className={styles.title}>{UI.presets.title}</h1>
