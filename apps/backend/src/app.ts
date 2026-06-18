@@ -9,7 +9,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { secureHeaders } from 'hono/secure-headers';
-import { serveStatic } from 'hono/bun';
+
 import { authRouter } from './modules/auth/auth.routes.js';
 import { catalogRouter, adminCatalogRouter } from './modules/catalog/catalog.routes.js';
 import { buildsRouter, adminBuildsRouter, shareController } from './modules/builds/builds.routes.js';
@@ -129,28 +129,6 @@ app.onError((err, c) => {
   );
 });
 
-// ── Static file serving (production only) ────────────────────────────────────
-// Enabled when NODE_ENV=production and SERVE_STATIC=true.
-// Serves the admin panel at /admin and the frontend at /.
-// In development, Vite dev servers handle this instead.
-//
-// Paths are relative to the backend's dist output directory (apps/backend/dist/).
-// The monorepo build copies admin/dist and frontend/dist there.
-
-if (process.env.SERVE_STATIC === 'true') {
-  // Admin panel — must be mounted before the frontend catch-all
-  app.get('/admin/*', serveStatic({ 
-    root: './admin/dist',
-    rewriteRequestPath: (path) => path.replace(/^\/admin/, '')
-  }));
-  // SPA fallback for admin panel
-  app.get('/admin/*', serveStatic({ path: './admin/dist/index.html' }));
-
-  // Frontend SPA
-  app.get('/*', serveStatic({ root: './frontend/dist' }));
-  // SPA fallback — serve index.html for any unmatched path (client-side routing)
-  app.get('/*', serveStatic({ path: './frontend/dist/index.html' }));
-}
 
 export type AppRouter = typeof routes;
 export { app };
