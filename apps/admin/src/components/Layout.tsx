@@ -43,7 +43,6 @@ export function Layout() {
       <aside className={styles.sidebar}>
         <div className={styles.brand}>
           <img src="/logo-full.png" alt="PC Builder Maroc" className={styles.brandLogo} />
-          <span className={styles.brandBadge}>Admin</span>
         </div>
 
         <nav className={styles.nav}>
@@ -55,6 +54,7 @@ export function Layout() {
                   <NavLink
                     key={to}
                     to={to}
+                    end={to === '/admin/components' || to === '/admin/dashboard'}
                     className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
                   >
                     <Icon size={18} strokeWidth={2.5} aria-hidden className={styles.navIcon} />
