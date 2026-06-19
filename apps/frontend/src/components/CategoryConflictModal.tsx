@@ -1,5 +1,5 @@
 import { useCompare } from '../context/CompareContext';
-import { CATEGORY_LABELS, type ComponentCategory } from '../types';
+import { CATEGORY_LABELS } from '../types';
 import { GitCompare, AlertTriangle } from 'lucide-react';
 import styles from './CategoryConflictModal.module.css';
 
@@ -8,8 +8,8 @@ export function CategoryConflictModal() {
 
   if (!categoryConflict) return null;
 
-  const currentLabel = compareCategory ? CATEGORY_LABELS[compareCategory as ComponentCategory] : 'composants';
-  const targetLabel = CATEGORY_LABELS[categoryConflict.category as ComponentCategory] || 'composant';
+  const currentLabel = compareCategory ? CATEGORY_LABELS[compareCategory as keyof typeof CATEGORY_LABELS] : 'composants';
+  const targetLabel = CATEGORY_LABELS[categoryConflict.category as keyof typeof CATEGORY_LABELS] || 'composant';
 
   function handleOverride() {
     clearCompare();
