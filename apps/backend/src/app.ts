@@ -73,6 +73,11 @@ app.use('/api/*', cors({
 app.get('/b/:id', (c) => shareController.redirect(c));
 app.get('/share/:id', (c) => shareController.redirect(c));
 
+// ── Root Health Check ────────────────────────────────────────────────────────
+// GCP Load Balancers and uptime checks ping '/' by default. We return 200 OK
+// to prevent these automated checks from cluttering the logs with 404s.
+app.get('/', (c) => c.text('OK'));
+
 const routes = app
   // ── Public routes ─────────────────────────────────────────────────────────────
   .route('/api/auth', authRouter)
