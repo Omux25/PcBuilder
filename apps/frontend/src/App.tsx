@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate, Navigate, useParams } from 'react-router-dom';
-import { Cpu, Sun, Moon, LayoutGrid, Search, GitCompare, Home as HomeIcon, Sliders, Sparkles, TrendingUp } from 'lucide-react';
+import { Sun, Moon, LayoutGrid, Search, GitCompare, Home as HomeIcon, Sliders, Sparkles, TrendingUp } from 'lucide-react';
 import { Configurator } from './components/Configurator';
 import { Skeleton } from './components/Skeleton';
 const CompareTray = lazy(() => import('./components/CompareTray').then(m => ({ default: m.CompareTray })));
