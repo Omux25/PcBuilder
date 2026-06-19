@@ -127,10 +127,15 @@ export class PresetService {
 
       const presetId = inserted[0].id;
 
-      for (const [category, componentId] of Object.entries(data.components)) {
+      const componentsToInsert = Object.entries(data.components).map(([category, component_id]) => ({
+        preset_build_id: presetId,
+        category,
+        component_id
+      }));
+
+      if (componentsToInsert.length > 0) {
         await tx`
-          INSERT INTO preset_build_components (preset_build_id, category, component_id)
-          VALUES (${presetId}, ${category}, ${componentId})
+          INSERT INTO preset_build_components ${tx(componentsToInsert)}
         `;
       }
 
@@ -155,10 +160,16 @@ export class PresetService {
 
       if (data.components) {
         await tx`DELETE FROM preset_build_components WHERE preset_build_id = ${id}`;
-        for (const [category, componentId] of Object.entries(data.components)) {
+
+        const componentsToInsert = Object.entries(data.components).map(([category, component_id]) => ({
+          preset_build_id: id,
+          category,
+          component_id
+        }));
+
+        if (componentsToInsert.length > 0) {
           await tx`
-            INSERT INTO preset_build_components (preset_build_id, category, component_id)
-            VALUES (${id}, ${category}, ${componentId})
+            INSERT INTO preset_build_components ${tx(componentsToInsert)}
           `;
         }
       }
