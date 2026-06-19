@@ -403,10 +403,9 @@ export async function aggregate(
 
       if (fuzzyMatchId) {
         if (fuzzyConfidence === 'high') {
-          // High confidence fuzzy match -> 100% bypass of staging. Map it directly.
-          finalResolved.push({ ...p, component_id: fuzzyMatchId, category: resolvedCategory, _autoLinked: true } as any);
-          autoMapped++;
-          continue;
+          // High confidence fuzzy match -> Previously this bypassed staging and auto-linked.
+          // Due to catastrophic false positives in PC hardware (e.g., 7600X vs 5600G),
+          // fuzzy matches are now strictly relegated to suggestions in unmatched_listings.
         }
       }
 

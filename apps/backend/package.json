@@ -14,6 +14,7 @@
     "enrich": "bun scripts/enrich_database.ts"
   },
   "dependencies": {
+    "@google/genai": "^2.8.0",
     "@hono/zod-validator": "^0.8.0",
     "bcrypt": "6.0.0",
     "cheerio": "1.0.0",
