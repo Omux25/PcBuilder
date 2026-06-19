@@ -5,17 +5,17 @@
 
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  TrendingDown, 
-  TrendingUp, 
-  ShoppingCart, 
-  BarChart3, 
-  Share2, 
-  Check, 
-  RotateCcw, 
-  SlidersHorizontal, 
-  DollarSign, 
-  Sparkles, 
+import {
+  TrendingDown,
+  TrendingUp,
+  ShoppingCart,
+  BarChart3,
+  Share2,
+  Check,
+  RotateCcw,
+  SlidersHorizontal,
+  DollarSign,
+  Sparkles,
   Calendar,
   ChevronDown
 } from 'lucide-react';
@@ -29,6 +29,7 @@ import { UI } from '../ui-strings';
 import { formatPrice } from '@shared/formatting/price.formatter';
 import { LinkEngine } from '@shared/link-engine';
 import { SEO } from '../components/SEO';
+import { useClipboard } from '../hooks/useClipboard';
 import styles from './MarketTrends.module.css';
 
 const DAY_OPTIONS = [3, 7, 14, 30];
@@ -108,7 +109,7 @@ export function MarketTrends() {
   const [showOutOfStock, setShowOutOfStock] = useState(false);
   const [added, setAdded] = useState<number | null>(null);
   const [adding, setAdding] = useState<number | null>(null);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useClipboard();
   const [sortBy, setSortBy] = useState<string>('pct');
 
   const isInitialLoad = useRef(true);
@@ -207,12 +208,6 @@ export function MarketTrends() {
     }
   }
 
-  function handleShare() {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
 
   const categoryOptions = useMemo(() => {
     const base = [{ value: '', label: UI.trends.allCategories }];
@@ -241,7 +236,7 @@ export function MarketTrends() {
 
   return (
     <div className={styles.page}>
-      <SEO 
+      <SEO
         title="Tendances"
         description="Suivez les baisses et hausses de prix des composants PC au Maroc. Achetez votre matériel au meilleur moment."
       />
@@ -255,13 +250,13 @@ export function MarketTrends() {
               <h1 className={styles.title}>{UI.trends.title}</h1>
               <p className={styles.subtitle}>{UI.trends.subtitle}</p>
               <p className={styles.description}>
-                Cette section analyse les fluctuations de prix sur le marché marocain. 
-                Les opportunités sont détectées en comparant le prix actuel au prix moyen des 
+                Cette section analyse les fluctuations de prix sur le marché marocain.
+                Les opportunités sont détectées en comparant le prix actuel au prix moyen des
                 derniers jours pour les produits en stock.
               </p>
             </div>
           </div>
-          <button className={`${styles.shareBtn} ${copied ? styles.copied : ''}`} onClick={handleShare}>
+          <button className={`${styles.shareBtn} ${copied ? styles.copied : ''}`} onClick={() => copy(window.location.href)}>
             {copied ? <Check size={16} /> : <Share2 size={16} />}
             <span className={styles.shareText}>{copied ? 'Copié !' : 'Partager'}</span>
           </button>
@@ -350,7 +345,7 @@ export function MarketTrends() {
                   <button
                     key={d}
                     className={`
-                      ${styles.dayPill} 
+                      ${styles.dayPill}
                       ${trendType === 'drops' ? styles.dayPillHoverDrops : styles.dayPillHoverHikes}
                       ${days === d ? (trendType === 'drops' ? styles.dayPillActiveDrops : styles.dayPillActiveHikes) : ''}
                     `}
@@ -427,8 +422,8 @@ export function MarketTrends() {
             </p>
             <div className={styles.emptyActions}>
               {(category !== '' || showOutOfStock) && (
-                <button 
-                  className={styles.emptyResetBtn} 
+                <button
+                  className={styles.emptyResetBtn}
                   onClick={() => {
                     setCategory('');
                     setShowOutOfStock(false);
@@ -439,8 +434,8 @@ export function MarketTrends() {
                 </button>
               )}
               {days < 30 && (
-                <button 
-                  className={styles.emptyExpandBtn} 
+                <button
+                  className={styles.emptyExpandBtn}
                   onClick={() => setDays(30)}
                 >
                   <Calendar size={14} />
@@ -472,21 +467,19 @@ export function MarketTrends() {
 
 function TrendCard({ trend, isAdded, isAdding, onAdd }: { trend: MarketTrend; isAdded: boolean; isAdding: boolean; onAdd: () => void }) {
   const isDrop = trend.type === 'drops';
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useClipboard();
 
   function handleShare(e: React.MouseEvent) {
     e.preventDefault();
-    navigator.clipboard.writeText(window.location.origin + LinkEngine.getProductUrl(trend));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    copy(window.location.origin + LinkEngine.getProductUrl(trend));
   }
 
   const isOutOfStock = !trend.in_stock;
 
   return (
-    <div 
+    <div
       className={`
-        ${styles.card} 
+        ${styles.card}
         ${isDrop ? styles.cardDrops : styles.cardHikes}
         ${isOutOfStock ? styles.cardOos : ''}
       `}
@@ -542,12 +535,12 @@ function TrendCard({ trend, isAdded, isAdding, onAdd }: { trend: MarketTrend; is
           <button className={`${styles.shareIconBtn} ${copied ? styles.copiedIconBtn : ''}`} onClick={handleShare} title="Partager">
             {copied ? <Check size={14} /> : <Share2 size={14} />}
           </button>
-          <button 
+          <button
             className={`
-              ${styles.addBtn} 
+              ${styles.addBtn}
               ${isAdded ? styles.addBtnDone : ''}
               ${isOutOfStock ? styles.addBtnDisabled : ''}
-            `} 
+            `}
             onClick={onAdd}
             disabled={isAdding || isAdded || isOutOfStock}
             title={isOutOfStock ? 'Produit en rupture de stock' : 'Ajouter au configurateur'}

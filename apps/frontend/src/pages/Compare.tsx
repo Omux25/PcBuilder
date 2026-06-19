@@ -21,6 +21,7 @@ import { LinkEngine } from '@shared/link-engine';
 import { UI } from '../ui-strings';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer } from 'recharts';
 import { SEO } from '../components/SEO';
+import { useClipboard } from '../hooks/useClipboard';
 import styles from './Compare.module.css';
 
 // Ranks for non-numeric specs
@@ -97,7 +98,7 @@ interface ComponentWithPrices {
 
 export function Compare() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useClipboard();
   const { syncCompareIds, removeFromCompare } = useCompare();
 
   // Show only differences toggle state
@@ -118,12 +119,6 @@ export function Compare() {
 
   const category = items[0]?.component.category;
   const specKeys = category ? CATEGORY_SPECS[category] || Object.keys(ALL_SPEC_ROWS) : [];
-
-  function handleShare() {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
 
   // Load components whenever URL ids change
   useEffect(() => {
@@ -277,7 +272,7 @@ export function Compare() {
                 <span>{showOnlyDifferences ? 'Afficher similitudes' : 'Masquer similitudes'}</span>
               </button>
             )}
-            <button className={`${styles.shareBtn} ${copied ? styles.copied : ''}`} onClick={handleShare}>
+            <button className={`${styles.shareBtn} ${copied ? styles.copied : ''}`} onClick={() => copy(window.location.href)}>
               {copied ? <Check size={16} /> : <Share2 size={16} />}
               <span>{copied ? 'Copié !' : 'Partager'}</span>
             </button>

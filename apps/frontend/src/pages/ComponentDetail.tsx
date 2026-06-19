@@ -19,6 +19,7 @@ import { UI } from '../ui-strings';
 import { formatPrice } from '@shared/formatting/price.formatter';
 import { formatComponentName } from '@shared/formatting/component-name.formatter';
 import { SEO } from '../components/SEO';
+import { useClipboard } from '../hooks/useClipboard';
 import styles from './ComponentDetail.module.css';
 
 interface Props {
@@ -41,9 +42,9 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
   const [showOos, setShowOos] = useState(false);
   const [componentId, setComponentId] = useState<number | null>(null);
   const [selectedImgIdx, setSelectedImgIdx] = useState(0);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useClipboard();
   const [isTrending, setIsTrending] = useState(false);
-  
+
   // Fetch history separately so period changes don't reload the whole page
   const fetchHistory = useCallback(async (id: number, p: HistoryPeriod) => {
     setHistoryLoading(true);
@@ -64,7 +65,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
     setLoading(true);
     setError(null);
 
-    const fetchPromise = slug 
+    const fetchPromise = slug
       ? getComponentBySlug(slug)
       : getComponentByIdentifier(category!, identifier!);
 
@@ -95,12 +96,6 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
     }
     setAddedToBuild(true);
     setTimeout(() => setAddedToBuild(false), 2000);
-  }
-
-  function handleShare() {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   }
 
   // Go back to wherever the user came from (preserves filters/page/scroll).
@@ -161,19 +156,19 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
   const specs = parsedSpecs;  // Simulated gallery images (fallback to product image)
   const images = component?.image_urls && component.image_urls.length > 0
     ? component.image_urls
-    : component?.image_url 
-      ? [component.image_url] 
+    : component?.image_url
+      ? [component.image_url]
       : [];
   const allSpecs = specs ? Object.entries(specs) : [];
-  
+
   // Gallery logic — always show thumbnails if we have at least one image
   const showGallery = images.length > 0;
-  
+
   const compName = formatComponentName(component);
 
   return (
     <div className={styles.page}>
-      <SEO 
+      <SEO
         title={`Prix ${compName} Maroc`}
         description={`Achetez le ${compName} au meilleur prix au Maroc. Spécifications, avis et compatibilité PC Gamer.`}
         image={images[0]}
@@ -199,7 +194,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
           <h1 className={styles.pageTitle}>
             {compName}
           </h1>
-          <button className={`${styles.shareBtn} ${copied ? styles.copied : ''}`} onClick={handleShare}>
+          <button className={`${styles.shareBtn} ${copied ? styles.copied : ''}`} onClick={() => copy(window.location.href)}>
             {copied ? <Check size={16} /> : <Share2 size={16} />}
             <span className={styles.shareText}>{copied ? 'Copié !' : 'Partager'}</span>
           </button>
@@ -219,17 +214,17 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
           <div className={styles.displayCase}>
             {/* Subtle background blur for a premium look */}
             {images.length > 0 && (
-              <div 
-                className={styles.displayBlur} 
-                style={{ backgroundImage: `url(${images[selectedImgIdx]})` }} 
+              <div
+                className={styles.displayBlur}
+                style={{ backgroundImage: `url(${images[selectedImgIdx]})` }}
                 />
             )}
             {images.length > 0 ? (
-              <img 
-                src={images[selectedImgIdx]} 
-                alt={component.name} 
-                className={styles.productImg} 
-                referrerPolicy="no-referrer" 
+              <img
+                src={images[selectedImgIdx]}
+                alt={component.name}
+                className={styles.productImg}
+                referrerPolicy="no-referrer"
               />
             ) : (
               <div className={styles.productImgPlaceholder}>
@@ -241,7 +236,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
           {showGallery && (
             <div className={styles.thumbnails}>
               {images.map((img, idx) => (
-                <button 
+                <button
                   key={idx}
                   className={`${styles.thumbBtn} ${selectedImgIdx === idx ? styles.thumbActive : ''}`}
                   onClick={() => setSelectedImgIdx(idx)}
@@ -275,7 +270,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
                   const inStock = prices.filter(p => p.in_stock);
                   const oos = prices.filter(p => !p.in_stock);
                   const visible = (showOos || inStock.length === 0) ? prices : inStock;
-                  
+
                   return (
                     <>
                       <table className={styles.pricesTable}>
@@ -315,16 +310,16 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
                           ))}
                         </tbody>
                       </table>
-                      
+
                       {inStock.length > 0 && oos.length > 0 && (
                         <button className={styles.oosToggleBtn} onClick={() => setShowOos(v => !v)}>
                           <span>{showOos ? UI.priceComparison.hideOos : UI.priceComparison.showOos(oos.length)}</span>
-                          <ChevronDown 
-                            size={14} 
-                            style={{ 
+                          <ChevronDown
+                            size={14}
+                            style={{
                               transform: showOos ? 'rotate(180deg)' : 'rotate(0deg)',
-                              transition: 'transform 0.2s' 
-                            }} 
+                              transition: 'transform 0.2s'
+                            }}
                           />
                         </button>
                       )}
@@ -343,7 +338,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
             >
               {addedToBuild ? UI.detail.added : <><ShoppingCart size={22} /> {UI.detail.addToConfig}</>}
             </button>
-            
+
             <button
               className={`${styles.compareBtn} ${isInCompare(component.id) ? styles.compareBtnActive : ''}`}
               onClick={() => {
@@ -353,8 +348,8 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
                   const compName = formatComponentName(component);
                   addToCompare(component.id, component.category, compName);
                   if (!compareCategory || compareCategory === component.category) {
-                    const newIds = compareIds.includes(component.id) 
-                      ? compareIds 
+                    const newIds = compareIds.includes(component.id)
+                      ? compareIds
                       : [...compareIds, component.id].slice(0, 4);
                     navigate(`/compare?ids=${newIds.join(',')}`);
                   }

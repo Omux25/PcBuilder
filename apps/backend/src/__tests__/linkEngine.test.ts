@@ -26,17 +26,17 @@ describe('LinkEngine & Slug Verification', () => {
         category: 'cpu',
         slug: 'amd-ryzen-5-7600x'
       });
-      expect(url).toBe('/components/cpu/amd-ryzen-5-7600x');
+      expect(url).toBe('/composants/processeur/amd-ryzen-5-7600x');
     });
 
     test('getCategoryBrowseUrl generates correct browse paths', () => {
-      expect(LinkEngine.getCategoryBrowseUrl('cpu')).toBe('/browse/cpu');
-      expect(LinkEngine.getCategoryBrowseUrl('cpu', 'cpu_slot')).toBe('/browse/cpu/cpu_slot');
+      expect(LinkEngine.getCategoryBrowseUrl('cpu')).toBe('/parcourir/processeur');
+      expect(LinkEngine.getCategoryBrowseUrl('cpu', 'cpu_slot')).toBe('/parcourir/processeur/cpu_slot');
     });
 
     test('getBuildShareUrl appends query string cleanly', () => {
-      expect(LinkEngine.getBuildShareUrl('https://pcbuilder.ma/', 'cpu=123')).toBe('https://pcbuilder.ma/build?cpu=123');
-      expect(LinkEngine.getBuildShareUrl('https://pcbuilder.ma', 'cpu=123')).toBe('https://pcbuilder.ma/build?cpu=123');
+      expect(LinkEngine.getBuildShareUrl('https://pcbuilder.ma/', 'cpu=123')).toBe('https://pcbuilder.ma/configurateur?cpu=123');
+      expect(LinkEngine.getBuildShareUrl('https://pcbuilder.ma', 'cpu=123')).toBe('https://pcbuilder.ma/configurateur?cpu=123');
     });
   });
 });

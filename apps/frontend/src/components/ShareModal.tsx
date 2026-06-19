@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X, Copy, Check, QrCode, Share2, Clipboard, ExternalLink } from 'lucide-react';
+import { useClipboard } from '../hooks/useClipboard';
 import styles from './ShareModal.module.css';
 import { shareBuild } from '../api';
 import { formatToReddit, formatToDiscord, formatToBBCode } from '../utils/exportFormatter';
@@ -19,7 +20,7 @@ export function ShareModal({ isOpen, onClose, build, totalPrice }: ShareModalPro
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [activeTab, setActiveTab] = useState<TabType>('link');
-  const [copiedText, setCopiedText] = useState<boolean>(false);
+  const { copied: copiedText, copy: handleCopy } = useClipboard();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -28,7 +29,6 @@ export function ShareModal({ isOpen, onClose, build, totalPrice }: ShareModalPro
     setShortUrl('');
     setError('');
     setActiveTab('link');
-    setCopiedText(false);
 
     async function generateLink() {
       setLoading(true);
@@ -69,13 +69,6 @@ export function ShareModal({ isOpen, onClose, build, totalPrice }: ShareModalPro
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
-
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedText(true);
-      setTimeout(() => setCopiedText(false), 2000);
-    });
-  };
 
   const getTemplateContent = (): string => {
     switch (activeTab) {
@@ -123,31 +116,31 @@ export function ShareModal({ isOpen, onClose, build, totalPrice }: ShareModalPro
               <nav className={styles.tabs} aria-label="Share options">
                 <button
                   className={`${styles.tab} ${activeTab === 'link' ? styles.activeTab : ''}`}
-                  onClick={() => { setActiveTab('link'); setCopiedText(false); }}
+                  onClick={() => setActiveTab('link')}
                 >
                   <QrCode size={15} /> Lien & QR
                 </button>
                 <button
                   className={`${styles.tab} ${activeTab === 'social' ? styles.activeTab : ''}`}
-                  onClick={() => { setActiveTab('social'); setCopiedText(false); }}
+                  onClick={() => setActiveTab('social')}
                 >
                   <Share2 size={15} /> Réseaux
                 </button>
                 <button
                   className={`${styles.tab} ${activeTab === 'reddit' ? styles.activeTab : ''}`}
-                  onClick={() => { setActiveTab('reddit'); setCopiedText(false); }}
+                  onClick={() => setActiveTab('reddit')}
                 >
                   Reddit
                 </button>
                 <button
                   className={`${styles.tab} ${activeTab === 'discord' ? styles.activeTab : ''}`}
-                  onClick={() => { setActiveTab('discord'); setCopiedText(false); }}
+                  onClick={() => setActiveTab('discord')}
                 >
                   Discord / Texte
                 </button>
                 <button
                   className={`${styles.tab} ${activeTab === 'bbcode' ? styles.activeTab : ''}`}
-                  onClick={() => { setActiveTab('bbcode'); setCopiedText(false); }}
+                  onClick={() => setActiveTab('bbcode')}
                 >
                   BBCode
                 </button>
