@@ -97,6 +97,11 @@ textarea:hover:not(:focus) {
   border-color: var(--accent);
 }
 
+option {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
 /* ── Tables ───────────────────────────────────────────────────────────────── */
 
 table {
