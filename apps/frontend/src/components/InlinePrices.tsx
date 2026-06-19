@@ -12,16 +12,12 @@ import { UI } from '../ui-strings';
 import { formatPrice } from '@shared/formatting/price.formatter';
 import { ExternalLink } from 'lucide-react';
 import styles from './InlinePrices.module.css';
+import { getInitials } from "@shared/formatting/initials.formatter";
 
 interface Props {
   componentId: number;
 }
 
-function getInitials(name: string) {
-  const parts = name.trim().split(/[\s_-]+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return name.slice(0, 2).toUpperCase();
-}
 
 export function InlinePrices({ componentId }: Props) {
   const [offers, setOffers] = useState<PriceOffer[]>([]);
