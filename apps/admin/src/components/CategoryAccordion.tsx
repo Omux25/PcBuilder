@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronRight, Link2, CheckCircle, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronRight, Link2, CheckCircle, CheckSquare, RefreshCw } from 'lucide-react';
 import { CanonicalGroupRow } from './CanonicalGroupRow';
 import { ConfirmDialog } from './ConfirmDialog';
 import { CreateAndLinkModal } from './CreateAndLinkModal';
@@ -24,6 +24,7 @@ import type {
 import { getGroupedUnmatched, getErrorMessage } from '../api';
 import { CATEGORY_LABELS } from '@shared/types';
 import type { ComponentCategory } from '@shared/types';
+import { getCategoryIcon } from '../utils/categoryIcons';
 
 const LOAD_SIZE = 50;
 
@@ -197,6 +198,10 @@ export function CategoryAccordion({
 
     const eligibleCount = summary.high_confidence_linkable_count;
     const highConfidenceCount = summary.high_confidence_count ?? 0;
+    const totalCount = summary.group_count;
+    
+    // Progress bar calculations
+    const highPercent = totalCount > 0 ? (highConfidenceCount / totalCount) * 100 : 0;
 
     return (
         <>
@@ -207,26 +212,49 @@ export function CategoryAccordion({
                     style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '10px',
+                        gap: '12px',
                         padding: '10px 14px',
-                        background: 'var(--surface)',
-                        border: '1px solid var(--border)',
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
                         borderRadius: isOpen ? 'var(--radius) var(--radius) 0 0' : 'var(--radius)',
                         cursor: 'pointer',
                         marginBottom: isOpen ? 0 : '6px',
                         userSelect: 'none',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                     }}
+                    onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'; }}
                 >
                     <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
                         {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     </span>
-                    <span style={{ fontWeight: 600, fontSize: '14px', flex: 1 }}>
+                    <span style={{ color: 'var(--accent-blue)', display: 'flex', alignItems: 'center' }}>
+                        {getCategoryIcon(category)}
+                    </span>
+                    <span style={{ fontWeight: 600, fontSize: '14px', flexShrink: 0 }}>
                         {label}
                     </span>
-                    <span style={{ color: 'var(--text-dim)', fontSize: '12px' }}>
-                        {summary.group_count} groupe{summary.group_count !== 1 ? 's' : ''}
+                    
+                    {/* Mini Progress Bar */}
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '16px', maxWidth: '200px' }}>
+                        <div style={{ 
+                            flex: 1, 
+                            height: '4px', 
+                            background: 'var(--surface-3)', 
+                            borderRadius: '2px', 
+                            overflow: 'hidden',
+                            display: 'flex'
+                        }}>
+                            <div style={{ width: `${highPercent}%`, background: '#10b981', transition: 'width 0.3s ease' }} />
+                        </div>
+                    </div>
+
+                    <span style={{ color: 'var(--text-dim)', fontSize: '12px', flexShrink: 0 }}>
+                        {totalCount} groupe{totalCount !== 1 ? 's' : ''}
                     </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, marginLeft: '8px' }}>
                         {eligibleCount > 0 && (
                             <button
                                 onClick={handleAssociateToutClick}
@@ -252,55 +280,72 @@ export function CategoryAccordion({
                             <button
                                 onClick={handleConfirmCategoryClick}
                                 disabled={isConfirming}
-                                title={isConfirming ? 'Confirmation en cours...' : `Confirmer et créer automatiquement les suggestions haute confiance pour la catégorie ${label}`}
+                                title={isConfirming ? 'Confirmation en cours...' : `Confirmer et créer automatiquement les suggestions haute confiance pour la catégorie ${label} (${highConfidenceCount})`}
                                 style={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
-                                    gap: '4px',
-                                    padding: '4px 10px',
+                                    justifyContent: 'center',
+                                    width: '28px',
+                                    height: '28px',
                                     background: isConfirming
                                         ? 'var(--surface-3)'
-                                        : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                                    color: isConfirming ? 'var(--text-dim)' : '#fff',
-                                    border: 'none',
-                                    borderRadius: 'var(--radius)',
-                                    fontSize: '12px',
-                                    fontWeight: 600,
+                                        : 'rgba(16, 185, 129, 0.15)',
+                                    color: isConfirming ? 'var(--text-dim)' : '#10b981',
+                                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                                    borderRadius: '6px',
                                     cursor: isConfirming ? 'not-allowed' : 'pointer',
-                                    opacity: isConfirming ? 0.7 : 1,
                                     transition: 'all 0.2s',
+                                    position: 'relative'
                                 }}
+                                onMouseOver={(e) => { if (!isConfirming) e.currentTarget.style.background = 'rgba(16, 185, 129, 0.25)'; }}
+                                onMouseOut={(e) => { if (!isConfirming) e.currentTarget.style.background = 'rgba(16, 185, 129, 0.15)'; }}
                             >
                                 {isConfirming
-                                    ? <><RefreshCw size={12} className="spin" /> Confirmation...</>
-                                    : <><CheckCircle size={12} /> Confirmer ({highConfidenceCount})</>
+                                    ? <RefreshCw size={14} className="spin" />
+                                    : <CheckCircle size={14} />
                                 }
+                                {!isConfirming && highConfidenceCount > 0 && (
+                                    <span style={{
+                                        position: 'absolute',
+                                        top: '-4px',
+                                        right: '-4px',
+                                        background: '#10b981',
+                                        color: '#fff',
+                                        fontSize: '9px',
+                                        fontWeight: 'bold',
+                                        padding: '1px 4px',
+                                        borderRadius: '10px',
+                                        lineHeight: 1
+                                    }}>
+                                        {highConfidenceCount}
+                                    </span>
+                                )}
                             </button>
                         )}
                         {onConfirmCategory && (
                             <button
                                 onClick={handleConfirmMediumCategoryClick}
                                 disabled={isConfirming}
-                                title={isConfirming ? 'Confirmation en cours...' : `Confirmer et créer automatiquement les suggestions moyenne + haute confiance pour la catégorie ${label}`}
+                                title={isConfirming ? 'Confirmation en cours...' : `Confirmer Moyenne + Haute confiance pour la catégorie ${label}`}
                                 style={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
-                                    gap: '4px',
-                                    padding: '3px 10px',
-                                    background: 'var(--surface)',
+                                    justifyContent: 'center',
+                                    width: '28px',
+                                    height: '28px',
+                                    background: 'var(--surface-2)',
                                     color: 'var(--text)',
                                     border: '1px solid var(--border)',
-                                    borderRadius: 'var(--radius)',
-                                    fontSize: '12px',
-                                    fontWeight: 600,
+                                    borderRadius: '6px',
                                     cursor: isConfirming ? 'not-allowed' : 'pointer',
-                                    opacity: isConfirming ? 0.7 : 1,
                                     transition: 'all 0.2s',
                                 }}
+                                onMouseOver={(e) => { if (!isConfirming) e.currentTarget.style.background = 'var(--surface-3)'; }}
+                                onMouseOut={(e) => { if (!isConfirming) e.currentTarget.style.background = 'var(--surface-2)'; }}
                             >
                                 {isConfirming
-                                    ? <><RefreshCw size={12} className="spin" /> Confirmation...</>
-                                    : <><CheckCircle size={12} /> Moyenne + Haute</>
+                                    ? <RefreshCw size={14} className="spin" />
+                                    : <CheckSquare size={14} />
                                 }
                             </button>
                         )}
