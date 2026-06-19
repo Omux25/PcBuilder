@@ -15,7 +15,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { RefreshCw, Search, X, CheckCircle, CheckSquare } from 'lucide-react';
+import { RefreshCw, Search, X, CheckCircle, CheckSquare, ChevronDown } from 'lucide-react';
 import { CategoryAccordion } from '../components/CategoryAccordion';
 import { UnknownSection } from '../components/UnknownSection';
 import { SearchOverrideView } from '../components/SearchOverrideView';
@@ -278,19 +278,17 @@ export function Unmatched() {
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
-      padding: '10px 16px',
+      padding: '8px 14px',
       fontSize: '13px',
       fontWeight: isActive ? 600 : 500,
       color: isActive ? 'var(--accent-blue)' : 'var(--text-muted)',
-      background: isActive ? 'rgba(137, 180, 250, 0.08)' : 'transparent',
+      background: isActive ? 'rgba(137, 180, 250, 0.12)' : 'transparent',
       border: 'none',
-      borderBottom: `2px solid ${isActive ? 'var(--accent-blue)' : 'transparent'}`,
       cursor: 'pointer',
       whiteSpace: 'nowrap',
-      transition: 'all 0.2s',
-      marginBottom: '-1px',
+      transition: 'all 0.2s ease',
       flexShrink: 0,
-      borderRadius: '6px 6px 0 0',
+      borderRadius: '8px',
     };
   }
 
@@ -469,10 +467,10 @@ export function Unmatched() {
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          padding: '0 24px',
+          gap: '6px',
+          padding: '10px 24px',
           borderBottom: '1px solid var(--border)',
-          background: 'var(--surface)',
+          background: 'var(--surface-2)',
           overflowX: 'auto',
           flexShrink: 0,
           scrollbarWidth: 'none',
@@ -517,50 +515,68 @@ export function Unmatched() {
           gap: '12px',
           padding: '12px 24px',
           borderBottom: '1px solid var(--border)',
-          background: 'var(--surface-2)',
+          background: 'var(--surface)',
           flexShrink: 0,
         }}>
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>Filtrer par :</span>
+          <span style={{ fontSize: '12px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filtrer par</span>
           
           {/* Confidence Filter */}
-          <select
-            value={filterConfidence}
-            onChange={(e) => setFilterConfidence(e.target.value)}
-            style={{
-              padding: '6px 12px',
-              fontSize: '12px',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius)',
-              background: 'var(--surface)',
-              color: 'var(--text)',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="">Toutes les confiances</option>
-            <option value="high">Confiance : Élevée</option>
-            <option value="medium">Confiance : Moyenne</option>
-            <option value="low">Confiance : Faible</option>
-            <option value="unknown">Confiance : Inconnue</option>
-          </select>
+          <div style={{ position: 'relative' }}>
+            <select
+              value={filterConfidence}
+              onChange={(e) => setFilterConfidence(e.target.value)}
+              style={{
+                appearance: 'none',
+                padding: '6px 32px 6px 12px',
+                fontSize: '13px',
+                fontWeight: 500,
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '6px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                color: 'var(--text)',
+                cursor: 'pointer',
+                outline: 'none',
+                transition: 'all 0.2s',
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'; }}
+              onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'; }}
+            >
+              <option value="">Toutes les confiances</option>
+              <option value="high">Confiance : Élevée</option>
+              <option value="medium">Confiance : Moyenne</option>
+              <option value="low">Confiance : Faible</option>
+              <option value="unknown">Confiance : Inconnue</option>
+            </select>
+            <ChevronDown size={14} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-dim)' }} />
+          </div>
 
           {/* Association / Match Filter */}
-          <select
-            value={filterHasExisting}
-            onChange={(e) => setFilterHasExisting(e.target.value)}
-            style={{
-              padding: '6px 12px',
-              fontSize: '12px',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius)',
-              background: 'var(--surface)',
-              color: 'var(--text)',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="">Tous les statuts d'association</option>
-            <option value="true">Composant existant trouvé</option>
-            <option value="false">Nouveau composant à créer</option>
-          </select>
+          <div style={{ position: 'relative' }}>
+            <select
+              value={filterHasExisting}
+              onChange={(e) => setFilterHasExisting(e.target.value)}
+              style={{
+                appearance: 'none',
+                padding: '6px 32px 6px 12px',
+                fontSize: '13px',
+                fontWeight: 500,
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '6px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                color: 'var(--text)',
+                cursor: 'pointer',
+                outline: 'none',
+                transition: 'all 0.2s',
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'; }}
+              onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'; }}
+            >
+              <option value="">Tous les statuts</option>
+              <option value="true">Composant existant trouvé</option>
+              <option value="false">Nouveau composant à créer</option>
+            </select>
+            <ChevronDown size={14} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-dim)' }} />
+          </div>
 
           {(filterConfidence || filterHasExisting) && (
             <button
