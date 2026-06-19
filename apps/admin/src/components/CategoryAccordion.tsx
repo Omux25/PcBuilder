@@ -45,6 +45,8 @@ interface Props {
     filterHasExisting?: string;
     /** True while bulkConfirmAllWithCategories is running for this category. */
     isConfirming?: boolean;
+    /** True to disable collapsing the header. */
+    disableToggle?: boolean;
 }
 
 export function CategoryAccordion({
@@ -63,6 +65,7 @@ export function CategoryAccordion({
     filterConfidence = '',
     filterHasExisting = '',
     isConfirming = false,
+    disableToggle = false,
 }: Props) {
     const [confirmAssociate, setConfirmAssociate] = useState(false);
     const [confirmCategoryDialog, setConfirmCategoryDialog] = useState(false);
@@ -112,6 +115,7 @@ export function CategoryAccordion({
 
     // ── Fetch first batch on first open ──────────────────────────────────────
     async function handleToggle() {
+        if (disableToggle) return;
         onToggle();
         if (!isOpen && !state) {
             // First open — fetch initial batch
@@ -217,21 +221,23 @@ export function CategoryAccordion({
                         background: 'rgba(255, 255, 255, 0.02)',
                         backdropFilter: 'blur(10px)',
                         border: '1px solid rgba(255, 255, 255, 0.06)',
-                        borderRadius: isOpen ? 'var(--radius) var(--radius) 0 0' : 'var(--radius)',
-                        cursor: 'pointer',
-                        marginBottom: isOpen ? 0 : '8px',
+                        borderRadius: isOpen && !disableToggle ? 'var(--radius) var(--radius) 0 0' : 'var(--radius)',
+                        cursor: disableToggle ? 'default' : 'pointer',
+                        marginBottom: isOpen && !disableToggle ? 0 : '8px',
                         userSelect: 'none',
                         transition: 'all 0.2s ease',
                         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                         position: 'relative',
                         overflow: 'hidden'
                     }}
-                    onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'; }}
-                    onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'; }}
+                    onMouseOver={(e) => { if (!disableToggle) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'; } }}
+                    onMouseOut={(e) => { if (!disableToggle) { e.currentTarget.style.transform = 'none'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'; } }}
                 >
-                    <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
-                        {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    </span>
+                    {!disableToggle && (
+                        <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+                            {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        </span>
+                    )}
                     <span style={{ color: 'var(--accent-blue)', display: 'flex', alignItems: 'center' }}>
                         {getCategoryIcon(category)}
                     </span>
@@ -359,7 +365,7 @@ export function CategoryAccordion({
             {isOpen && (
                 <div style={{
                     border: '1px solid var(--border)',
-                    borderTop: hideHeader ? '1px solid var(--border)' : 'none',
+                    borderTop: hideHeader || disableToggle ? '1px solid var(--border)' : 'none',
                     borderRadius: hideHeader ? 'var(--radius)' : '0 0 var(--radius) var(--radius)',
                     marginBottom: '6px',
                     overflow: 'hidden',
