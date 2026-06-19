@@ -571,6 +571,7 @@ export function Unmatched() {
       {!summaryLoading && categorySummary.length > 0 && (
         <div style={{
           display: 'flex',
+          justifyContent: 'center',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: '10px',
