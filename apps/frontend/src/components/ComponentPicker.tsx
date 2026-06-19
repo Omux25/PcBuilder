@@ -13,18 +13,6 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { SlidersHorizontal, X, ArrowUpDown, GitCompare } from 'lucide-react';
 import { smartSearch } from '../api';
 import type { SmartComponent } from "../api";
-import { useCompare } from '../context/CompareContext';
-import type { Component, ComponentCategory, BuildConfig } from '../types';
-import { formatComponentName } from '@shared/formatting/component-name.formatter';
-import { CATEGORY_LABELS } from '../types';
-import { CategoryIcon } from './CategoryIcon';
-import { UI } from '../ui-strings';
-import { formatPrice } from '@shared/formatting/price.formatter';
-import styles from './ComponentPicker.module.css';
-
-interface Props {
-  category: ComponentCategory;
-  slotKey: string;
   selected: Component | null;
   build: BuildConfig;
   onSelect: (component: Component | null) => void;

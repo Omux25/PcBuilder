@@ -21,6 +21,8 @@ import { formatPrice } from '@shared/formatting/price.formatter';
 import { LinkEngine } from '@shared/link-engine';
 import { UI } from '../ui-strings';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer } from 'recharts';
+import { CategoryIcon } from '../components/CategoryIcon';
+import { FadeImage } from '../components/FadeImage';
 import { SEO } from '../components/SEO';
 import styles from './Compare.module.css';
 
@@ -403,7 +405,7 @@ export function Compare() {
                 <X size={16} />
               </button>
               <div className={styles.imgWrap}>
-                <img src={item.component.image_url} alt={item.component.name} referrerPolicy="no-referrer" loading="lazy" fetchpriority="low" />
+                <FadeImage src={item.component.image_url} alt={item.component.name} referrerPolicy="no-referrer" loading="lazy" fetchpriority="low" />
               </div>
               <div className={styles.compInfo}>
                 <span className={styles.brand}>{item.component.brand}</span>
@@ -458,7 +460,7 @@ export function Compare() {
                                   }}
                                >
                                   {prod.image_url ? (
-                                    <img src={prod.image_url} alt={prod.name} className={styles.quickAddThumb} referrerPolicy="no-referrer" loading="lazy" fetchpriority="low" />
+                                    <FadeImage src={prod.image_url} alt={prod.name} className={styles.quickAddThumb} referrerPolicy="no-referrer" loading="lazy" fetchpriority="low" />
                                   ) : (
                                     <div className={styles.quickAddThumbPlaceholder}><Plus size={12} /></div>
                                   )}

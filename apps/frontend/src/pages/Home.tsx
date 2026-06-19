@@ -17,6 +17,7 @@ const FEATURED_CATEGORIES: (keyof typeof CATEGORY_LABELS)[] = [
 ];
 
 import { SEO } from '../components/SEO';
+import { FadeImage } from '../components/FadeImage';
 
 export function Home() {
   return (
@@ -52,7 +53,7 @@ export function Home() {
         </div>
         <div className={styles.heroVisual}>
           <div className={styles.heroImageWrap}>
-            <img 
+            <FadeImage 
               src="/premium_pc_hero.webp" 
               alt="Premium PC Build" 
               className={styles.heroImage} 

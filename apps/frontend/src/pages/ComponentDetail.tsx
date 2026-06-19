@@ -20,6 +20,7 @@ import { UI } from '../ui-strings';
 import { formatPrice } from '@shared/formatting/price.formatter';
 import { formatComponentName } from '@shared/formatting/component-name.formatter';
 import { SEO } from '../components/SEO';
+import { FadeImage } from '../components/FadeImage';
 import styles from './ComponentDetail.module.css';
 
 interface Props {
@@ -222,7 +223,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
                 />
             )}
             {images.length > 0 ? (
-              <img
+              <FadeImage
                 src={images[selectedImgIdx]}
                 alt={component.name}
                 className={styles.productImg}
@@ -243,7 +244,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
                   className={`${styles.thumbBtn} ${selectedImgIdx === idx ? styles.thumbActive : ''}`}
                   onClick={() => setSelectedImgIdx(idx)}
                 >
-                  <img src={img} alt={`${compName} image ${idx + 1}`} referrerPolicy="no-referrer" className={styles.productImg} />
+                  <FadeImage src={img} alt={`${compName} image ${idx + 1}`} referrerPolicy="no-referrer" className={styles.productImg} />
                 </button>
               ))}
             </div>

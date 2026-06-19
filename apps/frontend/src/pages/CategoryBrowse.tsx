@@ -11,6 +11,7 @@ import { useCompare } from '../context/CompareContext';
 import { formatComponentName } from '@shared/formatting/component-name.formatter';
 import { LinkEngine } from '@shared/link-engine';
 import { SEO } from '../components/SEO';
+import { FadeImage } from '../components/FadeImage';
 import styles from './CategoryBrowse.module.css';
 
 const LIMIT = 20;
@@ -934,7 +935,7 @@ export function CategoryBrowse() {
                               onClick={(e) => e.stopPropagation()}
                             >
                               {c.image_url
-                                ? <img src={c.image_url} alt={c.name} className={styles.compThumb} referrerPolicy="no-referrer" loading="lazy" fetchpriority="low" />
+                                ? <FadeImage src={c.image_url} alt={c.name} className={styles.compThumb} referrerPolicy="no-referrer" loading="lazy" fetchpriority="low" />
                                 : <div className={styles.compThumbPlaceholder}><CategoryIcon category={cat} size={16} /></div>
                               }
                             </Link>
@@ -1057,7 +1058,7 @@ export function CategoryBrowse() {
                     <div className={styles.mobileCardTop}>
                       <div className={styles.mobileCardImg}>
                         {c.image_url
-                          ? <img src={c.image_url} alt={c.name} referrerPolicy="no-referrer" loading="lazy" fetchpriority="low" />
+                          ? <FadeImage src={c.image_url} alt={c.name} referrerPolicy="no-referrer" loading="lazy" fetchpriority="low" />
                           : <div className={styles.compThumbPlaceholder}><CategoryIcon category={cat} size={20} /></div>
                         }
                       </div>

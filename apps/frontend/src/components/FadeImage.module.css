@@ -1,0 +1,44 @@
+.wrapper {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--card-bg, #1a1a1a); /* subtle dark background */
+  border-radius: inherit; /* Inherits rounded corners from parent */
+  width: 100%;
+  height: 100%;
+}
+
+/* Pulsing skeleton animation while loading */
+.wrapper:not(.loaded)::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.5s infinite linear;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: inherit;
+  display: block;
+  opacity: 0;
+  filter: blur(8px);
+  transform: scale(1.05);
+  transition: opacity 0.5s ease-out, filter 0.5s ease-out, transform 0.5s ease-out;
+}
+
+.wrapper.loaded .image {
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
+}
