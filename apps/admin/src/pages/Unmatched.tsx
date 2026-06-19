@@ -364,14 +364,14 @@ export function Unmatched() {
               display: 'flex', 
               alignItems: 'center', 
               background: 'var(--surface-2)', 
-              padding: '4px', 
+              padding: '6px', 
               borderRadius: 'var(--radius)',
               border: '1px solid var(--border)'
             }}>
-              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-dim)', padding: '0 8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-dim)', padding: '0 10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Confirmer
               </span>
-              <div style={{ width: '1px', height: '16px', background: 'var(--border)', margin: '0 4px' }} />
+              <div style={{ width: '1px', height: '20px', background: 'var(--border)', margin: '0 6px' }} />
               
               <button
                 onClick={() => { if (!confirmingCategories) setConfirmAllDialog(true); }}
@@ -380,10 +380,10 @@ export function Unmatched() {
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  height: '28px',
-                  padding: '0 12px',
-                  fontSize: '12px',
+                  gap: '8px',
+                  height: '34px',
+                  padding: '0 16px',
+                  fontSize: '13px',
                   fontWeight: 600,
                   borderRadius: '4px',
                   border: 'none',
@@ -395,7 +395,7 @@ export function Unmatched() {
                 onMouseOver={(e) => { if (!confirmingCategories) e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)'; }}
                 onMouseOut={(e) => { if (!confirmingCategories) e.currentTarget.style.background = 'transparent'; }}
               >
-                <CheckCircle size={14} />
+                <CheckCircle size={16} />
                 <span>Haute</span>
               </button>
 
@@ -406,10 +406,10 @@ export function Unmatched() {
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  height: '28px',
-                  padding: '0 12px',
-                  fontSize: '12px',
+                  gap: '8px',
+                  height: '34px',
+                  padding: '0 16px',
+                  fontSize: '13px',
                   fontWeight: 600,
                   borderRadius: '4px',
                   border: 'none',
@@ -421,7 +421,7 @@ export function Unmatched() {
                 onMouseOver={(e) => { if (!confirmingCategories) e.currentTarget.style.background = 'var(--surface-3)'; }}
                 onMouseOut={(e) => { if (!confirmingCategories) e.currentTarget.style.background = 'transparent'; }}
               >
-                <CheckSquare size={14} />
+                <CheckSquare size={16} />
                 <span>Moyenne + Haute</span>
               </button>
             </div>
