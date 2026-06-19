@@ -278,29 +278,29 @@ export function Unmatched() {
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
-      padding: '8px 14px',
+      padding: '8px 16px',
       fontSize: '13px',
       fontWeight: isActive ? 600 : 500,
-      color: isActive ? 'var(--accent-blue)' : 'var(--text-muted)',
-      background: isActive ? 'rgba(137, 180, 250, 0.12)' : 'transparent',
-      border: 'none',
+      color: isActive ? 'var(--accent-blue)' : 'var(--text-dim)',
+      background: isActive ? 'rgba(137, 180, 250, 0.12)' : 'rgba(255, 255, 255, 0.03)',
+      border: isActive ? '1px solid rgba(137, 180, 250, 0.3)' : '1px solid rgba(255, 255, 255, 0.06)',
       cursor: 'pointer',
       whiteSpace: 'nowrap',
       transition: 'all 0.2s ease',
       flexShrink: 0,
-      borderRadius: '8px',
+      borderRadius: '999px',
     };
   }
 
   function badgeStyle(isActive: boolean): React.CSSProperties {
     return {
       fontSize: '11px',
-      background: isActive ? 'var(--accent-blue)' : 'var(--surface-3)',
-      color: isActive ? '#000' : 'var(--text-dim)',
+      background: isActive ? 'var(--accent-blue)' : 'rgba(255, 255, 255, 0.08)',
+      color: isActive ? '#000' : 'var(--text-muted)',
       padding: '2px 8px',
-      borderRadius: '12px',
+      borderRadius: '999px',
       fontWeight: 700,
-      marginLeft: '4px',
+      marginLeft: '2px',
     };
   }
 
@@ -573,8 +573,8 @@ export function Unmatched() {
           display: 'flex',
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: '6px',
-          padding: '10px 24px',
+          gap: '10px',
+          padding: '16px 24px',
           borderBottom: '1px solid var(--border)',
           background: 'var(--surface-2)',
           flexShrink: 0,
