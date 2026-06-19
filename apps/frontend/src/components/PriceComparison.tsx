@@ -15,16 +15,11 @@ import { formatDate } from '@shared/formatting/date.formatter';
 import { formatComponentName } from '@shared/formatting/component-name.formatter';
 import { UI } from '../ui-strings';
 import { formatPrice } from '@shared/formatting/price.formatter';
+import { getInitials } from '@shared/formatting/string.formatter';
 import styles from './PriceComparison.module.css';
 
 interface Props {
   component: Component | null;
-}
-
-function getInitials(name: string) {
-  const parts = name.trim().split(/[\s_-]+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return name.slice(0, 2).toUpperCase();
 }
 
 export function PriceComparison({ component }: Props) {
