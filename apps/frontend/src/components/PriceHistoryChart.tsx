@@ -62,7 +62,19 @@ export function PriceHistoryChart({ history, loading, period, onPeriodChange }: 
     );
   }
 
-  // Allow empty chart to render when there is no data to show the grid
+  if (history.length === 0) {
+    return (
+      <div>
+        {periodToggle}
+        <div className={styles.empty}>
+          <p>Aucun historique de prix disponible pour la période sélectionnée.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Allow chart to render
+
 
   const retailerNames = [...new Set(history.map(h => h.retailer_name))];
 

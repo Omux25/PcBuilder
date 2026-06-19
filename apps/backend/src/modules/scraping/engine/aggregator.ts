@@ -82,7 +82,7 @@ export async function aggregate(
 
   const sql = getSql();
 
-  const isRealSql = (sql as unknown) === (bunSql as unknown);
+  const isRealSql = process.env.NODE_ENV !== 'test';
 
   // UltraPC stock is now parsed directly from HTML listing cards (no extra HTTP calls).
   // checkStock() removed — "Produit en stock" text extracted per card in the scraper.
@@ -414,6 +414,18 @@ export async function aggregate(
       const cleanedName = cleanName(nameForExtraction, resolvedBrand, resolvedCategory);
       const baseSlug = componentSlug(resolvedBrand, cleanedName);
       const existingBySlug = slugToComponent.get(baseSlug);
+      
+      if (p.product_url === 'https://test.com/product/123') {
+        console.log('--- DEBUG SLUG MATCH ---');
+        console.log('nameForExtraction:', nameForExtraction);
+        console.log('resolvedBrand:', resolvedBrand);
+        console.log('resolvedCategory:', resolvedCategory);
+        console.log('cleanedName:', cleanedName);
+        console.log('baseSlug:', baseSlug);
+        console.log('existingBySlug found?', !!existingBySlug);
+        console.log('slugToComponent size:', slugToComponent.size);
+      }
+
       if (existingBySlug) {
         finalResolved.push({ ...p, component_id: existingBySlug.id, category: resolvedCategory });
         autoMapped++;
