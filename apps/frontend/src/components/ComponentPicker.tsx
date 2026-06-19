@@ -11,7 +11,8 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { SlidersHorizontal, X, ArrowUpDown, GitCompare } from 'lucide-react';
-import { smartSearch, type SmartComponent } from '../api';
+import { smartSearch } from '../api';
+import type { SmartComponent } from "../api";
 import { useCompare } from '../context/CompareContext';
 import type { Component, ComponentCategory, BuildConfig } from '../types';
 import { formatComponentName } from '@shared/formatting/component-name.formatter';
