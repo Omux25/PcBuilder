@@ -156,9 +156,13 @@ function extractCpuDna(name: string): string[] {
     if (intelMatch) tokens.push(intelMatch[2].replace(/\s/g, ''));
   }
 
+  // Squash spaces before common CPU suffixes (X, XT, X3D, K, KF, F, KS, G, GE, T)
+  // so "7900 X3D" becomes "7900x3d"
+  const processedName = n.replace(/\b(\d{3,5})\s+(x3d|xt|x|kf|ks|k|f|g|ge|t)\b/gi, '$1$2');
+
   // Model number — allow up to 8 alphanumeric chars after digits (e.g. 7950x3d, 13700kf, 285k, 5600xt)
   // We use a global match to find all numbers, as products often have specs in name
-  const modelMatches = n.matchAll(/\b(\d{3,5}[a-z0-9]{0,6})\b/g);
+  const modelMatches = processedName.matchAll(/\b(\d{3,5}[a-z0-9]{0,6})\b/g);
   for (const match of modelMatches) {
     tokens.push(match[1]);
   }
