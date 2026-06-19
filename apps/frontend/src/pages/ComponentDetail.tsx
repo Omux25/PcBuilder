@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
+import { useShare } from '../hooks/useShare';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { GitCompare, ShoppingCart, ArrowLeft, Share2, Check, TrendingDown, ChevronDown } from 'lucide-react';
 import { getComponentBySlug, getComponentByIdentifier, getPrices, getPriceHistory, getMarketTrends } from '../api';
@@ -41,7 +42,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
   const [showOos, setShowOos] = useState(false);
   const [componentId, setComponentId] = useState<number | null>(null);
   const [selectedImgIdx, setSelectedImgIdx] = useState(0);
-  const [copied, setCopied] = useState(false);
+  const { copied, handleShare } = useShare();
   const [isTrending, setIsTrending] = useState(false);
 
   // Fetch history separately so period changes don't reload the whole page
@@ -97,11 +98,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
     setTimeout(() => setAddedToBuild(false), 2000);
   }
 
-  function handleShare() {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
+
 
   // Go back to wherever the user came from (preserves filters/page/scroll).
   // Falls back to the category browse page if there's no history entry.

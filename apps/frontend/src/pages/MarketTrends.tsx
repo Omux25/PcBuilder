@@ -20,6 +20,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { getMarketTrends, getComponentById, type MarketTrend } from '../api';
+import { useShare } from '../hooks/useShare';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { Skeleton } from '../components/Skeleton';
 import type { ComponentCategory } from '../types';
@@ -108,7 +109,7 @@ export function MarketTrends() {
   const [showOutOfStock, setShowOutOfStock] = useState(false);
   const [added, setAdded] = useState<number | null>(null);
   const [adding, setAdding] = useState<number | null>(null);
-  const [copied, setCopied] = useState(false);
+  const { copied, handleShare } = useShare();
   const [sortBy, setSortBy] = useState<string>('pct');
 
   const isInitialLoad = useRef(true);
@@ -207,11 +208,7 @@ export function MarketTrends() {
     }
   }
 
-  function handleShare() {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
+
 
 
   const categoryOptions = useMemo(() => {
@@ -472,14 +469,9 @@ export function MarketTrends() {
 
 function TrendCard({ trend, isAdded, isAdding, onAdd }: { trend: MarketTrend; isAdded: boolean; isAdding: boolean; onAdd: () => void }) {
   const isDrop = trend.type === 'drops';
-  const [copied, setCopied] = useState(false);
+  const { copied, handleShare } = useShare();
 
-  function handleShare(e: React.MouseEvent) {
-    e.preventDefault();
-    navigator.clipboard.writeText(window.location.origin + LinkEngine.getProductUrl(trend));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
+
 
   const isOutOfStock = !trend.in_stock;
 
@@ -539,7 +531,7 @@ function TrendCard({ trend, isAdded, isAdding, onAdd }: { trend: MarketTrend; is
       <div className={styles.cardFooter}>
         <Link to={LinkEngine.getProductUrl(trend)} className={styles.detailLink}>{UI.trends.viewDetails}</Link>
         <div className={styles.cardActions}>
-          <button className={`${styles.shareIconBtn} ${copied ? styles.copiedIconBtn : ''}`} onClick={handleShare} title="Partager">
+          <button className={`${styles.shareIconBtn} ${copied ? styles.copiedIconBtn : ''}`} onClick={(e) => handleShare(e, window.location.origin + LinkEngine.getProductUrl(trend))} title="Partager">
             {copied ? <Check size={14} /> : <Share2 size={14} />}
           </button>
           <button 
