@@ -111,6 +111,56 @@ async function run() {
   sitemapXml += `</urlset>`;
   fs.writeFileSync(path.join(DIST_DIR, 'sitemap.xml'), sitemapXml);
   console.log('✅ Created sitemap.xml');
+  console.log('📡 Submitting URLs to IndexNow...');
+  const indexNowKey = '0f85b8823f6e492f8087fcda8cb080b0';
+  let urlList = routesToPrerender.map(route => `${PUBLIC_URL}${route}`);
+  
+  try {
+    console.log('📡 Fetching dynamic sitemap from backend to include all URLs...');
+    const sitemapRes = await fetch('https://pcbuilder-m2nf.onrender.com/api/sitemap.xml');
+    if (sitemapRes.ok) {
+      const sitemapText = await sitemapRes.text();
+      const matches = sitemapText.match(/<loc>(.*?)<\/loc>/g);
+      if (matches) {
+        const dynamicUrls = matches.map(m => m.replace(/<\/?loc>/g, ''));
+        // Merge and deduplicate URLs
+        urlList = [...new Set([...urlList, ...dynamicUrls])];
+        console.log(`✅ Found ${dynamicUrls.length} URLs in live sitemap. Total unique URLs to submit: ${urlList.length}`);
+      }
+    } else {
+      console.warn('⚠️ Failed to fetch dynamic sitemap, submitting only static URLs.');
+    }
+  } catch (err) {
+    console.warn('⚠️ Error fetching dynamic sitemap:', err.message);
+  }
+
+  // Submit in chunks of 10,000 (IndexNow limit)
+  const chunkSize = 10000;
+  for (let i = 0; i < urlList.length; i += chunkSize) {
+    const chunk = urlList.slice(i, i + chunkSize);
+    try {
+      const response = await fetch('https://www.bing.com/indexnow', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+        body: JSON.stringify({
+          host: 'pcbuilder.ma',
+          key: indexNowKey,
+          keyLocation: `https://pcbuilder.ma/${indexNowKey}.txt`,
+          urlList: chunk
+        })
+      });
+      
+      if (response.ok) {
+        console.log(`✅ IndexNow submission successful for ${chunk.length} URLs!`);
+      } else {
+        console.error(`❌ IndexNow submission failed: ${response.status} ${response.statusText}`);
+      }
+    } catch (e) {
+      console.error('❌ Failed to submit to IndexNow:', e);
+    }
+  }
 
   await browser.close();
   server.close();
