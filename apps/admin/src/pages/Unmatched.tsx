@@ -14,7 +14,7 @@
  * Toast: last-write-wins — new toast replaces previous immediately.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { RefreshCw, Search, X, CheckCircle, CheckSquare } from 'lucide-react';
 import { CategoryAccordion } from '../components/CategoryAccordion';
 import { UnknownSection } from '../components/UnknownSection';
@@ -357,61 +357,74 @@ export function Unmatched() {
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <button
-              onClick={() => { if (!confirmingCategories) setConfirmAllDialog(true); }}
-              disabled={confirmingCategories}
-              title="Confirmer et créer automatiquement tous les produits avec une confiance ÉLEVÉE ou une catégorie manuelle"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                height: '36px',
-                padding: '0 16px',
-                fontSize: '13px',
-                fontWeight: 600,
-                borderRadius: 'var(--radius)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                cursor: confirmingCategories ? 'not-allowed' : 'pointer',
-                background: 'rgba(16, 185, 129, 0.1)',
-                color: '#10b981',
-                transition: 'all 0.2s',
-              }}
-              onMouseOver={(e) => { if (!confirmingCategories) e.currentTarget.style.background = 'rgba(16, 185, 129, 0.2)'; }}
-              onMouseOut={(e) => { if (!confirmingCategories) e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)'; }}
-            >
-              <CheckCircle size={14} />
-              <span>Haute</span>
-            </button>
+          {/* ── Global Actions Toolbar ────────────────────────────── */}
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {/* Confirmation Pill Group */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              background: 'var(--surface-2)', 
+              padding: '4px', 
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)'
+            }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-dim)', padding: '0 8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Confirmer
+              </span>
+              <div style={{ width: '1px', height: '16px', background: 'var(--border)', margin: '0 4px' }} />
+              
+              <button
+                onClick={() => { if (!confirmingCategories) setConfirmAllDialog(true); }}
+                disabled={confirmingCategories}
+                title="Créer automatiquement tous les produits avec une confiance ÉLEVÉE"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  height: '28px',
+                  padding: '0 12px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: confirmingCategories ? 'not-allowed' : 'pointer',
+                  background: 'transparent',
+                  color: '#10b981',
+                  transition: 'all 0.2s',
+                }}
+                onMouseOver={(e) => { if (!confirmingCategories) e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)'; }}
+                onMouseOut={(e) => { if (!confirmingCategories) e.currentTarget.style.background = 'transparent'; }}
+              >
+                <CheckCircle size={14} />
+                <span>Haute</span>
+              </button>
 
-            <button
-              onClick={() => { if (!confirmingCategories) { setConfirmAllDialog(true); handleConfirmCategories(true); setConfirmAllDialog(false); } }}
-              disabled={confirmingCategories}
-              title="Confirmer et créer automatiquement tous les produits avec une confiance MOYENNE ou ÉLEVÉE"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                height: '36px',
-                padding: '0 16px',
-                fontSize: '13px',
-                fontWeight: 600,
-                borderRadius: 'var(--radius)',
-                border: '1px solid var(--border)',
-                cursor: confirmingCategories ? 'not-allowed' : 'pointer',
-                background: 'var(--surface)',
-                color: 'var(--text)',
-                transition: 'all 0.2s',
-              }}
-              onMouseOver={(e) => { if (!confirmingCategories) e.currentTarget.style.background = 'var(--surface-3)'; }}
-              onMouseOut={(e) => { if (!confirmingCategories) e.currentTarget.style.background = 'var(--surface)'; }}
-            >
-              <CheckSquare size={14} />
-              <span>Moyenne + Haute</span>
-            </button>
-          </div>
+              <button
+                onClick={() => { if (!confirmingCategories) { setConfirmAllDialog(true); handleConfirmCategories(true); setConfirmAllDialog(false); } }}
+                disabled={confirmingCategories}
+                title="Créer automatiquement tous les produits avec une confiance MOYENNE ou ÉLEVÉE"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  height: '28px',
+                  padding: '0 12px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: confirmingCategories ? 'not-allowed' : 'pointer',
+                  background: 'transparent',
+                  color: 'var(--text)',
+                  transition: 'all 0.2s',
+                }}
+                onMouseOver={(e) => { if (!confirmingCategories) e.currentTarget.style.background = 'var(--surface-3)'; }}
+                onMouseOut={(e) => { if (!confirmingCategories) e.currentTarget.style.background = 'transparent'; }}
+              >
+                <CheckSquare size={14} />
+                <span>Moyenne + Haute</span>
+              </button>
+            </div>
 
           <button
             onClick={handleReprocess}
@@ -445,6 +458,7 @@ export function Unmatched() {
             />
             {reprocessing ? 'Traitement...' : 'Tout Traiter'}
           </button>
+          </div>
         </div>
       </div>
 
@@ -468,8 +482,12 @@ export function Unmatched() {
             const isActive = activeCategory === entry.category;
             return (
               <button key={entry.category!} onClick={() => setActiveCategory(entry.category)} style={tabStyle(isActive)}>
-                <span style={{ color: isActive ? 'var(--accent-blue)' : 'var(--text-dim)' }}>
-                  {getCategoryIcon(entry.category)}
+                <span style={{ 
+                  color: isActive ? 'var(--accent-blue)' : 'var(--text-dim)', 
+                  display: 'flex', 
+                  alignItems: 'center' 
+                }}>
+                  {React.cloneElement(getCategoryIcon(entry.category) as React.ReactElement, { size: 14 })}
                 </span>
                 {CATEGORY_LABELS[entry.category as ComponentCategory] ?? entry.category}
                 <span style={badgeStyle(isActive)}>{entry.group_count}</span>
