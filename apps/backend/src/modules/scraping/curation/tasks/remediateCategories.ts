@@ -8,10 +8,28 @@ export async function remediateCategories(sql: SqlFn): Promise<TaskResult> {
     FROM components
   ` as any[];
 
+  if (components.length === 0) {
+    return { success: true, mutatedCount: 0, message: 'No components found.' };
+  }
+
+  const componentIds = components.map(c => c.id);
+  const allMappings = await sql`
+    SELECT component_id, product_identifier
+    FROM scraper_mappings
+    WHERE component_id IN ${sql(componentIds)}
+  ` as { component_id: number; product_identifier: string }[];
+
+  const mappingsByComponentId: Record<number, string[]> = {};
+  for (const m of allMappings) {
+    if (!mappingsByComponentId[m.component_id]) {
+      mappingsByComponentId[m.component_id] = [];
+    }
+    mappingsByComponentId[m.component_id].push(m.product_identifier);
+  }
+
   let moved = 0;
   for (const c of components) {
-    const mappings = (await sql`SELECT product_identifier FROM scraper_mappings WHERE component_id = ${c.id}`) as { product_identifier: string }[];
-    const identifiers = mappings.map((m: any) => m.product_identifier);
+    const identifiers = mappingsByComponentId[c.id] || [];
     
     const allResults: string[] = [];
     
