@@ -308,15 +308,16 @@ export function Unmatched() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* ── Top Bar ────────────────────────────────────────────────────────── */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '12px 24px',
-        borderBottom: '1px solid var(--border)',
-        background: 'var(--surface)',
-        flexShrink: 0,
-      }}>
+      <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 24px',
+          maxWidth: '1600px',
+          margin: '0 auto',
+          width: '100%',
+        }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>Produits non associés</h1>
           <p style={{ margin: '2px 0 0', color: 'var(--text-muted)', fontSize: '12px' }}>
@@ -472,18 +473,21 @@ export function Unmatched() {
           </button>
           </div>
         </div>
+      </div>
+      </div>
 
         {/* ── Filter Bar ────────────────────────────────────────────────────────── */}
         {!summaryLoading && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '12px 24px',
-            borderBottom: '1px solid var(--border)',
-            background: 'var(--surface)',
-            flexShrink: 0,
-          }}>
+          <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 24px',
+              maxWidth: '1600px',
+              margin: '0 auto',
+              width: '100%',
+            }}>
             <span style={{ fontSize: '12px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filtrer par</span>
             
             {/* Confidence Filter */}
@@ -564,22 +568,23 @@ export function Unmatched() {
               </button>
             )}
           </div>
+        </div>
         )}
-      </div>
 
       {/* ── Horizontal Category Tabs ──────────────────────────────────────────── */}
       {!summaryLoading && categorySummary.length > 0 && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          padding: '10px 24px',
-          borderBottom: '1px solid var(--border)',
-          background: 'var(--surface-2)',
-          overflowX: 'auto',
-          flexShrink: 0,
-          scrollbarWidth: 'none',
-        }}>
+        <div style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '10px 24px',
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+            maxWidth: '1600px',
+            margin: '0 auto',
+            width: '100%',
+          }}>
           <button onClick={() => setActiveCategory('all')} style={tabStyle(activeCategory === 'all')}>
             Tous <span style={badgeStyle(activeCategory === 'all')}>{totalGroups}</span>
           </button>
@@ -610,10 +615,12 @@ export function Unmatched() {
             </>
           )}
         </div>
+      </div>
       )}
 
       {/* ── Main Content (full width) ─────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '24px', background: 'var(--bg)' }}>
+      <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg)' }}>
+        <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px', width: '100%', minHeight: '100%' }}>
         {/* Toast */}
         {toast && (
           <div style={{
@@ -724,6 +731,7 @@ export function Unmatched() {
           />
         )}
       </div>
+    </div>
 
       {/* Global confirm-all dialog */}
       {confirmAllDialog && (

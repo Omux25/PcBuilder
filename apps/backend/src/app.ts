@@ -48,12 +48,12 @@ app.use('/api/admin/*', async (c, next) => {
 // (CORS spec forbids it). We require an explicit origin list in production.
 // In development (no ALLOWED_ORIGINS set), we allow all origins for convenience.
 
-function getAllowedOrigins(): string | string[] {
+export function getAllowedOrigins(): string | string[] {
   const raw = process.env.ALLOWED_ORIGINS?.trim();
   if (!raw || raw === '*') {
-    // In production, log a warning — credentials + wildcard is a security risk
     if (process.env.NODE_ENV === 'production') {
-      console.warn('[CORS] WARNING: ALLOWED_ORIGINS is not set. Defaulting to * in production is a security risk. Set ALLOWED_ORIGINS to a comma-separated list of allowed origins.');
+      console.warn('[CORS] WARNING: ALLOWED_ORIGINS is missing or set to *. In production, this restricts all cross-origin credentialed requests. Set ALLOWED_ORIGINS to a comma-separated list of valid origins.');
+      return [];
     }
     return '*';
   }

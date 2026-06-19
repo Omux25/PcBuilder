@@ -279,8 +279,8 @@ export function CategoryAccordion({
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    width: '28px',
-                                    height: '28px',
+                                    width: '36px',
+                                    height: '36px',
                                     background: isConfirming
                                         ? 'var(--surface-3)'
                                         : 'rgba(16, 185, 129, 0.15)',
@@ -295,20 +295,20 @@ export function CategoryAccordion({
                                 onMouseOut={(e) => { if (!isConfirming) e.currentTarget.style.background = 'rgba(16, 185, 129, 0.15)'; }}
                             >
                                 {isConfirming
-                                    ? <RefreshCw size={14} className="spin" />
-                                    : <CheckCircle size={14} />
+                                    ? <RefreshCw size={16} className="spin" />
+                                    : <CheckCircle size={18} />
                                 }
                                 {!isConfirming && highConfidenceCount > 0 && (
                                     <span style={{
                                         position: 'absolute',
-                                        top: '-4px',
-                                        right: '-4px',
+                                        top: '-6px',
+                                        right: '-6px',
                                         background: '#10b981',
                                         color: '#fff',
-                                        fontSize: '9px',
+                                        fontSize: '10px',
                                         fontWeight: 'bold',
-                                        padding: '1px 4px',
-                                        borderRadius: '10px',
+                                        padding: '2px 5px',
+                                        borderRadius: '12px',
                                         lineHeight: 1
                                     }}>
                                         {highConfidenceCount}
@@ -325,8 +325,8 @@ export function CategoryAccordion({
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    width: '28px',
-                                    height: '28px',
+                                    width: '36px',
+                                    height: '36px',
                                     background: 'var(--surface-2)',
                                     color: 'var(--text)',
                                     border: '1px solid var(--border)',
@@ -338,8 +338,8 @@ export function CategoryAccordion({
                                 onMouseOut={(e) => { if (!isConfirming) e.currentTarget.style.background = 'var(--surface-2)'; }}
                             >
                                 {isConfirming
-                                    ? <RefreshCw size={14} className="spin" />
-                                    : <CheckSquare size={14} />
+                                    ? <RefreshCw size={16} className="spin" />
+                                    : <CheckSquare size={18} />
                                 }
                             </button>
                         )}

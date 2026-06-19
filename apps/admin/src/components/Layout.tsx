@@ -74,9 +74,7 @@ export function Layout() {
 
       <main className={styles.main}>
         <div className={styles.glassLayer}></div>
-        <div className={styles.contentWrapper}>
-          <Outlet />
-        </div>
+        <Outlet />
       </main>
     </div>
   );
