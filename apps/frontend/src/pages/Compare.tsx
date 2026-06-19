@@ -11,6 +11,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { X, Plus, ArrowLeft, BarChart3, CheckCircle2, Share2, Check } from 'lucide-react';
+import { useShare } from '../hooks/useShare';
 import { getComponentById, getPrices, smartSearch } from '../api';
 import type { Component, PriceOffer, ComponentCategory } from '../types';
 import { CATEGORY_LABELS } from '../types';
@@ -97,7 +98,7 @@ interface ComponentWithPrices {
 
 export function Compare() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [copied, setCopied] = useState(false);
+  const { copied, handleShare } = useShare();
   const { syncCompareIds, removeFromCompare } = useCompare();
 
   // Show only differences toggle state
@@ -119,11 +120,6 @@ export function Compare() {
   const category = items[0]?.component.category;
   const specKeys = category ? CATEGORY_SPECS[category] || Object.keys(ALL_SPEC_ROWS) : [];
 
-  function handleShare() {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
 
   // Load components whenever URL ids change
   useEffect(() => {
