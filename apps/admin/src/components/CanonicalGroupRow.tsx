@@ -122,11 +122,17 @@ export function CanonicalGroupRow({
     return (
         <>
             <tr
-                style={{ cursor: 'pointer' }}
+                style={{ 
+                    cursor: 'pointer',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
+                    transition: 'all 0.2s ease',
+                }}
+                onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 onClick={onToggleExpand}
             >
                 {/* Expand indicator */}
-                <td style={{ width: '32px', color: 'var(--text-muted)', fontSize: '11px', textAlign: 'center' }}>
+                <td style={{ width: '32px', color: 'var(--text-muted)', fontSize: '11px', textAlign: 'center', padding: '8px 0' }}>
                     {isExpanded ? '▼' : '▶'}
                 </td>
 
@@ -145,8 +151,9 @@ export function CanonicalGroupRow({
                                     height: '40px',
                                     objectFit: 'contain',
                                     background: '#fff',
-                                    borderRadius: '4px',
-                                    border: '1px solid var(--border)',
+                                    borderRadius: '6px',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    padding: '2px',
                                 }}
                             />
                         ) : (
@@ -154,30 +161,30 @@ export function CanonicalGroupRow({
                                 width: '40px',
                                 height: '40px',
                                 background: 'var(--surface-3)',
-                                borderRadius: '4px',
-                                border: '1px solid var(--border)',
+                                borderRadius: '6px',
+                                border: '1px solid rgba(255, 255, 255, 0.05)',
                             }} />
                         );
                     })()}
                 </td>
 
                 {/* Canonical name + brand + count */}
-                <td>
+                <td style={{ padding: '8px 14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <strong style={{ fontSize: '13px' }}>{group.canonical_name}</strong>
+                        <strong style={{ fontSize: '13.5px', color: 'var(--text)', letterSpacing: '0.01em' }}>{group.canonical_name}</strong>
                         {group.brand && (
-                            <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{group.brand}</span>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{group.brand}</span>
                         )}
-                        <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>({listingCount})</span>
+                        <span style={{ color: 'var(--text-dim)', fontSize: '11px', background: 'rgba(255, 255, 255, 0.04)', padding: '2px 8px', borderRadius: '12px', fontWeight: 500 }}>{listingCount} off{listingCount > 1 ? 'res' : 're'}</span>
                         {categoryBadge && (
                             <span style={{
                                 fontSize: '10px',
                                 fontWeight: 600,
                                 color: 'var(--text-secondary)',
                                 background: 'var(--surface-2)',
-                                border: '1px solid var(--border)',
-                                padding: '1px 6px',
-                                borderRadius: '999px',
+                                border: '1px solid rgba(255, 255, 255, 0.05)',
+                                padding: '2px 8px',
+                                borderRadius: '12px',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.04em',
                             }}>
@@ -188,22 +195,22 @@ export function CanonicalGroupRow({
                 </td>
 
                 {/* Confidence badge */}
-                <td onClick={(e) => e.stopPropagation()}>
+                <td onClick={(e) => e.stopPropagation()} style={{ padding: '8px 14px' }}>
                     <ConfidenceBadge confidence={confidence} />
                 </td>
 
                 {/* Retailer count */}
-                <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                <td style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500, padding: '8px 14px', textAlign: 'center' }}>
                     {group.retailer_count}
                 </td>
 
                 {/* Price range */}
-                <td style={{ fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
+                <td style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', fontVariantNumeric: 'tabular-nums', padding: '8px 14px', whiteSpace: 'nowrap' }}>
                     {fmtPriceRange(group.price_min, group.price_max)}
                 </td>
 
                 {/* Actions */}
-                <td onClick={(e) => e.stopPropagation()} style={{ paddingRight: '12px' }}>
+                <td onClick={(e) => e.stopPropagation()} style={{ padding: '8px 14px', paddingRight: '24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
                         <select
                             value={group.category || ''}
@@ -223,19 +230,24 @@ export function CanonicalGroupRow({
                             }}
                             disabled={rejecting}
                             style={{
-                                padding: '5px 8px',
+                                padding: '6px 12px',
                                 paddingRight: '24px',
                                 fontSize: '12px',
-                                border: '1px solid var(--border)',
-                                borderRadius: 'var(--radius)',
-                                background: 'var(--surface-2)',
+                                fontWeight: 500,
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: '6px',
+                                background: 'rgba(255, 255, 255, 0.02)',
                                 color: 'var(--text)',
                                 cursor: 'pointer',
+                                transition: 'all 0.2s',
                                 outline: 'none',
+                                maxWidth: '160px',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden'
                             }}
+                            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'; }}
                         >
                             <option value="">— Standby / Aucun —</option>
                             {CATEGORY_ORDER.map((cat) => (
@@ -251,20 +263,27 @@ export function CanonicalGroupRow({
                             style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '4px',
-                                padding: '5px 12px',
-                                background: 'var(--accent)',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: 'var(--radius)',
+                                gap: '6px',
+                                padding: '6px 14px',
+                                background: group.existing_component_id ? 'rgba(79, 70, 229, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                                color: group.existing_component_id ? '#818cf8' : '#10b981',
+                                border: group.existing_component_id ? '1px solid rgba(79, 70, 229, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)',
+                                borderRadius: '6px',
                                 fontSize: '12px',
                                 fontWeight: 600,
                                 cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseOver={(e) => { 
+                                e.currentTarget.style.background = group.existing_component_id ? 'rgba(79, 70, 229, 0.25)' : 'rgba(16, 185, 129, 0.25)'; 
+                            }}
+                            onMouseOut={(e) => { 
+                                e.currentTarget.style.background = group.existing_component_id ? 'rgba(79, 70, 229, 0.15)' : 'rgba(16, 185, 129, 0.15)'; 
                             }}
                         >
                             {group.existing_component_id
-                                ? <><Link2 size={12} /> Associer</>
-                                : <><Plus size={12} /> Créer</>}
+                                ? <><Link2 size={14} /> Associer</>
+                                : <><Plus size={14} /> Créer</>}
                         </button>
                         <button
                             onClick={handleGroupReject}
@@ -272,10 +291,10 @@ export function CanonicalGroupRow({
                             title="Rejeter tout le groupe"
                             aria-label={`Rejeter ${group.canonical_name}`}
                             style={{
-                                background: 'none',
-                                border: '1px solid var(--border)',
-                                borderRadius: 'var(--radius)',
-                                padding: '5px 8px',
+                                background: 'rgba(255, 255, 255, 0.02)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: '6px',
+                                padding: '6px 8px',
                                 cursor: rejecting ? 'not-allowed' : 'pointer',
                                 color: 'var(--text-dim)',
                                 opacity: rejecting ? 0.5 : 1,

@@ -27,7 +27,8 @@
 
 .brandLogo {
   height: 32px;
-  width: auto;
+  max-width: 100%;
+  object-fit: contain;
   margin-bottom: 0.2rem;
 }
 

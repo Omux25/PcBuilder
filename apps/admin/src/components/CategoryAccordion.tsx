@@ -450,14 +450,14 @@ export function CategoryAccordion({
                     {groups.length > 0 && (
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
-                                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)', background: 'rgba(255, 255, 255, 0.015)' }}>
                                     <th style={{ width: '32px' }} />
                                     <th style={{ width: '48px' }} />
-                                    <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nom canonique</th>
-                                    <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Confiance</th>
-                                    <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Revendeurs</th>
-                                    <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prix</th>
-                                    <th style={{ textAlign: 'right', padding: '12px 14px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actions</th>
+                                    <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', width: '100%' }}>Nom canonique</th>
+                                    <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', width: '120px', whiteSpace: 'nowrap' }}>Confiance</th>
+                                    <th style={{ textAlign: 'center', padding: '12px 14px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', width: '100px', whiteSpace: 'nowrap' }}>Revendeurs</th>
+                                    <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', width: '150px', whiteSpace: 'nowrap' }}>Prix</th>
+                                    <th style={{ textAlign: 'right', padding: '12px 24px 12px 14px', fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', width: '300px', whiteSpace: 'nowrap' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
