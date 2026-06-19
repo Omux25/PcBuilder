@@ -35,7 +35,7 @@ interface Props {
     onToggle: () => void;
     onStateChange: (patch: Partial<CategoryState>) => void;
     onAssociateTout: (canonicalNames: string[]) => void;
-    onConfirmCategory?: (category: string) => void;
+    onConfirmCategory?: (category: string, includeMedium?: boolean) => void;
     onGroupRemoved: (canonicalName: string) => void;
     onToast: (toast: ToastState) => void;
     hideHeader?: boolean;
@@ -65,6 +65,7 @@ export function CategoryAccordion({
 }: Props) {
     const [confirmAssociate, setConfirmAssociate] = useState(false);
     const [confirmCategoryDialog, setConfirmCategoryDialog] = useState(false);
+    const [confirmMediumCategoryDialog, setConfirmMediumCategoryDialog] = useState(false);
     const [createLinkTarget, setCreateLinkTarget] = useState<CanonicalGroup | null>(null);
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
     const label = CATEGORY_LABELS[category as ComponentCategory] ?? category;
@@ -156,6 +157,19 @@ export function CategoryAccordion({
         setConfirmCategoryDialog(false);
         if (onConfirmCategory) {
             onConfirmCategory(category);
+        }
+    }
+
+    function handleConfirmMediumCategoryClick(e: React.MouseEvent) {
+        e.stopPropagation();
+        if (isConfirming) return;
+        setConfirmMediumCategoryDialog(true);
+    }
+
+    function handleConfirmMediumCategoryDialogConfirm() {
+        setConfirmMediumCategoryDialog(false);
+        if (onConfirmCategory) {
+            onConfirmCategory(category, true);
         }
     }
 
@@ -263,6 +277,33 @@ export function CategoryAccordion({
                                 }
                             </button>
                         )}
+                        {onConfirmCategory && (
+                            <button
+                                onClick={handleConfirmMediumCategoryClick}
+                                disabled={isConfirming}
+                                title={isConfirming ? 'Confirmation en cours...' : `Confirmer et créer automatiquement les suggestions moyenne + haute confiance pour la catégorie ${label}`}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '3px 10px',
+                                    background: 'var(--surface)',
+                                    color: 'var(--text)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: 'var(--radius)',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    cursor: isConfirming ? 'not-allowed' : 'pointer',
+                                    opacity: isConfirming ? 0.7 : 1,
+                                    transition: 'all 0.2s',
+                                }}
+                            >
+                                {isConfirming
+                                    ? <><RefreshCw size={12} className="spin" /> Confirmation...</>
+                                    : <><CheckCircle size={12} /> Moyenne + Haute</>
+                                }
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
@@ -321,11 +362,10 @@ export function CategoryAccordion({
                                         color: isConfirming ? 'var(--text-dim)' : '#fff',
                                         border: 'none',
                                         borderRadius: 'var(--radius)',
-                                        fontSize: '12px',
+                                        fontSize: '13px',
                                         fontWeight: 600,
                                         cursor: isConfirming ? 'not-allowed' : 'pointer',
                                         opacity: isConfirming ? 0.7 : 1,
-                                        transition: 'all 0.2s',
                                     }}
                                 >
                                     {isConfirming
@@ -425,6 +465,17 @@ export function CategoryAccordion({
                     confirmLabel={`Confirmer (${highConfidenceCount})`}
                     onConfirm={handleConfirmCategoryDialogConfirm}
                     onCancel={() => setConfirmCategoryDialog(false)}
+                />
+            )}
+            
+            {/* Confirm per-category (Medium + High) ingestion */}
+            {confirmMediumCategoryDialog && (
+                <ConfirmDialog
+                    title={`Confirmer Moyenne + Haute — ${label}`}
+                    message={`Créer automatiquement tous les composants MOYENNE et HAUTE confiance pour la catégorie "${label}" ?`}
+                    confirmLabel={`Confirmer`}
+                    onConfirm={handleConfirmMediumCategoryDialogConfirm}
+                    onCancel={() => setConfirmMediumCategoryDialog(false)}
                 />
             )}
 
