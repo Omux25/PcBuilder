@@ -14,59 +14,59 @@
 :root[data-theme="dark"] {
   --accent-alpha-10: rgba(250, 250, 250, 0.1);
   /* Surfaces */
-  --bg-app: #09090b;
-  --bg-surface: #111113;
-  --bg-surface-2: #18181b;
-  --bg-surface-3: #27272a;
-  --bg-surface-hover: #1c1c1f;
-  --bg-surface-glass: rgba(9, 9, 11, 0.85);
+  --bg-app: #060608;
+  --bg-surface: #0e0e12;
+  --bg-surface-2: #16161b;
+  --bg-surface-3: #222228;
+  --bg-surface-hover: #19191e;
+  --bg-surface-glass: rgba(6, 6, 8, 0.65);
 
   /* Borders */
-  --border-subtle: #27272a;
+  --border-subtle: #222228;
 
   /* Logo */
-  --logo-filter: brightness(1);
+  --logo-filter: brightness(1) drop-shadow(0 0 10px rgba(59, 130, 246, 0.3));
   --border-focus: #3f3f46;
-  --border: #27272a;
+  --border: #222228;
   --border-2: #3f3f46;
-  --border-glass: rgba(255, 255, 255, 0.06);
+  --border-glass: rgba(255, 255, 255, 0.08);
 
   /* Text */
-  --text-primary: #fafafa;
-  --cta-primary-hover: #e4e4e7;
-  --text-secondary: #d4d4d8;
-  --text-dim: #a1a1aa;
-  --text-muted: #a1a1aa;
-  --text: #fafafa;
-  --text-2: #d4d4d8;
+  --text-primary: #f8fafc;
+  --cta-primary-hover: #e2e8f0;
+  --text-secondary: #cbd5e1;
+  --text-dim: #94a3b8;
+  --text-muted: #64748b;
+  --text: #f8fafc;
+  --text-2: #cbd5e1;
 
   /* Brand / Actions */
-  --accent: #fafafa;
+  --accent: #f8fafc;
   --accent-h: #ffffff;
-  --accent-glow: rgba(250, 250, 250, 0.1);
+  --accent-glow: rgba(248, 250, 252, 0.1);
   --accent-blue: #3b82f6;
   --accent-blue-rgb: 59, 130, 246;
-  --accent-blue-tint: rgba(59, 130, 246, 0.08);
-  --accent-blue-glow: rgba(59, 130, 246, 0.2);
+  --accent-blue-tint: rgba(59, 130, 246, 0.1);
+  --accent-blue-glow: rgba(59, 130, 246, 0.25);
   --accent-orange: #f97316;
   --accent-orange-rgb: 249, 115, 22;
-  --accent-orange-tint: rgba(249, 115, 22, 0.08);
+  --accent-orange-tint: rgba(249, 115, 22, 0.1);
   --accent-cyan: #06b6d4;
-  --accent-rgb: 250, 250, 250;
-  --accent-tech: #4f46e5;
-  --accent-tech-glow: rgba(79, 70, 229, 0.15);
+  --accent-rgb: 248, 250, 252;
+  --accent-tech: #6366f1;
+  --accent-tech-glow: rgba(99, 102, 241, 0.2);
 
   /* Semantic */
   --danger: #ef4444;
   --danger-soft: #fca5a5;
-  --danger-tint: rgba(239, 68, 68, 0.08);
+  --danger-tint: rgba(239, 68, 68, 0.1);
   --danger-row: rgba(239, 68, 68, 0.05);
-  --success: #22c55e;
-  --success-soft: #86efac;
-  --success-rgb: 34, 197, 94;
-  --success-tint: rgba(var(--success-rgb), 0.08);
+  --success: #10b981;
+  --success-soft: #6ee7b7;
+  --success-rgb: 16, 185, 129;
+  --success-tint: rgba(var(--success-rgb), 0.1);
   --success-row: rgba(var(--success-rgb), 0.05);
-  --card-bg: linear-gradient(180deg, var(--bg-surface) 0%, rgba(17, 17, 19, 0.7) 100%);
+  --card-bg: linear-gradient(180deg, rgba(22, 22, 27, 0.8) 0%, rgba(14, 14, 18, 0.9) 100%);
 
   /* Compat aliases */
   --bg: var(--bg-app);
@@ -88,7 +88,7 @@
 /* ── Theme-agnostic structural tokens (must live in bare :root so
       @media breakpoints can override them without a specificity fight) ── */
 :root {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   line-height: 1.5;
@@ -181,7 +181,7 @@ h2,
 h3,
 h4,
 .font-heading {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Outfit", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: var(--text);
   letter-spacing: -0.03em;
   line-height: 1.2;
@@ -189,7 +189,8 @@ h4,
 
 h1 {
   font-size: 2.25rem;
-  font-weight: 800;
+  font-weight: 700;
+  letter-spacing: -0.04em;
 }
 
 h2 {
@@ -255,7 +256,7 @@ button:disabled {
 }
 
 button:not(:disabled):active {
-  transform: scale(0.97);
+  transform: scale(0.95);
 }
 
 /* ── Form elements ────────────────────────────────────────────────────────── */

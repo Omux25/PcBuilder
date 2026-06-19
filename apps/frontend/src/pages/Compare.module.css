@@ -137,31 +137,30 @@
 /* ── Compare Grid ────────────────────────────────────────────────────────── */
 
 .compareGrid {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-  box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
   position: relative;
-  backdrop-filter: blur(10px);
+  gap: 2rem;
 }
 
 /* Row 1: The sticky header with product info */
 .rowSticky {
   display: grid;
-  grid-template-columns: 240px repeat(var(--cols), 1fr);
-  background: rgba(17, 17, 19, 0.95);
-  border-bottom: 2px solid var(--border-subtle);
+  grid-template-columns: minmax(160px, 220px) repeat(var(--cols), 1fr);
+  background: rgba(17, 17, 19, 0.85);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
   position: sticky;
   top: 58px;
   z-index: 10;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 0.5rem;
 }
 
 [data-theme="light"] .rowSticky {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .cornerCol {
@@ -184,13 +183,13 @@
 }
 
 .headerCol {
-  padding: 2rem 1.5rem 1.5rem;
+  padding: 1.25rem 1rem 1.25rem;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 1.25rem;
+  gap: 1rem;
   border-left: 1px solid var(--border-subtle);
   transition: background 0.3s;
 }
@@ -225,11 +224,11 @@
 }
 
 .imgWrap {
-  width: 120px;
-  height: 120px;
+  width: 90px;
+  height: 90px;
   background: #ffffff;
-  border-radius: var(--radius-lg);
-  padding: 0.75rem;
+  border-radius: var(--radius);
+  padding: 0.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -349,21 +348,33 @@
   flex-direction: column;
 }
 
-.sectionDivider {
+.specGroup {
+  margin-bottom: 2rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(10px);
+}
+
+.groupHeader {
   background: var(--bg-surface-2);
-  padding: 0.8rem 1.5rem;
-  font-size: 0.75rem;
+  padding: 1rem 1.5rem;
+  font-size: 0.85rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--text-secondary);
+  letter-spacing: 0.1em;
+  color: var(--text-primary);
   border-bottom: 1px solid var(--border-subtle);
-  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .specRow {
   display: grid;
-  grid-template-columns: 240px repeat(var(--cols), 1fr);
+  grid-template-columns: minmax(160px, 220px) repeat(var(--cols), 1fr);
   border-bottom: 1px solid var(--border-subtle);
   transition: background 0.15s var(--ease-out);
 }
@@ -373,8 +384,8 @@
 }
 
 .labelCol {
-  padding: 1.25rem 1.5rem;
-  font-size: 0.85rem;
+  padding: 1rem 1.25rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-secondary);
   display: flex;
@@ -397,7 +408,10 @@
 
 .isBest {
   font-weight: 700;
-  background: rgba(var(--success-rgb), 0.03);
+  background: rgba(var(--success-rgb), 0.04);
+  box-shadow: inset 0 0 0 1px rgba(var(--success-rgb), 0.15);
+  position: relative;
+  z-index: 1;
 }
 
 .bestIcon {
@@ -411,18 +425,19 @@
 /* ── Versus Split Hero Card (Exactly 2 items) ───────────────────────────── */
 
 .vsContainer {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(79, 70, 229, 0.08) 100%);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(79, 70, 229, 0.1) 100%);
   border: 1px solid rgba(59, 130, 246, 0.15);
   border-radius: var(--radius-xl);
-  padding: 1.75rem 2rem;
-  margin-bottom: 2.5rem;
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 2rem;
+  flex-direction: column;
+  gap: 1.5rem;
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-md);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .vsContainer::before {
@@ -433,6 +448,91 @@
   right: 0;
   height: 2px;
   background: linear-gradient(90deg, var(--accent-blue), var(--accent-tech));
+}
+
+.vsHeader {
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.vsBody {
+  display: flex;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.vsItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  background: var(--bg-surface-2);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+}
+
+.vsItemName {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.vsPrice {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+}
+
+.vsProsCons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: auto;
+}
+
+.proItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--success);
+  line-height: 1.4;
+}
+
+.proIcon {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.conItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--danger);
+  line-height: 1.4;
+}
+
+.conIcon {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.vsRadarContainer {
+  flex: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
 }
 
 .vsHeroInfo {
@@ -473,12 +573,14 @@
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: 1rem 1.25rem;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  min-width: 220px;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
   box-shadow: var(--shadow-sm);
+  margin-top: 0.5rem;
 }
 
 .vsSummaryLabel {

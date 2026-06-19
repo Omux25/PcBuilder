@@ -20,7 +20,7 @@ import { formatComponentName } from '@shared/formatting/component-name.formatter
 import { formatPrice } from '@shared/formatting/price.formatter';
 import { LinkEngine } from '@shared/link-engine';
 import { UI } from '../ui-strings';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { FadeImage } from '../components/FadeImage';
 import { SEO } from '../components/SEO';
@@ -81,6 +81,25 @@ const ALL_SPEC_ROWS: Record<string, { label: string; unit?: string; highlight?: 
   supported_sockets: { label: 'Sockets supportés' },
 };
 
+const SPEC_GROUPS = [
+  {
+    title: 'Performance',
+    keys: ['benchmark_score', 'core_count', 'thread_count', 'base_clock_ghz', 'boost_clock_ghz', 'frequency_mhz', 'read_speed_mbps', 'write_speed_mbps']
+  },
+  {
+    title: 'Spécifications Principales',
+    keys: ['socket', 'chipset', 'vram_gb', 'capacity_gb', 'wattage', 'efficiency_rating', 'modular']
+  },
+  {
+    title: 'Mémoire & Interfaces',
+    keys: ['ram_type', 'supported_ram_types', 'max_ram_frequency', 'ram_slots', 'm2_slots', 'cas_latency', 'interface_type']
+  },
+  {
+    title: 'Physique & Compatibilité',
+    keys: ['tdp', 'max_tdp', 'form_factor', 'length_mm', 'max_gpu_length_mm', 'max_cooler_height_mm', 'height_mm', 'supported_motherboards', 'supported_sockets']
+  }
+];
+
 const CATEGORY_SPECS: Record<string, string[]> = {
   cpu: ['benchmark_score', 'socket', 'core_count', 'thread_count', 'base_clock_ghz', 'boost_clock_ghz', 'tdp'],
   gpu: ['benchmark_score', 'chipset', 'vram_gb', 'length_mm', 'tdp'],
@@ -101,19 +120,13 @@ interface ComponentWithPrices {
 export function Compare() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { copied, handleShare } = useShare();
-  const { syncCompareIds, removeFromCompare } = useCompare();
+  const { compareIds, syncCompareIds, removeFromCompare } = useCompare();
 
   // Show only differences toggle state
   const [showOnlyDifferences, setShowOnlyDifferences] = useState(false);
 
-  // Quick Add states
-  const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [quickAddSearch, setQuickAddSearch] = useState('');
-  const [quickAddResults, setQuickAddResults] = useState<Component[]>([]);
-  const [quickAddLoading, setQuickAddLoading] = useState(false);
-
   // Parse IDs from URL
-  const idsParam = searchParams.get('ids') ?? '';
+  const idsParam = searchParams.get('ids');
   const ids = useMemo(() => idsParam ? idsParam.split(',').map(Number).filter(Boolean) : [], [idsParam]);
 
   const [items, setItems] = useState<ComponentWithPrices[]>([]);
@@ -122,14 +135,18 @@ export function Compare() {
   const category = items[0]?.component.category;
   const specKeys = category ? CATEGORY_SPECS[category] || Object.keys(ALL_SPEC_ROWS) : [];
 
-
+  // Recover state from global context if URL is empty
+  useEffect(() => {
+    if (!idsParam && compareIds.length > 0) {
+      setSearchParams({ ids: compareIds.join(',') }, { replace: true });
+    }
+  }, [idsParam, compareIds, setSearchParams]);
 
   // Load components whenever URL ids change
   useEffect(() => {
     if (ids.length === 0) {
       setItems([]);
       setLoading(false);
-      syncCompareIds([], null);
       return;
     }
 
@@ -164,32 +181,7 @@ export function Compare() {
     }).finally(() => setLoading(false));
   }, [idsParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Quick Add Search suggestions effect
-  useEffect(() => {
-    if (!showQuickAdd || !category) return;
-    if (!quickAddSearch.trim()) {
-      setQuickAddResults([]);
-      return;
-    }
-    setQuickAddLoading(true);
-    const delayDebounce = setTimeout(() => {
-      smartSearch({
-        category: category as ComponentCategory,
-        search: quickAddSearch,
-        limit: 5,
-        compatible_only: false
-      }).then(res => {
-        // Filter out components already in the comparison
-        setQuickAddResults(res.components.filter(c => !ids.includes(c.id)));
-      }).catch(() => {
-        setQuickAddResults([]);
-      }).finally(() => {
-        setQuickAddLoading(false);
-      });
-    }, 300);
 
-    return () => clearTimeout(delayDebounce);
-  }, [quickAddSearch, showQuickAdd, category, ids]);
 
   function removeComponent(id: number) {
     const newIds = ids.filter(i => i !== id);
@@ -289,85 +281,94 @@ export function Compare() {
       {/* Versus Split Hero Card (Exactly 2 items) */}
       {items.length === 2 && (
         <div className={styles.vsContainer}>
-          <div className={styles.vsHeroInfo}>
-            <div className={styles.vsTitle}>
-              <span className={styles.vsBadge}>Versus Mode</span>
-              {formatComponentName(items[0].component)} <span style={{ opacity: 0.5 }}>vs</span> {formatComponentName(items[1].component)}
+          <div className={styles.vsHeader}>Versus Mode</div>
+          <div className={styles.vsBody}>
+            {/* Item 0 Pros & Cons */}
+            <div className={styles.vsItem}>
+               <h3 className={styles.vsItemName}>{formatComponentName(items[0].component)}</h3>
+               <div className={styles.vsPrice}>{items[0].lowestPrice ? formatPrice(items[0].lowestPrice) : 'Rupture'}</div>
+               {(() => {
+                 const { pros, cons } = generateProsCons(items[0], items, displayedSpecKeys);
+                 return (
+                   <div className={styles.vsProsCons}>
+                     {pros.map((p, i) => <div key={`pro-${i}`} className={styles.proItem}><CheckCircle2 size={14} className={styles.proIcon}/> {p}</div>)}
+                     {cons.map((c, i) => <div key={`con-${i}`} className={styles.conItem}><X size={14} className={styles.conIcon}/> {c}</div>)}
+                   </div>
+                 );
+               })()}
             </div>
-            <div className={styles.vsSubtext}>
-              {(() => {
-                const scoreA = Number(getSpecValue(items[0].component, 'benchmark_score')) || 0;
-                const scoreB = Number(getSpecValue(items[1].component, 'benchmark_score')) || 0;
-                const priceA = items[0].lowestPrice || 0;
-                const priceB = items[1].lowestPrice || 0;
 
-                if (scoreA && scoreB) {
-                  const perfDiff = Math.round(((scoreA - scoreB) / scoreB) * 100);
-                  const priceDiff = priceA && priceB ? Math.round(((priceA - priceB) / priceB) * 100) : 0;
+            {/* Radar Chart */}
+            <div className={styles.vsRadarContainer}>
+               {(() => {
+                  const radarAxes = displayedSpecKeys.filter(k => ALL_SPEC_ROWS[k]?.highlight).slice(0, 5);
+                  if (radarAxes.length < 3) return <div style={{opacity: 0.5, textAlign: 'center', fontSize: 12}}>Pas assez de données</div>;
 
-                  if (perfDiff > 0 && priceDiff < 0) {
-                    return `Le ${formatComponentName(items[0].component)} est ${Math.abs(perfDiff)}% plus puissant et ${Math.abs(priceDiff)}% moins cher. C'est l'option recommandée de loin !`;
-                  }
-                  if (perfDiff < 0 && priceDiff > 0) {
-                    return `Le ${formatComponentName(items[1].component)} est ${Math.abs(perfDiff)}% plus puissant et ${Math.abs(priceDiff)}% moins cher. C'est l'option recommandée de loin !`;
-                  }
-                  if (perfDiff > 0 && priceDiff > 0) {
-                    return `Le ${formatComponentName(items[0].component)} est ${Math.abs(perfDiff)}% plus performant, mais coûte ${Math.abs(priceDiff)}% de plus.`;
-                  }
-                  if (perfDiff < 0 && priceDiff < 0) {
-                    return `Le ${formatComponentName(items[0].component)} est ${Math.abs(priceDiff)}% moins cher, mais offre ${Math.abs(perfDiff)}% de performances en moins.`;
-                  }
-                }
-                
-                // Fallback price-only comparison
-                if (priceA && priceB) {
-                  const priceDiff = Math.round(((priceA - priceB) / priceB) * 100);
-                  if (priceDiff < 0) return `Le ${formatComponentName(items[0].component)} est ${Math.abs(priceDiff)}% moins cher que son concurrent.`;
-                  if (priceDiff > 0) return `Le ${formatComponentName(items[1].component)} est ${Math.abs(priceDiff)}% moins cher que son concurrent.`;
-                }
+                  const radarData = radarAxes.map(key => {
+                     const row = ALL_SPEC_ROWS[key];
+                     const valA = Number(getSpecValue(items[0].component, key)) || 0;
+                     const valB = Number(getSpecValue(items[1].component, key)) || 0;
+                     const maxVal = Math.max(valA, valB);
+                     
+                     let normA = 0, normB = 0;
+                     if (maxVal > 0) {
+                        if (row.highlight === 'higher') {
+                           normA = (valA / maxVal) * 100;
+                           normB = (valB / maxVal) * 100;
+                        } else {
+                           const minVal = Math.min(valA || Infinity, valB || Infinity);
+                           normA = valA ? (minVal / valA) * 100 : 0;
+                           normB = valB ? (minVal / valB) * 100 : 0;
+                        }
+                     }
+                     return { 
+                        subject: row.label, 
+                        A: normA, 
+                        B: normB, 
+                        fullMark: 100,
+                        realA: valA,
+                        realB: valB,
+                        unit: row.unit || ''
+                     };
+                  });
 
-                return "Comparez les caractéristiques techniques détaillées et les prix en temps réel ci-dessous.";
-              })()}
+                  return (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData} margin={{top: 10, right: 10, bottom: 10, left: 10}}>
+                        <PolarGrid stroke="var(--border-subtle)" />
+                        <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} />
+                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                        <Radar name={formatComponentName(items[0].component)} dataKey="A" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.4} />
+                        <Radar name={formatComponentName(items[1].component)} dataKey="B" stroke="#a855f7" fill="#a855f7" fillOpacity={0.4} />
+                        <Tooltip 
+                          contentStyle={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border-subtle)', borderRadius: 8, fontSize: '11px', color: 'var(--text-primary)' }}
+                          formatter={(value: any, name: string, props: any) => {
+                            // Find the original real value from the data payload
+                            const realVal = props.dataKey === 'A' ? props.payload.realA : props.payload.realB;
+                            const unit = props.payload.unit ? ` ${props.payload.unit}` : '';
+                            return [`${realVal}${unit}`, name];
+                          }}
+                        />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  );
+               })()}
             </div>
-            {(() => {
-              const scoreA = Number(getSpecValue(items[0].component, 'benchmark_score')) || 0;
-              const scoreB = Number(getSpecValue(items[1].component, 'benchmark_score')) || 0;
-              const nameA = items[0].component.brand || 'Produit A';
-              const nameB = items[1].component.brand || 'Produit B';
-              
-              if (!scoreA || !scoreB) return null;
 
-              const chartData = [
-                { name: nameA, Score: scoreA, fill: '#3b82f6' },
-                { name: nameB, Score: scoreB, fill: '#a855f7' }
-              ];
-
-              return (
-                <div className={styles.vsChartContainer}>
-                  <div className={styles.vsChartLabel}>Indice de puissance brute (Benchmark)</div>
-                  <ResponsiveContainer width="100%" height={90}>
-                    <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 15, left: -25, bottom: 5 }}>
-                      <XAxis type="number" hide />
-                      <YAxis dataKey="name" type="category" stroke="var(--text-muted)" fontSize={11} axisLine={false} tickLine={false} />
-                      <Tooltip 
-                        contentStyle={{ 
-                          background: 'var(--bg-surface-2)', 
-                          border: '1px solid var(--border-subtle)', 
-                          borderRadius: 8,
-                          fontSize: '11px',
-                          color: 'var(--text-primary)'
-                        }} 
-                      />
-                      <Bar dataKey="Score" radius={[0, 99, 99, 0]} barSize={12}>
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              );
-            })()}
+            {/* Item 1 Pros & Cons */}
+            <div className={styles.vsItem}>
+               <h3 className={styles.vsItemName}>{formatComponentName(items[1].component)}</h3>
+               <div className={styles.vsPrice}>{items[1].lowestPrice ? formatPrice(items[1].lowestPrice) : 'Rupture'}</div>
+               {(() => {
+                 const { pros, cons } = generateProsCons(items[1], items, displayedSpecKeys);
+                 return (
+                   <div className={styles.vsProsCons}>
+                     {pros.map((p, i) => <div key={`pro-${i}`} className={styles.proItem}><CheckCircle2 size={14} className={styles.proIcon}/> {p}</div>)}
+                     {cons.map((c, i) => <div key={`con-${i}`} className={styles.conItem}><X size={14} className={styles.conIcon}/> {c}</div>)}
+                   </div>
+                 );
+               })()}
+            </div>
           </div>
           {(() => {
             const scoreA = Number(getSpecValue(items[0].component, 'benchmark_score')) || 0;
@@ -417,205 +418,180 @@ export function Compare() {
             </div>
           ))}
           {items.length < MAX_COMPARE && (
-             <div className={`${styles.addSlot} ${showQuickAdd ? styles.addSlotActive : ''}`}>
-                {!showQuickAdd ? (
-                   <button className={styles.addBtnEmptySlot} onClick={() => setShowQuickAdd(true)}>
-                      <Plus size={24} />
-                      <span>Ajouter</span>
-                   </button>
-                ) : (
-                   <div className={styles.quickAddContainer}>
-                      <div className={styles.quickAddHeader}>
-                         <input
-                            type="text"
-                            className={styles.quickAddInput}
-                            placeholder="Rechercher…"
-                            value={quickAddSearch}
-                            onChange={e => setQuickAddSearch(e.target.value)}
-                            autoFocus
-                         />
-                         <button className={styles.quickAddClose} onClick={() => { setShowQuickAdd(false); setQuickAddSearch(''); }}>
-                            <X size={14} />
-                         </button>
-                      </div>
-                      <div className={styles.quickAddBody}>
-                         {quickAddLoading && <div className={styles.quickAddLoading}>Chargement…</div>}
-                         {!quickAddLoading && quickAddResults.length === 0 && quickAddSearch.trim() !== '' && (
-                            <div className={styles.quickAddNoResults}>Aucun résultat</div>
-                         )}
-                         {!quickAddLoading && quickAddSearch.trim() === '' && (
-                            <div className={styles.quickAddPrompt}>Rechercher un produit...</div>
-                         )}
-                         <div className={styles.quickAddList}>
-                            {quickAddResults.map(prod => (
-                               <div 
-                                  key={prod.id} 
-                                  className={styles.quickAddRow}
-                                  title={formatComponentName(prod)}
-                                  onClick={() => {
-                                     const newIds = [...ids, prod.id];
-                                     setSearchParams({ ids: newIds.join(',') });
-                                     setShowQuickAdd(false);
-                                     setQuickAddSearch('');
-                                  }}
-                               >
-                                  {prod.image_url ? (
-                                    <FadeImage src={prod.image_url} alt={prod.name} className={styles.quickAddThumb} referrerPolicy="no-referrer" loading="lazy" fetchpriority="low" />
-                                  ) : (
-                                    <div className={styles.quickAddThumbPlaceholder}><Plus size={12} /></div>
-                                  )}
-                                  <div className={styles.quickAddInfo}>
-                                     <span className={styles.quickAddBrand}>{prod.brand}</span>
-                                     <span className={styles.quickAddName}>
-                                        {formatComponentName(prod)}
-                                     </span>
-                                  </div>
-                                  <Plus size={14} className={styles.quickAddPlusIcon} />
-                               </div>
-                            ))}
-                         </div>
-                      </div>
-                   </div>
-                )}
-             </div>
+             <Link to={category ? `/parcourir/${category}` : "/composants"} className={styles.addSlot}>
+                <Plus size={28} />
+                <span>Ajouter un composant</span>
+             </Link>
           )}
         </div>
 
         {/* Comparison Body */}
         <div className={styles.tableBody}>
-            {/* Price Section */}
-            <div className={styles.sectionDivider}>Prix et Offres</div>
-            <div className={styles.specRow}>
-                <div className={styles.labelCol}>Meilleur prix</div>
-                {items.map(item => {
-                    const isLowest = absoluteLowest !== null && item.lowestPrice === absoluteLowest;
-                    return (
-                        <div key={item.component.id} className={`${styles.valCol} ${isLowest ? styles.isBest : ''}`}>
-                            <span className={styles.primaryPrice}>{item.lowestPrice ? formatPrice(item.lowestPrice) : '—'}</span>
-                            {isLowest && <CheckCircle2 size={14} className={styles.bestIcon} />}
-                        </div>
-                    );
-                })}
-            </div>
-            <div className={styles.specRow}>
-                <div className={styles.labelCol}>Offres</div>
-                {items.map(item => (
-                    <div key={item.component.id} className={styles.valCol}>
-                        <div className={styles.offersList}>
-                            {item.prices.slice(0, 3).map(p => (
-                                <a key={p.product_url} href={p.product_url} target="_blank" className={styles.offerLink}>
-                                    {p.retailer_name} <span>{formatPrice(p.price)}</span>
-                                </a>
-                            ))}
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Value for Money Row */}
-            {(() => {
-              const hasBenchmarks = items.some(item => Number(getSpecValue(item.component, 'benchmark_score')) > 0);
-              if (!hasBenchmarks) return null;
-
-              const valueScores = items.map(item => {
-                const score = Number(getSpecValue(item.component, 'benchmark_score')) || 0;
-                const price = item.lowestPrice || 0;
-                return score && price ? (score / price) : 0;
-              });
-              const maxScore = Math.max(...valueScores);
-
-              return (
+            {/* Purchase & Value Section */}
+            <div className={styles.specGroup}>
+                <div className={styles.groupHeader}>Achat & Offres</div>
                 <div className={styles.specRow}>
-                  <div className={styles.labelCol}>Rapport Perf/Prix</div>
-                  {items.map((item, idx) => {
-                    const currentScore = valueScores[idx];
-                    const isWinner = maxScore > 0 && currentScore === maxScore;
-                    const scorePct = maxScore > 0 ? Math.round((currentScore / maxScore) * 100) : 0;
-
-                    return (
-                      <div key={item.component.id} className={`${styles.valCol} ${isWinner ? styles.isBest : ''}`}>
-                        {isWinner && <CheckCircle2 size={14} className={styles.bestIcon} />}
-                        <div className={styles.performanceChartWrapper}>
-                          <div className={styles.chartValueRow}>
-                            <span style={{ fontWeight: isWinner ? 800 : 600 }}>
-                              {currentScore > 0 ? `${Math.round(currentScore * 10) / 10} pts/DH` : '—'}
-                            </span>
-                            <span className={styles.chartPct}>{scorePct}%</span>
-                          </div>
-                          <div className={styles.progressBarTrack}>
-                            <div 
-                              className={styles.progressBarFill} 
-                              style={{ 
-                                width: `${scorePct}%`,
-                                background: isWinner ? 'linear-gradient(90deg, #10b981, #34d399)' : undefined
-                              }} 
-                            />
-                          </div>
-                          {isWinner && (
-                            <span className={`${styles.valueBadge} ${styles.gagnant}`}>
-                              Meilleur Choix
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                    <div className={styles.labelCol}>Meilleur prix</div>
+                    {items.map(item => {
+                        const isLowest = absoluteLowest !== null && item.lowestPrice === absoluteLowest;
+                        return (
+                            <div key={item.component.id} className={`${styles.valCol} ${isLowest ? styles.isBest : ''}`}>
+                                <span className={styles.primaryPrice}>{item.lowestPrice ? formatPrice(item.lowestPrice) : '—'}</span>
+                                {isLowest && <CheckCircle2 size={14} className={styles.bestIcon} />}
+                            </div>
+                        );
+                    })}
                 </div>
-              );
-            })()}
+                <div className={styles.specRow}>
+                    <div className={styles.labelCol}>Détaillants</div>
+                    {items.map(item => (
+                        <div key={item.component.id} className={styles.valCol}>
+                            <div className={styles.offersList}>
+                                {item.prices.slice(0, 3).map(p => (
+                                    <a key={p.product_url} href={p.product_url} target="_blank" className={styles.offerLink}>
+                                        {p.retailer_name} <span>{formatPrice(p.price)}</span>
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
 
-            {/* Specs Section */}
-            <div className={styles.sectionDivider}>Caractéristiques</div>
-            {displayedSpecKeys.map(key => {
-                const row = ALL_SPEC_ROWS[key] || { label: key };
-                const bestVal = getBestValue(key);
+                {/* Value for Money Row */}
+                {(() => {
+                  const hasBenchmarks = items.some(item => Number(getSpecValue(item.component, 'benchmark_score')) > 0);
+                  if (!hasBenchmarks) return null;
+
+                  const valueScores = items.map(item => {
+                    const score = Number(getSpecValue(item.component, 'benchmark_score')) || 0;
+                    const price = item.lowestPrice || 0;
+                    return score && price ? (score / price) : 0;
+                  });
+                  const maxScore = Math.max(...valueScores);
+
+                  return (
+                    <div className={styles.specRow}>
+                      <div className={styles.labelCol}>Rapport Perf/Prix</div>
+                      {items.map((item, idx) => {
+                        const currentScore = valueScores[idx];
+                        const isWinner = maxScore > 0 && currentScore === maxScore;
+                        const scorePct = maxScore > 0 ? Math.round((currentScore / maxScore) * 100) : 0;
+
+                        return (
+                          <div key={item.component.id} className={`${styles.valCol} ${isWinner ? styles.isBest : ''}`}>
+                            {isWinner && <CheckCircle2 size={14} className={styles.bestIcon} />}
+                            <div className={styles.performanceChartWrapper}>
+                              <div className={styles.chartValueRow}>
+                                <span style={{ fontWeight: isWinner ? 800 : 600 }}>
+                                  {currentScore > 0 ? `${Math.round(currentScore * 10) / 10} pts/DH` : '—'}
+                                </span>
+                                <span className={styles.chartPct}>{scorePct}%</span>
+                              </div>
+                              <div className={styles.progressBarTrack}>
+                                <div 
+                                  className={styles.progressBarFill} 
+                                  style={{ 
+                                    width: `${scorePct}%`,
+                                    background: isWinner ? 'linear-gradient(90deg, #10b981, #34d399)' : undefined
+                                  }} 
+                                />
+                              </div>
+                              {isWinner && (
+                                <span className={`${styles.valueBadge} ${styles.gagnant}`}>
+                                  Meilleur Choix
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+            </div>
+
+            {/* Specifications Groups */}
+            {SPEC_GROUPS.map(group => {
+                const groupKeys = displayedSpecKeys.filter(k => group.keys.includes(k));
+                if (groupKeys.length === 0) return null;
+
                 return (
-                    <div key={key} className={styles.specRow}>
-                        <div className={styles.labelCol}>{row.label}</div>
-                        {items.map(item => {
-                            const raw = getSpecValue(item.component, key);
-                            const valToCompare = typeof raw === 'number' ? raw : (typeof raw === 'string' ? SPEC_RANKINGS[key]?.[raw] : null);
-                            const isBest = bestVal !== null && valToCompare !== null && valToCompare === bestVal;
-
-                            const isNumeric = typeof raw === 'number' && raw > 0;
-                            const isRanked = typeof raw === 'string' && SPEC_RANKINGS[key]?.[raw];
-                            const showChart = row.highlight && (isNumeric || isRanked);
-
-                            let pct = 0;
-                            if (showChart && bestVal) {
-                              const currentVal = isNumeric ? raw : (isRanked ? SPEC_RANKINGS[key][raw as string] : 0);
-                              const maxVal = row.highlight === 'higher' 
-                                ? bestVal 
-                                : Math.max(...items.map(i => {
-                                    const r = getSpecValue(i.component, key);
-                                    return typeof r === 'number' ? r : (typeof r === 'string' ? SPEC_RANKINGS[key]?.[r] : 0);
-                                  }).filter(Boolean) as number[]);
-                              
-                              if (row.highlight === 'higher') {
-                                pct = maxVal > 0 ? Math.round((currentVal / maxVal) * 100) : 0;
-                              } else {
-                                const minVal = bestVal;
-                                pct = currentVal > 0 ? Math.round((minVal / currentVal) * 100) : 0;
-                              }
-                            }
-
+                    <div key={group.title} className={styles.specGroup}>
+                        <div className={styles.groupHeader}>{group.title}</div>
+                        {groupKeys.map(key => {
+                            const row = ALL_SPEC_ROWS[key] || { label: key };
+                            const bestVal = getBestValue(key);
                             return (
-                                <div key={item.component.id} className={`${styles.valCol} ${isBest ? styles.isBest : ''}`}>
-                                    {isBest && <CheckCircle2 size={14} className={styles.bestIcon} />}
-                                    
-                                    {showChart ? (
-                                      <div className={styles.performanceChartWrapper}>
-                                          <div className={styles.chartValueRow}>
-                                              <span>{formatSpecVal(raw, row.unit)}</span>
-                                              <span className={styles.chartPct}>{pct}%</span>
-                                          </div>
-                                          <div className={styles.progressBarTrack}>
-                                              <div className={styles.progressBarFill} style={{ width: `${pct}%` }} />
-                                          </div>
-                                      </div>
-                                    ) : (
-                                      formatSpecVal(raw, row.unit)
-                                    )}
+                                <div key={key} className={styles.specRow}>
+                                    <div className={styles.labelCol}>{row.label}</div>
+                                    {items.map(item => {
+                                        const raw = getSpecValue(item.component, key);
+                                        const rawNum = Number(raw);
+                                        const isNumeric = raw !== null && raw !== '' && typeof raw !== 'boolean' && !isNaN(rawNum) && rawNum > 0;
+                                        const isRanked = typeof raw === 'string' && !!SPEC_RANKINGS[key]?.[raw];
+                                        const isIdentical = identicalKeys.has(key);
+                                        const valToCompare = isNumeric ? rawNum : (isRanked ? SPEC_RANKINGS[key][raw as string] : null);
+                                        const isBest = !isIdentical && bestVal !== null && valToCompare !== null && valToCompare === bestVal;
+                                        const showChart = !isIdentical && row.highlight && (isNumeric || isRanked);
+
+                                        let pct = 0;
+                                        let diffText = '';
+
+                                        if (showChart && bestVal) {
+                                          const currentVal = isNumeric ? rawNum : (isRanked ? SPEC_RANKINGS[key][raw as string] : 0);
+                                          const isHigherBetter = row.highlight === 'higher';
+                                          
+                                          // For exact difference display (+X%)
+                                          const numericVals = items.map(i => {
+                                             const v = getSpecValue(i.component, key);
+                                             return Number(v) || (typeof v === 'string' ? SPEC_RANKINGS[key]?.[v] || 0 : 0);
+                                          }).filter(Boolean);
+
+                                          const worstVal = isHigherBetter ? Math.min(...numericVals) : Math.max(...numericVals);
+                                            
+                                          if (worstVal && currentVal !== worstVal) {
+                                             const pctDiff = isHigherBetter 
+                                                ? ((currentVal - worstVal) / worstVal) * 100
+                                                : ((worstVal - currentVal) / currentVal) * 100;
+                                             
+                                             if (pctDiff > 0) {
+                                                diffText = `+${Math.round(pctDiff)}%`;
+                                             }
+                                          }
+
+                                          // For Progress bar scaling
+                                          const maxVal = isHigherBetter ? bestVal : Math.max(...numericVals);
+                                          
+                                          if (isHigherBetter) {
+                                            pct = maxVal > 0 ? Math.round((currentVal / maxVal) * 100) : 0;
+                                          } else {
+                                            const minVal = bestVal;
+                                            pct = currentVal > 0 ? Math.round((minVal / currentVal) * 100) : 0;
+                                          }
+                                        }
+
+                                        return (
+                                            <div key={item.component.id} className={`${styles.valCol} ${isBest ? styles.isBest : ''}`}>
+                                                {isBest && <CheckCircle2 size={14} className={styles.bestIcon} />}
+                                                
+                                                {showChart ? (
+                                                  <div className={styles.performanceChartWrapper}>
+                                                      <div className={styles.chartValueRow}>
+                                                          <span>{formatSpecVal(raw, row.unit)}</span>
+                                                          <span className={styles.chartPct} style={{ color: diffText && isBest ? 'var(--success)' : 'inherit' }}>
+                                                            {diffText}
+                                                          </span>
+                                                      </div>
+                                                      <div className={styles.progressBarTrack}>
+                                                          <div className={styles.progressBarFill} style={{ width: `${pct}%`, background: diffText && isBest ? 'var(--success)' : undefined }} />
+                                                      </div>
+                                                  </div>
+                                                ) : (
+                                                  formatSpecVal(raw, row.unit)
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             );
                         })}
@@ -629,6 +605,76 @@ export function Compare() {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+function generateProsCons(item: ComponentWithPrices, allItems: ComponentWithPrices[], specKeys: string[]) {
+  const pros: string[] = [];
+  const cons: string[] = [];
+
+  if (allItems.length < 2) return { pros, cons };
+
+  const myPrice = item.lowestPrice;
+  const others = allItems.filter(i => i.component.id !== item.component.id);
+  
+  // Benchmark
+  const myPerf = Number(getSpecValue(item.component, 'benchmark_score'));
+  if (myPerf) {
+    const avgOtherPerf = others.reduce((acc, curr) => acc + (Number(getSpecValue(curr.component, 'benchmark_score')) || 0), 0) / others.length;
+    if (avgOtherPerf > 0) {
+      const diff = Math.round(((myPerf - avgOtherPerf) / avgOtherPerf) * 100);
+      const absDiff = Math.round(Math.abs(myPerf - avgOtherPerf));
+      if (diff >= 5) pros.push(`+${absDiff} pts de perf. (+${diff}%)`);
+      else if (diff <= -5) cons.push(`-${absDiff} pts de perf. (${diff}%)`);
+    }
+  }
+
+  // Price
+  if (myPrice) {
+    const minOtherPrice = Math.min(...others.map(o => o.lowestPrice || Infinity));
+    if (minOtherPrice !== Infinity && myPrice !== minOtherPrice) {
+      const diff = Math.round(((myPrice - minOtherPrice) / minOtherPrice) * 100);
+      const absDiff = Math.abs(myPrice - minOtherPrice);
+      if (diff <= -5) pros.push(`${formatPrice(absDiff)} moins cher (${Math.abs(diff)}%)`);
+      else if (diff >= 5) cons.push(`${formatPrice(absDiff)} plus cher (${diff}%)`);
+    }
+  }
+
+  // Other Specs
+  specKeys.forEach(key => {
+    if (key === 'benchmark_score') return;
+    const row = ALL_SPEC_ROWS[key];
+    if (!row?.highlight) return;
+
+    const myVal = Number(getSpecValue(item.component, key));
+    if (!myVal) return;
+
+    const otherVals = others.map(o => Number(getSpecValue(o.component, key))).filter(v => v);
+    if (otherVals.length === 0) return;
+
+    const avgOther = otherVals.reduce((a, b) => a + b, 0) / otherVals.length;
+    const diff = ((myVal - avgOther) / avgOther) * 100;
+    
+    const isHigherBetter = row.highlight === 'higher';
+    
+    if (Math.abs(diff) >= 8) {
+      const formattedDiff = Math.abs(Math.round(diff));
+      const absDiff = Math.abs(myVal - avgOther);
+      let formattedAbsDiff = absDiff % 1 === 0 ? absDiff.toString() : absDiff.toFixed(1);
+      if (row.unit) formattedAbsDiff += ` ${row.unit}`;
+      
+      const labelText = row.label.toLowerCase();
+
+      if (isHigherBetter) {
+        if (diff > 0) pros.push(`+${formattedAbsDiff} ${labelText} (+${formattedDiff}%)`);
+        else cons.push(`-${formattedAbsDiff} ${labelText} (-${formattedDiff}%)`);
+      } else {
+        if (diff < 0) pros.push(`-${formattedAbsDiff} ${labelText} (-${formattedDiff}%)`);
+        else cons.push(`+${formattedAbsDiff} ${labelText} (+${formattedDiff}%)`);
+      }
+    }
+  });
+
+  return { pros: pros.slice(0, 4), cons: cons.slice(0, 3) };
+}
 
 function getSpecValue(component: Component, key: string): unknown {
   const flat = (component as unknown as Record<string, unknown>)[key];

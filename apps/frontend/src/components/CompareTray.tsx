@@ -29,7 +29,7 @@ export function CompareTray() {
       .finally(() => setLoading(false));
   }, [compareIds]);
 
-  if (compareIds.length === 0 || location.pathname === '/compare') return null;
+  if (compareIds.length === 0 || location.pathname === '/comparer') return null;
 
   return (
     <div className={styles.tray}>
@@ -62,7 +62,7 @@ export function CompareTray() {
       <div className={styles.footer}>
         <button
           className={styles.compareBtn}
-          onClick={() => navigate(`/comparer?ids=${compareIds.join(',')}`)}
+          onClick={() => navigate({ pathname: '/comparer', search: `?ids=${compareIds.join(',')}` })}
           disabled={compareIds.length < 2}
         >
           {UI.compareTray.compareNow}
