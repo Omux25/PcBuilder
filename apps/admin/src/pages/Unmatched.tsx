@@ -15,7 +15,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { RefreshCw, Search, X, CheckCircle, CheckSquare, ChevronDown } from 'lucide-react';
+import { RefreshCw, Search, X, CheckCircle, CheckSquare, ChevronDown, Layers } from 'lucide-react';
 import { CategoryAccordion } from '../components/CategoryAccordion';
 import { UnknownSection } from '../components/UnknownSection';
 import { SearchOverrideView } from '../components/SearchOverrideView';
@@ -581,6 +581,13 @@ export function Unmatched() {
           flexShrink: 0,
         }}>
           <button onClick={() => setActiveCategory('all')} style={tabStyle(activeCategory === 'all')}>
+            <span style={{ 
+              color: activeCategory === 'all' ? 'var(--accent-blue)' : 'var(--text-dim)', 
+              display: 'flex', 
+              alignItems: 'center' 
+            }}>
+              <Layers size={14} />
+            </span>
             Tous <span style={badgeStyle(activeCategory === 'all')}>{totalGroups}</span>
           </button>
 

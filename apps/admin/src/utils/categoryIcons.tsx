@@ -41,6 +41,7 @@ export const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   sound_card: <Speaker size={16} />,
   case_accessory: <Settings size={16} />,
   fan_controller: <Settings size={16} />,
+  other_accessory: <MoreHorizontal size={16} />,
 };
 
 export function getCategoryIcon(category: string | null) {
