@@ -18,7 +18,6 @@ import { ConfiguratorChecklist } from './ConfiguratorChecklist';
 import { ConfiguratorTotals } from './ConfiguratorTotals';
 import { ShareModal } from './ShareModal';
 import { SEO } from './SEO';
-import { UI } from '../ui-strings';
 import type { ComponentCategory } from '../types';
 import { CATEGORY_LABELS, RULE_LABELS, slotKeyToCategory, CATEGORY_ORDER, CORE_CATEGORIES, CATEGORY_SLUGS } from '../types';
 import { useBuild } from '../context/BuildContext';
