@@ -7,6 +7,7 @@
 }
 
 :root {
+  color-scheme: dark;
   --bg: #09090b;
   --surface: #121318;
   --surface-2: #181a24;

@@ -699,7 +699,6 @@ export function Unmatched() {
             state={categoryState.get(activeCategory)}
             isOpen={true}
             hideHeader={true}
-            expandAllGroups={true}
             isConfirming={confirmingCategory === activeCategory}
             filterConfidence={filterConfidence}
             filterHasExisting={filterHasExisting}
