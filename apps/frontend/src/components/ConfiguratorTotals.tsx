@@ -1,4 +1,4 @@
-import { Check, Printer, RefreshCw, Share2, Zap } from 'lucide-react';
+import { Printer, RefreshCw, Share2, Zap } from 'lucide-react';
 import styles from './Configurator.module.css';
 import { formatPrice } from '@shared/formatting/price.formatter';
 
