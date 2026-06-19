@@ -217,16 +217,19 @@ export class UnmatchedController {
   async bulkConfirmCategories(c: Context) {
     const admin = c.get('admin') as { id: number } | undefined;
     let category: string | undefined = undefined;
+    let includeMedium = false;
     try {
       const body = await c.req.json();
-      category = body.category;
+      category = body.category || undefined;
+      includeMedium = body.includeMedium === true;
     } catch (e) {
       category = c.req.query('category') || undefined;
+      includeMedium = c.req.query('includeMedium') === 'true';
     }
-    const result = await this.service.bulkConfirmAllWithCategories(category);
+    const result = await this.service.bulkConfirmAllWithCategories(category, includeMedium);
 
     if (admin?.id) {
-      await logActivity(admin.id, 'bulk_confirm_categories', 'unmatched_listings', undefined, { ...result, category });
+      await logActivity(admin.id, 'bulk_confirm_categories', 'unmatched_listings', undefined, { ...result, category, includeMedium });
     }
 
     return c.json(result);

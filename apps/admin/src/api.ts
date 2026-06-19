@@ -403,10 +403,10 @@ export const bulkUpdateUnmatchedCategory = (listingIds: number[], category: stri
     body: JSON.stringify({ listing_ids: listingIds, category }),
   });
 
-export const bulkConfirmAllWithCategories = (category?: string) =>
+export const bulkConfirmAllWithCategories = (category?: string, includeMedium: boolean = false) =>
   request<BulkConfirmResponse>('/admin/unmatched-listings/bulk-confirm-categories', {
     method: 'POST',
-    body: category ? JSON.stringify({ category }) : undefined,
+    body: JSON.stringify({ category, includeMedium }),
   });
 
 // ── Presets ───────────────────────────────────────────────────────────────────
