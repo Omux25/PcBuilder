@@ -42,7 +42,7 @@ export function Layout() {
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
         <div className={styles.brand}>
-          <img src={`${import.meta.env.BASE_URL}logo-full.webp`} alt="PC Builder Maroc" className={styles.brandLogo} />
+          <img src="/admin/logo-full.webp" alt="PC Builder Maroc" className={styles.brandLogo} />
         </div>
 
         <nav className={styles.nav}>
