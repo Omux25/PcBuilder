@@ -99,8 +99,8 @@ export class NextLevelScraper {
     const results = await Promise.allSettled(
       CATEGORY_PATHS.map(async (path, index) => {
         if (index > 0) {
-          const delay = getRetryDelay(1000);
-          if (delay > 0) await new Promise(r => setTimeout(r, index * delay));
+          const delay = getRetryDelay(index * 1000);
+          if (delay > 0) await new Promise(r => setTimeout(r, delay));
         }
         return this.scrapeCategory(path);
       })
