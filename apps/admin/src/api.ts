@@ -18,6 +18,11 @@ export type AdminPreset = PresetBuild;
 import { createRequest, type RequestOptions } from '@shared/api-client';
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
+
+export function getProxyImageUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  return `${BASE}/builds/proxy-image?url=${encodeURIComponent(url)}`;
+}
 const baseRequest = createRequest(BASE);
 
 let accessToken: string | null = null;

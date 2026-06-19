@@ -10,7 +10,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import type { CanonicalGroupListing } from '../api';
-import { getErrorMessage } from '../api';
+import { getErrorMessage, getProxyImageUrl } from '../api';
 import { fmtPrice } from '../utils/fmt';
 
 interface Props {
@@ -43,7 +43,7 @@ export function ScrapedListingRow({ listing, onReject }: Props) {
                         {(listing.image_urls && listing.image_urls.length > 0 ? listing.image_urls : [listing.image_url]).filter(Boolean).slice(0, 3).map((url, i) => (
                             <img
                                 key={i}
-                                src={url!}
+                                src={getProxyImageUrl(url)}
                                 alt=""
                                 referrerPolicy="no-referrer"
                                 style={{

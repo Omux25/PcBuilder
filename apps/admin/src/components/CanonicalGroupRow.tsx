@@ -16,7 +16,7 @@ import { X, Link2, Plus } from 'lucide-react';
 import { ConfidenceBadge } from './ConfidenceBadge';
 import { ScrapedListingRow } from './ScrapedListingRow';
 import type { CanonicalGroup, CanonicalGroupListing } from '../api';
-import { getErrorMessage, rejectUnmatchedListings, bulkUpdateUnmatchedCategory } from '../api';
+import { getErrorMessage, rejectUnmatchedListings, bulkUpdateUnmatchedCategory, getProxyImageUrl } from '../api';
 import { fmtPriceRange } from '../utils/fmt';
 import { CATEGORY_ORDER, CATEGORY_LABELS, type ComponentCategory } from '@shared/types';
 
@@ -143,7 +143,7 @@ export function CanonicalGroupRow({
                         const imgUrl = listingWithImage?.image_url || (listingWithImage?.image_urls && listingWithImage.image_urls[0]);
                         return imgUrl ? (
                             <img
-                                src={imgUrl}
+                                src={getProxyImageUrl(imgUrl)}
                                 alt=""
                                 referrerPolicy="no-referrer"
                                 style={{

@@ -84,9 +84,15 @@ const buildsRouter = new Hono()
         return c.text('Forbidden URL target', 403);
       }
 
+      const targetUrlObj = new URL(decodedUrl);
+      const origin = targetUrlObj.origin;
+      
       const response = await fetch(decodedUrl, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)',
+          'Referer': origin + '/',
+          'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+          'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
         },
       });
 
