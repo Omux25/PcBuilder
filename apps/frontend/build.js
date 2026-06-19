@@ -6,6 +6,9 @@ try {
   console.log('🚀 Building frontend...');
   execSync('vite build', { stdio: 'inherit' });
 
+  console.log('🌐 Running static prerendering for SEO...');
+  execSync('node prerender.mjs', { stdio: 'inherit' });
+
   console.log('🎨 Inlining CSS to remove render-blocking requests...');
   const indexPath = join('./dist', 'index.html');
   const assetsDir = join('./dist', 'assets');

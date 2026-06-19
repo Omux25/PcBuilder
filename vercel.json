@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "api/seo.js": {
-      "includeFiles": "apps/frontend/dist/index.html"
-    }
-  },
   "rewrites": [
     {
       "source": "/sitemap.xml",
@@ -28,10 +23,6 @@
     {
       "source": "/admin",
       "destination": "/admin/index.html"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/api/seo"
     }
   ]
 }
