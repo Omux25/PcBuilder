@@ -214,18 +214,20 @@ export function CategoryAccordion({
                         alignItems: 'center',
                         gap: '12px',
                         padding: '10px 14px',
-                        background: 'rgba(255, 255, 255, 0.03)',
+                        background: 'rgba(255, 255, 255, 0.02)',
                         backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        border: '1px solid rgba(255, 255, 255, 0.06)',
                         borderRadius: isOpen ? 'var(--radius) var(--radius) 0 0' : 'var(--radius)',
                         cursor: 'pointer',
-                        marginBottom: isOpen ? 0 : '6px',
+                        marginBottom: isOpen ? 0 : '8px',
                         userSelect: 'none',
                         transition: 'all 0.2s ease',
                         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                        position: 'relative',
+                        overflow: 'hidden'
                     }}
-                    onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'; }}
-                    onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'; }}
+                    onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'; }}
                 >
                     <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
                         {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -233,28 +235,14 @@ export function CategoryAccordion({
                     <span style={{ color: 'var(--accent-blue)', display: 'flex', alignItems: 'center' }}>
                         {getCategoryIcon(category)}
                     </span>
-                    <span style={{ fontWeight: 600, fontSize: '14px', flexShrink: 0 }}>
+                    <span style={{ fontWeight: 600, fontSize: '14px', flex: 1 }}>
                         {label}
                     </span>
                     
-                    {/* Mini Progress Bar */}
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '16px', maxWidth: '200px' }}>
-                        <div style={{ 
-                            flex: 1, 
-                            height: '4px', 
-                            background: 'var(--surface-3)', 
-                            borderRadius: '2px', 
-                            overflow: 'hidden',
-                            display: 'flex'
-                        }}>
-                            <div style={{ width: `${highPercent}%`, background: '#10b981', transition: 'width 0.3s ease' }} />
-                        </div>
-                    </div>
-
                     <span style={{ color: 'var(--text-dim)', fontSize: '12px', flexShrink: 0 }}>
                         {totalCount} groupe{totalCount !== 1 ? 's' : ''}
                     </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, marginLeft: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginLeft: '12px' }}>
                         {eligibleCount > 0 && (
                             <button
                                 onClick={handleAssociateToutClick}
@@ -350,6 +338,20 @@ export function CategoryAccordion({
                             </button>
                         )}
                     </div>
+
+                    {/* Full-width bottom progress line */}
+                    {totalCount > 0 && highConfidenceCount > 0 && (
+                        <div style={{ 
+                            position: 'absolute', 
+                            bottom: 0, 
+                            left: 0, 
+                            height: '2px', 
+                            background: '#10b981', 
+                            width: `${highPercent}%`,
+                            transition: 'width 0.5s ease',
+                            borderBottomLeftRadius: isOpen ? 0 : 'var(--radius)'
+                        }} />
+                    )}
                 </div>
             )}
 

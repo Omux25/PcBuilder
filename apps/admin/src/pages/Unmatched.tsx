@@ -277,30 +277,32 @@ export function Unmatched() {
     return {
       display: 'flex',
       alignItems: 'center',
-      gap: '6px',
-      padding: '10px 14px',
+      gap: '8px',
+      padding: '10px 16px',
       fontSize: '13px',
-      fontWeight: isActive ? 600 : 400,
+      fontWeight: isActive ? 600 : 500,
       color: isActive ? 'var(--accent-blue)' : 'var(--text-muted)',
-      background: 'none',
+      background: isActive ? 'rgba(137, 180, 250, 0.08)' : 'transparent',
       border: 'none',
       borderBottom: `2px solid ${isActive ? 'var(--accent-blue)' : 'transparent'}`,
       cursor: 'pointer',
       whiteSpace: 'nowrap',
-      transition: 'color 0.15s, border-color 0.15s',
+      transition: 'all 0.2s',
       marginBottom: '-1px',
       flexShrink: 0,
+      borderRadius: '6px 6px 0 0',
     };
   }
 
   function badgeStyle(isActive: boolean): React.CSSProperties {
     return {
       fontSize: '11px',
-      background: isActive ? 'rgba(137,180,250,0.15)' : 'var(--surface-3)',
-      color: isActive ? 'var(--accent-blue)' : 'var(--text-dim)',
-      padding: '1px 7px',
-      borderRadius: '10px',
-      fontWeight: 600,
+      background: isActive ? 'var(--accent-blue)' : 'var(--surface-3)',
+      color: isActive ? '#000' : 'var(--text-dim)',
+      padding: '2px 8px',
+      borderRadius: '12px',
+      fontWeight: 700,
+      marginLeft: '4px',
     };
   }
 
@@ -467,6 +469,7 @@ export function Unmatched() {
         <div style={{
           display: 'flex',
           alignItems: 'center',
+          gap: '8px',
           padding: '0 24px',
           borderBottom: '1px solid var(--border)',
           background: 'var(--surface)',
