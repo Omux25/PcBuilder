@@ -30,6 +30,7 @@ import { UI } from '../ui-strings';
 import { formatPrice } from '@shared/formatting/price.formatter';
 import { LinkEngine } from '@shared/link-engine';
 import { SEO } from '../components/SEO';
+import { FadeImage } from '../components/FadeImage';
 import styles from './MarketTrends.module.css';
 
 const DAY_OPTIONS = [3, 7, 14, 30];
@@ -485,7 +486,7 @@ function TrendCard({ trend, isAdded, isAdding, onAdd }: { trend: MarketTrend; is
     >
       <div className={styles.cardImageWrap}>
         {trend.image_url ? (
-          <img src={trend.image_url} alt={trend.name} className={styles.cardImage} referrerPolicy="no-referrer" />
+          <FadeImage src={trend.image_url} alt={trend.name} className={styles.cardImage} referrerPolicy="no-referrer" />
         ) : (
           <div className={styles.cardImagePlaceholder}>
             <CategoryIcon category={trend.category as ComponentCategory} size={28} />

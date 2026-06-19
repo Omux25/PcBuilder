@@ -16,6 +16,7 @@ import type { Component, ComponentCategory } from '../types';
 import { CATEGORY_LABELS, CATEGORY_ORDER, CATEGORY_SLUGS } from '../types';
 import { SEO } from '../components/SEO';
 import { UI } from '../ui-strings';
+import { FadeImage } from '../components/FadeImage';
 import styles from './GlobalSearch.module.css';
 
 const MAX_PER_CATEGORY = 5;
@@ -144,7 +145,7 @@ export function GlobalSearch() {
                 {components.map(c => (
                   <Link key={c.id} to={LinkEngine.getProductUrl(c)} className={styles.componentRow}>
                     {c.image_url ? (
-                      <img src={c.image_url} alt={c.name} className={styles.componentImg} referrerPolicy="no-referrer" />
+                      <FadeImage src={c.image_url} alt={c.name} className={styles.componentImg} referrerPolicy="no-referrer" />
                     ) : (
                       <div className={styles.componentImgPlaceholder}>
                         <CategoryIcon category={c.category as ComponentCategory} size={18} />

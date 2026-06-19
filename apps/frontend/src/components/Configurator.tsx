@@ -27,6 +27,7 @@ import { getSpecLine } from '@shared/formatting/spec-line.formatter';
 import { formatPrice } from '@shared/formatting/price.formatter';
 import { formatComponentName } from '@shared/formatting/component-name.formatter';
 import { LinkEngine } from '@shared/link-engine';
+import { FadeImage } from './FadeImage';
 import styles from './Configurator.module.css';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -225,7 +226,7 @@ export function Configurator() {
                   className={styles.compThumbLink}
                   onClick={e => e.stopPropagation()}
                 >
-                  <img src={selected.image_url} alt={selected.name} className={styles.compThumb} referrerPolicy="no-referrer" />
+                  <FadeImage src={selected.image_url} alt={selected.name} className={styles.compThumb} referrerPolicy="no-referrer" />
                 </Link>
               ) : null}
               <div className={styles.compInfo}>
