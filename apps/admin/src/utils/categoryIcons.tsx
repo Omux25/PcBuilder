@@ -15,7 +15,8 @@ import {
   Video, 
   Wifi, 
   Settings,
-  HelpCircle
+  HelpCircle,
+  MoreHorizontal
 } from 'lucide-react';
 
 export const CATEGORY_ICONS: Record<string, React.ReactNode> = {
