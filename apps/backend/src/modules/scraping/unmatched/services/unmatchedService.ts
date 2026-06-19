@@ -86,10 +86,10 @@ export class UnmatchedService {
     return count;
   }
 
-  async bulkConfirmAllWithCategories(category?: string) {
+  async bulkConfirmAllWithCategories(category?: string, includeMedium: boolean = false) {
     const sql = getSql();
     // 1. Fetch all pending listings with suggested categories
-    const listings = await this.repository.getPendingWithCategory(category);
+    const listings = await this.repository.getPendingWithCategory(category, includeMedium);
     if (listings.length === 0) {
       return { linked_listings: 0, created_components: 0, created_listings: 0 };
     }

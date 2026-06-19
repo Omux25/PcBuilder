@@ -217,11 +217,12 @@ export function Unmatched() {
     }
   }
 
-  async function handleConfirmCategories() {
+  async function handleConfirmCategories(includeMedium: boolean = false) {
     if (confirmingCategories) return;
     setConfirmingCategories(true);
     try {
-      const result = await bulkConfirmAllWithCategories();
+      const targetCategory = (activeCategory && activeCategory !== 'all') ? activeCategory : undefined;
+      const result = await bulkConfirmAllWithCategories(targetCategory, includeMedium);
       showToast({
         message: `✓ Ingestion réussie : ${result.created_components} composants créés, ${result.created_listings} listings associés aux nouveaux, ${result.linked_listings} listings associés aux existants.`,
         type: 'success',
@@ -238,11 +239,11 @@ export function Unmatched() {
   }
 
   // ── Category confirmation handler ──────────────────────────────────────────
-  async function handleConfirmCategory(category: string) {
+  async function handleConfirmCategory(category: string, includeMedium: boolean = false) {
     if (confirmingCategory) return;
     setConfirmingCategory(category);
     try {
-      const result = await bulkConfirmAllWithCategories(category);
+      const result = await bulkConfirmAllWithCategories(category, includeMedium);
       showToast({
         message: `✓ Ingestion réussie pour la catégorie : ${result.created_components} composants créés, ${result.created_listings} listings associés aux nouveaux, ${result.linked_listings} listings associés aux existants.`,
         type: 'success',
@@ -390,6 +391,37 @@ export function Unmatched() {
               }}
             />
             {confirmingCategories ? 'Confirmation...' : 'Confirmer Hautes Confiances'}
+          </button>
+
+          <button
+            onClick={() => { if (!confirmingCategories) { setConfirmAllDialog(true); handleConfirmCategories(true); setConfirmAllDialog(false); } }}
+            disabled={confirmingCategories}
+            title="Confirmer et créer automatiquement tous les produits avec une confiance MOYENNE ou ÉLEVÉE"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              height: '42px',
+              padding: '0 24px',
+              fontSize: '13px',
+              fontWeight: 700,
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--border)',
+              cursor: confirmingCategories ? 'not-allowed' : 'pointer',
+              transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              background: 'var(--surface)',
+              color: 'var(--text)',
+              opacity: confirmingCategories ? 0.6 : 1,
+            }}
+          >
+            <CheckCircle
+              size={16}
+              style={{
+                flexShrink: 0,
+              }}
+            />
+            Moyenne + Haute
           </button>
 
           <button
@@ -663,7 +695,7 @@ export function Unmatched() {
           title="Confirmer toutes les hautes confiances"
           message="Créer automatiquement des composants pour TOUS les produits haute confiance ou avec catégorie manuelle ? Les correspondances existantes seront liées, les nouvelles créées."
           confirmLabel="Confirmer"
-          onConfirm={() => { setConfirmAllDialog(false); handleConfirmCategories(); }}
+          onConfirm={() => { setConfirmAllDialog(false); handleConfirmCategories(false); }}
           onCancel={() => setConfirmAllDialog(false)}
         />
       )}

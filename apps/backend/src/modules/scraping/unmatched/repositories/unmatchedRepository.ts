@@ -233,7 +233,7 @@ export class UnmatchedRepository {
     return rows.length;
   }
 
-  async getPendingWithCategory(category?: string) {
+  async getPendingWithCategory(category?: string, includeMedium: boolean = false) {
     return (await this.sql`
       SELECT
         ul.id          AS listing_id,
@@ -254,7 +254,7 @@ export class UnmatchedRepository {
       WHERE ul.status = 'pending'
         AND us.category IS NOT NULL
         AND us.category != 'standby'
-        AND us.confidence = 'high'
+        AND (${includeMedium ? this.sql`us.confidence IN ('high', 'medium')` : this.sql`us.confidence = 'high'`})
         AND (${category ?? null}::text IS NULL OR us.category = ${category ?? null})
       ORDER BY ul.scraped_at DESC
     `) as any[];
