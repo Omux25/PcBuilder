@@ -314,8 +314,6 @@ export function Unmatched() {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '12px 24px',
-          maxWidth: '1600px',
-          margin: '0 auto',
           width: '100%',
         }}>
         <div>
@@ -484,8 +482,6 @@ export function Unmatched() {
               alignItems: 'center',
               gap: '12px',
               padding: '12px 24px',
-              maxWidth: '1600px',
-              margin: '0 auto',
               width: '100%',
             }}>
             <span style={{ fontSize: '12px', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filtrer par</span>
@@ -581,8 +577,6 @@ export function Unmatched() {
             padding: '10px 24px',
             overflowX: 'auto',
             scrollbarWidth: 'none',
-            maxWidth: '1600px',
-            margin: '0 auto',
             width: '100%',
           }}>
           <button onClick={() => setActiveCategory('all')} style={tabStyle(activeCategory === 'all')}>
@@ -620,7 +614,7 @@ export function Unmatched() {
 
       {/* ── Main Content (full width) ─────────────────────────────────────────── */}
       <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg)' }}>
-        <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px', width: '100%', minHeight: '100%' }}>
+        <div style={{ padding: '24px', width: '100%', minHeight: '100%' }}>
         {/* Toast */}
         {toast && (
           <div style={{
