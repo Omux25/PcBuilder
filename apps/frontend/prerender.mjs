@@ -1,4 +1,5 @@
 import puppeteer from 'puppeteer';
+import chromium from '@sparticuz/chromium';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
@@ -55,10 +56,21 @@ async function run() {
   console.log('🚀 Starting static prerendering...');
   const server = await startServer();
   
+  const isVercel = process.env.VERCEL === '1';
+
+  let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
+  let args = ['--no-sandbox', '--disable-setuid-sandbox'];
+
+  if (isVercel) {
+    // Vercel build environment requires the sparticuz chromium binary
+    executablePath = await chromium.executablePath();
+    args = chromium.args;
+  }
+
   const browser = await puppeteer.launch({
-    headless: "new",
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    headless: isVercel ? chromium.headless : "new",
+    executablePath,
+    args
   });
   
   const page = await browser.newPage();

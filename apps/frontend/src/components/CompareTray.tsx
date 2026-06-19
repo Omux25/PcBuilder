@@ -62,7 +62,7 @@ export function CompareTray() {
       <div className={styles.footer}>
         <button
           className={styles.compareBtn}
-          onClick={() => navigate(`/compare?ids=${compareIds.join(',')}`)}
+          onClick={() => navigate(`/comparer?ids=${compareIds.join(',')}`)}
           disabled={compareIds.length < 2}
         >
           {UI.compareTray.compareNow}

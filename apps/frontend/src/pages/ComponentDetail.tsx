@@ -298,7 +298,7 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
                     const newIds = compareIds.includes(component.id)
                       ? compareIds
                       : [...compareIds, component.id].slice(0, 4);
-                    navigate(`/compare?ids=${newIds.join(',')}`);
+                    navigate(`/comparer?ids=${newIds.join(',')}`);
                   }
                 }
               }}
