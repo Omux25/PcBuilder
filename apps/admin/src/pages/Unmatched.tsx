@@ -20,6 +20,7 @@ import { CategoryAccordion } from '../components/CategoryAccordion';
 import { UnknownSection } from '../components/UnknownSection';
 import { SearchOverrideView } from '../components/SearchOverrideView';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { CustomSelect } from '../components/CustomSelect';
 import type {
   CategorySummaryEntry,
   CategoryState,
@@ -488,60 +489,32 @@ export function Unmatched() {
             
             {/* Confidence Filter */}
             <div style={{ position: 'relative' }}>
-              <select
+              <CustomSelect
                 value={filterConfidence}
-                onChange={(e) => setFilterConfidence(e.target.value)}
-                style={{
-                  appearance: 'none',
-                  padding: '6px 32px 6px 12px',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '6px',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  color: 'var(--text)',
-                  cursor: 'pointer',
-                  outline: 'none',
-                  transition: 'all 0.2s',
-                }}
-                onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'; }}
-                onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'; }}
-              >
-                <option value="">Toutes les confiances</option>
-                <option value="high">Confiance : Élevée</option>
-                <option value="medium">Confiance : Moyenne</option>
-                <option value="low">Confiance : Faible</option>
-                <option value="unknown">Confiance : Inconnue</option>
-              </select>
-              <ChevronDown size={14} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-dim)' }} />
+                onChange={setFilterConfidence}
+                width="200px"
+                options={[
+                  { value: '', label: 'Toutes les confiances' },
+                  { value: 'high', label: 'Confiance : Élevée' },
+                  { value: 'medium', label: 'Confiance : Moyenne' },
+                  { value: 'low', label: 'Confiance : Faible' },
+                  { value: 'unknown', label: 'Confiance : Inconnue' },
+                ]}
+              />
             </div>
 
             {/* Association / Match Filter */}
             <div style={{ position: 'relative' }}>
-              <select
+              <CustomSelect
                 value={filterHasExisting}
-                onChange={(e) => setFilterHasExisting(e.target.value)}
-                style={{
-                  appearance: 'none',
-                  padding: '6px 32px 6px 12px',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '6px',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  color: 'var(--text)',
-                  cursor: 'pointer',
-                  outline: 'none',
-                  transition: 'all 0.2s',
-                }}
-                onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'; }}
-                onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'; }}
-              >
-                <option value="">Tous les statuts</option>
-                <option value="true">Composant existant trouvé</option>
-                <option value="false">Nouveau composant à créer</option>
-              </select>
-              <ChevronDown size={14} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-dim)' }} />
+                onChange={setFilterHasExisting}
+                width="240px"
+                options={[
+                  { value: '', label: 'Tous les statuts' },
+                  { value: 'true', label: 'Composant existant trouvé' },
+                  { value: 'false', label: 'Nouveau composant à créer' },
+                ]}
+              />
             </div>
 
             {(filterConfidence || filterHasExisting) && (
