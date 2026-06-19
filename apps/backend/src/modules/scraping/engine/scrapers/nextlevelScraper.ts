@@ -98,7 +98,10 @@ export class NextLevelScraper {
     // Parallel with staggered start to prevent triggering Cloudflare rate limits.
     const results = await Promise.allSettled(
       CATEGORY_PATHS.map(async (path, index) => {
-        if (index > 0) await new Promise(r => setTimeout(r, index * 1000));
+        if (index > 0) {
+          const delay = getRetryDelay(index * 1000);
+          if (delay > 0) await new Promise(r => setTimeout(r, delay));
+        }
         return this.scrapeCategory(path);
       })
     );
