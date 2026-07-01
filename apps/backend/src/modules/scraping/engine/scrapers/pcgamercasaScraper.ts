@@ -109,6 +109,8 @@ export class PcGamerCasaScraper {
         const allPrices: ScrapedPrice[] = [];
         const paths = [...CATEGORY_PATHS];
 
+        let firstErrorReason: any;
+
         while (paths.length > 0) {
             const batch = paths.splice(0, CONCURRENCY);
             const results = await Promise.allSettled(
@@ -119,14 +121,13 @@ export class PcGamerCasaScraper {
                     allPrices.push(...result.value);
                 } else {
                     console.error(`[${SITE_NAME}] Category failed: ${result.reason}`);
+                    if (!firstErrorReason) firstErrorReason = result.reason;
                 }
             }
         }
 
         if (allPrices.length === 0) {
-            const firstError = results.find(r => r.status === 'rejected') as PromiseRejectedResult | undefined;
-            const reason = firstError ? firstError.reason : 'unknown';
-            throw new Error(`Scraped 0 products. First error: ${reason}`);
+            throw new Error(`Scraped 0 products. First error: ${firstErrorReason || 'unknown'}`);
         }
         return allPrices;
     }
