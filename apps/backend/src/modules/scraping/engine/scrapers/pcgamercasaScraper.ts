@@ -44,10 +44,9 @@ const CATEGORY_PATHS: string[] = [
 
 // Firefox-like headers — required to get a 200 response (plain Chrome UA gets blocked)
 const HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0',
     'Accept': 'application/json, text/javascript, */*; q=0.01',
     'Accept-Language': 'fr-MA,fr;q=0.8,en-US;q=0.5,en;q=0.3',
-    'Accept-Encoding': 'gzip, deflate, br',
     'X-Requested-With': 'XMLHttpRequest',
     'sec-fetch-dest': 'empty',
     'sec-fetch-mode': 'cors',
@@ -125,7 +124,9 @@ export class PcGamerCasaScraper {
         }
 
         if (allPrices.length === 0) {
-            throw new Error(`Scraped 0 products (possible Cloudflare block or site change)`);
+            const firstError = results.find(r => r.status === 'rejected') as PromiseRejectedResult | undefined;
+            const reason = firstError ? firstError.reason : 'unknown';
+            throw new Error(`Scraped 0 products. First error: ${reason}`);
         }
         return allPrices;
     }
