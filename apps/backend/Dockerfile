@@ -64,4 +64,4 @@ USER bun
 EXPOSE 3000
 
 # Entry point starts the Hono server
-CMD ["sh", "-c", "bun run migrate && bun run src/server.ts"]
+CMD ["sh", "-c", "bun run scripts/purge_bad_mappings.ts && bun run scripts/revalidateMappings.ts && bun run migrate && bun run src/server.ts"]
