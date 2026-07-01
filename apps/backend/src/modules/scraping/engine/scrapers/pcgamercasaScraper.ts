@@ -138,7 +138,7 @@ export class PcGamerCasaScraper {
         let totalPages = 1;
 
         do {
-            const url = `${BASE_URL}/${path}?ajax=1&action=updateProductList&resultsPerPage=1000${page > 1 ? `&page=${page}` : ''}`;
+            const url = `${BASE_URL}/${path}?ajax=1&action=updateProductList&resultsPerPage=100${page > 1 ? `&page=${page}` : ''}`;
             const data = await this.fetchPage(url, path);
 
             if (page === 1) {
