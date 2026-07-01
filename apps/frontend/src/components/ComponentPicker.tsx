@@ -104,6 +104,7 @@ export function ComponentPicker({ category, slotKey, selected, build, onSelect }
       page: pageNum,
       limit: PAGE_SIZE,
       sort: sort,
+      in_stock: 'true',
     })
       .then(({ components: list, total: t }) => {
         setAllComponents(list);

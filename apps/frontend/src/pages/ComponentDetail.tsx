@@ -337,7 +337,9 @@ interface ComponentPricesTableProps {
 function ComponentPricesTable({ prices, showOos, setShowOos }: ComponentPricesTableProps) {
   const inStock = prices.filter(p => p.in_stock);
   const oos = prices.filter(p => !p.in_stock);
-  const visible = (showOos || inStock.length === 0) ? prices : inStock;
+  
+  // Completely hide out-of-stock items from the user, even if there are no in-stock items
+  const visible = inStock;
 
   return (
     <>
@@ -379,18 +381,7 @@ function ComponentPricesTable({ prices, showOos, setShowOos }: ComponentPricesTa
         </tbody>
       </table>
 
-      {inStock.length > 0 && oos.length > 0 && (
-        <button className={styles.oosToggleBtn} onClick={() => setShowOos(v => !v)}>
-          <span>{showOos ? UI.priceComparison.hideOos : UI.priceComparison.showOos(oos.length)}</span>
-          <ChevronDown
-            size={14}
-            style={{
-              transform: showOos ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.2s'
-            }}
-          />
-        </button>
-      )}
+      {/* Out of stock items are completely hidden, so the toggle button is removed */}
     </>
   );
 }

@@ -351,7 +351,8 @@ export function CategoryBrowse() {
   const [maxFreq, setMaxFreq] = useState(searchParams.get('max_freq') ?? '');
   const [minPrice, setMinPrice] = useState(searchParams.get('min_price') ?? '');
   const [maxPrice, setMaxPrice] = useState(searchParams.get('max_price') ?? '');
-  const [inStockOnly, setInStockOnly] = useState(searchParams.get('in_stock') === 'true');
+  // Default to hiding out-of-stock items unless the user explicitly requests them
+  const [inStockOnly, setInStockOnly] = useState(searchParams.get('in_stock') !== 'false');
   const [compatibleOnly, setCompatibleOnly] = useState(searchParams.get('compatible_only') !== 'false'); // Default true
   const [selectedChipsets, setSelectedChipsets] = useState<string[]>(() => {
     const chipsetsParam = searchParams.get('chipsets');
