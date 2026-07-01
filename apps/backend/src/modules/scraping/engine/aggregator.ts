@@ -431,10 +431,10 @@ export async function aggregate(
         continue;
       }
 
-      // Step 5: Auto-create components for regional hardware categories.
-      // CPUs, GPUs, and Motherboards are excluded (they must be seeded via PCPartPicker or strict matched).
+      // Step 5: Auto-create components for hardware categories.
+      // Since we have robust bundle detection in place, it is now safe to auto-create CPUs, GPUs, and Motherboards.
       const AUTO_CREATE_CATEGORIES = new Set([
-        'ram', 'case', 'cooling', 'fan', 'psu', 'storage', 
+        'cpu', 'gpu', 'motherboard', 'ram', 'case', 'cooling', 'fan', 'psu', 'storage', 
         'monitor', 'keyboard', 'mouse', 'headphones', 'speakers', 
         'webcam', 'case_accessory', 'accessory'
       ]);
@@ -456,7 +456,7 @@ export async function aggregate(
         continue;
       }
 
-      // For CPUs, GPUs, Motherboards, etc., fall back to unmatched_listings staging
+      // For anything else not in the set, fall back to unmatched_listings staging
       unmatchedListingsToUpsert.push({
         retailer_id: p.retailer_id,
         product_url: p.product_url,
