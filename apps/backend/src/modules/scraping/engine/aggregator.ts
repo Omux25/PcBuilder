@@ -431,8 +431,32 @@ export async function aggregate(
         continue;
       }
 
-      // Step 5: Disable auto-creation of components in scraping pipeline.
-      // All unmatched/unmapped products go directly to unmatched_listings staging.
+      // Step 5: Auto-create components for regional hardware categories.
+      // CPUs, GPUs, and Motherboards are excluded (they must be seeded via PCPartPicker or strict matched).
+      const AUTO_CREATE_CATEGORIES = new Set([
+        'ram', 'case', 'cooling', 'fan', 'psu', 'storage', 
+        'monitor', 'keyboard', 'mouse', 'headphones', 'speakers', 
+        'webcam', 'case_accessory', 'accessory'
+      ]);
+
+      if (AUTO_CREATE_CATEGORIES.has(resolvedCategory)) {
+        const existingPending = toCreateBySlug.get(baseSlug);
+        if (existingPending) {
+          existingPending.prices.push({ ...p } as any);
+        } else {
+          toCreateBySlug.set(baseSlug, {
+            slug: baseSlug,
+            cleanedName,
+            brand: resolvedBrand,
+            category: resolvedCategory,
+            nameForExtraction,
+            prices: [{ ...p } as any]
+          });
+        }
+        continue;
+      }
+
+      // For CPUs, GPUs, Motherboards, etc., fall back to unmatched_listings staging
       unmatchedListingsToUpsert.push({
         retailer_id: p.retailer_id,
         product_url: p.product_url,
