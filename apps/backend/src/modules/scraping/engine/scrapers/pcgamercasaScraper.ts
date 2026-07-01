@@ -25,7 +25,7 @@ import type { ScrapedPrice } from './baseScraper.js';
 import { getRetryDelay } from './baseScraper.js';
 
 const SITE_NAME = 'pcgamercasa.ma';
-const BASE_URL = 'https://www.pcgamercasa.ma';
+const BASE_URL = 'https://pcgamercasa.ma';
 
 // Component category URLs — <id>/<slug>
 // Using parent categories where possible to avoid duplicates across subcategories.
