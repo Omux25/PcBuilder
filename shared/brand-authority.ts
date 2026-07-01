@@ -209,6 +209,22 @@ const CASE_SIGNALS = [
     /\b(atx|matx|itx)\s*chassis\b/i,
 ];
 
+// Signals that explicitly identify a product as a full PC/bundle
+const PC_SIGNALS = [
+    /\bpc\s*gamer\b/i,
+    /\bpc\s*gaming\b/i,
+    /\bpc\s*bureau\b/i,
+    /\bpc\s*de\s*bureau\b/i,
+    /\bordinateur\b/i,
+    /\bsetup\b/i,
+    /\bpc\s*assembl[eé]\b/i,
+    /\bpc\s*portable\b/i,
+    /\blaptop\b/i,
+    /\bmini\s*pc\b/i,
+    /\bmacbook\b/i,
+    /\bimac\b/i
+];
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export interface BrandAuthorityResult {
@@ -239,11 +255,13 @@ export function validateBrandAuthority(
 
     // ── 1. Bundle detection ───────────────────────────────────────────────────
     // Check if name contains BOTH CPU and GPU signals → it's a pre-built PC bundle.
-    // Also dismiss if explicitly identified as a 'build' by the inference engine.
+    // Also dismiss if explicitly identified as a 'build' by the inference engine,
+    // or if the title contains explicit PC signals (like "PC Gamer").
     const hasCpuSignal = CPU_SIGNALS.some(r => r.test(name));
     const hasGpuSignal = GPU_SIGNALS.some(r => r.test(name));
     const hasPsuSignal = PSU_SIGNALS.some(r => r.test(name));
     const hasCaseSignal = CASE_SIGNALS.some(r => r.test(name));
+    const hasPcSignal = PC_SIGNALS.some(r => r.test(name));
 
     const isWorkstation = /\b(workstation|station\s*de\s*travail|pc\s*professionnel)\b/i.test(name) && hasCpuSignal;
     
@@ -251,7 +269,8 @@ export function validateBrandAuthority(
                            (hasPsuSignal && hasCaseSignal && name.includes('+')) ||
                            inferredCategory === 'build' || 
                            (inferredCategory as string) === 'bundle' || 
-                           isWorkstation;
+                           isWorkstation ||
+                           hasPcSignal;
 
     if (isBundleProduct) {
         return { 
@@ -259,7 +278,8 @@ export function validateBrandAuthority(
             dismiss: true, 
             dismissReason: inferredCategory === 'build' ? 'explicit build detection' : 
                           (inferredCategory as string) === 'bundle' ? 'explicit bundle detection' :
-                          (isWorkstation ? 'workstation detection' : 'bundle detection') 
+                          (hasPcSignal ? 'explicit PC detection' : 
+                          (isWorkstation ? 'workstation detection' : 'bundle detection')) 
         };
     }
 
@@ -329,5 +349,6 @@ export function validateBrandAuthority(
 export function isBundle(productName: string): boolean {
     const hasCpu = CPU_SIGNALS.some(r => r.test(productName));
     const hasGpu = GPU_SIGNALS.some(r => r.test(productName));
-    return (hasCpu && hasGpu) || productName.toLowerCase().includes('workstation');
+    const hasPc = PC_SIGNALS.some(r => r.test(productName));
+    return (hasCpu && hasGpu) || productName.toLowerCase().includes('workstation') || hasPc;
 }
