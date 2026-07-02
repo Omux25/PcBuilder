@@ -227,14 +227,16 @@ export class PcGamerCasaScraper {
                 if (!data.contents) throw new Error("Empty proxy response");
                 return JSON.parse(data.contents);
             },
-            // Strategy 4: ProxyScrape Free Proxies with Undici (Last resort)
+            // Strategy 4: ProxyScrape Elite Proxies (Aggressive rotation)
             async () => {
                 const { ProxyAgent, request } = await import('undici');
-                const proxyListRes = await _fetch("https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all");
+                // Fetch elite proxies that hide our IP
+                const proxyListRes = await _fetch("https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=5000&country=all&ssl=all&anonymity=elite");
                 const proxyText = await proxyListRes.text();
                 const proxies = proxyText.split('\n').map(p => p.trim()).filter(p => p);
                 
-                for (let i = 0; i < 5; i++) {
+                // Try up to 15 random proxies
+                for (let i = 0; i < 15; i++) {
                     const proxy = proxies[Math.floor(Math.random() * proxies.length)];
                     try {
                         const dispatcher = new ProxyAgent(`http://${proxy}`);
@@ -248,28 +250,30 @@ export class PcGamerCasaScraper {
                                 'Referer': `${BASE_URL}/${refererPath}`,
                                 'Content-Length': '0',
                             },
-                            bodyTimeout: 15000,
-                            headersTimeout: 15000,
+                            bodyTimeout: 8000,
+                            headersTimeout: 8000,
                         });
                         
                         if (statusCode === 200) {
                             const text = await body.text();
-                            return JSON.parse(text);
+                            const json = JSON.parse(text);
+                            if (json.products) return json;
                         }
                     } catch (err) {
-                        // Ignore and try next proxy
+                        // Ignore and try next proxy quickly
                     }
                 }
-                throw new Error("All free proxies failed");
+                throw new Error("All free proxies failed or timed out");
             }
         ];
 
         for (let i = 0; i < strategies.length; i++) {
             try {
-                // Wrap in timeout
+                // Wrap in timeout. Give Strategy 4 more time to rotate proxies.
+                const timeoutMs = i === 3 ? 120000 : 30000; 
                 const data = await Promise.race([
                     strategies[i](),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Strategy Timeout')), 45000))
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Strategy Timeout')), timeoutMs))
                 ]);
                 return data;
             } catch (err: any) {
