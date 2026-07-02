@@ -53,7 +53,7 @@ async function startServer() {
 }
 
 async function run() {
-  console.log('🚀 Starting static prerendering...');
+  console.log('[PRERENDER] Starting static prerendering...');
   const server = await startServer();
   
   const isVercel = process.env.VERCEL === '1';
@@ -104,19 +104,19 @@ async function run() {
       sitemapXml += `  <url>\n    <loc>${PUBLIC_URL}${route}</loc>\n    <priority>${priority}</priority>\n  </url>\n`;
 
     } catch (e) {
-      console.error(`❌ Failed to prerender ${route}:`, e);
+      console.error(`[ERROR] Failed to prerender ${route}:`, e);
     }
   }
 
   sitemapXml += `</urlset>`;
   fs.writeFileSync(path.join(DIST_DIR, 'sitemap.xml'), sitemapXml);
-  console.log('✅ Created sitemap.xml');
-  console.log('📡 Submitting URLs to IndexNow...');
+  console.log('[PRERENDER] Created sitemap.xml.');
+  console.log('[PRERENDER] Submitting URLs to IndexNow...');
   const indexNowKey = '0f85b8823f6e492f8087fcda8cb080b0';
   let urlList = routesToPrerender.map(route => `${PUBLIC_URL}${route}`);
   
   try {
-    console.log('📡 Fetching dynamic sitemap from backend to include all URLs...');
+    console.log('[PRERENDER] Fetching dynamic sitemap from backend to include all URLs...');
     const sitemapRes = await fetch('https://pcbuilder-m2nf.onrender.com/api/sitemap.xml');
     if (sitemapRes.ok) {
       const sitemapText = await sitemapRes.text();
@@ -125,13 +125,13 @@ async function run() {
         const dynamicUrls = matches.map(m => m.replace(/<\/?loc>/g, ''));
         // Merge and deduplicate URLs
         urlList = [...new Set([...urlList, ...dynamicUrls])];
-        console.log(`✅ Found ${dynamicUrls.length} URLs in live sitemap. Total unique URLs to submit: ${urlList.length}`);
+        console.log(`[PRERENDER] Found ${dynamicUrls.length} URLs in live sitemap. Total unique URLs to submit: ${urlList.length}`);
       }
     } else {
-      console.warn('⚠️ Failed to fetch dynamic sitemap, submitting only static URLs.');
+      console.warn('[WARNING] Failed to fetch dynamic sitemap, submitting only static URLs.');
     }
   } catch (err) {
-    console.warn('⚠️ Error fetching dynamic sitemap:', err.message);
+    console.warn('[WARNING] Error fetching dynamic sitemap:', err.message);
   }
 
   // Submit in chunks of 10,000 (IndexNow limit)
@@ -153,21 +153,21 @@ async function run() {
       });
       
       if (response.ok) {
-        console.log(`✅ IndexNow submission successful for ${chunk.length} URLs!`);
+        console.log(`[PRERENDER] IndexNow submission successful for ${chunk.length} URLs.`);
       } else {
-        console.error(`❌ IndexNow submission failed: ${response.status} ${response.statusText}`);
+        console.error(`[ERROR] IndexNow submission failed: ${response.status} ${response.statusText}`);
       }
     } catch (e) {
-      console.error('❌ Failed to submit to IndexNow:', e);
+      console.error('[ERROR] Failed to submit to IndexNow:', e);
     }
   }
 
   await browser.close();
   server.close();
-  console.log('✅ Static prerendering complete!');
+  console.log('[PRERENDER] Static prerendering complete.');
 }
 
 run().catch(err => {
-  console.error(err);
+  console.error('[ERROR]', err);
   process.exit(1);
 });

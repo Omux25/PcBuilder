@@ -3,13 +3,13 @@ import { renameSync, rmSync, existsSync, readFileSync, writeFileSync, readdirSyn
 import { join } from 'path';
 
 try {
-  console.log('🚀 Building frontend...');
+  console.log('[BUILD] Starting frontend build process...');
   execSync('vite build', { stdio: 'inherit' });
 
-  console.log('🌐 Running static prerendering for SEO...');
+  console.log('[BUILD] Running static prerendering for SEO...');
   execSync('node prerender.mjs', { stdio: 'inherit' });
 
-  console.log('🎨 Inlining CSS to remove render-blocking requests...');
+  console.log('[BUILD] Inlining critical CSS...');
   const indexPath = join('./dist', 'index.html');
   const assetsDir = join('./dist', 'assets');
   if (existsSync(indexPath) && existsSync(assetsDir)) {
@@ -36,26 +36,26 @@ try {
       html = html.replace('</head>', `<style>${combinedCss}</style></head>`);
     }
     writeFileSync(indexPath, html);
-    console.log('✨ Critical CSS inlined successfully.');
+    console.log('[BUILD] Critical CSS successfully inlined.');
   }
 
   if (existsSync('../admin/src')) {
-    console.log('🚀 Building admin...');
+    console.log('[BUILD] Starting admin build process...');
     execSync('bun run build', { cwd: '../admin', stdio: 'inherit' });
 
-    console.log('📦 Moving admin build to frontend/dist/admin...');
+    console.log('[BUILD] Moving admin artifacts to frontend/dist/admin...');
     const dest = './dist/admin';
     if (existsSync(dest)) {
       rmSync(dest, { recursive: true, force: true });
     }
     renameSync('../admin/dist', dest);
   } else {
-    console.log('⚠️ admin source not found at ../admin/src, skipping admin build');
+    console.log('[BUILD] Admin source not found; skipping admin build step.');
   }
   
-  console.log('✅ Monorepo build complete! Frontend and Admin successfully bundled.');
+  console.log('[BUILD] Monorepo build completed successfully.');
 } catch (error) {
-  console.error('❌ Build failed:', error);
+  console.error('[ERROR] Build failed:', error);
   process.exit(1);
 }
 // Trigger Vercel Build 10
