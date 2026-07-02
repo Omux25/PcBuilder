@@ -17,15 +17,36 @@ export function SEO({
   type = 'website',
   image = 'https://pcbuilder.ma/premium_pc_hero.png', // Default image from public directory
   url,
-}: SEOProps) {
+  schema, // Optional JSON-LD schema
+}: SEOProps & { schema?: Record<string, any> }) {
   const location = useLocation();
   const canonicalUrl = url || `https://pcbuilder.ma${location.pathname}`;
   const fullTitle = title.includes(name) ? title : `${title} | ${name}`;
+
+  // Default Organization schema if none provided
+  const defaultSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'PC Builder Maroc',
+    url: 'https://pcbuilder.ma',
+    logo: 'https://pcbuilder.ma/favicon-pc.png',
+    description: 'Le premier comparateur de prix de composants PC et configurateur sur mesure au Maroc.',
+    sameAs: [
+      'https://www.instagram.com/pcbuilder.ma' // Add real social links here if any
+    ]
+  };
+
+  const finalSchema = schema || defaultSchema;
 
   return (
     <Helmet>
       {/* Canonical URL for SEO */}
       <link rel="canonical" href={canonicalUrl} />
+      
+      {/* JSON-LD Structured Data */}
+      <script type="application/ld+json">
+        {JSON.stringify(finalSchema)}
+      </script>
       
       {/* Standard metadata tags */}
       <title>{fullTitle}</title>
