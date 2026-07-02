@@ -185,39 +185,100 @@ export class PcGamerCasaScraper {
 
         return prices;
     }
+    private async fetchPage(url: string, refererPath: string): Promise<any> {
+        let lastError = null;
 
-    private async fetchPage(url: string, refererPath: string): Promise<PsResponse> {
-        const MAX_RETRIES = 2; // fail fast — site is slow when blocking
-        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 45000); // 45s — Bun fetch TTFB is ~30s on this server
-            try {
+        const strategies = [
+            // Strategy 1: POST request with Chrome UA (Avoid Fake Googlebot block, bypass GET JS challenge)
+            async () => {
                 const res = await _fetch(url, {
                     method: 'POST',
-                    signal: controller.signal,
                     headers: {
-                        ...HEADERS,
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                        'Accept': 'application/json, text/javascript, */*; q=0.01',
+                        'Accept-Language': 'fr-MA,fr;q=0.9,en;q=0.8',
+                        'X-Requested-With': 'XMLHttpRequest',
                         'Referer': `${BASE_URL}/${refererPath}`,
                         'Content-Length': '0',
-                    },
+                    }
                 });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json();
+            },
+            // Strategy 2: GET request with Firefox UA
+            async () => {
+                const res = await _fetch(url, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0',
+                        'Accept': 'application/json, text/javascript, */*; q=0.01',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Referer': `${BASE_URL}/${refererPath}`,
+                    }
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json();
+            },
+            // Strategy 3: allorigins.win free proxy
+            async () => {
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                const res = await _fetch(proxyUrl);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (!data.contents) throw new Error("Empty proxy response");
+                return JSON.parse(data.contents);
+            },
+            // Strategy 4: ProxyScrape Free Proxies with Undici (Last resort)
+            async () => {
+                const { ProxyAgent, request } = await import('undici');
+                const proxyListRes = await _fetch("https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all");
+                const proxyText = await proxyListRes.text();
+                const proxies = proxyText.split('\n').map(p => p.trim()).filter(p => p);
                 
-                if (!res.ok) {
-                    await res.text().catch(() => {});
-                    throw new Error(`HTTP ${res.status} fetching ${url}`);
+                for (let i = 0; i < 5; i++) {
+                    const proxy = proxies[Math.floor(Math.random() * proxies.length)];
+                    try {
+                        const dispatcher = new ProxyAgent(`http://${proxy}`);
+                        const { statusCode, body } = await request(url, {
+                            dispatcher,
+                            method: 'POST',
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                                'Accept': 'application/json, text/javascript, */*; q=0.01',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Referer': `${BASE_URL}/${refererPath}`,
+                                'Content-Length': '0',
+                            },
+                            bodyTimeout: 15000,
+                            headersTimeout: 15000,
+                        });
+                        
+                        if (statusCode === 200) {
+                            const text = await body.text();
+                            return JSON.parse(text);
+                        }
+                    } catch (err) {
+                        // Ignore and try next proxy
+                    }
                 }
-                
-                const text = await res.text();
-                return JSON.parse(text) as PsResponse;
-            } catch (err) {
-                const isHttp = err instanceof Error && err.message.startsWith('HTTP ');
-                if (isHttp || attempt === MAX_RETRIES) throw err;
-                const delay = getRetryDelay(Math.pow(2, attempt) * 1000);
-                await new Promise(r => setTimeout(r, delay));
-            } finally {
-                clearTimeout(timeout);
+                throw new Error("All free proxies failed");
+            }
+        ];
+
+        for (let i = 0; i < strategies.length; i++) {
+            try {
+                // Wrap in timeout
+                const data = await Promise.race([
+                    strategies[i](),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Strategy Timeout')), 45000))
+                ]);
+                return data;
+            } catch (err: any) {
+                lastError = err;
+                console.warn(`[${SITE_NAME}] Strategy ${i + 1} failed: ${err.message}`);
+                await new Promise(r => setTimeout(r, 2000));
             }
         }
-        throw new Error('Unreachable');
+        
+        throw new Error(`All Cloudflare bypass strategies failed. Last error: ${lastError?.message}`);
     }
 }
