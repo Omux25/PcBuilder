@@ -23,9 +23,6 @@
     "jsonwebtoken": "9.0.2",
     "p-queue": "9.2.0",
     "papaparse": "5.5.3",
-    "puppeteer-core": "^22.7.1",
-    "puppeteer-extra": "^3.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "undici": "8.1.0",
     "zod": "^4.4.3"
   },

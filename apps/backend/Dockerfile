@@ -30,11 +30,6 @@ RUN bun run build
 # ── STAGE 3: Backend Runtime ──────────────────────────────────────────────────
 FROM oven/bun:1.3-alpine AS base
 
-# Install Chromium for Puppeteer Stealth Cloudflare Bypass
-RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-
 # Mirror the monorepo layout so tsconfig path aliases resolve correctly.
 WORKDIR /app
 

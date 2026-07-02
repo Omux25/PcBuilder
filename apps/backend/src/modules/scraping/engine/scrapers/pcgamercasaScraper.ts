@@ -186,68 +186,42 @@ export class PcGamerCasaScraper {
         return prices;
     }
     private async fetchPage(url: string, refererPath: string): Promise<any> {
-        // Dynamically import puppeteer to avoid crashing if it's not installed locally
-        const puppeteer = await import('puppeteer-extra').then(m => m.default || m);
-        const StealthPlugin = await import('puppeteer-extra-plugin-stealth').then(m => m.default || m);
+        const apiKey = process.env.SCRAPER_API_KEY;
         
-        puppeteer.use(StealthPlugin());
+        if (!apiKey) {
+            throw new Error(
+                `Missing SCRAPER_API_KEY in .env file. ` +
+                `PC Gamer Casa requires ScraperAPI to bypass Cloudflare. ` +
+                `Get a free key at https://www.scraperapi.com/ and add it to your backend .env file.`
+            );
+        }
 
-        const browser = await puppeteer.launch({
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-            headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--disable-gpu'
-            ]
-        });
+        // Construct the ScraperAPI URL
+        const targetUrl = encodeURIComponent(url);
+        const scraperApiUrl = `http://api.scraperapi.com?api_key=${apiKey}&url=${targetUrl}&render=false&keep_headers=true`;
 
         try {
-            const page = await browser.newPage();
-            await page.setViewport({ width: 1280, height: 720 });
-            
-            // Set headers for AJAX request
-            await page.setExtraHTTPHeaders({
-                'Accept': 'application/json, text/javascript, */*; q=0.01',
-                'X-Requested-With': 'XMLHttpRequest',
-                'Referer': `${BASE_URL}/${refererPath}`,
+            // We still send standard headers so ScraperAPI forwards them to the target
+            const res = await _fetch(scraperApiUrl, {
+                method: 'POST', // POST bypasses standard GET JS challenges in Cloudflare
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                    'Accept': 'application/json, text/javascript, */*; q=0.01',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Referer': `${BASE_URL}/${refererPath}`,
+                    'Content-Length': '0',
+                }
             });
 
-            // We must go to the page itself first, or just hit the AJAX endpoint directly.
-            // Bot Fight Mode usually injects a JS challenge on GET requests.
-            // We will go to the base URL first to solve the challenge, then evaluate fetch.
-            
-            // 1. Solve challenge on the referer page
-            const navUrl = `${BASE_URL}/${refererPath}`;
-            await page.goto(navUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
-            
-            // Wait a moment for Cloudflare Turnstile to run and set the cf_clearance cookie
-            await new Promise(r => setTimeout(r, 4000));
-            
-            // 2. Now use the browser's own fetch API (which has the clearance cookie) to get the AJAX JSON
-            const jsonStr = await page.evaluate(async (ajaxUrl) => {
-                const res = await fetch(ajaxUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json, text/javascript, */*; q=0.01',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Content-Length': '0'
-                    }
-                });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                return await res.text();
-            }, url);
-            
-            return JSON.parse(jsonStr);
+            if (!res.ok) {
+                const text = await res.text().catch(() => '');
+                throw new Error(`ScraperAPI returned HTTP ${res.status}: ${text}`);
+            }
+
+            return await res.json();
         } catch (err: any) {
-            console.error(`[${SITE_NAME}] Puppeteer failed: ${err.message}`);
+            console.error(`[${SITE_NAME}] ScraperAPI failed: ${err.message}`);
             throw err;
-        } finally {
-            await browser.close().catch(() => {});
         }
     }
 }
