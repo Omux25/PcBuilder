@@ -198,6 +198,7 @@ export class PcGamerCasaScraper {
                     headers: {
                         ...HEADERS,
                         'Referer': `${BASE_URL}/${refererPath}`,
+                        'Content-Length': '0',
                     },
                 });
                 
