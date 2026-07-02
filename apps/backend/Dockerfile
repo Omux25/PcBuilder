@@ -9,6 +9,9 @@ RUN bun install
 COPY apps/frontend/ apps/frontend/
 COPY shared/ shared/
 WORKDIR /app/apps/frontend
+RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 RUN bun run build
 
 # ── STAGE 2: Admin Build ──────────────────────────────────────────────────────
