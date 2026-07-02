@@ -27,8 +27,14 @@ export class ScrapingController {
       return c.json({ error: { code: 'VALIDATION_ERROR', message: 'retailerId must be a positive integer' } }, 400);
     }
 
-    await this.service.runRetailerSession(retailerId);
-    return c.json({ status: 'started', retailer_id: retailerId });
+    const runStatus = await this.service.runRetailerSession(retailerId);
+    
+    let message = 'Scraping started on server';
+    if (runStatus === 'queued_to_local_worker') {
+      message = 'Job queued to your Local PC Worker';
+    }
+
+    return c.json({ status: runStatus, message, retailer_id: retailerId });
   }
 
   async scrapeUrls(c: Context) {
