@@ -193,6 +193,7 @@ export class PcGamerCasaScraper {
             const timeout = setTimeout(() => controller.abort(), 45000); // 45s — Bun fetch TTFB is ~30s on this server
             try {
                 const res = await _fetch(url, {
+                    method: 'POST',
                     signal: controller.signal,
                     headers: {
                         ...HEADERS,
