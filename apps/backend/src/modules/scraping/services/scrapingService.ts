@@ -55,29 +55,9 @@ export class ScrapingService {
       throw new AppError('CONFLICT', `A scraping job is already running for retailer ${retailerId}`, 409);
     }
 
-    const sql = getSql();
-
-    // Check if the local worker is online (heartbeat within last 30 seconds)
-    const activeWorkers = await sql`
-      SELECT id FROM local_workers 
-      WHERE heartbeat_at > NOW() - INTERVAL '30 seconds'
-      LIMIT 1
-    `;
-
-    if (activeWorkers.length > 0) {
-      // Offload to local worker
-      await sql`
-        UPDATE local_workers 
-        SET current_job = ${retailerId}, updated_at = NOW() 
-        WHERE id = ${activeWorkers[0].id}
-      `;
-      // Return a special status so the controller knows it was offloaded
-      return 'queued_to_local_worker';
-    }
-
-    // Worker is offline. Check if this retailer strictly requires a local worker due to Cloudflare (PC Gamer Casa = 2)
+    // Check if this retailer is strictly local due to Cloudflare (PC Gamer Casa = 2)
     if (retailerId === 2 || retailer.name.toLowerCase().includes('pc gamer casa')) {
-       throw new AppError('SERVICE_UNAVAILABLE', 'Local PC worker is offline. PC Gamer Casa blocks server IP, so you must start the local worker script on your home PC to scrape them.', 503);
+       throw new AppError('SERVICE_UNAVAILABLE', 'PC Gamer Casa blocks server IP. Please use the manual command on your PC.', 503);
     }
 
     // Run normally on the server
@@ -90,7 +70,7 @@ export class ScrapingService {
       }
     })();
 
-    return 'started_on_server';
+    return 'started';
   }
 
   async scrapeUrls(urls: { retailer_id: number; product_url: string }[]) {

@@ -12,8 +12,7 @@
     "migrate": "bun src/core/db/migrate.ts",
     "sync": "bun scripts/sync_catalog.ts",
     "enrich": "bun scripts/enrich_database.ts",
-    "scrape:pcgamercasa": "bun scripts/scrape_local.ts",
-    "worker": "bun scripts/worker.ts"
+    "scrape:pcgamercasa": "bun scripts/scrape_local.ts"
   },
   "dependencies": {
     "@google/genai": "^2.8.0",

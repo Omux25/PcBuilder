@@ -327,24 +327,35 @@ export function Scrapers() {
                 </div>
 
                 <div className={styles.cardFooter}>
-                  <button
-                    className="admin-btn-secondary"
-                    style={{ width: '100%', justifyContent: 'center', padding: '0.55rem', borderRadius: 'var(--radius)' }}
-                    onClick={() => handleRunOne(r.id)}
-                    disabled={isJobRunning || !r.is_active}
-                  >
-                    {isJobRunning ? (
-                      <>
-                        <RefreshCw size={14} className="spin" />
-                        Scraping en cours...
-                      </>
-                    ) : (
-                      <>
-                        <Play size={14} />
-                        Lancer le scraper
-                      </>
-                    )}
-                  </button>
+                  {r.id === 2 || r.name.toLowerCase().includes('pc gamer casa') ? (
+                    <div style={{ width: '100%', textAlign: 'center', fontSize: '12px', color: 'var(--text-dim)', padding: '0.2rem' }}>
+                      <span className="badge badge-error" style={{ marginBottom: '0.4rem', display: 'inline-block' }}>Bloqué par Cloudflare</span>
+                      <br/>
+                      Scraping manuel requis via votre PC :
+                      <code style={{ display: 'block', marginTop: '0.4rem', padding: '0.5rem', background: 'var(--bg)', borderRadius: '4px', border: '1px solid var(--border)', userSelect: 'all', cursor: 'pointer' }} title="Cliquez pour copier" onClick={(e) => { navigator.clipboard.writeText('bun run scrape:pcgamercasa'); const el = e.target as HTMLElement; const old = el.innerText; el.innerText = 'Copié !'; setTimeout(() => el.innerText = old, 1000); }}>
+                        bun run scrape:pcgamercasa
+                      </code>
+                    </div>
+                  ) : (
+                    <button
+                      className="admin-btn-secondary"
+                      style={{ width: '100%', justifyContent: 'center', padding: '0.55rem', borderRadius: 'var(--radius)' }}
+                      onClick={() => handleRunOne(r.id)}
+                      disabled={isJobRunning || !r.is_active}
+                    >
+                      {isJobRunning ? (
+                        <>
+                          <RefreshCw size={14} className="spin" />
+                          Scraping en cours...
+                        </>
+                      ) : (
+                        <>
+                          <Play size={14} />
+                          Lancer le scraper
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             );
