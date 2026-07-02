@@ -186,103 +186,68 @@ export class PcGamerCasaScraper {
         return prices;
     }
     private async fetchPage(url: string, refererPath: string): Promise<any> {
-        let lastError = null;
+        // Dynamically import puppeteer to avoid crashing if it's not installed locally
+        const puppeteer = await import('puppeteer-extra').then(m => m.default || m);
+        const StealthPlugin = await import('puppeteer-extra-plugin-stealth').then(m => m.default || m);
+        
+        puppeteer.use(StealthPlugin());
 
-        const strategies = [
-            // Strategy 1: POST request with Chrome UA (Avoid Fake Googlebot block, bypass GET JS challenge)
-            async () => {
-                const res = await _fetch(url, {
+        const browser = await puppeteer.launch({
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--disable-gpu'
+            ]
+        });
+
+        try {
+            const page = await browser.newPage();
+            await page.setViewport({ width: 1280, height: 720 });
+            
+            // Set headers for AJAX request
+            await page.setExtraHTTPHeaders({
+                'Accept': 'application/json, text/javascript, */*; q=0.01',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Referer': `${BASE_URL}/${refererPath}`,
+            });
+
+            // We must go to the page itself first, or just hit the AJAX endpoint directly.
+            // Bot Fight Mode usually injects a JS challenge on GET requests.
+            // We will go to the base URL first to solve the challenge, then evaluate fetch.
+            
+            // 1. Solve challenge on the referer page
+            const navUrl = `${BASE_URL}/${refererPath}`;
+            await page.goto(navUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
+            
+            // Wait a moment for Cloudflare Turnstile to run and set the cf_clearance cookie
+            await new Promise(r => setTimeout(r, 4000));
+            
+            // 2. Now use the browser's own fetch API (which has the clearance cookie) to get the AJAX JSON
+            const jsonStr = await page.evaluate(async (ajaxUrl) => {
+                const res = await fetch(ajaxUrl, {
                     method: 'POST',
                     headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
                         'Accept': 'application/json, text/javascript, */*; q=0.01',
-                        'Accept-Language': 'fr-MA,fr;q=0.9,en;q=0.8',
                         'X-Requested-With': 'XMLHttpRequest',
-                        'Referer': `${BASE_URL}/${refererPath}`,
-                        'Content-Length': '0',
+                        'Content-Length': '0'
                     }
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                return res.json();
-            },
-            // Strategy 2: GET request with Firefox UA
-            async () => {
-                const res = await _fetch(url, {
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0',
-                        'Accept': 'application/json, text/javascript, */*; q=0.01',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Referer': `${BASE_URL}/${refererPath}`,
-                    }
-                });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                return res.json();
-            },
-            // Strategy 3: allorigins.win free proxy
-            async () => {
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-                const res = await _fetch(proxyUrl);
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
-                if (!data.contents) throw new Error("Empty proxy response");
-                return JSON.parse(data.contents);
-            },
-            // Strategy 4: ProxyScrape Elite Proxies (Aggressive rotation)
-            async () => {
-                const { ProxyAgent, request } = await import('undici');
-                // Fetch elite proxies that hide our IP
-                const proxyListRes = await _fetch("https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=5000&country=all&ssl=all&anonymity=elite");
-                const proxyText = await proxyListRes.text();
-                const proxies = proxyText.split('\n').map(p => p.trim()).filter(p => p);
-                
-                // Try up to 15 random proxies
-                for (let i = 0; i < 15; i++) {
-                    const proxy = proxies[Math.floor(Math.random() * proxies.length)];
-                    try {
-                        const dispatcher = new ProxyAgent(`http://${proxy}`);
-                        const { statusCode, body } = await request(url, {
-                            dispatcher,
-                            method: 'POST',
-                            headers: {
-                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                                'Accept': 'application/json, text/javascript, */*; q=0.01',
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'Referer': `${BASE_URL}/${refererPath}`,
-                                'Content-Length': '0',
-                            },
-                            bodyTimeout: 8000,
-                            headersTimeout: 8000,
-                        });
-                        
-                        if (statusCode === 200) {
-                            const text = await body.text();
-                            const json = JSON.parse(text);
-                            if (json.products) return json;
-                        }
-                    } catch (err) {
-                        // Ignore and try next proxy quickly
-                    }
-                }
-                throw new Error("All free proxies failed or timed out");
-            }
-        ];
-
-        for (let i = 0; i < strategies.length; i++) {
-            try {
-                // Wrap in timeout. Give Strategy 4 more time to rotate proxies.
-                const timeoutMs = i === 3 ? 120000 : 30000; 
-                const data = await Promise.race([
-                    strategies[i](),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Strategy Timeout')), timeoutMs))
-                ]);
-                return data;
-            } catch (err: any) {
-                lastError = err;
-                console.warn(`[${SITE_NAME}] Strategy ${i + 1} failed: ${err.message}`);
-                await new Promise(r => setTimeout(r, 2000));
-            }
+                return await res.text();
+            }, url);
+            
+            return JSON.parse(jsonStr);
+        } catch (err: any) {
+            console.error(`[${SITE_NAME}] Puppeteer failed: ${err.message}`);
+            throw err;
+        } finally {
+            await browser.close().catch(() => {});
         }
-        
-        throw new Error(`All Cloudflare bypass strategies failed. Last error: ${lastError?.message}`);
     }
 }
