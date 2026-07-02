@@ -1,7 +1,7 @@
 # ── STAGE 1: Frontend Build ───────────────────────────────────────────────────
 FROM oven/bun:1.3-alpine AS frontend-builder
 WORKDIR /app
-COPY package.json bun.lock ./
+COPY package.json ./
 COPY apps/frontend/package.json apps/frontend/
 COPY apps/admin/package.json apps/admin/
 COPY apps/backend/package.json apps/backend/
@@ -9,15 +9,12 @@ RUN bun install
 COPY apps/frontend/ apps/frontend/
 COPY shared/ shared/
 WORKDIR /app/apps/frontend
-RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 RUN bun run build
 
 # ── STAGE 2: Admin Build ──────────────────────────────────────────────────────
 FROM oven/bun:1.3-alpine AS admin-builder
 WORKDIR /app
-COPY package.json bun.lock ./
+COPY package.json ./
 COPY apps/frontend/package.json apps/frontend/
 COPY apps/admin/package.json apps/admin/
 COPY apps/backend/package.json apps/backend/
@@ -39,11 +36,11 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 WORKDIR /app
 
 # Install backend dependencies
-COPY package.json bun.lock ./
+COPY package.json ./
 COPY apps/frontend/package.json apps/frontend/
 COPY apps/admin/package.json apps/admin/
 COPY apps/backend/package.json apps/backend/
-RUN bun install --production
+RUN bun install --production --no-frozen-lockfile
 
 # Copy backend source
 COPY apps/backend/src/ apps/backend/src/
