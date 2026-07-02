@@ -186,27 +186,13 @@ export class PcGamerCasaScraper {
         return prices;
     }
     private async fetchPage(url: string, refererPath: string): Promise<any> {
-        const apiKey = process.env.SCRAPER_API_KEY;
-        
-        if (!apiKey) {
-            throw new Error(
-                `Missing SCRAPER_API_KEY in .env file. ` +
-                `PC Gamer Casa requires ScraperAPI to bypass Cloudflare. ` +
-                `Get a free key at https://www.scraperapi.com/ and add it to your backend .env file.`
-            );
-        }
-
-        // Construct the ScraperAPI URL
-        const targetUrl = encodeURIComponent(url);
-        const scraperApiUrl = `http://api.scraperapi.com?api_key=${apiKey}&url=${targetUrl}&render=false&keep_headers=true`;
-
         try {
-            // We still send standard headers so ScraperAPI forwards them to the target
-            const res = await _fetch(scraperApiUrl, {
-                method: 'POST', // POST bypasses standard GET JS challenges in Cloudflare
+            const res = await _fetch(url, {
+                method: 'POST', // POST bypasses basic GET challenges
                 headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
                     'Accept': 'application/json, text/javascript, */*; q=0.01',
+                    'Accept-Language': 'fr-MA,fr;q=0.8,en-US;q=0.5,en;q=0.3',
                     'X-Requested-With': 'XMLHttpRequest',
                     'Referer': `${BASE_URL}/${refererPath}`,
                     'Content-Length': '0',
@@ -215,12 +201,12 @@ export class PcGamerCasaScraper {
 
             if (!res.ok) {
                 const text = await res.text().catch(() => '');
-                throw new Error(`ScraperAPI returned HTTP ${res.status}: ${text}`);
+                throw new Error(`HTTP ${res.status}: ${text}`);
             }
 
             return await res.json();
         } catch (err: any) {
-            console.error(`[${SITE_NAME}] ScraperAPI failed: ${err.message}`);
+            console.error(`[${SITE_NAME}] Fetch failed: ${err.message}`);
             throw err;
         }
     }
