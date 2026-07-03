@@ -638,8 +638,8 @@ export function CategoryBrowse() {
   return (
     <div className={styles.page}>
       <SEO 
-        title={CATEGORY_LABELS[cat] as string}
-        description={`Parcourez et comparez les meilleurs ${CATEGORY_LABELS[cat].toLowerCase()} pour votre configuration PC Gamer ou bureautique au Maroc. Prix, spécifications et compatibilité.`}
+        title={`${CATEGORY_LABELS[cat]} au Maroc | Comparateur de Prix`}
+        description={`Parcourez et comparez les prix des meilleurs ${CATEGORY_LABELS[cat].toLowerCase()} pour votre configuration PC Gamer ou bureautique au Maroc. Spécifications et compatibilité.`}
       />
       <nav className={styles.breadcrumb}>
         <Link to="/" className={styles.breadcrumbLink}>Accueil</Link>

@@ -75,9 +75,6 @@ async function run() {
   
   const page = await browser.newPage();
   
-  // Create a sitemap
-  let sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
-
   for (const route of routesToPrerender) {
     console.log(`Prerendering ${route}...`);
     try {
@@ -99,40 +96,38 @@ async function run() {
          fs.writeFileSync(path.join(fileDir, 'index.html'), html);
       }
 
-      // Add to sitemap
-      const priority = route === '/' ? '1.0' : '0.8';
-      sitemapXml += `  <url>\n    <loc>${PUBLIC_URL}${route}</loc>\n    <priority>${priority}</priority>\n  </url>\n`;
-
     } catch (e) {
       console.error(`[ERROR] Failed to prerender ${route}:`, e);
     }
   }
 
-  sitemapXml += `</urlset>`;
-  fs.writeFileSync(path.join(DIST_DIR, 'sitemap.xml'), sitemapXml);
-  console.log('[PRERENDER] Created sitemap.xml.');
-  console.log('[PRERENDER] Submitting URLs to IndexNow...');
-  const indexNowKey = '0f85b8823f6e492f8087fcda8cb080b0';
+  console.log('[PRERENDER] Fetching dynamic sitemap from backend to include all URLs...');
   let urlList = routesToPrerender.map(route => `${PUBLIC_URL}${route}`);
   
   try {
-    console.log('[PRERENDER] Fetching dynamic sitemap from backend to include all URLs...');
     const sitemapRes = await fetch('https://pcbuilder-m2nf.onrender.com/api/sitemap.xml');
     if (sitemapRes.ok) {
       const sitemapText = await sitemapRes.text();
+      // Write the complete backend sitemap directly to dist/sitemap.xml
+      fs.writeFileSync(path.join(DIST_DIR, 'sitemap.xml'), sitemapText);
+      console.log('[PRERENDER] Successfully saved dynamic sitemap.xml to dist.');
+
       const matches = sitemapText.match(/<loc>(.*?)<\/loc>/g);
       if (matches) {
         const dynamicUrls = matches.map(m => m.replace(/<\/?loc>/g, ''));
-        // Merge and deduplicate URLs
+        // Merge and deduplicate URLs for IndexNow
         urlList = [...new Set([...urlList, ...dynamicUrls])];
         console.log(`[PRERENDER] Found ${dynamicUrls.length} URLs in live sitemap. Total unique URLs to submit: ${urlList.length}`);
       }
     } else {
-      console.warn('[WARNING] Failed to fetch dynamic sitemap, submitting only static URLs.');
+      console.warn('[WARNING] Failed to fetch dynamic sitemap. Check backend status.');
     }
   } catch (err) {
     console.warn('[WARNING] Error fetching dynamic sitemap:', err.message);
   }
+
+  console.log('[PRERENDER] Submitting URLs to IndexNow...');
+  const indexNowKey = '0f85b8823f6e492f8087fcda8cb080b0';
 
   // Submit in chunks of 10,000 (IndexNow limit)
   const chunkSize = 10000;

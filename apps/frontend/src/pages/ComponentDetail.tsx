@@ -169,12 +169,44 @@ export function ComponentDetail({ onAddToBuild }: Props = {}) {
 
   const compName = formatComponentName(component);
 
+  // Construct JSON-LD Product Schema
+  const productSchema: Record<string, any> = {
+    '@context': 'https://schema.org/',
+    '@type': 'Product',
+    name: compName,
+    image: images,
+    description: `Achetez le ${compName} au meilleur prix au Maroc. Spécifications, avis et compatibilité PC Gamer.`,
+    brand: {
+      '@type': 'Brand',
+      name: component.brand || 'Generic'
+    }
+  };
+
+  if (prices.length > 0) {
+    const inStockPrices = prices.filter(p => p.in_stock);
+    const validPrices = inStockPrices.length > 0 ? inStockPrices : prices;
+    
+    const lowPrice = Math.min(...validPrices.map(p => Number(p.price)));
+    const highPrice = Math.max(...validPrices.map(p => Number(p.price)));
+
+    productSchema.offers = {
+      '@type': 'AggregateOffer',
+      url: `https://pcbuilder.ma${location.pathname}`,
+      priceCurrency: 'MAD',
+      lowPrice: lowPrice,
+      highPrice: highPrice,
+      offerCount: validPrices.length,
+      availability: inStockPrices.length > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock'
+    };
+  }
+
   return (
     <div className={styles.page}>
       <SEO
-        title={`Prix ${compName} Maroc`}
-        description={`Achetez le ${compName} au meilleur prix au Maroc. Spécifications, avis et compatibilité PC Gamer.`}
+        title={`${compName} Prix Maroc`}
+        description={`Comparez les prix du ${compName} au Maroc. Spécifications complètes, disponibilité en stock et compatibilité PC Gamer.`}
         image={images[0]}
+        schema={productSchema}
       />
       {/* ── Anchor Header ────────────────────────────────────────────── */}
       <header className={styles.headerSection}>

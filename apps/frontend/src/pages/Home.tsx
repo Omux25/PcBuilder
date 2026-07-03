@@ -23,8 +23,8 @@ export function Home() {
   return (
     <div className={styles.home}>
       <SEO 
-        title="Accueil" 
-        description="Configurez votre PC, vérifiez la compatibilité et comparez les prix chez les meilleurs revendeurs au Maroc." 
+        title="PC Builder Maroc | Comparateur de prix et Config PC sur mesure" 
+        description="Configurez votre PC Gamer, vérifiez la compatibilité et comparez les prix des composants chez tous les revendeurs au Maroc en temps réel." 
       />
       {/* ── Hero Section ────────────────────────────────────────────────── */}
       <header className={styles.hero}>
